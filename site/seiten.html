@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#17171a" />
+<title>GF Weekly · Wichtige Seiten</title>
+<meta name="description" content="Steuerungsmaske der Geschäftsleitung – alle Arbeitsseiten, ihr Zweck und die Zugangsdaten an einem Ort. Vertraulich." />
+<meta property="og:title" content="GF Weekly · Geschäftsleitung" />
+<meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre." />
+<meta property="og:image" content="assets/og-image.png" />
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="assets/icon-180.png" />
+<link rel="manifest" href="assets/manifest.webmanifest" />
+<link rel="stylesheet" href="assets/styles.css" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark">GF</div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>GF Weekly</h1>
+    <div class="sub">Geschäftsleitung · Lea, Alex &amp; Sebastian</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+
+  <section class="start-hero">
+    <div>
+      <h2>Wichtige Seiten</h2>
+      <p>Alle Arbeitsseiten der Geschäftsleitung an einem Ort: was sich hinter jeder Seite verbirgt, wo sie liegt und wie man hineinkommt. Zugangsdaten sind nur nach dem Entsperren sichtbar.</p>
+    </div>
+    <div class="start-stats" id="startStats"></div>
+  </section>
+
+  <div class="toolbar">
+    <div class="search"><input id="search" placeholder="Seiten durchsuchen … (Taste /)" /></div>
+    <div class="segs" id="viewSegs">
+      <button class="seg on" data-v="aktiv">Aktiv</button>
+      <button class="seg" data-v="alle">Alle inkl. Entwurf &amp; Archiv</button>
+    </div>
+    <button class="btn btn-ghost" id="editMode" title="Bearbeiten ein/aus">✎ Bearbeiten</button>
+    <button class="btn btn-brand" id="addSite">＋ Seite</button>
+    <button class="btn btn-ghost" id="reload" title="Aktualisieren">↻</button>
+  </div>
+
+  <div id="groups"><div class="loading">lädt …</div></div>
+
+  <p class="start-foot">Hinweis: Zugangsdaten hier gelten für den internen Gebrauch der Geschäftsleitung. Wer eine Seite teilt, teilt die Seite, nicht diese Übersicht.</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="assets/core.js"></script>
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+let CATS=[], SITES=[], VIEW="aktiv", EDIT=false, Q="", OPEN_EDIT=null, REVEAL=new Set();
+const STATUS_LBL={aktiv:"aktiv",entwurf:"Entwurf",archiv:"Archiv"};
+
+function host(u){ try{ return new URL(u).host.replace(/^www\./,""); }catch(e){ return u; } }
+function fmtDate(iso){ if(!iso) return ""; const d=new Date(iso); return d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"2-digit"}); }
+function catOf(key){ return CATS.find(c=>c.key===key) || {key, label:key||"Sonstiges", icon:"", sort_order:999}; }
+function matches(s){
+  if(!Q) return true; const q=Q.toLowerCase();
+  return [s.name,s.url,s.purpose,s.notes,s.login_user,s.login_note,catOf(s.category).label].join(" ").toLowerCase().includes(q);
+}
+
+async function load(){
+  try{ const d=await gfApi("sites_list"); CATS=d.categories||[]; SITES=d.sites||[]; render(); }
+  catch(e){ $("#groups").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+}
+
+function render(){
+  const visible=SITES.filter(s=>(VIEW==="alle"||s.status==="aktiv") && matches(s));
+  const withLogin=SITES.filter(s=>s.login_user||s.login_password).length;
+  $("#startStats").innerHTML=`
+    <div class="sstat"><div class="k">Seiten</div><div class="v">${SITES.filter(s=>s.status==="aktiv").length}</div></div>
+    <div class="sstat"><div class="k">Bereiche</div><div class="v">${CATS.length}</div></div>
+    <div class="sstat"><div class="k">mit Zugang</div><div class="v">${withLogin}</div></div>`;
+  $("#editMode").classList.toggle("on-edit",EDIT);
+  $("#editMode").textContent = EDIT ? "✓ Fertig" : "✎ Bearbeiten";
+
+  const order=[...CATS].sort((a,b)=>a.sort_order-b.sort_order||a.label.localeCompare(b.label));
+  const extraKeys=[...new Set(visible.map(s=>s.category).filter(k=>!CATS.some(c=>c.key===k)))];
+  const groups=[...order, ...extraKeys.map(k=>catOf(k))];
+  let html="";
+  for(const c of groups){
+    const items=visible.filter(s=>s.category===c.key);
+    if(!items.length && !(EDIT && OPEN_EDIT && OPEN_EDIT.category===c.key && !OPEN_EDIT.id)) continue;
+    html+=`<div class="group">
+      <div class="group-h"><span>${gfEsc(c.icon||"")}</span> ${gfEsc(c.label)} <span class="n">${items.length}</span></div>
+      <div class="sites-grid">${items.map(card).join("")}${(EDIT&&OPEN_EDIT&&!OPEN_EDIT.id&&OPEN_EDIT.category===c.key)?editForm(OPEN_EDIT):""}</div>
+    </div>`;
+  }
+  if(!html) html=`<div class="empty">${Q?"Keine Seite passt zur Suche.":"Noch keine Seiten hinterlegt."}</div>`;
+  $("#groups").innerHTML=html;
+  bind();
+}
+
+function card(s){
+  if(OPEN_EDIT && OPEN_EDIT.id===s.id) return editForm(s);
+  const hasLogin=!!(s.login_user||s.login_password||s.login_note);
+  const rev=REVEAL.has(s.id);
+  const pw = s.login_password ? (rev? gfEsc(s.login_password) : "•".repeat(Math.min(10,Math.max(6,s.login_password.length)))) : "";
+  return `<article class="site ${s.status!=="aktiv"?"is-"+s.status:""}" data-id="${s.id}">
+    <div class="site-top">
+      <a class="site-name" href="${gfEsc(s.url)}" target="_blank" rel="noopener">${gfEsc(s.name)}</a>
+      ${s.status!=="aktiv"?`<span class="pill pill-${s.status}">${STATUS_LBL[s.status]}</span>`:""}
+      ${EDIT?`<button class="icon-btn edit" title="Bearbeiten" data-act="edit">✎</button>`:""}
+    </div>
+    <div class="site-host"><span>${gfEsc(host(s.url))}</span><button class="mini" data-act="copyurl" title="Link kopieren">⧉</button></div>
+    ${s.purpose?`<p class="site-purpose">${gfEsc(s.purpose)}</p>`:`<p class="site-purpose muted">Zweck noch nicht beschrieben.</p>`}
+    ${s.notes?`<p class="site-notes">${gfEsc(s.notes)}</p>`:""}
+    ${hasLogin?`<div class="site-login">
+        <div class="lk">Zugang</div>
+        ${s.login_user?`<div class="lrow"><span class="lv">${gfEsc(s.login_user)}</span><button class="mini" data-act="copy" data-v="user" title="Kopieren">⧉</button></div>`:""}
+        ${s.login_password?`<div class="lrow"><span class="lv mono">${pw}</span><button class="mini" data-act="reveal" title="${rev?"Verbergen":"Anzeigen"}">${rev?"verbergen":"zeigen"}</button><button class="mini" data-act="copy" data-v="pw" title="Kopieren">⧉</button></div>`:""}
+        ${s.login_note?`<div class="lnote">${gfEsc(s.login_note)}</div>`:""}
+      </div>`:`<div class="site-login none"><span class="lk">Zugang</span><span class="lnote">kein Login hinterlegt${EDIT?" · über ✎ ergänzen":""}</span></div>`}
+    <div class="site-foot">
+      <a class="btn btn-sm btn-brand" href="${gfEsc(s.url)}" target="_blank" rel="noopener">Öffnen ↗</a>
+      <span class="site-meta">${s.updated_by?`von ${gfEsc(s.updated_by)} · `:""}${fmtDate(s.updated_at)}</span>
+    </div>
+  </article>`;
+}
+
+function editForm(s){
+  const opts=[...CATS].sort((a,b)=>a.sort_order-b.sort_order).map(c=>`<option value="${gfEsc(c.key)}" ${c.key===s.category?"selected":""}>${gfEsc(c.icon||"")} ${gfEsc(c.label)}</option>`).join("");
+  return `<form class="site editcard" data-id="${s.id||""}">
+    <div class="fgrid">
+      <div class="fld"><label>Name</label><input name="name" value="${gfEsc(s.name||"")}" required /></div>
+      <div class="fld"><label>Bereich</label><select name="category">${opts}<option value="__new">＋ Neuer Bereich …</option></select></div>
+      <div class="fld ffull"><label>URL</label><input name="url" type="url" value="${gfEsc(s.url||"")}" placeholder="https://…" required /></div>
+      <div class="fld ffull"><label>Wozu ist die Seite da?</label><textarea name="purpose" rows="2">${gfEsc(s.purpose||"")}</textarea></div>
+      <div class="fld ffull"><label>Notizen (Stand, Besonderheiten)</label><textarea name="notes" rows="2">${gfEsc(s.notes||"")}</textarea></div>
+      <div class="fld"><label>Login: Nutzer / E-Mail</label><input name="login_user" value="${gfEsc(s.login_user||"")}" autocomplete="off" /></div>
+      <div class="fld"><label>Login: Passwort</label><input name="login_password" value="${gfEsc(s.login_password||"")}" autocomplete="off" /></div>
+      <div class="fld ffull"><label>Login-Hinweis (z. B. „Passwort auf Startseite eingeben", „Google-Login mit @wildemoehre.org")</label><input name="login_note" value="${gfEsc(s.login_note||"")}" /></div>
+      <div class="fld"><label>Status</label><select name="status">${["aktiv","entwurf","archiv"].map(v=>`<option value="${v}" ${(s.status||"aktiv")===v?"selected":""}>${STATUS_LBL[v]}</option>`).join("")}</select></div>
+      <div class="fld"><label>Reihenfolge</label><input name="sort_order" type="number" value="${s.sort_order??100}" /></div>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" type="submit">Speichern</button>
+      <button class="btn btn-ghost" type="button" data-act="cancel">Abbrechen</button>
+      ${s.id?`<button class="btn btn-ghost del" type="button" data-act="delete">Löschen</button>`:""}
+    </div>
+  </form>`;
+}
+
+function bind(){
+  document.querySelectorAll(".site[data-id]").forEach(el=>{
+    const id=el.dataset.id; const s=SITES.find(x=>x.id===id);
+    el.querySelectorAll("[data-act]").forEach(b=>{
+      b.onclick=async (ev)=>{
+        ev.preventDefault();
+        const act=b.dataset.act;
+        if(act==="edit"){ OPEN_EDIT={...s}; render(); }
+        if(act==="copyurl") gfCopy(s.url);
+        if(act==="copy") gfCopy(b.dataset.v==="pw"?s.login_password:s.login_user);
+        if(act==="reveal"){ REVEAL.has(id)?REVEAL.delete(id):REVEAL.add(id); render(); }
+        if(act==="cancel"){ OPEN_EDIT=null; render(); }
+        if(act==="delete"){ if(!confirm(`„${s.name}" aus der Übersicht löschen?`)) return; try{ await gfApi("sites_delete",{id}); gfToast("Gelöscht"); OPEN_EDIT=null; await load(); }catch(e){ gfToast("Fehler: "+e.message); } }
+      };
+    });
+  });
+  document.querySelectorAll("form.editcard").forEach(f=>{
+    const catSel=f.querySelector('[name="category"]');
+    catSel.onchange=async()=>{
+      if(catSel.value!=="__new") return;
+      const label=prompt("Name des neuen Bereichs:"); if(!label){ catSel.value=OPEN_EDIT.category||CATS[0]?.key; return; }
+      const icon=prompt("Symbol (ein Emoji, optional):","")||"";
+      try{ const d=await gfApi("category_save",{label,icon}); CATS.push(d.category); OPEN_EDIT.category=d.category.key; render(); }
+      catch(e){ gfToast("Fehler: "+e.message); }
+    };
+    f.onsubmit=async (ev)=>{
+      ev.preventDefault();
+      const fd=new FormData(f); const p={ updated_by:gfWho() }; for(const [k,v] of fd.entries()) p[k]=v;
+      if(p.category==="__new") return gfToast("Bitte zuerst einen Bereich wählen.");
+      if(f.dataset.id) p.id=f.dataset.id;
+      try{ await gfApi("sites_save",p); gfToast("Gespeichert"); OPEN_EDIT=null; await load(); }
+      catch(e){ gfToast("Fehler: "+e.message); }
+    };
+    f.querySelector('[data-act="cancel"]').onclick=()=>{ OPEN_EDIT=null; render(); };
+    const del=f.querySelector('[data-act="delete"]');
+    if(del) del.onclick=async()=>{ const s=SITES.find(x=>x.id===f.dataset.id); if(!confirm(`„${s.name}" aus der Übersicht löschen?`)) return; try{ await gfApi("sites_delete",{id:s.id}); gfToast("Gelöscht"); OPEN_EDIT=null; await load(); }catch(e){ gfToast("Fehler: "+e.message); } };
+  });
+}
+
+$("#search").oninput=e=>{ Q=e.target.value.trim(); render(); };
+document.addEventListener("keydown",e=>{ if(e.key==="/" && document.activeElement.tagName!=="INPUT" && document.activeElement.tagName!=="TEXTAREA"){ e.preventDefault(); $("#search").focus(); } });
+$("#viewSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; VIEW=b.dataset.v; document.querySelectorAll("#viewSegs .seg").forEach(x=>x.classList.toggle("on",x===b)); render(); };
+$("#editMode").onclick=()=>{ EDIT=!EDIT; if(!EDIT) OPEN_EDIT=null; render(); };
+$("#addSite").onclick=()=>{ EDIT=true; OPEN_EDIT={ id:null, name:"", url:"", category:(CATS[0]||{}).key||"steuerung", purpose:"", notes:"", login_user:"", login_password:"", login_note:"", status:"aktiv", sort_order:100 }; render(); setTimeout(()=>{ const f=$("form.editcard"); if(f){ f.scrollIntoView({behavior:"smooth",block:"center"}); f.querySelector('[name="name"]').focus(); } },50); };
+$("#reload").onclick=load;
+
+gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("seiten"); await load(); });
+</script>
+</body>
+</html>

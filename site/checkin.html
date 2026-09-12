@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#17171a" />
+<title>GF Weekly · Check-in</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="assets/icon-180.png" />
+<link rel="manifest" href="assets/manifest.webmanifest" />
+<link rel="stylesheet" href="assets/styles.css" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Check-in vorbereiten</h1>
+    <div class="sub">Was lohnt sich heute zu besprechen?</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+
+  <div class="dash" id="dash" style="grid-template-columns:1fr 1fr 1fr"></div>
+
+  <div class="section">
+    <div class="sec-h"><h2>Vorbereitung</h2><span class="hint">was Aufmerksamkeit braucht</span><span class="line"></span></div>
+    <div class="prep-grid" id="prep"></div>
+  </div>
+
+  <div class="section">
+    <div class="sec-h"><h2>Agenda</h2><span class="line"></span></div>
+    <div class="toolbar">
+      <button class="btn btn-brand" id="genBtn">Check-in-Agenda generieren</button>
+      <button class="btn btn-ghost" id="copyBtn" style="display:none">Agenda kopieren</button>
+    </div>
+    <div id="agendaWrap"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="assets/core.js"></script>
+<script>
+let topics=[]; const $=s=>document.querySelector(s);
+const ST={offen:"Offen",in_klaerung:"In Klärung",erledigt:"Erledigt"};
+const today=()=>new Date().toISOString().slice(0,10);
+
+gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("checkin"); await load(); });
+async function load(){ const d=await gfApi("list"); topics=d.topics||[]; renderPrep(); }
+
+function isHot(t){ return t.relevance==="kritisch"||t.relevance==="hoch"||t.priority==="hoch"; }
+function discussItems(){
+  const rec=topics.filter(t=>t.kind==="recurring").sort((a,b)=>GF_REL_RANK[a.relevance]-GF_REL_RANK[b.relevance]);
+  const one=topics.filter(t=>t.kind!=="recurring"&&t.status!=="erledigt"&&isHot(t)).sort((a,b)=>(GF_REL_RANK[a.relevance]-GF_REL_RANK[b.relevance])||(GF_PRANK[a.priority]-GF_PRANK[b.priority]));
+  return rec.concat(one);
+}
+const totalMin=items=>items.reduce((s,t)=>s+gfDefaultTime(t),0);
+
+function renderDash(){
+  const items=discussItems();
+  $("#dash").innerHTML=`
+    <div class="stat accent"><div class="k">Geschätzte Dauer</div><div class="v">${totalMin(items)} Min</div><div class="cap">${items.length} Themen vorgeschlagen</div></div>
+    <div class="stat"><div class="k"> Wiederkehrend</div><div class="v">${topics.filter(t=>t.kind==="recurring").length}</div><div class="cap">feste Check-ins</div></div>
+    <div class="stat"><div class="k"> Hohe Relevanz</div><div class="v">${topics.filter(t=>t.kind!=="recurring"&&t.status!=="erledigt"&&isHot(t)).length}</div><div class="cap">offen &amp; wichtig</div></div>`;
+}
+function prepItem(t){ return `<div class="prep-item"><div class="pt">${gfEsc(t.title)}</div><div class="pm">
+  ${t.relevance?`<span class="rel rel-${t.relevance}">${gfRelLabel(t.relevance)}</span>`:""}
+  <span class="mchip time-chip"> ${gfDefaultTime(t)} Min</span>
+  ${t.delegate_to?`<span class="mchip"> ${gfEsc(gfNames(t.delegate_to)[0])}${gfNames(t.delegate_to).length>1?" +"+(gfNames(t.delegate_to).length-1):""}</span>`:(t.owner?`<span class="mchip"> ${gfEsc(t.owner)}</span>`:"")}
+  <span class="pill s-${t.status}">${ST[t.status]||"Check-in"}</span></div></div>`; }
+function col(title,items){ return `<div class="prep-col"><h3>${title} <span style="color:var(--muted)">(${items.length})</span></h3>${items.length?items.map(prepItem).join(""):'<div class="prep-item" style="color:var(--muted)">—</div>'}</div>`; }
+function renderPrep(){
+  renderDash();
+  const rec=topics.filter(t=>t.kind==="recurring");
+  const open=topics.filter(t=>t.kind!=="recurring"&&t.status!=="erledigt");
+  $("#prep").innerHTML=
+    col(" Wiederkehrende Check-ins",rec)+
+    col(" Hohe Relevanz / Priorität",open.filter(isHot))+
+    col(" In Klärung",open.filter(t=>t.status==="in_klaerung"))+
+    col(" Mit Abhängigkeiten",open.filter(t=>t.dependencies&&t.dependencies.trim()))+
+    col(" Delegation offen",open.filter(t=>!t.delegate_to&&!t.owner))+
+    col(" Follow-up überfällig",topics.filter(t=>t.next_suggested&&t.next_suggested<today()));
+}
+
+let agendaText="";
+function decisionNeeded(t){ const r=(t.recommendation||"").toLowerCase(); return t.relevance==="kritisch"||r.includes("entsch")||/entscheid/i.test(t.title); }
+$("#genBtn").onclick=()=>{
+  const items=discussItems(); if(!items.length){gfToast("Keine Themen für die Agenda");return;}
+  let html=`<div class="agenda">`; let txt="GF Weekly – Check-in-Agenda ("+today()+")\n\n"; let n=0;
+  items.forEach(t=>{ n++; const min=gfDefaultTime(t); const why=t.relevance_reason||t.short_description||"";
+    const goal=t.next_action||(t.recommendation||"Status & nächste Schritte klären");
+    const people=[...gfNames(t.delegate_to),t.owner].filter(Boolean).join(", ")||"Board"; const dec=decisionNeeded(t)?"ja":"nein";
+    html+=`<div class="ag-item"><div class="ag-h"><span class="ag-num">${n}.</span><span class="ag-t">${gfEsc(t.title)}</span><span class="ag-min">${min} Min</span></div>
+      <div class="ag-meta">${why?`<div><b>Warum:</b> ${gfEsc(why)}</div>`:""}<div><b>Ziel:</b> ${gfEsc(goal)}</div>
+      <div><b>Entscheidung nötig:</b> ${dec} · <b>Beteiligt:</b> ${gfEsc(people)}</div>${t.recommendation?`<div><b>Empfehlung:</b> ${gfEsc(t.recommendation)}</div>`:""}</div></div>`;
+    txt+=`${n}. ${t.title} — ${min} Min\n`; if(why)txt+=`   Warum: ${why}\n`; txt+=`   Ziel: ${goal}\n   Entscheidung nötig: ${dec} · Beteiligt: ${people}\n`; if(t.recommendation)txt+=`   Empfehlung: ${t.recommendation}\n`; txt+="\n";
+  });
+  const total=totalMin(items);
+  html+=`<div class="ag-total"> Geschätzte Gesamtdauer: ${total} Minuten · ${n} Themen</div></div>`;
+  txt+=`Geschätzte Gesamtdauer: ${total} Minuten (${n} Themen)\n`;
+  $("#agendaWrap").innerHTML=html; agendaText=txt; $("#copyBtn").style.display="inline-flex"; $("#agendaWrap").scrollIntoView({behavior:"smooth",block:"start"});
+};
+$("#copyBtn").onclick=()=>gfCopy(agendaText);
+</script>
+</body>
+</html>

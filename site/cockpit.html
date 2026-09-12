@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#17171a" />
+<title>GF Weekly · Cockpit</title>
+<meta name="description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre. Vertraulich." />
+<meta property="og:title" content="GF Weekly · Geschäftsleitung" />
+<meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre." />
+<meta property="og:image" content="assets/og-image.png" />
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="assets/icon-180.png" />
+<link rel="manifest" href="assets/manifest.webmanifest" />
+<link rel="stylesheet" href="assets/styles.css" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark">GF</div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>GF Weekly</h1>
+    <div class="sub">Geschäftsleitung · Lea, Alex &amp; Sebastian</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+
+  <div class="dash" id="dash"></div>
+
+  <div class="recurring-band section" id="recBand" style="display:none">
+    <div class="sec-h"><h2>Wiederkehrende Check-in-Themen</h2><span class="hint">vor jedem Termin kurz durchgehen</span><span class="line"></span></div>
+    <div class="rec-grid" id="recGrid"></div>
+  </div>
+
+  <div class="section" id="nextSection" style="display:none">
+    <div class="sec-h"><h2>Was als Nächstes</h2><span class="hint">höchste Priorität &amp; offen</span><span class="line"></span></div>
+    <div class="next-grid" id="nextGrid"></div>
+  </div>
+
+  <div class="section">
+    <div class="sec-h"><h2>Themen</h2><span class="line"></span></div>
+    <div class="toolbar">
+      <div class="search"><input id="search" placeholder="Themen &amp; Beschreibungen durchsuchen …" /></div>
+      <div class="segs" id="statusSegs">
+        <button class="seg on" data-v="alle">Alle</button>
+        <button class="seg" data-v="offen">Offen</button>
+        <button class="seg" data-v="in_klaerung">In Klärung</button>
+        <button class="seg" data-v="erledigt">Erledigt</button>
+      </div>
+      <select id="fPerson" class="select"><option value="">Alle Personen</option></select>
+      <select id="fPrio" class="select"><option value="">Alle Prioritäten</option><option value="hoch">hoch</option><option value="mittel">mittel</option><option value="niedrig">niedrig</option></select>
+      <button class="btn btn-ghost" id="reload" title="Aktualisieren">↻</button>
+    </div>
+    <div class="add">
+      <div class="row">
+        <input class="title" id="newTitle" placeholder="Neues Thema eintragen …" />
+        <select id="newPrio" class="select"><option value="hoch">Priorität: hoch</option><option value="mittel" selected>Priorität: mittel</option><option value="niedrig">Priorität: niedrig</option></select>
+        <button class="btn btn-brand" id="addBtn">＋ Hinzufügen</button>
+      </div>
+    </div>
+    <div id="list"><div class="loading">lädt …</div></div>
+  </div>
+</div>
+
+<div class="protocol" id="protoBar" style="display:none">
+  <button class="btn-finish" id="finishBtn">✓ Meeting fertig · Protokoll per Mail</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="assets/core.js"></script>
+<script>
+const ST={offen:"Offen",in_klaerung:"In Klärung",erledigt:"Erledigt"};
+let topics=[], linksByItem={}, openIds=new Set();
+let filter={status:"alle",person:"",prio:"",q:""};
+const $=s=>document.querySelector(s);
+const todayStr=()=>new Date().toISOString().slice(0,10);
+
+gfGate(boot);
+async function boot(){
+  $("#app").style.display="block"; $("#protoBar").style.display="flex";
+  gfMountTopbar("cockpit");
+  await gfLoadPeople();
+  fillPersonFilter();
+  await loadAll();
+}
+function fillPersonFilter(){
+  const sel=$("#fPerson"); const names=gfAssignable().map(p=>p.name).filter(Boolean);
+  sel.innerHTML='<option value="">Alle Personen</option>'+names.map(n=>`<option>${gfEsc(n)}</option>`).join("")+'<option value="Claude">Von Claude</option>';
+}
+async function loadAll(){
+  const [d,l]=await Promise.all([gfApi("list"), gfApi("links_all").catch(()=>({links:[]}))]);
+  topics=d.topics||[]; linksByItem={}; (l.links||[]).forEach(x=>{(linksByItem[x.item_id]=linksByItem[x.item_id]||[]).push(x);});
+  render();
+}
+
+/* ---------- dashboard ---------- */
+function renderDash(){
+  const one=topics.filter(t=>t.kind!=="recurring");
+  const c={offen:0,in_klaerung:0,erledigt:0}; one.forEach(t=>c[t.status]++);
+  const total=one.length, pct=total?Math.round(c.erledigt/total*100):0;
+  $("#dash").innerHTML=`
+    <div class="stat accent"><div class="k">Fortschritt</div>
+      <div class="ring-wrap"><div class="ring" style="--p:${pct};--c:#7ec98f"><b>${pct}%</b></div>
+      <div><div class="v" style="font-size:24px">${c.erledigt}/${total}</div><div class="cap">Themen erledigt</div></div></div></div>
+    <div class="stat"><div class="k"><span class="dot-led led-offen"></span>Offen</div><div class="v">${c.offen}</div><div class="cap">warten</div></div>
+    <div class="stat"><div class="k"><span class="dot-led led-klaerung"></span>In Klärung</div><div class="v">${c.in_klaerung}</div><div class="cap">in Arbeit</div></div>
+    <div class="stat"><div class="k"> Wiederkehrend</div><div class="v">${topics.filter(t=>t.kind==="recurring").length}</div><div class="cap">Check-in-Themen</div></div>`;
+}
+
+/* ---------- shared chips + detail ---------- */
+function relChip(t){ return t.relevance?`<span class="rel rel-${t.relevance}">${gfRelLabel(t.relevance)}${t.relevance_source==='ki'?' ·KI':''}</span>`:""; }
+function timeChip(t){ const m=t.time_minutes||(t.kind==="recurring"?gfDefaultTime(t):0); return m?`<span class="mchip time-chip"> ${m} Min</span>`:""; }
+function delegTags(t){ const ns=gfNames(t.delegate_to); if(!ns.length) return ""; const show=ns.slice(0,2).map(n=>`<span class="ptag"> ${gfEsc(n)}</span>`).join(""); return `<span class="deleg-tags">${show}${ns.length>2?`<span class="ptag">+${ns.length-2}</span>`:""}</span>`; }
+
+function delegControl(t){
+  const sel=gfNames(t.delegate_to);
+  const opts=gfAssignable().map(p=>{ const checked=sel.includes(p.name)?"checked":""; return `<label class="dd-opt"><input type="checkbox" data-name="${gfEsc(p.name)}" ${checked}><span>${gfEsc(p.name)}${p.team&&p.team!=="Wilde Möhre"?` · ${gfEsc(p.team)}`:""}</span></label>`; }).join("");
+  const label = sel.length?`${sel.length} zugewiesen`:"zuweisen";
+  return `<div class="dsection deleg">
+    <div class="dlabel"> Verantwortlich / Delegation</div>
+    <div class="deleg-row">
+      ${sel.length?`<span class="deleg-tags">${sel.map(n=>`<span class="ptag"> ${gfEsc(n)}</span>`).join("")}</span>`:`<span class="by">Noch niemand zugewiesen</span>`}
+      <div class="dd"><button class="dd-btn js-dd">▾ ${label}</button>
+        <div class="dd-pop">${opts||'<div class="by" style="padding:8px">Keine Personen im Verzeichnis</div>'}</div>
+      </div>
+    </div>
+    <div class="actions-row">
+      <button class="btn-sm btn-copy js-copydeleg">Delegations-Nachricht</button>
+      <button class="btn-sm btn-asana js-asana">Asana-Text (fällig morgen)</button>
+    </div>
+  </div>`;
+}
+
+function detailHtml(t){
+  const links=linksByItem[t.id]||[];
+  let h=`<div class="detail-inner">`;
+  if(t.context) h+=`<div class="dsection"><div class="dlabel">Kontext</div><div class="dtext">${gfEsc(t.context)}</div></div>`;
+  if(t.recommendation) h+=`<div class="dsection reco"><div class="dlabel"> Empfehlung ${t.recommendation_source?`<span class="inferred">${gfSrcBadge(t.recommendation_source)}</span>`:""}</div><div class="dtext">${gfEsc(t.recommendation)}</div></div>`;
+  if(t.relevance_reason) h+=`<div class="dsection"><div class="dlabel">Warum relevant</div><div class="dtext">${gfEsc(t.relevance_reason)}</div></div>`;
+  if(t.next_action) h+=`<div class="dsection"><div class="dlabel">Nächster Schritt</div><div class="dtext">${gfEsc(t.next_action)}</div></div>`;
+  if(t.dependencies) h+=`<div class="dsection"><div class="dlabel">Abhängigkeiten</div><div class="dtext">${gfEsc(t.dependencies)}</div></div>`;
+  if(t.notes) h+=`<div class="dsection"><div class="dlabel">Notizen</div><div class="dtext">${gfEsc(t.notes)}</div></div>`;
+  h+=`<div class="dsection"><div class="dlabel"> Verknüpfte Dokumente</div>`;
+  h+= links.length?`<div class="linklist">`+links.map(l=>`<div class="linkrow"><span class="lt">${gfEsc(l.type)}</span>${l.url?`<a href="${gfEsc(l.url)}" target="_blank" rel="noreferrer">${gfEsc(l.title||l.url)}</a>`:`<span>${gfEsc(l.title)}</span>`}</div>`).join("")+`</div>`:`<div class="dtext" style="color:var(--muted)">Noch keine – im Bereich „Bearbeiten" hinzufügen.</div>`;
+  h+=`</div>`;
+  h+=delegControl(t);
+  if(t.kind==="recurring"){
+    h+=`<div class="dsection"><div class="dlabel">Rhythmus</div><div class="dtext">${gfEsc(t.frequency||"—")}${t.last_discussed?` · zuletzt besprochen: ${gfEsc(t.last_discussed)}`:""}</div></div>`;
+  }
+  h+=`<div class="card-foot">
+    <select class="selectx status-sel">
+      <option value="offen" ${t.status==="offen"?"selected":""}>Offen</option>
+      <option value="in_klaerung" ${t.status==="in_klaerung"?"selected":""}>In Klärung</option>
+      <option value="erledigt" ${t.status==="erledigt"?"selected":""}>Erledigt</option>
+    </select>
+    <span class="saved">✓ gespeichert</span>
+    <a class="del" href="bearbeiten.html" style="text-decoration:none">alle Felder bearbeiten ›</a>
+  </div></div>`;
+  return h;
+}
+
+/* ---------- recurring ---------- */
+function renderRecurring(){
+  const rec=topics.filter(t=>t.kind==="recurring").sort((a,b)=>GF_REL_RANK[a.relevance]-GF_REL_RANK[b.relevance]);
+  const band=$("#recBand"); if(!rec.length){band.style.display="none";return;} band.style.display="block";
+  $("#recGrid").innerHTML=rec.map(t=>{ const open=openIds.has(t.id);
+    return `<div class="rec-card ${open?'open':''}" data-id="${t.id}">
+      <div class="rec-head">
+        <div class="rec-main js-toggle">
+          <div class="rec-title">${gfEsc(t.title)}</div>
+          ${t.short_description?`<div class="rec-q">${gfEsc(t.short_description)}</div>`:""}
+          <div class="rec-chips">${relChip(t)}${timeChip(t)}${delegTags(t)||(t.owner?`<span class="mchip"> ${gfEsc(t.owner)}</span>`:"")}</div>
+        </div>
+        <div class="rec-cta">
+          ${t.frequency?`<span class="freqtag">${gfEsc(t.frequency)}</span>`:""}
+          <button class="btn-discussed js-discussed">✓ heute besprochen</button>
+        </div>
+      </div>
+      <div class="detail ${open?'open':''}">${detailHtml(t)}</div>
+    </div>`;
+  }).join("");
+  bindCards("#recGrid");
+}
+
+/* ---------- next ---------- */
+function renderNext(){
+  const open=topics.filter(t=>t.kind!=="recurring"&&t.status!=="erledigt").sort((a,b)=>(GF_PRANK[a.priority]-GF_PRANK[b.priority])||(new Date(a.created_at)-new Date(b.created_at))).slice(0,3);
+  const sec=$("#nextSection"); if(!open.length){sec.style.display="none";return;} sec.style.display="block";
+  $("#nextGrid").innerHTML=open.map(t=>`<div class="next p-${t.priority}" data-go="${t.id}">
+    <div class="t">${gfEsc(t.title)}</div><div class="m"><span class="pill p-${t.priority}">${t.priority}</span>${relChip(t)}${delegTags(t)}</div></div>`).join("");
+  document.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>{ const id=el.dataset.go; openIds.add(id); render(); setTimeout(()=>{const c=document.querySelector('.card[data-id="'+id+'"]'); if(c)c.scrollIntoView({behavior:"smooth",block:"center"});},60); });
+}
+
+/* ---------- einmalig ---------- */
+function passFilter(t){
+  if(filter.status!=="alle"&&t.status!==filter.status) return false;
+  if(filter.person){ const inDeleg=gfNames(t.delegate_to).includes(filter.person); if(t.created_by!==filter.person&&t.owner!==filter.person&&!inDeleg) return false; }
+  if(filter.prio&&t.priority!==filter.prio) return false;
+  if(filter.q){const q=filter.q.toLowerCase(); if(!((t.title||"").toLowerCase().includes(q)||(t.context||"").toLowerCase().includes(q)||(t.short_description||"").toLowerCase().includes(q))) return false;}
+  return true;
+}
+function cardHtml(t){
+  const done=t.status==="erledigt", open=openIds.has(t.id);
+  const date=new Date(t.updated_at||t.created_at).toLocaleDateString("de-DE",{day:"2-digit",month:"short"});
+  const sub=t.short_description||((t.context||"").split("\n")[0]||"").slice(0,150);
+  return `<div class="card ${done?'done':''} ${open?'open':''}" data-id="${t.id}">
+    <div class="card-top">
+      <input type="checkbox" class="check" ${done?'checked':''} title="Als erledigt markieren" aria-label="erledigt">
+      <div class="card-main">
+        <div class="ttl js-toggle">${gfEsc(t.title)}</div>
+        ${sub?`<div class="subline js-toggle">${gfEsc(sub)}</div>`:""}
+        <div class="card-meta">
+          <span class="pill prio p-${t.priority}" title="Priorität ändern">${t.priority}</span>
+          ${relChip(t)}${timeChip(t)}
+          <span class="pill s-${t.status}">${ST[t.status]}</span>
+          ${delegTags(t)}
+          <span class="by">· ${date}</span>
+          ${t.source==="claude"?`<span class="src-claude"> vorbereitet</span>`:""}
+        </div>
+        <span class="expand-btn js-toggle">${open?'▾ weniger':'▸ Details'}</span>
+      </div>
+      <div class="chev js-toggle"></div>
+    </div>
+    <div class="detail ${open?'open':''}">${detailHtml(t)}</div>
+  </div>`;
+}
+function render(){
+  renderDash(); renderRecurring(); renderNext();
+  const list=$("#list"); const one=topics.filter(t=>t.kind!=="recurring"); const filtered=one.filter(passFilter);
+  if(!one.length){ list.innerHTML=`<div class="empty"><div class="ico"></div><h3>Noch keine Themen</h3><p>Oben eintragen oder über „Eingabe" erfassen. Vor Terminen ergänzt Claude automatisch Infos &amp; Vorschläge.</p></div>`; return; }
+  if(!filtered.length){ list.innerHTML=`<div class="empty"><div class="ico"></div><h3>Keine Treffer</h3><p>Mit diesen Filtern gibt es nichts.</p><p style="margin-top:12px"><button class="btn btn-ghost" id="resetF">Filter zurücksetzen</button></p></div>`;
+    $("#resetF").onclick=()=>{filter={status:"alle",person:"",prio:"",q:""};$("#search").value="";$("#fPerson").value="";$("#fPrio").value="";document.querySelectorAll("#statusSegs .seg").forEach(s=>s.classList.toggle("on",s.dataset.v==="alle"));render();}; return; }
+  const order=["offen","in_klaerung","erledigt"]; let html="";
+  for(const st of order){ const items=filtered.filter(t=>t.status===st); if(!items.length) continue;
+    items.sort((a,b)=>(GF_PRANK[a.priority]-GF_PRANK[b.priority])||(new Date(a.created_at)-new Date(b.created_at)));
+    html+=`<div class="group"><div class="group-h"><span class="dot-led led-${st==='in_klaerung'?'klaerung':st}"></span>${ST[st]} <span class="n">${items.length}</span></div>${items.map(cardHtml).join("")}</div>`;
+  }
+  list.innerHTML=html; bindCards("#list");
+}
+
+/* ---------- bind ---------- */
+function topicById(id){ return topics.find(t=>t.id===id)||{}; }
+function bindCards(scope){
+  document.querySelectorAll(scope+" .card, "+scope+" .rec-card").forEach(card=>{
+    const id=card.dataset.id, saved=card.querySelector(".saved");
+    card.querySelectorAll(".js-toggle").forEach(el=>el.onclick=(ev)=>{ ev.stopPropagation(); if(openIds.has(id))openIds.delete(id); else openIds.add(id); card.classList.toggle("open"); const d=card.querySelector(".detail"); if(d)d.classList.toggle("open"); const eb=card.querySelector(".expand-btn"); if(eb)eb.textContent=card.classList.contains("open")?'▾ weniger':'▸ Details'; });
+    const chk=card.querySelector(".check"); if(chk) chk.onchange=e=>doUpdate(id,{status:e.target.checked?"erledigt":"offen"},saved,true);
+    const ss=card.querySelector(".status-sel"); if(ss) ss.onchange=e=>doUpdate(id,{status:e.target.value},saved,true);
+    const pr=card.querySelector(".prio"); if(pr) pr.onclick=(ev)=>{ ev.stopPropagation(); const cur=topicById(id).priority,nx={hoch:"mittel",mittel:"niedrig",niedrig:"hoch"}[cur]; doUpdate(id,{priority:nx},saved,true); };
+    const disc=card.querySelector(".js-discussed"); if(disc) disc.onclick=(ev)=>{ ev.stopPropagation(); doUpdate(id,{last_discussed:todayStr()},saved,false); gfToast("Als heute besprochen markiert ✓"); };
+    // delegation dropdown
+    const ddBtn=card.querySelector(".js-dd"); if(ddBtn){ const pop=card.querySelector(".dd-pop");
+      ddBtn.onclick=(ev)=>{ ev.stopPropagation(); document.querySelectorAll(".dd-pop.open").forEach(p=>{if(p!==pop)p.classList.remove("open");}); pop.classList.toggle("open"); };
+      pop.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.onchange=()=>{ const names=[...pop.querySelectorAll("input:checked")].map(x=>x.dataset.name); doUpdate(id,{delegate_to:names.join(", ")},saved,true); });
+    }
+    const cd=card.querySelector(".js-copydeleg"); if(cd) cd.onclick=(ev)=>{ev.stopPropagation(); gfCopy(gfDelegationMsg(topicById(id)));};
+    const as=card.querySelector(".js-asana"); if(as) as.onclick=(ev)=>{ev.stopPropagation(); gfCopy(gfAsanaText(topicById(id)));};
+  });
+}
+document.addEventListener("click",()=>document.querySelectorAll(".dd-pop.open").forEach(p=>p.classList.remove("open")));
+
+async function doUpdate(id,patch,savedEl,rerender){
+  try{ const d=await gfApi("update",{id,...patch}); const i=topics.findIndex(t=>t.id===id); if(i>=0&&d.topic) topics[i]=d.topic;
+    if(savedEl){savedEl.classList.add("show");setTimeout(()=>savedEl.classList.remove("show"),1300);} if(rerender) render();
+  }catch(e){ gfToast("Speichern fehlgeschlagen"); }
+}
+
+/* ---------- add / filters / protocol ---------- */
+async function addTopic(){ const title=$("#newTitle").value.trim(); if(!title){$("#newTitle").focus();return;}
+  try{ const d=await gfApi("add",{title,priority:$("#newPrio").value,created_by:gfWho(),source:"manuell",kind:"einmalig"}); if(d.topic)topics.push(d.topic); $("#newTitle").value=""; render(); gfToast("Thema hinzugefügt"); }catch(e){ gfToast("Konnte nicht hinzufügen"); } }
+$("#addBtn").onclick=addTopic; $("#newTitle").addEventListener("keydown",e=>{if(e.key==="Enter")addTopic();});
+document.querySelectorAll("#statusSegs .seg").forEach(s=>s.onclick=()=>{document.querySelectorAll("#statusSegs .seg").forEach(x=>x.classList.remove("on"));s.classList.add("on");filter.status=s.dataset.v;render();});
+$("#fPerson").onchange=e=>{filter.person=e.target.value;render();};
+$("#fPrio").onchange=e=>{filter.prio=e.target.value;render();};
+$("#search").addEventListener("input",e=>{filter.q=e.target.value.trim();render();});
+$("#reload").onclick=async()=>{ try{ await loadAll(); gfToast("Aktualisiert"); }catch(e){ gfToast("Fehler"); } };
+$("#finishBtn").onclick=async()=>{ const open=topics.filter(t=>t.kind!=="recurring"&&t.status!=="erledigt").length;
+  const msg=open>0?`Protokoll jetzt an Lea & Alex senden?\n\nNoch ${open} Thema/Themen offen – sie werden als „offen / mitzunehmen" geführt.`:"Protokoll mit allen Beschlüssen jetzt senden?";
+  if(!confirm(msg))return; try{ await gfApi("request_protocol",{requested_by:gfWho()}); gfToast("Angefordert – Protokoll-Entwurf folgt "); }catch(e){ gfToast("Anfrage fehlgeschlagen"); } };
+</script>
+</body>
+</html>

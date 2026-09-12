@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#17171a" />
+<title>GF Weekly · Eingabe</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="assets/icon-180.png" />
+<link rel="manifest" href="assets/manifest.webmanifest" />
+<link rel="stylesheet" href="assets/styles.css" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Schnell-Eingabe</h1>
+    <div class="sub">Gedanke rein – das Cockpit macht Struktur draus.</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap mid" id="app">
+  <header id="topbar"></header>
+
+  <div class="add cform" id="form" style="border-radius:var(--r-xl);box-shadow:var(--shadow-2);padding:20px">
+    <label class="first">Worum geht's?</label>
+    <textarea id="raw" placeholder="Einfach lostippen oder diktieren … z.B. „Angebotspaket für Kommunen bauen“ oder „Wer übernimmt das Follow-up mit den Kulturorten?“"></textarea>
+    <div class="tip"> Tipp: Am Handy aufs Mikrofon der Tastatur tippen und einsprechen.</div>
+    <label>Von wem?</label>
+    <div class="chips" id="who"><button class="chip" data-v="Alex">Alex</button><button class="chip" data-v="Lea">Lea</button><button class="chip" data-v="Sebastian">Sebastian</button></div>
+    <label>Dringlichkeit <span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted)">(optional)</span></label>
+    <div class="chips" id="urg"><button class="chip u-hoch" data-v="hoch">hoch</button><button class="chip u-mittel" data-v="mittel">mittel</button><button class="chip u-niedrig" data-v="niedrig">niedrig</button></div>
+    <label>Art <span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted)">(optional)</span></label>
+    <div class="chips" id="typ">
+      <button class="chip" data-v="Aufgabe">Aufgabe</button><button class="chip" data-v="Idee">Idee</button><button class="chip" data-v="Frage">Frage</button>
+      <button class="chip" data-v="Risiko">Risiko</button><button class="chip" data-v="Entscheidung">Entscheidung</button><button class="chip" data-v="Erinnerung">Erinnerung</button>
+    </div>
+    <button class="more" id="moreBtn">+ Mehr Details (optional)</button>
+    <div class="extra" id="extra">
+      <div class="row2"><div><label>Projekt / Bereich</label><input class="txt" id="related" placeholder="z.B. Kommunen, Website"></div><div><label>Stakeholder</label><input class="txt" id="stake" placeholder="z.B. Kulturorte"></div></div>
+      <div class="row2"><div><label>Verantwortlich</label><input class="txt" id="owner" placeholder="Name (optional)"></div><div><label>Fällig bis</label><input class="txt" id="due" type="date"></div></div>
+    </div>
+    <button class="btn btn-primary" id="sendBtn" style="width:100%;justify-content:center;margin-top:20px;padding:15px;font-size:16px">Ab ins Cockpit →</button>
+  </div>
+
+  <div class="add okcard" id="ok" style="display:none;border-radius:var(--r-xl)">
+    <div class="big">✓</div><h2>Erfasst!</h2><p>Landet sicher in der Inbox und wird automatisch vorsortiert.</p>
+    <button class="btn btn-ghost" id="again">Noch einen Gedanken erfassen</button>
+  </div>
+  <div class="foot">Sortieren &amp; übernehmen: <a href='/inbox'>Inbox</a> · <a href='/'>Cockpit</a></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="assets/core.js"></script>
+<script>
+const $=s=>document.querySelector(s); let pick={who:gfWho(),urg:"",typ:""};
+gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("capture"); initPicks(); });
+function chipGroup(id,key){ document.querySelectorAll("#"+id+" .chip").forEach(c=>{ if(pick[key]===c.dataset.v)c.classList.add("on");
+  c.onclick=()=>{ const same=pick[key]===c.dataset.v; document.querySelectorAll("#"+id+" .chip").forEach(x=>x.classList.remove("on")); pick[key]=same?"":c.dataset.v; if(!same)c.classList.add("on"); if(key==="who"){gfSetWho(pick.who);} }; }); }
+function initPicks(){ pick.who=gfWho(); chipGroup("who","who"); chipGroup("urg","urg"); chipGroup("typ","typ"); }
+$("#moreBtn").onclick=()=>{ const e=$("#extra"); const o=e.style.display==="block"; e.style.display=o?"none":"block"; $("#moreBtn").textContent=o?"+ Mehr Details (optional)":"– Details ausblenden"; };
+$("#sendBtn").onclick=async()=>{ const raw=$("#raw").value.trim(); if(!raw){$("#raw").focus();return;}
+  try{ await gfApi("capture",{raw_text:raw,created_by:pick.who||gfWho(),source:"form",urgency:pick.urg,type_hint:pick.typ,related_hint:$("#related").value.trim(),stakeholder_hint:$("#stake").value.trim(),owner_hint:$("#owner").value.trim(),due_hint:$("#due").value});
+    $("#form").style.display="none"; $("#ok").style.display="block";
+  }catch(e){ gfToast("Konnte nicht senden – nochmal versuchen"); } };
+$("#again").onclick=()=>{ ["raw","related","stake","owner","due"].forEach(i=>$("#"+i).value=""); pick.urg="";pick.typ=""; document.querySelectorAll("#urg .chip,#typ .chip").forEach(x=>x.classList.remove("on")); $("#ok").style.display="none"; $("#form").style.display="block"; $("#raw").focus(); };
+</script>
+</body>
+</html>

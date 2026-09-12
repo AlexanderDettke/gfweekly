@@ -1,0 +1,13 @@
+{
+  "name": "GF Weekly – Steuerung der Geschäftsleitung",
+  "short_name": "GF Weekly",
+  "description": "Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#17171a",
+  "theme_color": "#17171a",
+  "icons": [
+    { "src": "./favicon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "./icon-180.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

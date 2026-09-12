@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#17171a" />
+<title>GF Weekly · Inbox</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="assets/icon-180.png" />
+<link rel="manifest" href="assets/manifest.webmanifest" />
+<link rel="stylesheet" href="assets/styles.css" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Topic Inbox</h1>
+    <div class="sub">Eingänge prüfen &amp; übernehmen</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap mid" id="app">
+  <header id="topbar"></header>
+  <div class="toolbar">
+    <button class="btn btn-ghost" id="reload">↻ Aktualisieren</button>
+    <span class="hint" id="count" style="color:var(--muted);font-size:13px"></span>
+  </div>
+  <div id="list"><div class="loading">lädt …</div></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="assets/core.js"></script>
+<script>
+let items=[]; const $=s=>document.querySelector(s);
+gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("inbox"); await load(); });
+async function load(){ const d=await gfApi("inbox_list",{}); items=d.items||[]; render(); }
+$("#reload").onclick=async()=>{ try{ await load(); gfToast("Aktualisiert"); }catch(e){ gfToast("Fehler"); } };
+function fmt(s){ return new Date(s).toLocaleDateString("de-DE",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}); }
+function chip(l,v){ return v?`<span class="ch"><b>${l}:</b> ${gfEsc(v)}</span>`:""; }
+function render(){
+  $("#count").textContent=items.length+" offene Eingänge";
+  const list=$("#list");
+  if(!items.length){ list.innerHTML=`<div class="empty"><div class="ico"></div><h3>Inbox leer</h3><p>Neue Gedanken über „Eingabe" erfassen – sie erscheinen hier, vorsortiert von der KI.</p></div>`; return; }
+  list.innerHTML=items.map(card).join(""); items.forEach(bind);
+}
+function card(it){
+  const cls=it.classified, conf=it.ai_confidence||""; const title=it.ai_summary||it.raw_text, prio=['hoch','mittel','niedrig'].includes(it.ai_priority)?it.ai_priority:'mittel';
+  const ai=cls?`<div class="ai"><div class="ai-h"> KI-Vorschlag ${conf?('· Sicherheit '+gfEsc(conf)):''} ${it.needs_review?'<span class="needs">prüfen</span>':''}</div>
+    <div class="chips" style="gap:6px">${chip("Typ",it.ai_type)}${chip("Modul/Feld",[it.ai_module,it.ai_development_field].filter(Boolean).join(" / "))}${chip("Stakeholder",it.ai_stakeholder)}${chip("Owner",it.ai_owner)}${chip("Priorität",it.ai_priority)}${chip("Wiederkehrend",it.ai_recurring)}</div>
+    ${it.ai_next_action?`<div class="na"><b>Nächster Schritt:</b> ${gfEsc(it.ai_next_action)}</div>`:""}</div>`
+    :`<div class="pending"> Wird automatisch vorsortiert … (KI-Klassifikation läuft alle 30 Min)</div>`;
+  const hints=[chip("Dringlichkeit",it.urgency),chip("Art",it.type_hint),chip("Bereich",it.related_hint),chip("Owner",it.owner_hint),chip("Fällig",it.due_hint)].join("");
+  return `<div class="inbox-item" data-id="${it.id}">
+    <div class="raw">${gfEsc(it.raw_text)}</div>
+    <div class="imeta"><span class="src">${gfEsc(it.source)}</span> ${gfEsc(it.created_by||"")} · ${fmt(it.created_at)} ${hints}</div>
+    ${ai}
+    <div class="iedit"><input class="ititle" value="${gfEsc(title)}" placeholder="Titel fürs Cockpit">
+      <select class="select iprio"><option value="hoch" ${prio==="hoch"?"selected":""}>Priorität: hoch</option><option value="mittel" ${prio==="mittel"?"selected":""}>Priorität: mittel</option><option value="niedrig" ${prio==="niedrig"?"selected":""}>Priorität: niedrig</option></select></div>
+    <div class="actions-row" style="margin-top:12px"><button class="btn btn-primary ok" style="background:var(--ok)">✓ Ins Cockpit übernehmen</button><button class="btn btn-ghost rej">Verwerfen</button></div>
+  </div>`;
+}
+function bind(it){ const el=document.querySelector('.inbox-item[data-id="'+it.id+'"]'); if(!el)return;
+  el.querySelector(".ok").onclick=async()=>{ const title=el.querySelector(".ititle").value.trim(),priority=el.querySelector(".iprio").value; try{ await gfApi("inbox_promote",{id:it.id,title,priority}); items=items.filter(x=>x.id!==it.id); render(); gfToast("Ins Cockpit übernommen ✓"); }catch(e){ gfToast("Übernehmen fehlgeschlagen"); } };
+  el.querySelector(".rej").onclick=async()=>{ if(!confirm("Diesen Eingang verwerfen?"))return; try{ await gfApi("inbox_reject",{id:it.id}); items=items.filter(x=>x.id!==it.id); render(); gfToast("Verworfen"); }catch(e){ gfToast("Fehler"); } };
+}
+</script>
+</body>
+</html>

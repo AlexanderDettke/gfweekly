@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#17171a" />
+<title>GF Weekly · Bearbeiten</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="assets/icon-180.png" />
+<link rel="manifest" href="assets/manifest.webmanifest" />
+<link rel="stylesheet" href="assets/styles.css" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Bearbeiten</h1>
+    <div class="sub">Themen, Felder, Delegation &amp; Team</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+
+  <div class="toolbar">
+    <div class="segs" id="tabs">
+      <button class="seg on" data-v="items">Themen &amp; Check-ins</button>
+      <button class="seg" data-v="people">Team-Verzeichnis</button>
+    </div>
+    <button class="btn btn-ghost" id="reload">↻</button>
+  </div>
+
+  <div id="itemsView">
+    <div class="add">
+      <div class="row">
+        <input class="title" id="newTitle" placeholder="Neues Thema / Check-in anlegen …" />
+        <select id="newKind" class="select"><option value="einmalig">Typ: Thema (einmalig)</option><option value="recurring">Typ: Wiederkehrend</option></select>
+        <select id="newPrio" class="select"><option value="hoch">hoch</option><option value="mittel" selected>mittel</option><option value="niedrig">niedrig</option></select>
+        <button class="btn btn-brand" id="addBtn">＋ Anlegen</button>
+      </div>
+    </div>
+    <div class="sec-h" style="margin-top:18px"><h2>Wiederkehrende Check-in-Themen</h2><span class="line"></span></div>
+    <div id="recList"></div>
+    <div class="sec-h" style="margin-top:22px"><h2>Themen (einmalig)</h2><span class="line"></span></div>
+    <div id="oneList"></div>
+  </div>
+
+  <div id="peopleView" style="display:none">
+    <p style="color:var(--muted);font-size:13.5px;margin:4px 2px 14px">Editierbares Team-Verzeichnis. Vorbefüllt mit vorhandenen Adressen &amp; den vorgeschlagenen Personen – <b>bitte ergänzen/korrigieren</b>. Es werden keine Adressen erfunden.</p>
+    <div id="peopleList"></div>
+    <div class="add" style="margin-top:14px"><div class="row">
+      <input class="title" id="npName" placeholder="Name" style="min-width:140px" />
+      <input class="title" id="npEmail" placeholder="E-Mail (optional)" style="min-width:180px" />
+      <input class="title" id="npRole" placeholder="Rolle" style="min-width:120px" />
+      <button class="btn btn-brand" id="addPerson">＋ Person</button>
+    </div></div>
+  </div>
+</div>
+
+<datalist id="peopleDL"></datalist>
+<div class="toast" id="toast"></div>
+
+<script src="assets/core.js"></script>
+<script>
+let topics=[], people=[], linksByItem={}, openIds=new Set();
+const $=s=>document.querySelector(s);
+const REL=["","niedrig","mittel","hoch","kritisch"], SRC=["manuell","ki","pruefen","bestaetigt"];
+const LT=["coda","drive","gdoc","gsheet","gslides","email","url","note","file","other"];
+const DSTATE=["","Delegation vorbereitet","Notification nötig","Mail-Entwurf nötig"];
+
+gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("edit"); await loadAll(); });
+async function loadAll(){
+  const [d,p,l]=await Promise.all([gfApi("list"),gfApi("people_list"),gfApi("links_all").catch(()=>({links:[]}))]);
+  topics=d.topics||[]; people=p.people||[];
+  linksByItem={}; (l.links||[]).forEach(x=>{(linksByItem[x.item_id]=linksByItem[x.item_id]||[]).push(x);});
+  renderDL(); renderItems(); renderPeople();
+}
+function renderDL(){ $("#peopleDL").innerHTML=people.filter(p=>p.assignable!==false).map(p=>`<option value="${gfEsc(p.name||p.email)}">${gfEsc(p.email||"")}</option>`).join(""); }
+
+document.querySelectorAll("#tabs .seg").forEach(s=>s.onclick=()=>{document.querySelectorAll("#tabs .seg").forEach(x=>x.classList.remove("on"));s.classList.add("on");$("#itemsView").style.display=s.dataset.v==="items"?"block":"none";$("#peopleView").style.display=s.dataset.v==="people"?"block":"none";});
+$("#reload").onclick=async()=>{try{await loadAll();gfToast("Aktualisiert");}catch(e){gfToast("Fehler");}};
+
+function opt(v,cur){ return `<option value="${v}" ${cur===v?"selected":""}>${v||"—"}</option>`; }
+function selField(label,name,cur,opts){ return `<div class="fld"><label>${label}</label><select data-f="${name}">${opts.map(o=>opt(o,cur)).join("")}</select></div>`; }
+const PEOPLEFIELDS=["owner","delegate_to","involved","needs_input_from","reviewer","approver"];
+function txtField(label,name,cur,full){ return `<div class="fld ${full?'ffull':''}"><label>${label}</label><input data-f="${name}" value="${gfEsc(cur)}" ${PEOPLEFIELDS.includes(name)?'list="peopleDL"':''}></div>`; }
+function areaField(label,name,cur){ return `<div class="fld ffull"><label>${label}</label><textarea data-f="${name}">${gfEsc(cur)}</textarea></div>`; }
+function linkRow(l){ return `<div class="linkrow" data-link="${l.id}"><span class="lt">${gfEsc(l.type)}</span>${l.url?`<a href="${gfEsc(l.url)}" target="_blank" rel="noreferrer">${gfEsc(l.title||l.url)}</a>`:`<span>${gfEsc(l.title)}</span>`}<button class="del ldel" style="margin-left:auto">✕</button></div>`; }
+
+function editCard(t){
+  const open=openIds.has(t.id); const links=linksByItem[t.id]||[];
+  return `<div class="editcard ${open?'open':''}" data-id="${t.id}">
+    <div class="eh js-toggle"><span class="kindtag kind-${t.kind}">${t.kind==="recurring"?" wiederkehrend":"Thema"}</span><span class="et">${gfEsc(t.title)}</span><span style="color:var(--muted)">${open?'▾':'▸'}</span></div>
+    <div class="ebody"><div class="ebody-inner">
+      <div class="fgrid">
+        <div class="fld ffull"><label>Titel</label><input data-f="title" value="${gfEsc(t.title)}"></div>
+        <div class="fld ffull"><label>Kurzbeschreibung</label><input data-f="short_description" value="${gfEsc(t.short_description)}" placeholder="ein Satz fürs Cockpit"></div>
+        ${selField("Typ","kind",t.kind,["einmalig","recurring"])}
+        ${selField("Priorität","priority",t.priority,["hoch","mittel","niedrig"])}
+        ${selField("Status","status",t.status,["offen","in_klaerung","erledigt"])}
+        ${selField("Relevanz","relevance",t.relevance||"",REL)}
+        ${selField("Relevanz-Quelle","relevance_source",t.relevance_source||"manuell",SRC)}
+        <div class="fld"><label>Zeit (Min)</label><input data-f="time_minutes" type="number" value="${t.time_minutes||""}"></div>
+        <div class="fld"><label>Rhythmus</label><input data-f="frequency" value="${gfEsc(t.frequency)}" placeholder="z.B. wöchentlich"></div>
+        ${txtField("Owner","owner",t.owner)}
+        ${txtField("Delegiert an (Komma-getrennt)","delegate_to",t.delegate_to,true)}
+        ${txtField("Beteiligte","involved",t.involved)}
+        ${txtField("Input von","needs_input_from",t.needs_input_from)}
+        ${txtField("Review","reviewer",t.reviewer)}
+        ${txtField("Freigabe","approver",t.approver)}
+        ${selField("Delegations-Status","delegation_state",t.delegation_state||"",DSTATE)}
+        <div class="fld"><label>Zuletzt besprochen</label><input data-f="last_discussed" type="date" value="${t.last_discussed||""}"></div>
+        <div class="fld"><label>Nächstes Mal</label><input data-f="next_suggested" type="date" value="${t.next_suggested||""}"></div>
+        <div class="fld ffull"><label>Nächster Schritt</label><input data-f="next_action" value="${gfEsc(t.next_action)}"></div>
+        ${areaField("Kontext / Hintergrund","context",t.context)}
+        ${areaField("Relevanz-Begründung","relevance_reason",t.relevance_reason)}
+        ${areaField("Empfehlung","recommendation",t.recommendation)}
+        ${selField("Empfehlungs-Quelle","recommendation_source",t.recommendation_source||"manuell",SRC)}
+        ${areaField("Abhängigkeiten","dependencies",t.dependencies)}
+        ${areaField("Notizen","notes",t.notes)}
+        ${areaField("Beschluss / Ergebnis","decision",t.decision)}
+      </div>
+      <div class="dsection" style="margin-top:14px"><div class="dlabel"> Verknüpfte Dokumente</div>
+        <div class="linklist" data-links>${links.map(linkRow).join("")||'<div class="dtext" style="color:var(--muted)">noch keine</div>'}</div>
+        <div class="row" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px">
+          <input class="txt lk-title" placeholder="Titel" style="flex:1;min-width:120px">
+          <select class="select lk-type">${LT.map(x=>`<option value="${x}">${x}</option>`).join("")}</select>
+          <input class="txt lk-url" placeholder="URL / Referenz" style="flex:2;min-width:160px">
+          <button class="btn btn-ghost lk-add">＋ Link</button>
+        </div>
+      </div>
+      <div class="card-foot" style="margin-top:14px"><button class="btn btn-primary save">Speichern</button><span class="saved">✓ gespeichert</span><button class="del del-item" style="margin-left:auto">Thema löschen</button></div>
+    </div></div>
+  </div>`;
+}
+function renderItems(){
+  $("#recList").innerHTML=topics.filter(t=>t.kind==="recurring").map(editCard).join("")||'<div class="dtext" style="color:var(--muted);padding:6px 2px">keine</div>';
+  $("#oneList").innerHTML=topics.filter(t=>t.kind!=="recurring").map(editCard).join("")||'<div class="dtext" style="color:var(--muted);padding:6px 2px">keine</div>';
+  document.querySelectorAll(".editcard").forEach(bindEdit);
+}
+function bindEdit(card){
+  const id=card.dataset.id;
+  card.querySelector(".js-toggle").onclick=()=>{ if(openIds.has(id))openIds.delete(id);else openIds.add(id); card.classList.toggle("open"); };
+  card.querySelector(".save").onclick=async()=>{ const patch={id}; card.querySelectorAll("[data-f]").forEach(el=>patch[el.dataset.f]=el.value);
+    try{ const d=await gfApi("update",patch); const i=topics.findIndex(t=>t.id===id); if(i>=0&&d.topic)topics[i]=d.topic; const sv=card.querySelector(".saved");sv.classList.add("show");setTimeout(()=>sv.classList.remove("show"),1500); gfToast("Gespeichert"); }catch(e){ gfToast("Speichern fehlgeschlagen"); } };
+  card.querySelector(".del-item").onclick=async()=>{ if(!confirm("Dieses Thema wirklich löschen?"))return; try{ await gfApi("delete",{id}); topics=topics.filter(t=>t.id!==id); renderItems(); gfToast("Gelöscht"); }catch(e){ gfToast("Fehler"); } };
+  card.querySelector(".lk-add").onclick=async()=>{ const title=card.querySelector(".lk-title").value.trim(),type=card.querySelector(".lk-type").value,url=card.querySelector(".lk-url").value.trim(); if(!title&&!url){gfToast("Titel oder URL angeben");return;}
+    try{ const d=await gfApi("link_add",{item_id:id,title,type,url,added_by:gfWho()}); (linksByItem[id]=linksByItem[id]||[]).push(d.link); const box=card.querySelector("[data-links]"); if(box.querySelector(".dtext"))box.innerHTML=""; box.insertAdjacentHTML("beforeend",linkRow(d.link)); bindLinkDel(card); card.querySelector(".lk-title").value="";card.querySelector(".lk-url").value=""; gfToast("Link hinzugefügt"); }catch(e){ gfToast("Konnte Link nicht speichern"); } };
+  bindLinkDel(card);
+}
+function bindLinkDel(card){ card.querySelectorAll(".ldel").forEach(b=>b.onclick=async()=>{ const row=b.closest("[data-link]"),lid=row.dataset.link; try{ await gfApi("link_delete",{id:lid}); row.remove(); const id=card.dataset.id; linksByItem[id]=(linksByItem[id]||[]).filter(x=>x.id!==lid); gfToast("Link entfernt"); }catch(e){ gfToast("Fehler"); } }); }
+
+$("#addBtn").onclick=async()=>{ const title=$("#newTitle").value.trim(); if(!title){$("#newTitle").focus();return;} try{ const d=await gfApi("add",{title,kind:$("#newKind").value,priority:$("#newPrio").value,created_by:gfWho(),source:"manuell"}); if(d.topic){topics.push(d.topic);openIds.add(d.topic.id);} $("#newTitle").value=""; renderItems(); gfToast("Angelegt"); }catch(e){ gfToast("Konnte nicht anlegen"); } };
+
+/* people */
+function personRow(p){ return `<div class="editcard ${p.active===false?'muted-row':''}" data-pid="${p.id}" style="margin-bottom:8px"><div class="ebody-inner" style="padding:12px 14px;max-height:none">
+  <div class="fgrid">
+    <div class="fld"><label>Name</label><input data-pf="name" value="${gfEsc(p.name)}"></div>
+    <div class="fld"><label>E-Mail</label><input data-pf="email" value="${gfEsc(p.email||"")}"></div>
+    <div class="fld"><label>Rolle</label><input data-pf="role" value="${gfEsc(p.role)}"></div>
+    <div class="fld"><label>Team</label><input data-pf="team" value="${gfEsc(p.team)}"></div>
+    <div class="fld ffull"><label>Notiz</label><input data-pf="notes" value="${gfEsc(p.notes)}"></div>
+    <div class="fld ffull"><label>&nbsp;</label><div style="display:flex;gap:16px;align-items:center;padding-top:6px;font-size:13px">
+      <label style="text-transform:none;letter-spacing:0;font-weight:600;display:flex;gap:6px;align-items:center"><input type="checkbox" data-pf="active" ${p.active!==false?"checked":""}> aktiv</label>
+      <label style="text-transform:none;letter-spacing:0;font-weight:600;display:flex;gap:6px;align-items:center"><input type="checkbox" data-pf="assignable" ${p.assignable!==false?"checked":""}> zuweisbar</label>
+    </div></div>
+  </div>
+  <div class="card-foot" style="margin-top:8px"><button class="btn btn-primary psave">Speichern</button><span class="saved">✓</span><button class="del pdel" style="margin-left:auto">entfernen</button></div>
+</div></div>`; }
+function renderPeople(){
+  $("#peopleList").innerHTML=people.map(personRow).join("");
+  document.querySelectorAll("[data-pid]").forEach(row=>{ const id=row.dataset.pid;
+    row.querySelector(".psave").onclick=async()=>{ const patch={id}; row.querySelectorAll("[data-pf]").forEach(el=>patch[el.dataset.pf]=el.type==="checkbox"?el.checked:el.value);
+      try{ const d=await gfApi("people_save",patch); const i=people.findIndex(x=>x.id===id); if(i>=0&&d.person)people[i]=d.person; const sv=row.querySelector(".saved");sv.classList.add("show");setTimeout(()=>sv.classList.remove("show"),1400); renderDL(); gfToast("Gespeichert"); }catch(e){ gfToast("Fehler"); } };
+    row.querySelector(".pdel").onclick=async()=>{ if(!confirm("Person entfernen?"))return; try{ await gfApi("people_delete",{id}); people=people.filter(x=>x.id!==id); renderPeople(); renderDL(); gfToast("Entfernt"); }catch(e){ gfToast("Fehler"); } };
+  });
+}
+$("#addPerson").onclick=async()=>{ const name=$("#npName").value.trim(),email=$("#npEmail").value.trim(),role=$("#npRole").value.trim(); if(!name&&!email){gfToast("Name oder E-Mail angeben");return;}
+  try{ const d=await gfApi("people_save",{name,email,role}); if(d.person)people.push(d.person); $("#npName").value="";$("#npEmail").value="";$("#npRole").value=""; renderPeople(); renderDL(); gfToast("Person hinzugefügt"); }catch(e){ gfToast("Konnte nicht anlegen"); } };
+</script>
+</body>
+</html>
