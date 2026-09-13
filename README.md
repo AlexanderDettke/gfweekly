@@ -29,7 +29,11 @@ Repo: <https://github.com/AlexanderDettke/gfweekly> (privat — `supabase/functi
 
 Continuous Deployment ist **noch nicht eingerichtet**. Dafür in Netlify unter Project configuration → Build & deploy → Continuous deployment → Link repository das Repo wählen: Branch `main`, Build command leer, Publish directory `site` (steht bereits in `netlify.toml`). Danach deployt jeder Push auf `main` automatisch.
 
-Bis dahin: Netlify-Drop des Ordners `site/`. Die Netlify-CLI ist kein Weg — auf dem Arbeitsrechner fehlen Node und npm; der Netlify-MCP-Connector kann Env-Vars und Zugriffsschutz setzen, aber keine Repos verknüpfen.
+Bis dahin lässt sich von Hand deployen. Der Netlify-MCP-Connector (`deploy-site`) deployt nicht selbst, sondern liefert einen fertigen `npx @netlify/mcp`-Befehl mit eingebettetem Auth-Token zurück. Der läuft **nicht-interaktiv** — anders als `netlify login` und `netlify init`, die beide auf Browser-Klicks warten und darum hier nicht automatisierbar sind. Voraussetzung ist Node, das auf dem Arbeitsrechner nicht installiert ist; es genügt aber ein Tarball von nodejs.org, nach `~/` oder in ein temporäres Verzeichnis entpackt (kein `sudo` nötig).
+
+So entstand der Deploy vom 13.09.2026 (`deploy_source: api`, ohne `commit_ref`). Alternativ ohne jedes Werkzeug: Netlify-Drop des Ordners `site/`.
+
+Repos **verknüpfen** kann der Connector nicht — dafür bleibt nur die Weboberfläche.
 
 ## Backend
 Tabellen `gfweekly_topics`, `gfweekly_inbox`, `gfweekly_people`, `gfweekly_links`, `gfweekly_protocol_requests`, `gfweekly_assets`, `gfweekly_sites`, `gfweekly_site_categories`. Zugriff ausschließlich über die Edge Function (Passwort-Gate, service_role).
