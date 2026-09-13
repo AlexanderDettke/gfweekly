@@ -13,10 +13,23 @@ Internes Cockpit der Geschäftsleitung Wilde Möhre (Alex, Lea). Live: https://g
 - `netlify.toml` – veröffentlicht nur `site/`.
 
 ## Design
-Seit V9 (12.09.2026) nach dem Design System „Wilde Habitate" (Claude Design d8550ead-911c-4134-8036-38fc87ae4b99; Quelle: `festivalplanung-2027/docs/spiel/design-export/tokens`). Tokens stehen am Anfang von `site/assets/styles.css`; die bisherigen GF-Weekly-Namen (`--ink`, `--brand`, `--line` …) sind darauf gebrückt. Dunkel ist Standard, Hell über `[data-theme="light"]`. Regeln: Archivo, fünf Schriftstufen, Abstände 4/8/12/16/24/32/48, Radien 4/6/8, Rahmen 1 px, Schatten nur bei angehobenen Karten, keine Pillen, keine Farb-Emoji.
+Seit V9 (12.09.2026) nach dem Design System „Wilde Habitate" (Claude Design d8550ead-911c-4134-8036-38fc87ae4b99; Quelle: `festivalplanung-2027/docs/spiel/design-export/tokens`). Tokens stehen am Anfang von `site/assets/styles.css`; die bisherigen GF-Weekly-Namen (`--ink`, `--brand`, `--line` …) sind darauf gebrückt. Dunkel ist Standard, Hell über `[data-theme="light"]`. Regeln: Archivo, fünf Schriftstufen, Abstände 4/8/12/16/24/32/48, Schatten nur bei angehobenen Karten, keine Pillen, keine Farb-Emoji.
+
+V9.1 (13.09.2026) legt die Optik des Design Systems „Modernist" (Claude Design 9f0f400a-5e4c-4bd9-9fad-875538d709d2) darüber — als reine Token-Änderung, keine Komponentenregel wurde angefasst:
+
+- Radien **0** statt 4/6/8 (`--radius-s/m/l`). Kreise bleiben rund: Fortschrittsring und LED-Punkte sind Kreise, keine gerundeten Ecken.
+- Abschnittslinien **2 px** statt 1 px (`--rahmen`) — greift auf Topbar, Protokollleiste und Abschnittsköpfe.
+- Bauteilrahmen in `--border-strong` statt `--border` (`--line`), damit die Struktur sichtbar wird, ohne jedes Bauteil auf 2 px aufzublasen.
+- Beschriftungen bündig links, auch im Login-Gate.
+
+Farbrollen, Dunkelmodus und Statusfarben bleiben unverändert Habitate. Modernists roter Akzent (#ec3013) wurde **bewusst nicht** übernommen: er kollidiert mit `--crit` („ausgefallen"), das im Cockpit dieselbe Farbe als Signal trägt. Die vier Diagrammfarben `--chart-teal/-peach/-coral/-grid` sind aus der Habitate-Quelle nachgezogen und stehen für spätere Kennzahl-Visualisierungen bereit.
 
 ## Deploy
-Netlify ist (noch) nicht mit diesem Repo verknüpft. Deploy aus dem Repo-Ordner über die Netlify-Anbindung in Claude oder per Netlify-Drop des Ordners `site/`. Sobald das Repo auf GitHub liegt: in Netlify unter Site configuration → Build & deploy → Link repository verknüpfen, dann deployt jeder Push auf `main`.
+Repo: <https://github.com/AlexanderDettke/gfweekly> (privat — `supabase/functions/gfweekly/index.ts` enthält das Zugangspasswort).
+
+Continuous Deployment ist **noch nicht eingerichtet**. Dafür in Netlify unter Project configuration → Build & deploy → Continuous deployment → Link repository das Repo wählen: Branch `main`, Build command leer, Publish directory `site` (steht bereits in `netlify.toml`). Danach deployt jeder Push auf `main` automatisch.
+
+Bis dahin: Netlify-Drop des Ordners `site/`. Die Netlify-CLI ist kein Weg — auf dem Arbeitsrechner fehlen Node und npm; der Netlify-MCP-Connector kann Env-Vars und Zugriffsschutz setzen, aber keine Repos verknüpfen.
 
 ## Backend
 Tabellen `gfweekly_topics`, `gfweekly_inbox`, `gfweekly_people`, `gfweekly_links`, `gfweekly_protocol_requests`, `gfweekly_assets`, `gfweekly_sites`, `gfweekly_site_categories`. Zugriff ausschließlich über die Edge Function (Passwort-Gate, service_role).
