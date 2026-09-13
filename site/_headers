@@ -4,5 +4,14 @@
   Referrer-Policy: no-referrer
   X-Robots-Tag: noindex, nofollow
 
-/assets/*
-  Cache-Control: public,max-age=86400
+/*.html
+  Cache-Control: public,max-age=0,must-revalidate
+
+/assets/core.js
+  Cache-Control: public,max-age=0,must-revalidate
+
+/assets/styles.css
+  Cache-Control: public,max-age=0,must-revalidate
+
+/assets/img/*
+  Cache-Control: public,max-age=604800
