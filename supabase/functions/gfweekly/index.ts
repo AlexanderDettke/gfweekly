@@ -1,6 +1,6 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const PASSWORD = 'leaalex';
+const PASSWORD = Deno.env.get('GFWEEKLY_PASSWORD') ?? '';
 const PROJECT_URL = Deno.env.get('SUPABASE_URL')!;
 const PUBLIC_PAGE = PROJECT_URL + '/storage/v1/object/public/site/gfweekly.html';
 
@@ -20,6 +20,8 @@ const INBOX_SOURCES = ['form','chat','calendar','manuell','meeting']; // entspri
 
 /* v13: Passwort zusätzlich per Header (x-gfweekly-key oder Authorization: Bearer) — für ChatGPT-Actions / Connectoren,
    damit der Schlüssel nicht im Prompt stehen muss. Body-Passwort bleibt für die Website unverändert gültig. */
+/* v15: Passwort liegt nicht mehr im Quelltext, sondern im Supabase-Secret GFWEEKLY_PASSWORD.
+   Ohne gesetztes Secret lehnt die Funktion jede Anfrage ab (fail closed). */
 /* v14: Seitenverzeichnis für die Steuerungsmaske (gfweekly_sites, gfweekly_site_categories):
    sites_list, sites_save, sites_delete, category_save. */
 function keyFromHeaders(req: Request): string {
@@ -48,7 +50,7 @@ Deno.serve(async (req: Request) => {
   let body: any; try { body = await req.json(); } catch { return json({ error:'bad json' }, 400); }
   const { action, password, payload } = body ?? {};
   const given = (password ?? '').toString() || keyFromHeaders(req);
-  if (given !== PASSWORD) return json({ error:'unauthorized' }, 401);
+  if (!PASSWORD || given !== PASSWORD) return json({ error:'unauthorized' }, 401);
   const t = payload ?? {};
 
   try {
