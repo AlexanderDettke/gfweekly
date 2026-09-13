@@ -19,7 +19,7 @@
     <div class="mark"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
     <h1>Schnell-Eingabe</h1>
-    <div class="sub">Gedanke rein – das Cockpit macht Struktur draus.</div>
+    <div class="sub">Gedanke rein, landet direkt im Board.</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
     <div class="err" id="gateErr"></div>
@@ -28,6 +28,7 @@
 
 <div class="app wrap mid" id="app">
   <header id="topbar"></header>
+  <div id="hero"></div>
 
   <div class="add cform" id="form" style="border-radius:var(--r-xl);box-shadow:var(--shadow-2);padding:20px">
     <label class="first">Worum geht's?</label>
@@ -47,11 +48,11 @@
       <div class="row2"><div><label>Projekt / Bereich</label><input class="txt" id="related" placeholder="z.B. Kommunen, Website"></div><div><label>Stakeholder</label><input class="txt" id="stake" placeholder="z.B. Kulturorte"></div></div>
       <div class="row2"><div><label>Verantwortlich</label><input class="txt" id="owner" placeholder="Name (optional)"></div><div><label>Fällig bis</label><input class="txt" id="due" type="date"></div></div>
     </div>
-    <button class="btn btn-primary" id="sendBtn" style="width:100%;justify-content:center;margin-top:20px;padding:15px;font-size:16px">Ab ins Cockpit →</button>
+    <button class="btn btn-primary" id="sendBtn" style="width:100%;justify-content:center;margin-top:20px;padding:15px;font-size:16px">Ab ins Board →</button>
   </div>
 
   <div class="add okcard" id="ok" style="display:none;border-radius:var(--r-xl)">
-    <div class="big">✓</div><h2>Erfasst!</h2><p>Landet sicher in der Inbox und wird automatisch vorsortiert.</p>
+    <div class="big">✓</div><h2>Erfasst!</h2><p>Steht jetzt im Board unter „Zu besprechen“.</p><a class="btn btn-ghost" href="board.html">Board öffnen</a>
     <button class="btn btn-ghost" id="again">Noch einen Gedanken erfassen</button>
   </div>
   <div class="foot">Sortieren &amp; übernehmen: <a href='/inbox'>Inbox</a> · <a href='/'>Cockpit</a></div>
@@ -61,7 +62,7 @@
 <script src="assets/core.js"></script>
 <script>
 const $=s=>document.querySelector(s); let pick={who:gfWho(),urg:"",typ:""};
-gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("capture"); initPicks(); });
+gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("capture"); gfMountHero("kiste","Eingabe","Einfach lostippen oder diktieren. Alles landet als Thema im Board unter „Zu besprechen“.",{compact:true}); initPicks(); });
 function chipGroup(id,key){ document.querySelectorAll("#"+id+" .chip").forEach(c=>{ if(pick[key]===c.dataset.v)c.classList.add("on");
   c.onclick=()=>{ const same=pick[key]===c.dataset.v; document.querySelectorAll("#"+id+" .chip").forEach(x=>x.classList.remove("on")); pick[key]=same?"":c.dataset.v; if(!same)c.classList.add("on"); if(key==="who"){gfSetWho(pick.who);} }; }); }
 function initPicks(){ pick.who=gfWho(); chipGroup("who","who"); chipGroup("urg","urg"); chipGroup("typ","typ"); }

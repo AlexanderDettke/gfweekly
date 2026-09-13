@@ -28,6 +28,7 @@
 
 <div class="app wrap" id="app">
   <header id="topbar"></header>
+  <div id="hero"></div>
 
   <div class="dash" id="dash" style="grid-template-columns:1fr 1fr 1fr"></div>
 
@@ -53,7 +54,7 @@ let topics=[]; const $=s=>document.querySelector(s);
 const ST={offen:"Offen",in_klaerung:"In Klärung",erledigt:"Erledigt"};
 const today=()=>new Date().toISOString().slice(0,10);
 
-gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("checkin"); await load(); });
+gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("checkin"); gfMountHero("lager","Check-in","Agenda für den Kurzabgleich aus den wiederkehrenden Themen und den offenen Prioritäten.",{compact:true}); await load(); });
 async function load(){ const d=await gfApi("list"); topics=d.topics||[]; renderPrep(); }
 
 function isHot(t){ return t.relevance==="kritisch"||t.relevance==="hoch"||t.priority==="hoch"; }

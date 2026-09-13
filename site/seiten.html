@@ -32,14 +32,8 @@
 
 <div class="app wrap" id="app">
   <header id="topbar"></header>
-
-  <section class="start-hero">
-    <div>
-      <h2>Wichtige Seiten</h2>
-      <p>Alle Arbeitsseiten der Geschäftsleitung an einem Ort: was sich hinter jeder Seite verbirgt, wo sie liegt und wie man hineinkommt. Zugangsdaten sind nur nach dem Entsperren sichtbar.</p>
-    </div>
-    <div class="start-stats" id="startStats"></div>
-  </section>
+  <div id="hero"></div>
+  <section class="start-hero"><div class="start-stats" id="startStats"></div></section>
 
   <div class="toolbar">
     <div class="search"><input id="search" placeholder="Seiten durchsuchen … (Taste /)" /></div>
@@ -102,6 +96,7 @@ function render(){
   }
   if(!html) html=`<div class="empty">${Q?"Keine Seite passt zur Suche.":"Noch keine Seiten hinterlegt."}</div>`;
   $("#groups").innerHTML=html;
+  gfStagger($("#groups"),".site");
   bind();
 }
 
@@ -117,8 +112,8 @@ function card(s){
       ${EDIT?`<button class="icon-btn edit" title="Bearbeiten" data-act="edit">✎</button>`:""}
     </div>
     <div class="site-host"><span>${gfEsc(host(s.url))}</span><button class="mini" data-act="copyurl" title="Link kopieren">⧉</button></div>
-    ${s.purpose?`<p class="site-purpose">${gfEsc(s.purpose)}</p>`:`<p class="site-purpose muted">Zweck noch nicht beschrieben.</p>`}
-    ${s.notes?`<p class="site-notes">${gfEsc(s.notes)}</p>`:""}
+    ${s.purpose?`<p class="site-purpose">${gfClamp(s.purpose,"sp"+s.id,180)}</p>`:`<p class="site-purpose muted">Zweck noch nicht beschrieben.</p>`}
+    ${s.notes?`<p class="site-notes">${gfClamp(s.notes,"sn"+s.id,160)}</p>`:""}
     ${hasLogin?`<div class="site-login">
         <div class="lk">Zugang</div>
         ${s.login_user?`<div class="lrow"><span class="lv">${gfEsc(s.login_user)}</span><button class="mini" data-act="copy" data-v="user" title="Kopieren">⧉</button></div>`:""}
@@ -201,7 +196,7 @@ $("#editMode").onclick=()=>{ EDIT=!EDIT; if(!EDIT) OPEN_EDIT=null; render(); };
 $("#addSite").onclick=()=>{ EDIT=true; OPEN_EDIT={ id:null, name:"", url:"", category:(CATS[0]||{}).key||"steuerung", purpose:"", notes:"", login_user:"", login_password:"", login_note:"", status:"aktiv", sort_order:100 }; render(); setTimeout(()=>{ const f=$("form.editcard"); if(f){ f.scrollIntoView({behavior:"smooth",block:"center"}); f.querySelector('[name="name"]').focus(); } },50); };
 $("#reload").onclick=load;
 
-gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("seiten"); await load(); });
+gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("seiten"); gfMountHero("buehne","Wichtige Seiten","Alle Arbeitsseiten der Geschäftsleitung: was dahinter steckt, wo sie liegen, wie man hineinkommt. Zugangsdaten nur nach dem Entsperren."); await load(); });
 </script>
 </body>
 </html>

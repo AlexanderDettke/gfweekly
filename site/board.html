@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#17171a" />
+<title>GF Weekly · Themen · Board</title>
+<meta name="description" content="Themen der Geschäftsleitung als Board, Kacheln oder Liste. Vertraulich." />
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="assets/icon-180.png" />
+<link rel="manifest" href="assets/manifest.webmanifest" />
+<link rel="stylesheet" href="assets/styles.css" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark">GF</div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Themen</h1>
+    <div class="sub">Board · Kacheln · Liste</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app" style="max-width:1400px">
+  <header id="topbar"></header>
+  <div id="subnav"></div>
+  <div id="hero"></div>
+
+  <div class="board-bar">
+    <div class="search"><input id="q" placeholder="Themen durchsuchen … (Taste /)" /></div>
+    <div class="segs" id="groupSegs" title="Wonach sollen die Spalten gebildet werden?">
+      <button class="seg on" data-g="ablauf">Ablauf</button>
+      <button class="seg" data-g="prio">Prio</button>
+      <button class="seg" data-g="zeitraum">Zeitraum</button>
+      <button class="seg" data-g="person">Person</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="showRec" /> wiederkehrende zeigen</label>
+    <label class="chk"><input type="checkbox" id="showDone" /> erledigte zeigen</label>
+    <button class="btn btn-sm btn-brand" id="newTopic">＋ Thema</button>
+  </div>
+
+  <div id="view"></div>
+</div>
+
+<!-- Detail-Panel -->
+<div class="panel-back" id="panelBack"></div>
+<aside class="panel" id="panel" aria-hidden="true">
+  <div class="panel-h"><h3 id="pTitle">Thema</h3><button class="icon-btn" id="pClose" title="Schließen">✕</button></div>
+  <div class="panel-b" id="pBody"></div>
+  <div class="panel-f" id="pFoot"></div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script src="assets/core.js"></script>
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const LANES=[["zu_besprechen","Zu besprechen","var(--accent)"],["in_klaerung","In Klärung","var(--warn)"],["entschieden","Entschieden · nächster Schritt","var(--info)"],["erledigt","Erledigt","var(--pos)"]];
+const PRIOS=[["hoch","Hoch","var(--crit)"],["mittel","Mittel","var(--warn)"],["niedrig","Niedrig","var(--pos)"]];
+const ZEIT=[["woche","Diese Woche","var(--crit)"],["monat","Dieser Monat","var(--warn)"],["spaeter","Später","var(--info)"],["ohne","Ohne Termin","var(--accent)"]];
+const ST={offen:"Offen",in_klaerung:"In Klärung",erledigt:"Erledigt"};
+const LANE_STATUS={zu_besprechen:"offen",in_klaerung:"in_klaerung",entschieden:"offen",erledigt:"erledigt"};
+
+let TOPICS=[], PEOPLE=[];
+const params=new URLSearchParams(location.search);
+let VIEW=params.get("view")==="kacheln"?"kacheln":"board";
+let GROUP=localStorage.getItem("gf_board_group")||"ablauf";
+let SHOW_REC=localStorage.getItem("gf_board_rec")==="1", SHOW_DONE=localStorage.getItem("gf_board_done")==="1";
+let Q="", DRAG=null, UNDO=null, UNDO_T=null;
+
+/* ---- Datum-Helfer ---- */
+const NOW=new Date(); const today=new Date(NOW.getFullYear(),NOW.getMonth(),NOW.getDate());
+function iso(d){ return d.toISOString().slice(0,10); }
+function endOfWeek(){ const d=new Date(today); const dow=(d.getDay()+6)%7; d.setDate(d.getDate()+(6-dow)); return d; }
+function endOfMonth(){ return new Date(today.getFullYear(),today.getMonth()+1,0); }
+function zeitOf(t){ if(!t.next_suggested) return "ohne"; const d=new Date(t.next_suggested+"T00:00:00"); if(d<=endOfWeek()) return "woche"; if(d<=endOfMonth()) return "monat"; return "spaeter"; }
+function ageDays(t){ return Math.floor((NOW-new Date(t.created_at))/86400000); }
+function personKey(t){ return (t.owner||t.delegate_to||"").trim()||"niemand"; }
+
+/* ---- Spalten je Gruppierung ---- */
+function columns(list){
+  if(GROUP==="ablauf") return LANES.map(([k,l,c])=>({key:k,label:l,color:c,items:list.filter(t=>t.board_lane===k).sort((a,b)=>a.lane_order-b.lane_order||(a.created_at<b.created_at?-1:1))}));
+  if(GROUP==="prio") return PRIOS.map(([k,l,c])=>({key:k,label:l,color:c,items:list.filter(t=>t.priority===k).sort(byLane)}));
+  if(GROUP==="zeitraum") return ZEIT.map(([k,l,c])=>({key:k,label:l,color:c,items:list.filter(t=>zeitOf(t)===k).sort((a,b)=>(a.next_suggested||"9")<(b.next_suggested||"9")?-1:1)}));
+  const names=[...new Set(list.map(personKey))].sort((a,b)=>a==="niemand"?1:b==="niemand"?-1:a.localeCompare(b));
+  return names.map(n=>({key:n,label:n==="niemand"?"Niemand zugeordnet":n,color:"var(--accent)",items:list.filter(t=>personKey(t)===n).sort(byLane)}));
+}
+function byLane(a,b){ const o={zu_besprechen:0,in_klaerung:1,entschieden:2,erledigt:3}; return (o[a.board_lane]-o[b.board_lane])||(a.lane_order-b.lane_order); }
+function visible(){ return TOPICS.filter(t=>!t.archived && (SHOW_REC||t.kind!=="recurring") && (SHOW_DONE||GROUP==="ablauf"||t.status!=="erledigt") && (!Q||[t.title,t.short_description,t.context,t.owner,t.next_action,t.decision].join(" ").toLowerCase().includes(Q))); }
+
+/* ---- Karte ---- */
+function card(t){
+  const age=ageDays(t); const stale=t.status!=="erledigt"&&age>28;
+  const who=t.owner||t.delegate_to||"";
+  return `<article class="bcard ${t.kind==="recurring"?"rec":""} ${stale?"stale":""}" draggable="true" data-id="${t.id}" tabindex="0">
+    <div class="bm"><span class="pill p-${t.priority}">${t.priority}</span>${t.kind==="recurring"?`<span class="pill kindtag">wiederkehrend</span>`:""}${GROUP!=="ablauf"?`<span class="pill s-${t.status}">${LANES.find(l=>l[0]===t.board_lane)?.[1].split(" ·")[0]||ST[t.status]}</span>`:""}</div>
+    <div class="bt">${gfEsc(t.title)}</div>
+    ${t.short_description?`<div class="bn">${gfClamp(t.short_description,"b"+t.id+"s",120)}</div>`:""}
+    ${t.next_action&&t.board_lane!=="erledigt"?`<div class="bn"><b>Nächster Schritt:</b> ${gfClamp(t.next_action,"b"+t.id+"n",120)}</div>`:""}
+    ${t.decision&&t.board_lane==="entschieden"?`<div class="bn"><b>Entscheidung:</b> ${gfClamp(t.decision,"b"+t.id+"d",120)}</div>`:""}
+    <div class="bf"><span>${who?gfEsc(who):""}${t.next_suggested?` · ${new Date(t.next_suggested+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}`:""}</span><span class="age" title="Alter des Themas">${age} T</span></div>
+  </article>`;
+}
+
+/* ---- Rendern ---- */
+function render(){
+  document.querySelectorAll("#groupSegs .seg").forEach(b=>b.classList.toggle("on",b.dataset.g===GROUP));
+  $("#showRec").checked=SHOW_REC; $("#showDone").checked=SHOW_DONE;
+  const cols=columns(visible());
+  const total=cols.reduce((n,c)=>n+c.items.length,0);
+  if(VIEW==="board"){
+    $("#view").innerHTML=`<div class="board">${cols.map(c=>`<section class="lane" data-col="${gfEsc(c.key)}">
+      <div class="lane-h"><span class="bar" style="--c:${c.color}"></span>${gfEsc(c.label)}<span class="n">${c.items.length}</span></div>
+      ${c.items.map(card).join("")||`<div class="empty-lane">hierher ziehen</div>`}
+    </section>`).join("")}</div>`;
+  } else {
+    $("#view").innerHTML=`<div class="tiles">${cols.filter(c=>c.items.length).map(c=>`<section class="lane tgroup" data-col="${gfEsc(c.key)}" style="min-height:0">
+      <div class="tgroup-h"><span class="bar" style="--c:${c.color};width:var(--band);height:16px;display:inline-block;border-radius:var(--radius-s);background:var(--c)"></span>${gfEsc(c.label)}<span class="n" style="margin-left:auto;background:var(--fill);border-radius:var(--radius-s);padding:1px 8px;font-size:var(--stufe-1)">${c.items.length}</span></div>
+      <div class="tgrid">${c.items.map(card).join("")}</div>
+    </section>`).join("")||`<div class="empty pic" style="--hero-img:url(/assets/img/lagerfeuer.webp)"><div><h3>Nichts zu zeigen</h3><p>Filter lockern oder ein neues Thema erfassen.</p></div></div>`}</div>`;
+  }
+  gfStagger($("#view"),".bcard");
+  const hp=$("#hero p"); if(hp) hp.textContent=`${total} Themen · Spalten nach ${ {ablauf:"Ablauf",prio:"Priorität",zeitraum:"Zeitraum",person:"Person"}[GROUP] } · ziehen zum Verschieben, antippen für Details`;
+  bind();
+}
+
+/* ---- Verschieben: Zielspalte → Feldänderung je Gruppierung ---- */
+function patchFor(col){
+  if(GROUP==="ablauf") return { board_lane:col, status:LANE_STATUS[col] };
+  if(GROUP==="prio") return { priority:col };
+  if(GROUP==="zeitraum") return { next_suggested: col==="woche"?iso(endOfWeek()):col==="monat"?iso(endOfMonth()):col==="spaeter"?iso(new Date(today.getFullYear(),today.getMonth()+2,1)):"" };
+  return { owner: col==="niemand"?"":col };
+}
+async function move(id, col, beforeId){
+  const t=TOPICS.find(x=>x.id===id); if(!t) return;
+  const patch=patchFor(col);
+  if(GROUP==="ablauf"){
+    const lane=TOPICS.filter(x=>x.board_lane===col && x.id!==id).sort((a,b)=>a.lane_order-b.lane_order);
+    const idx=beforeId?lane.findIndex(x=>x.id===beforeId):lane.length;
+    const prev=idx>0?lane[idx-1].lane_order:0, next=idx<lane.length?lane[idx].lane_order:(prev+2000);
+    patch.lane_order=Math.floor((prev+next)/2);
+    if(next-prev<2){ /* Neu durchnummerieren */ lane.splice(idx,0,t); await Promise.all(lane.map((x,i)=>{ x.lane_order=(i+1)*10; return gfApi("update",{id:x.id,lane_order:x.lane_order}); })); patch.lane_order=t.lane_order; }
+  }
+  const before={}; for(const k of Object.keys(patch)) before[k]=t[k];
+  Object.assign(t,patch); render();
+  try{ await gfApi("update",{id, ...patch}); showUndo(id,before); }
+  catch(e){ Object.assign(t,before); render(); gfToast("Verschieben fehlgeschlagen: "+e.message); }
+}
+function showUndo(id,before){
+  clearTimeout(UNDO_T); UNDO={id,before};
+  const tt=$("#toast"); tt.innerHTML=`<span class="undo">Verschoben <button id="undoBtn">Rückgängig</button></span>`; tt.classList.add("show");
+  $("#undoBtn").onclick=async()=>{ const t=TOPICS.find(x=>x.id===UNDO.id); Object.assign(t,UNDO.before); render(); try{ await gfApi("update",{id:UNDO.id,...UNDO.before}); }catch(e){} tt.classList.remove("show"); UNDO=null; };
+  UNDO_T=setTimeout(()=>{ tt.classList.remove("show"); UNDO=null; },5000);
+}
+
+function bind(){
+  document.querySelectorAll(".bcard").forEach(el=>{
+    el.addEventListener("dragstart",e=>{ DRAG=el.dataset.id; el.classList.add("dragging"); e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",DRAG); });
+    el.addEventListener("dragend",()=>{ el.classList.remove("dragging"); document.querySelectorAll(".lane.over").forEach(l=>l.classList.remove("over")); });
+    el.addEventListener("click",e=>{ if(e.target.closest(".c-more")) return; openPanel(el.dataset.id); });
+    el.addEventListener("keydown",e=>{ if(e.key==="Enter") openPanel(el.dataset.id); });
+  });
+  document.querySelectorAll(".lane").forEach(l=>{
+    l.addEventListener("dragover",e=>{ e.preventDefault(); l.classList.add("over"); });
+    l.addEventListener("dragleave",()=>l.classList.remove("over"));
+    l.addEventListener("drop",e=>{ e.preventDefault(); l.classList.remove("over"); const id=DRAG||e.dataTransfer.getData("text/plain"); if(!id) return;
+      const after=[...l.querySelectorAll(".bcard")].find(c=>{ const r=c.getBoundingClientRect(); return e.clientY < r.top + r.height/2; });
+      move(id, l.dataset.col, after?after.dataset.id:null); DRAG=null; });
+  });
+}
+
+/* ---- Detail-Panel ---- */
+let OPEN=null;
+function openPanel(id){
+  const t=TOPICS.find(x=>x.id===id); if(!t) return; OPEN=id;
+  const people=[...new Set([...PEOPLE.map(p=>p.name),"Alex","Lea","Sebastian","Lea & Alex"].filter(Boolean))];
+  $("#pTitle").textContent=t.title;
+  $("#pBody").innerHTML=`
+    <div class="move-row">${LANES.map(([k,l])=>`<button class="seg ${t.board_lane===k?"on":""}" data-lane="${k}">${l.split(" ·")[0]}</button>`).join("")}</div>
+    <div class="fgrid">
+      <div class="fld ffull"><label>Titel</label><input name="title" value="${gfEsc(t.title)}" /></div>
+      <div class="fld"><label>Priorität</label><select name="priority">${PRIOS.map(([k,l])=>`<option value="${k}" ${t.priority===k?"selected":""}>${l}</option>`).join("")}</select></div>
+      <div class="fld"><label>Termin</label><input name="next_suggested" type="date" value="${t.next_suggested||""}" /></div>
+      <div class="fld"><label>Verantwortung</label><input name="owner" list="peopleList" value="${gfEsc(t.owner||"")}" /><datalist id="peopleList">${people.map(p=>`<option value="${gfEsc(p)}">`).join("")}</datalist></div>
+      <div class="fld"><label>Art</label><select name="kind"><option value="einmalig" ${t.kind!=="recurring"?"selected":""}>einmalig</option><option value="recurring" ${t.kind==="recurring"?"selected":""}>wiederkehrend</option></select></div>
+      <div class="fld ffull"><label>Ein Satz</label><input name="short_description" value="${gfEsc(t.short_description||"")}" /></div>
+      <div class="fld ffull"><label>Nächster Schritt</label><textarea name="next_action">${gfEsc(t.next_action||"")}</textarea></div>
+      <div class="fld ffull"><label>Entscheidung</label><textarea name="decision">${gfEsc(t.decision||"")}</textarea></div>
+      <div class="fld ffull"><label>Kontext</label><textarea name="context" rows="5">${gfEsc(t.context||"")}</textarea></div>
+      <div class="fld ffull"><label>Notizen</label><textarea name="notes">${gfEsc(t.notes||"")}</textarea></div>
+    </div>
+    <div class="site-meta">angelegt ${new Date(t.created_at).toLocaleDateString("de-DE")} von ${gfEsc(t.created_by||"–")} · zuletzt geändert ${new Date(t.updated_at).toLocaleDateString("de-DE")}${t.last_discussed?` · zuletzt besprochen ${gfEsc(t.last_discussed)}`:""}</div>`;
+  $("#pFoot").innerHTML=`<button class="btn btn-primary" id="pSave">Speichern</button><button class="btn btn-ghost" id="pDiscussed" title="Setzt „zuletzt besprochen“ auf heute">heute besprochen</button><button class="btn btn-ghost del" id="pDelete" style="margin-left:auto;color:var(--crit)">Löschen</button>`;
+  $("#pBody").querySelectorAll("[data-lane]").forEach(b=>b.onclick=async()=>{ const col=b.dataset.lane; const patch={board_lane:col,status:LANE_STATUS[col]}; Object.assign(t,patch); try{ await gfApi("update",{id:t.id,...patch}); gfToast("Verschoben nach "+LANES.find(l=>l[0]===col)[1].split(" ·")[0]); render(); openPanel(t.id); }catch(e){ gfToast("Fehler: "+e.message); } });
+  $("#pSave").onclick=async()=>{ const p={id:t.id}; $("#pBody").querySelectorAll("[name]").forEach(i=>p[i.name]=i.value); if(p.decision && t.board_lane==="zu_besprechen"){ p.board_lane="entschieden"; } try{ const d=await gfApi("update",p); Object.assign(t,d.topic); gfToast("Gespeichert"); render(); closePanel(); }catch(e){ gfToast("Fehler: "+e.message); } };
+  $("#pDiscussed").onclick=async()=>{ const d=iso(today); try{ await gfApi("update",{id:t.id,last_discussed:d}); t.last_discussed=d; gfToast("Als heute besprochen markiert"); openPanel(t.id); }catch(e){ gfToast("Fehler: "+e.message); } };
+  $("#pDelete").onclick=async()=>{ if(!confirm(`„${t.title}" löschen?`)) return; try{ await gfApi("delete",{id:t.id}); TOPICS=TOPICS.filter(x=>x.id!==t.id); render(); closePanel(); gfToast("Gelöscht"); }catch(e){ gfToast("Fehler: "+e.message); } };
+  $("#panel").classList.add("open"); $("#panel").setAttribute("aria-hidden","false"); $("#panelBack").classList.add("open");
+}
+function closePanel(){ $("#panel").classList.remove("open"); $("#panel").setAttribute("aria-hidden","true"); $("#panelBack").classList.remove("open"); OPEN=null; }
+$("#pClose").onclick=closePanel; $("#panelBack").onclick=closePanel;
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closePanel(); if(e.key==="/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); $("#q").focus(); } });
+
+/* ---- Steuerung ---- */
+$("#groupSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; GROUP=b.dataset.g; localStorage.setItem("gf_board_group",GROUP); render(); };
+$("#showRec").onchange=e=>{ SHOW_REC=e.target.checked; localStorage.setItem("gf_board_rec",SHOW_REC?"1":"0"); render(); };
+$("#showDone").onchange=e=>{ SHOW_DONE=e.target.checked; localStorage.setItem("gf_board_done",SHOW_DONE?"1":"0"); render(); };
+$("#q").oninput=e=>{ Q=e.target.value.trim().toLowerCase(); render(); };
+$("#newTopic").onclick=async()=>{ const title=prompt("Neues Thema (Titel):"); if(!title) return; try{ const d=await gfApi("add",{title,priority:"mittel",created_by:gfWho(),board_lane:"zu_besprechen"}); TOPICS.push(d.topic); render(); openPanel(d.topic.id); }catch(e){ gfToast("Fehler: "+e.message); } };
+
+gfGate(async()=>{
+  $("#app").style.display="block"; gfMountTopbar("themen"); gfMountSubnav(VIEW);
+  gfMountHero("lagerfeuer", VIEW==="board"?"Board":"Kacheln", "lädt …", {compact:true, aside:`<a class="btn btn-sm" href="capture.html">Thema erfassen</a><a class="btn btn-sm" href="checkin.html">Check-in vorbereiten</a>`});
+  $("#view").innerHTML=`<div class="board">${LANES.map(()=>`<section class="lane">${gfSkeleton(2,"")}</section>`).join("")}</div>`;
+  try{ const [d,p]=await Promise.all([gfApi("list"), gfLoadPeople()]); TOPICS=d.topics||[]; PEOPLE=p||[]; render(); const tid=params.get("topic"); if(tid) openPanel(tid); }
+  catch(e){ $("#view").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+});
+</script>
+</body>
+</html>

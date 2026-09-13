@@ -32,6 +32,7 @@
 
 <div class="app wrap" id="app">
   <header id="topbar"></header>
+  <div id="hero"></div>
 
   <!-- Zyklus -->
   <section class="cycle" id="cycle"><div class="loading">lädt …</div></section>
@@ -53,7 +54,7 @@
 
   <!-- Themen -->
   <div class="section">
-    <div class="sec-h"><h2>Wichtigste Themen</h2><span class="hint">Priorität hoch · offen oder in Klärung</span><span class="line"></span><a class="btn btn-sm btn-ghost" href="cockpit.html">Alle Themen →</a></div>
+    <div class="sec-h"><h2>Wichtigste Themen</h2><span class="hint">Priorität hoch · offen oder in Klärung</span><span class="line"></span><a class="btn btn-sm btn-ghost" href="board.html">Zum Board →</a></div>
     <div class="top-grid" id="topGrid"><div class="loading">lädt …</div></div>
   </div>
 
@@ -205,7 +206,7 @@ function msCard(m){
     <div class="ms-top"><span class="pill strand">${gfEsc(s.short)}</span><span class="pill st st-${m.status}">${MS_STATUS[m.status]||m.status}</span>${EDIT?`<button class="icon-btn edit" data-act="edit" title="Bearbeiten">✎</button>`:""}</div>
     <div class="ms-date">${gfEsc(fmtRange(m))}${when?` <em>· ${when}</em>`:""}</div>
     <div class="ms-title">${title}</div>
-    ${m.description?`<div class="ms-desc">${gfEsc(m.description)}</div>`:""}
+    ${m.description?`<div class="ms-desc">${gfClamp(m.description,"m"+m.id)}</div>`:""}
     <div class="ms-foot"><span>${m.owner?gfEsc(m.owner):""}</span><span class="site-meta">${m.updated_by?`von ${gfEsc(m.updated_by)} · `:""}${new Date(m.updated_at).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"2-digit"})}</span></div>
   </article>`;
 }
@@ -238,7 +239,8 @@ function renderMilestones(){
   const upcoming = MS_ALL ? list : list;
   let html = upcoming.map(msCard).join("");
   if(OPEN_MS && !OPEN_MS.id) html = msForm(OPEN_MS) + html;
-  $("#msGrid").innerHTML = html || `<div class="empty soft">Noch keine Meilensteine. Über „＋ Meilenstein" den ersten anlegen: Titel, Termin oder Zeitraum, Strang, Verantwortung.</div>`;
+  $("#msGrid").innerHTML = html || `<div class="empty pic" style="--hero-img:url(/assets/img/ankunft.webp)"><div><h3>Noch keine Meilensteine</h3><p>Über „＋ Meilenstein" den ersten anlegen: Titel, Termin oder Zeitraum, Strang, Verantwortung.</p></div></div>`;
+  gfStagger($("#msGrid"),"article.ms");
   $("#msHint").textContent = `${MS.length} ${MS_ALL?"insgesamt":"offen"} · nach Datum`;
   bindMs();
 }
@@ -261,18 +263,20 @@ $("#addMs").onclick=()=>{ EDIT=true; OPEN_MS={id:null,title:"",strand:"gf",statu
 /* ---- Themen & Kennzahlen ---- */
 function topicCard(t){
   const who=t.owner||t.delegate_to||"";
-  return `<a class="tcard" href="cockpit.html#${t.id}">
+  return `<a class="tcard" href="board.html?topic=${t.id}">
     <div class="tc-top"><span class="pill p-${t.priority}">${t.priority}</span>${t.kind==="recurring"?`<span class="pill kindtag">wiederkehrend</span>`:""}<span class="pill s-${t.status}">${ST[t.status]||t.status}</span></div>
     <div class="tc-title">${gfEsc(t.title)}</div>
-    ${t.short_description?`<div class="tc-sub">${gfEsc(t.short_description)}</div>`:""}
-    ${t.next_action?`<div class="tc-next"><b>Nächster Schritt:</b> ${gfEsc(t.next_action)}</div>`:""}
+    ${t.short_description?`<div class="tc-sub">${gfClamp(t.short_description,"t"+t.id+"s",160)}</div>`:""}
+    ${t.next_action?`<div class="tc-next"><b>Nächster Schritt:</b> ${gfClamp(t.next_action,"t"+t.id+"n",160)}</div>`:""}
     <div class="tc-foot">${who?`<span>${gfEsc(who)}</span>`:"<span></span>"}${t.next_suggested?`<span>${new Date(t.next_suggested).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}</span>`:""}</div>
   </a>`;
 }
 async function loadTopics(){
   try{
-    const [d,inb]=await Promise.all([gfApi("list"), gfApi("inbox_list",{statuses:["neu"]}).catch(()=>({items:[]}))]);
+    const d=await gfApi("list");
     const all=(d.topics||[]); const open=all.filter(t=>t.status!=="erledigt");
+    const zb=open.filter(t=>t.board_lane==="zu_besprechen" && t.kind!=="recurring").length;
+    const neu7=all.filter(t=>Date.now()-new Date(t.created_at)<7*86400000).length;
     const top=open.filter(t=>t.priority==="hoch").sort((a,b)=>(a.kind==="recurring")-(b.kind==="recurring") || (a.status==="in_klaerung"?-1:1)-(b.status==="in_klaerung"?-1:1));
     const inKl=open.filter(t=>t.status==="in_klaerung").length;
     const rec=open.filter(t=>t.kind==="recurring").length;
@@ -281,8 +285,10 @@ async function loadTopics(){
       <div class="stat accent"><div class="k">Priorität hoch</div><div class="v">${top.length}</div><div class="cap">offen oder in Klärung</div></div>
       <div class="stat"><div class="k">Offene Themen</div><div class="v">${open.length}</div><div class="cap">${rec} wiederkehrend · ${inKl} in Klärung</div></div>
       <div class="stat"><div class="k">Nächster Meilenstein</div><div class="v">${nextMs?daysTo(nextMs.date_from):"–"}</div><div class="cap">${nextMs?`Tage · ${gfEsc(nextMs.title)}`:"keiner mit Datum"}</div></div>
-      <div class="stat"><div class="k">Inbox neu</div><div class="v">${(inb.items||[]).length}</div><div class="cap"><a href="inbox.html">sichten →</a></div></div>`;
+      <a class="stat link" href="board.html"><div class="k">Zu besprechen</div><div class="v">${zb}</div><div class="cap">im Board ${neu7?`· ${neu7} neu diese Woche`:""}</div></a>`;
+    $("#dash").querySelectorAll(".v").forEach(v=>gfCountUp(v, v.textContent));
     $("#topGrid").innerHTML= top.length ? top.slice(0,8).map(topicCard).join("") : `<div class="empty soft">Keine Themen mit Priorität hoch offen.</div>`;
+    gfStagger($("#topGrid"),".tcard");
   }catch(e){ $("#topGrid").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
 }
 
@@ -298,10 +304,13 @@ async function loadQuick(){
 /* ---- Start ---- */
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("start");
+  const wd=NOW.toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long"});
+  gfMountHero("ankunft", `Guten Tag, ${gfEsc(gfWho())}`, `${wd} · Geschäftsleitung Wilde Möhre`, {compact:true, aside:`<a class="btn btn-sm" href="capture.html">Thema erfassen</a><a class="btn btn-sm" href="board.html">Board öffnen</a>`});
   try{
     const [cyc, ms]=await Promise.all([gfApi("cycle_get",{year:NOW.getFullYear()}), gfApi("milestones_list",{all:false})]);
     CYCLE=cyc; MS=ms.milestones||[];
     renderCycle(); renderRituals(); renderMilestones();
+    const ph=phaseOf(NOW); const hp=document.querySelector("#hero p"); if(hp) hp.textContent=`${wd} · Phase ${ph.label}`;
   }catch(e){ $("#cycle").innerHTML=`<div class="empty">Zyklus konnte nicht geladen werden: ${gfEsc(e.message||"Verbindung")}</div>`; }
   await Promise.all([loadTopics(), loadQuick()]);
 });

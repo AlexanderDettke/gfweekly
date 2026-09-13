@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#17171a" />
-<title>GF Weekly · Cockpit</title>
+<title>GF Weekly · Themen · Liste</title>
 <meta name="description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre. Vertraulich." />
 <meta property="og:title" content="GF Weekly · Geschäftsleitung" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre." />
@@ -32,6 +32,7 @@
 
 <div class="app wrap" id="app">
   <header id="topbar"></header>
+  <div id="subnav"></div>
 
   <div class="dash" id="dash"></div>
 
@@ -86,7 +87,7 @@ const todayStr=()=>new Date().toISOString().slice(0,10);
 gfGate(boot);
 async function boot(){
   $("#app").style.display="block"; $("#protoBar").style.display="flex";
-  gfMountTopbar("cockpit");
+  gfMountTopbar("themen"); gfMountSubnav("liste");
   await gfLoadPeople();
   fillPersonFilter();
   await loadAll();

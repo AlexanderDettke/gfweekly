@@ -28,6 +28,7 @@
 
 <div class="app wrap mid" id="app">
   <header id="topbar"></header>
+  <div class="empty soft" style="margin-bottom:14px">Die Inbox ist seit dem 13.09.2026 kein Zwischenschritt mehr: Eingaben landen direkt im <a href="board.html">Board</a> unter „Zu besprechen". Diese Seite zeigt nur noch alte Einträge.</div>
   <div class="toolbar">
     <button class="btn btn-ghost" id="reload">↻ Aktualisieren</button>
     <span class="hint" id="count" style="color:var(--muted);font-size:13px"></span>
@@ -39,7 +40,7 @@
 <script src="assets/core.js"></script>
 <script>
 let items=[]; const $=s=>document.querySelector(s);
-gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("inbox"); await load(); });
+gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("themen"); await load(); });
 async function load(){ const d=await gfApi("inbox_list",{}); items=d.items||[]; render(); }
 $("#reload").onclick=async()=>{ try{ await load(); gfToast("Aktualisiert"); }catch(e){ gfToast("Fehler"); } };
 function fmt(s){ return new Date(s).toLocaleDateString("de-DE",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}); }

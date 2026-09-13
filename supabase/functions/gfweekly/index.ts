@@ -15,16 +15,16 @@ async function ensurePageInStorage(){ const { data } = await admin.from('gfweekl
 
 const PRIOS = ['hoch','mittel','niedrig'];
 const STATUSES = ['offen','in_klaerung','erledigt'];
-const TOPIC_FIELDS = ['title','context','decision','priority','status','kind','short_description','time_minutes','relevance','relevance_reason','relevance_source','recommendation','recommendation_source','owner','delegate_to','involved','needs_input_from','reviewer','approver','next_action','dependencies','notes','delegation_state','frequency','last_discussed','next_suggested'];
+const TOPIC_FIELDS = ['title','context','decision','priority','status','kind','short_description','time_minutes','relevance','relevance_reason','relevance_source','recommendation','recommendation_source','owner','delegate_to','involved','needs_input_from','reviewer','approver','next_action','dependencies','notes','delegation_state','frequency','last_discussed','next_suggested','board_lane','lane_order'];
+const LANES = ['zu_besprechen','in_klaerung','entschieden','erledigt'];
 const INBOX_SOURCES = ['form','chat','calendar','manuell','meeting']; // entspricht CHECK gfweekly_inbox_source_check
 
 /* v13: Passwort zusätzlich per Header (x-gfweekly-key oder Authorization: Bearer) — für ChatGPT-Actions / Connectoren,
    damit der Schlüssel nicht im Prompt stehen muss. Body-Passwort bleibt für die Website unverändert gültig. */
-/* v15: Passwort liegt nicht mehr im Quelltext, sondern im Supabase-Secret GFWEEKLY_PASSWORD.
-   Ohne gesetztes Secret lehnt die Funktion jede Anfrage ab (fail closed). */
+/* v15: Passwort liegt nicht mehr im Quelltext, sondern im Supabase-Secret GFWEEKLY_PASSWORD (fail closed). */
 /* v14: Seitenverzeichnis für die Steuerungsmaske (gfweekly_sites, gfweekly_site_categories):
    sites_list, sites_save, sites_delete, category_save.
-   v16 (13.09.2026): Meta-Planung Stufe 2: cycle_get, ritual_toggle, ritual_save, ritual_delete,
+   v15 (13.09.2026): neues Passwort; Meta-Planung Stufe 2: cycle_get, ritual_toggle, ritual_save, ritual_delete,
    milestones_list, milestone_save, milestone_delete. */
 function keyFromHeaders(req: Request): string {
   const h = req.headers.get('x-gfweekly-key'); if (h) return h.trim();
@@ -43,7 +43,7 @@ function inboxRow(t: any){
 }
 const SITE_FIELDS = ['name','url','category','purpose','notes','login_user','login_password','login_note','status'];
 const SITE_STATUSES = ['aktiv','entwurf','archiv'];
-function slugKey(s: string){ return s.toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'sonstiges'; }
+function slugKey(s: string){ return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'sonstiges'; }
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -70,6 +70,8 @@ Deno.serve(async (req: Request) => {
         created_by: (t.created_by ?? '').toString().slice(0,120),
         source: t.source === 'claude' ? 'claude' : 'manuell',
         kind: t.kind === 'recurring' ? 'recurring' : 'einmalig',
+        board_lane: LANES.includes(t.board_lane) ? t.board_lane : 'zu_besprechen',
+        lane_order: parseInt(t.lane_order) || 0,
       };
       for (const f of ['short_description','relevance','relevance_reason','recommendation','owner','delegate_to','involved','needs_input_from','reviewer','approver','next_action','dependencies','notes','frequency']) if (t[f] !== undefined) row[f] = t[f];
       if (t.time_minutes !== undefined && t.time_minutes !== null && t.time_minutes !== '') row.time_minutes = parseInt(t.time_minutes) || null;
@@ -83,6 +85,8 @@ Deno.serve(async (req: Request) => {
         if (t[f] === undefined) continue;
         if (f === 'priority' && !PRIOS.includes(t[f])) continue;
         if (f === 'status') { if(!STATUSES.includes(t[f])) continue; patch.resolved_at = t[f]==='erledigt' ? new Date().toISOString() : null; }
+        if (f === 'board_lane') { if(!LANES.includes(t[f])) continue; }
+        if (f === 'lane_order') { patch.lane_order = parseInt(t[f]) || 0; continue; }
         if (f === 'time_minutes') { patch.time_minutes = (t[f]===''||t[f]===null) ? null : (parseInt(t[f])||null); continue; }
         if (f === 'last_discussed' || f === 'next_suggested') { patch[f] = t[f] || null; continue; }
         patch[f] = typeof t[f] === 'string' ? t[f] : t[f];
@@ -101,16 +105,31 @@ Deno.serve(async (req: Request) => {
     }
 
     /* ----- Inbox ----- */
+    /* v16: Eingaben landen direkt als Thema in „Zu besprechen" (kein Inbox-Zwischenschritt mehr, Entscheid 13.09.2026).
+       Antwortform bleibt kompatibel: item = das angelegte Thema. */
+    function topicFromCapture(c: any){
+      const raw=(c.raw_text ?? c.title ?? '').toString().trim(); if(!raw) return null;
+      const first=raw.split('\n')[0].trim();
+      const prio=['hoch','mittel','niedrig'].includes(c.urgency)?c.urgency:(['hoch','mittel','niedrig'].includes(c.priority)?c.priority:'mittel');
+      return {
+        title: first.slice(0,300), context: raw.slice(0,4000), priority: prio, status:'offen', kind:'einmalig',
+        source: c.source==='chat' ? 'claude' : 'manuell', created_by:(c.created_by??'').toString().slice(0,120),
+        board_lane:'zu_besprechen', lane_order: 0,
+        short_description:(c.type_hint??'').toString().slice(0,200), owner:(c.owner_hint??'').toString().slice(0,120),
+        involved:(c.stakeholder_hint??'').toString().slice(0,200), dependencies:(c.related_hint??'').toString().slice(0,200),
+        notes: c.due_hint ? ('Fällig: '+c.due_hint.toString().slice(0,60)) : '',
+      };
+    }
     if (action === 'capture') {
-      const row = inboxRow(t); if(!row) return json({ error:'leer' },400);
-      const { data, error } = await admin.from('gfweekly_inbox').insert(row).select().single();
-      if (error) throw error; return json({ item:data });
+      const row = topicFromCapture(t); if(!row) return json({ error:'leer' },400);
+      const { data, error } = await admin.from('gfweekly_topics').insert(row).select().single();
+      if (error) throw error; return json({ item:data, topic:data });
     }
     if (action === 'capture_many') {
       const items = Array.isArray(t.items) ? t.items.slice(0,30) : [];
-      const rows = items.map((it: any) => inboxRow({ ...it, created_by: it.created_by ?? t.created_by, source: it.source ?? t.source })).filter(Boolean);
+      const rows = items.map((it: any) => topicFromCapture({ ...it, created_by: it.created_by ?? t.created_by, source: it.source ?? t.source })).filter(Boolean);
       if(!rows.length) return json({ error:'leer' },400);
-      const { data, error } = await admin.from('gfweekly_inbox').insert(rows).select();
+      const { data, error } = await admin.from('gfweekly_topics').insert(rows).select();
       if (error) throw error; return json({ items:data, count:data.length });
     }
     if (action === 'inbox_list') {
