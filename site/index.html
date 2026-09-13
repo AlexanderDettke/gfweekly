@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#17171a" />
 <title>GF Weekly · Start</title>
-<meta name="description" content="Startseite der Geschäftsleitung: Jahreszyklus, wichtigste Themen, Meilensteine. Vertraulich." />
+<meta name="description" content="Startseite der Geschäftsleitung: Jahreszyklus, Meilensteine, wichtigste Themen, Rituale. Vertraulich." />
 <meta property="og:title" content="GF Weekly · Geschäftsleitung" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre." />
 <meta property="og:image" content="assets/og-image.png" />
@@ -34,15 +34,21 @@
   <header id="topbar"></header>
 
   <!-- Zyklus -->
-  <section class="cycle" id="cycle"></section>
+  <section class="cycle" id="cycle"><div class="loading">lädt …</div></section>
 
   <!-- Kennzahlen -->
   <div class="dash" id="dash"></div>
 
-  <!-- Meilensteine (Stufe 2) -->
+  <!-- Meilensteine -->
   <div class="section">
-    <div class="sec-h"><h2>Nächste Meilensteine</h2><span class="hint">Stufe 2 · kommt mit der Meilenstein-Pflege</span><span class="line"></span></div>
-    <div class="empty soft" id="msEmpty">Noch keine Meilensteine hinterlegt. Sobald die Pflege freigeschaltet ist, erscheinen hier die nächsten Termine je Strang (Möhre, Freude eG, WaTuSi, Ziegelei, Festivalmarken).</div>
+    <div class="sec-h"><h2>Nächste Meilensteine</h2><span class="hint" id="msHint">je Strang, nach Datum</span><span class="line"></span>
+      <div class="sec-actions">
+        <button class="btn btn-sm btn-ghost" id="msAll" title="Auch erreichte und abgesagte anzeigen">alle</button>
+        <button class="btn btn-sm btn-ghost" id="editMode" title="Bearbeiten ein/aus">✎ Bearbeiten</button>
+        <button class="btn btn-sm btn-brand" id="addMs">＋ Meilenstein</button>
+      </div>
+    </div>
+    <div class="ms-grid" id="msGrid"><div class="loading">lädt …</div></div>
   </div>
 
   <!-- Themen -->
@@ -51,10 +57,14 @@
     <div class="top-grid" id="topGrid"><div class="loading">lädt …</div></div>
   </div>
 
-  <!-- Rituale der Phase -->
+  <!-- Rituale -->
   <div class="section">
-    <div class="sec-h"><h2 id="ritH">Rituale dieser Phase</h2><span class="hint">Orientierung, noch nicht abhakbar</span><span class="line"></span></div>
+    <div class="sec-h"><h2 id="ritH">Rituale</h2><span class="hint" id="ritHint">abhaken je Jahr</span><span class="line"></span><div class="segs" id="ritSegs"></div></div>
     <div class="rit-wrap" id="rituals"></div>
+    <div class="rit-add" id="ritAdd" style="display:none">
+      <input id="ritNew" placeholder="Neues Ritual für diese Phase …" />
+      <button class="btn btn-sm btn-brand" id="ritNewBtn">＋ Ritual</button>
+    </div>
   </div>
 
   <!-- Schnellzugriff -->
@@ -69,66 +79,186 @@
 <script src="assets/core.js"></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
-
-/* ---- Jahreszyklus der Geschäftsleitung (Stufe 1: als Konstante, Stufe 2: als Daten) ---- */
-const PHASES=[
-  { key:"planung", label:"Planung", months:[1,2,3,4,5,6], color:"var(--info)", soft:"var(--info-soft)",
-    lead:"Was steht, was fehlt bis zur Produktionsfreigabe?",
-    rituals:["Zielbild & Budgetrahmen (Planungsauftakt Januar)","Ticketpreise & Verkaufsphasen","Programm & Partner","Förderanträge","Genehmigungen & B-Plan","Teamplanung & Verträge","Produktionsfreigabe Ende Juni: Planung einfrieren"] },
-  { key:"produktion", label:"Produktion", months:[7,8], color:"var(--warn)", soft:"var(--warn-bg)",
-    lead:"Läuft es? Was braucht das Team jetzt?",
-    rituals:["Aufbau & Übergabe Gelände","Betrieb & Care","Tägliche Lage","Abbau & Rückgabe","Erste Eindrücke sichern (für die Retro)"] },
-  { key:"verbesserung", label:"Verbesserung", months:[9,10,11,12], color:"var(--ok)", soft:"var(--ok-soft)",
-    lead:"Was haben wir gelernt? Was ändern wir?",
-    rituals:["Festival-Retro mit Team (Anfang September)","Nachkalkulation & BWA-Abgleich","Umfrage-Auswertung","Team-Feedback & Rollen","Partner- & Vertragsklärung","Verbesserungsliste priorisieren","Jahresabschluss Dezember: Lehren & Zielbild"] },
-];
-const TRANSITIONS=[ {m:1,d:1,label:"Planungsauftakt"}, {m:7,d:1,label:"Produktionsfreigabe"}, {m:9,d:1,label:"Retro & Verbesserungsliste"}, {m:12,d:15,label:"Jahresabschluss"} ];
 const MON=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+const TOK={ info:["var(--info)","var(--info-bg)"], warn:["var(--warn)","var(--warn-bg)"], pos:["var(--pos)","var(--pos-bg)"], accent:["var(--accent)","var(--accent-soft)"], crit:["var(--crit)","var(--crit-bg)"] };
+const MS_STATUS={geplant:"geplant",laufend:"laufend",erreicht:"erreicht",verschoben:"verschoben",abgesagt:"abgesagt"};
+const ST={offen:"Offen",in_klaerung:"In Klärung",erledigt:"Erledigt"};
 
-function phaseOf(date){ const m=date.getMonth()+1; return PHASES.find(p=>p.months.includes(m)); }
+/* ---- Zustand ---- */
+const NOW=new Date();
+let CYCLE=null;            // { year, phases, transitions, rituals, checks, strands }
+let MS=[];                 // Meilensteine
+let VIEW_YEAR=NOW.getFullYear();
+let RIT_PHASE=null;        // Phase-Key für die Ritualliste
+let EDIT=false, MS_ALL=false, OPEN_MS=null;
+
+/* ---- Helfer ---- */
+function col(tok){ return (TOK[tok]||TOK.info)[0]; } function soft(tok){ return (TOK[tok]||TOK.info)[1]; }
+function phaseOf(date){ const m=date.getMonth()+1; return CYCLE.phases.find(p=>(p.months||[]).includes(m)) || CYCLE.phases[0]; }
 function nextTransition(date){
   const y=date.getFullYear();
-  const cands=TRANSITIONS.flatMap(t=>[new Date(y,t.m-1,t.d), new Date(y+1,t.m-1,t.d)].map(d=>({d,label:t.label}))).filter(x=>x.d>date).sort((a,b)=>a.d-b.d);
-  return cands[0];
+  const c=CYCLE.transitions.flatMap(t=>[new Date(y,t.month-1,t.day), new Date(y+1,t.month-1,t.day)].map(d=>({d,t}))).filter(x=>x.d>date).sort((a,b)=>a.d-b.d);
+  return c[0];
 }
 function daysBetween(a,b){ return Math.round((b-a)/86400000); }
 function fmtD(d){ return d.toLocaleDateString("de-DE",{day:"2-digit",month:"long",year:"numeric"}); }
+function fmtShort(iso){ if(!iso) return ""; const d=new Date(iso+"T00:00:00"); return d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}); }
+function fmtRange(m){
+  if(m.date_from && m.date_to && m.date_to!==m.date_from){ const a=new Date(m.date_from+"T00:00:00"), b=new Date(m.date_to+"T00:00:00"); const sameM=a.getMonth()===b.getMonth()&&a.getFullYear()===b.getFullYear(); return sameM ? `${a.getDate()}. bis ${b.getDate()}. ${a.toLocaleDateString("de-DE",{month:"long",year:"numeric"})}` : `${fmtShort(m.date_from)} bis ${fmtShort(m.date_to)}`; }
+  if(m.date_from) return fmtD(new Date(m.date_from+"T00:00:00"));
+  return m.zeitraum || "ohne Termin";
+}
+function strandOf(k){ return (CYCLE?.strands||[]).find(s=>s.key===k) || {key:k,label:k,short:k}; }
+function daysTo(iso){ return daysBetween(new Date(NOW.getFullYear(),NOW.getMonth(),NOW.getDate()), new Date(iso+"T00:00:00")); }
 
+/* ---- Zyklus ---- */
 function renderCycle(){
-  const now=new Date(); const ph=phaseOf(now); const nt=nextTransition(now);
-  const yStart=new Date(now.getFullYear(),0,1), yEnd=new Date(now.getFullYear()+1,0,1);
-  const pct=((now-yStart)/(yEnd-yStart)*100).toFixed(2);
-  const phStart=new Date(now.getFullYear(), ph.months[0]-1, 1);
-  const week=Math.floor(daysBetween(phStart,now)/7)+1;
-  const months=MON.map((m,i)=>{ const p=phaseOf(new Date(now.getFullYear(),i,1)); return `<div class="cm ${p.key} ${i===now.getMonth()?"now":""}" style="--c:${p.color};--s:${p.soft}"><span>${m}</span></div>`; }).join("");
-  const marks=TRANSITIONS.map(t=>{ const d=new Date(now.getFullYear(),t.m-1,t.d); const x=((d-yStart)/(yEnd-yStart)*100).toFixed(2); const edge=x<4?" edge-l":(x>96?" edge-r":""); return `<div class="tmark${edge}" style="left:${x}%" title="${t.label} · ${fmtD(d)}"><i></i><b>${t.label}</b></div>`; }).join("");
+  const ph=phaseOf(NOW); const nt=nextTransition(NOW);
+  const yStart=new Date(VIEW_YEAR,0,1), yEnd=new Date(VIEW_YEAR+1,0,1);
+  const isThisYear=VIEW_YEAR===NOW.getFullYear();
+  const pct=((NOW-yStart)/(yEnd-yStart)*100).toFixed(2);
+  const phStart=new Date(NOW.getFullYear(), ph.months[0]-1, 1);
+  const week=Math.floor(daysBetween(phStart,NOW)/7)+1;
+  const months=MON.map((m,i)=>{ const p=phaseOf(new Date(VIEW_YEAR,i,1)); return `<div class="cm ${isThisYear&&i===NOW.getMonth()?"now":""}" style="--c:${col(p.color_token)};--s:${soft(p.color_token)}"><span>${m}</span></div>`; }).join("");
+  const marks=CYCLE.transitions.map(t=>{ const d=new Date(VIEW_YEAR,t.month-1,t.day); const x=((d-yStart)/(yEnd-yStart)*100).toFixed(2); const edge=x<4?" edge-l":(x>96?" edge-r":""); return `<div class="tmark${edge}" style="left:${x}%" title="${gfEsc(t.label)} · ${fmtD(d)}${t.description?" · "+gfEsc(t.description):""}"><i></i><b>${gfEsc(t.label)}</b></div>`; }).join("");
+  const msMarks=MS.filter(m=>m.date_from && new Date(m.date_from+"T00:00:00").getFullYear()===VIEW_YEAR && m.status!=="abgesagt").map(m=>{
+    const d=new Date(m.date_from+"T00:00:00"); const x=((d-yStart)/(yEnd-yStart)*100).toFixed(2); const s=strandOf(m.strand);
+    return `<div class="msmark ${m.status}" style="left:${x}%" title="${gfEsc(m.title)} · ${gfEsc(fmtRange(m))}"><i></i><b>${gfEsc(s.short)}</b></div>`; }).join("");
   $("#cycle").innerHTML=`
     <div class="cycle-head">
-      <div class="cycle-now" style="--c:${ph.color};--s:${ph.soft}">
+      <div class="cycle-now" style="--c:${col(ph.color_token)};--s:${soft(ph.color_token)}">
         <div class="k">Aktuelle Phase · Woche ${week}</div>
-        <div class="v">${ph.label}</div>
-        <div class="lead">${ph.lead}</div>
+        <div class="v">${gfEsc(ph.label)}</div>
+        <div class="lead">${gfEsc(ph.lead||"")}</div>
       </div>
       <div class="cycle-next">
         <div class="k">Nächster Übergang</div>
-        <div class="v2">${nt.label}</div>
-        <div class="cap">${fmtD(nt.d)} · in ${daysBetween(now,nt.d)} Tagen</div>
+        <div class="v2">${gfEsc(nt.t.label)}</div>
+        <div class="cap">${fmtD(nt.d)} · in ${daysBetween(NOW,nt.d)} Tagen</div>
+        ${nt.t.description?`<div class="cap muted">${gfEsc(nt.t.description)}</div>`:""}
       </div>
       <div class="cycle-legend">
-        ${PHASES.map(p=>`<span style="--c:${p.color}"><i></i>${p.label} <em>${MON[p.months[0]-1]}–${MON[p.months[p.months.length-1]-1]}</em></span>`).join("")}
+        ${CYCLE.phases.map(p=>`<span style="--c:${col(p.color_token)}"><i></i>${gfEsc(p.label)} <em>${MON[p.months[0]-1]}–${MON[p.months[p.months.length-1]-1]}</em></span>`).join("")}
       </div>
     </div>
-    <div class="cycle-strip">
+    <div class="cycle-yearbar">
+      <button class="mini" id="yPrev" title="Vorjahr">←</button>
+      <b>${VIEW_YEAR}</b>
+      <button class="mini" id="yNext" title="Folgejahr">→</button>
+      ${isThisYear?"":`<button class="btn btn-sm btn-ghost" id="yNow">zurück zu ${NOW.getFullYear()}</button>`}
+      <span class="hint">${msMarks?"Meilensteine auf der Leiste: Strang-Kürzel, Titel beim Zeigen":"keine Meilensteine mit Datum in diesem Jahr"}</span>
+    </div>
+    <div class="cycle-strip ${msMarks?"has-ms":""}">
+      <div class="msrow">${msMarks}</div>
       <div class="cmonths">${months}</div>
-      <div class="today" style="left:${pct}%"><i></i><b>heute</b></div>
+      ${isThisYear?`<div class="today" style="left:${pct}%"><i></i><b>heute</b></div>`:""}
       ${marks}
     </div>`;
-  $("#ritH").textContent=`Rituale der Phase „${ph.label}"`;
-  $("#rituals").innerHTML=ph.rituals.map((r,i)=>`<div class="rit"><span class="rn">${i+1}</span><span>${gfEsc(r)}</span></div>`).join("");
+  $("#yPrev").onclick=()=>{ VIEW_YEAR--; renderCycle(); };
+  $("#yNext").onclick=()=>{ VIEW_YEAR++; renderCycle(); };
+  const yn=$("#yNow"); if(yn) yn.onclick=()=>{ VIEW_YEAR=NOW.getFullYear(); renderCycle(); };
 }
 
+/* ---- Rituale ---- */
+function renderRituals(){
+  const cur=phaseOf(NOW); if(!RIT_PHASE) RIT_PHASE=cur.key;
+  const ph=CYCLE.phases.find(p=>p.key===RIT_PHASE)||cur;
+  $("#ritSegs").innerHTML=CYCLE.phases.map(p=>`<button class="seg ${p.key===ph.key?"on":""}" data-k="${p.key}">${gfEsc(p.label)}${p.key===cur.key?" · jetzt":""}</button>`).join("");
+  $("#ritSegs").querySelectorAll(".seg").forEach(b=>b.onclick=()=>{ RIT_PHASE=b.dataset.k; renderRituals(); });
+  const list=CYCLE.rituals.filter(r=>r.phase_key===ph.key);
+  const done=new Map(CYCLE.checks.map(c=>[c.ritual_id,c]));
+  const n=list.filter(r=>done.has(r.id)).length;
+  $("#ritH").textContent=`Rituale der Phase „${ph.label}"`;
+  $("#ritHint").textContent=`${n} von ${list.length} erledigt · ${CYCLE.year}`;
+  $("#rituals").innerHTML= list.length ? list.map((r,i)=>{ const c=done.get(r.id); return `<label class="rit ${c?"done":""}" data-id="${r.id}">
+      <input type="checkbox" class="check" ${c?"checked":""} />
+      <span class="rt">${gfEsc(r.title)}${r.hint?`<small>${gfEsc(r.hint)}</small>`:""}${c?`<small class="who">✓ ${gfEsc(c.done_by||"")} · ${new Date(c.done_at).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}</small>`:""}</span>
+      ${EDIT?`<button class="mini del" data-act="rdel" title="Ritual entfernen">✕</button>`:""}
+    </label>`; }).join("") : `<div class="empty soft">Noch keine Rituale für diese Phase.</div>`;
+  $("#rituals").querySelectorAll(".rit").forEach(el=>{
+    const id=el.dataset.id;
+    el.querySelector("input").onchange=async e=>{
+      const want=e.target.checked;
+      try{ const d=await gfApi("ritual_toggle",{ritual_id:id, year:CYCLE.year, done:want, done_by:gfWho()});
+        CYCLE.checks=CYCLE.checks.filter(c=>c.ritual_id!==id); if(d.done && d.check) CYCLE.checks.push(d.check);
+        renderRituals(); gfToast(want?"Ritual abgehakt":"Haken entfernt"); }
+      catch(err){ gfToast("Fehler: "+err.message); e.target.checked=!want; }
+    };
+    const del=el.querySelector('[data-act="rdel"]'); if(del) del.onclick=async ev=>{ ev.preventDefault(); const r=CYCLE.rituals.find(x=>x.id===id); if(!confirm(`Ritual „${r.title}" für alle Jahre entfernen?`)) return; try{ await gfApi("ritual_delete",{id}); CYCLE.rituals=CYCLE.rituals.filter(x=>x.id!==id); renderRituals(); gfToast("Entfernt"); }catch(err){ gfToast("Fehler: "+err.message); } };
+  });
+  $("#ritAdd").style.display=EDIT?"flex":"none";
+}
+$("#ritNewBtn").onclick=async()=>{ const t=$("#ritNew").value.trim(); if(!t) return; try{ const d=await gfApi("ritual_save",{phase_key:RIT_PHASE, title:t, sort_order:(CYCLE.rituals.filter(r=>r.phase_key===RIT_PHASE).length+1)*10}); CYCLE.rituals.push(d.ritual); $("#ritNew").value=""; renderRituals(); gfToast("Ritual angelegt"); }catch(e){ gfToast("Fehler: "+e.message); } };
+$("#ritNew").addEventListener("keydown",e=>{ if(e.key==="Enter") $("#ritNewBtn").click(); });
+
+/* ---- Meilensteine ---- */
+async function loadMilestones(){
+  try{ const d=await gfApi("milestones_list",{all:MS_ALL}); MS=d.milestones||[]; renderMilestones(); if(CYCLE) renderCycle(); }
+  catch(e){ $("#msGrid").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+}
+function msCard(m){
+  if(OPEN_MS && OPEN_MS.id===m.id) return msForm(m);
+  const s=strandOf(m.strand); const dt=m.date_from?daysTo(m.date_from):null;
+  const when = dt===null ? "" : dt<0 ? `vor ${-dt} Tagen` : dt===0 ? "heute" : `in ${dt} Tagen`;
+  const title = m.link_url ? `<a href="${gfEsc(m.link_url)}" target="_blank" rel="noopener">${gfEsc(m.title)} ↗</a>` : gfEsc(m.title);
+  return `<article class="ms st-${m.status}" data-id="${m.id}">
+    <div class="ms-top"><span class="pill strand">${gfEsc(s.short)}</span><span class="pill st st-${m.status}">${MS_STATUS[m.status]||m.status}</span>${EDIT?`<button class="icon-btn edit" data-act="edit" title="Bearbeiten">✎</button>`:""}</div>
+    <div class="ms-date">${gfEsc(fmtRange(m))}${when?` <em>· ${when}</em>`:""}</div>
+    <div class="ms-title">${title}</div>
+    ${m.description?`<div class="ms-desc">${gfEsc(m.description)}</div>`:""}
+    <div class="ms-foot"><span>${m.owner?gfEsc(m.owner):""}</span><span class="site-meta">${m.updated_by?`von ${gfEsc(m.updated_by)} · `:""}${new Date(m.updated_at).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"2-digit"})}</span></div>
+  </article>`;
+}
+function msForm(m){
+  const strands=(CYCLE?.strands||[]).map(s=>`<option value="${s.key}" ${s.key===m.strand?"selected":""}>${gfEsc(s.label)}</option>`).join("");
+  return `<form class="ms editcard" data-id="${m.id||""}">
+    <div class="fgrid">
+      <div class="fld ffull"><label>Titel</label><input name="title" value="${gfEsc(m.title||"")}" required /></div>
+      <div class="fld"><label>Strang</label><select name="strand">${strands}</select></div>
+      <div class="fld"><label>Status</label><select name="status">${Object.entries(MS_STATUS).map(([k,v])=>`<option value="${k}" ${(m.status||"geplant")===k?"selected":""}>${v}</option>`).join("")}</select></div>
+      <div class="fld"><label>Datum von</label><input name="date_from" type="date" value="${m.date_from||""}" /></div>
+      <div class="fld"><label>Datum bis (optional)</label><input name="date_to" type="date" value="${m.date_to||""}" /></div>
+      <div class="fld"><label>Zeitraum als Text (wenn kein Datum)</label><input name="zeitraum" value="${gfEsc(m.zeitraum||"")}" placeholder="z. B. Q1 2027" /></div>
+      <div class="fld"><label>Verantwortung</label><input name="owner" value="${gfEsc(m.owner||"")}" placeholder="z. B. Lea" /></div>
+      <div class="fld ffull"><label>Beschreibung</label><textarea name="description" rows="2">${gfEsc(m.description||"")}</textarea></div>
+      <div class="fld ffull"><label>Link (optional)</label><input name="link_url" type="url" value="${gfEsc(m.link_url||"")}" placeholder="https://…" /></div>
+      <div class="fld"><label>Reihenfolge</label><input name="sort_order" type="number" value="${m.sort_order??100}" /></div>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" type="submit">Speichern</button>
+      <button class="btn btn-ghost" type="button" data-act="cancel">Abbrechen</button>
+      ${m.id?`<button class="btn btn-ghost del" type="button" data-act="delete">Löschen</button>`:""}
+    </div>
+  </form>`;
+}
+function renderMilestones(){
+  $("#editMode").textContent = EDIT ? "✓ Fertig" : "✎ Bearbeiten"; $("#editMode").classList.toggle("on-edit",EDIT);
+  $("#msAll").classList.toggle("on-edit",MS_ALL); $("#msAll").textContent = MS_ALL ? "nur offene" : "alle";
+  const list=[...MS].sort((a,b)=>(a.date_from||"9999")<(b.date_from||"9999")?-1:1);
+  const upcoming = MS_ALL ? list : list;
+  let html = upcoming.map(msCard).join("");
+  if(OPEN_MS && !OPEN_MS.id) html = msForm(OPEN_MS) + html;
+  $("#msGrid").innerHTML = html || `<div class="empty soft">Noch keine Meilensteine. Über „＋ Meilenstein" den ersten anlegen: Titel, Termin oder Zeitraum, Strang, Verantwortung.</div>`;
+  $("#msHint").textContent = `${MS.length} ${MS_ALL?"insgesamt":"offen"} · nach Datum`;
+  bindMs();
+}
+function bindMs(){
+  document.querySelectorAll("article.ms[data-id]").forEach(el=>{
+    const m=MS.find(x=>x.id===el.dataset.id);
+    el.querySelectorAll("[data-act]").forEach(b=>b.onclick=ev=>{ ev.preventDefault(); if(b.dataset.act==="edit"){ OPEN_MS={...m}; renderMilestones(); } });
+  });
+  document.querySelectorAll("form.ms.editcard").forEach(f=>{
+    f.onsubmit=async ev=>{ ev.preventDefault(); const fd=new FormData(f); const p={updated_by:gfWho()}; for(const [k,v] of fd.entries()) p[k]=v; if(f.dataset.id) p.id=f.dataset.id;
+      try{ await gfApi("milestone_save",p); gfToast("Gespeichert"); OPEN_MS=null; await loadMilestones(); }catch(e){ gfToast("Fehler: "+e.message); } };
+    f.querySelector('[data-act="cancel"]').onclick=()=>{ OPEN_MS=null; renderMilestones(); };
+    const del=f.querySelector('[data-act="delete"]'); if(del) del.onclick=async()=>{ const m=MS.find(x=>x.id===f.dataset.id); if(!confirm(`„${m.title}" löschen?`)) return; try{ await gfApi("milestone_delete",{id:m.id}); gfToast("Gelöscht"); OPEN_MS=null; await loadMilestones(); }catch(e){ gfToast("Fehler: "+e.message); } };
+  });
+}
+$("#editMode").onclick=()=>{ EDIT=!EDIT; if(!EDIT) OPEN_MS=null; renderMilestones(); renderRituals(); };
+$("#msAll").onclick=async()=>{ MS_ALL=!MS_ALL; await loadMilestones(); };
+$("#addMs").onclick=()=>{ EDIT=true; OPEN_MS={id:null,title:"",strand:"gf",status:"geplant",date_from:"",date_to:"",zeitraum:"",owner:"",description:"",link_url:"",sort_order:100}; renderMilestones(); renderRituals(); setTimeout(()=>{ const f=$("form.ms.editcard"); if(f){ f.scrollIntoView({behavior:"smooth",block:"center"}); f.querySelector('[name="title"]').focus(); } },50); };
+
 /* ---- Themen & Kennzahlen ---- */
-const ST={offen:"Offen",in_klaerung:"In Klärung",erledigt:"Erledigt"};
 function topicCard(t){
   const who=t.owner||t.delegate_to||"";
   return `<a class="tcard" href="cockpit.html#${t.id}">
@@ -136,7 +266,7 @@ function topicCard(t){
     <div class="tc-title">${gfEsc(t.title)}</div>
     ${t.short_description?`<div class="tc-sub">${gfEsc(t.short_description)}</div>`:""}
     ${t.next_action?`<div class="tc-next"><b>Nächster Schritt:</b> ${gfEsc(t.next_action)}</div>`:""}
-    <div class="tc-foot">${who?`<span> ${gfEsc(who)}</span>`:"<span></span>"}${t.next_suggested?`<span> ${new Date(t.next_suggested).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}</span>`:""}</div>
+    <div class="tc-foot">${who?`<span>${gfEsc(who)}</span>`:"<span></span>"}${t.next_suggested?`<span>${new Date(t.next_suggested).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}</span>`:""}</div>
   </a>`;
 }
 async function loadTopics(){
@@ -146,16 +276,17 @@ async function loadTopics(){
     const top=open.filter(t=>t.priority==="hoch").sort((a,b)=>(a.kind==="recurring")-(b.kind==="recurring") || (a.status==="in_klaerung"?-1:1)-(b.status==="in_klaerung"?-1:1));
     const inKl=open.filter(t=>t.status==="in_klaerung").length;
     const rec=open.filter(t=>t.kind==="recurring").length;
+    const nextMs=MS.filter(m=>m.date_from && daysTo(m.date_from)>=0).sort((a,b)=>a.date_from<b.date_from?-1:1)[0];
     $("#dash").innerHTML=`
       <div class="stat accent"><div class="k">Priorität hoch</div><div class="v">${top.length}</div><div class="cap">offen oder in Klärung</div></div>
-      <div class="stat"><div class="k">Offene Themen</div><div class="v">${open.length}</div><div class="cap">${rec} wiederkehrend</div></div>
-      <div class="stat"><div class="k">In Klärung</div><div class="v">${inKl}</div><div class="cap">brauchen eine Entscheidung</div></div>
+      <div class="stat"><div class="k">Offene Themen</div><div class="v">${open.length}</div><div class="cap">${rec} wiederkehrend · ${inKl} in Klärung</div></div>
+      <div class="stat"><div class="k">Nächster Meilenstein</div><div class="v">${nextMs?daysTo(nextMs.date_from):"–"}</div><div class="cap">${nextMs?`Tage · ${gfEsc(nextMs.title)}`:"keiner mit Datum"}</div></div>
       <div class="stat"><div class="k">Inbox neu</div><div class="v">${(inb.items||[]).length}</div><div class="cap"><a href="inbox.html">sichten →</a></div></div>`;
     $("#topGrid").innerHTML= top.length ? top.slice(0,8).map(topicCard).join("") : `<div class="empty soft">Keine Themen mit Priorität hoch offen.</div>`;
   }catch(e){ $("#topGrid").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
 }
 
-/* ---- Schnellzugriff aus dem Seitenverzeichnis ---- */
+/* ---- Schnellzugriff ---- */
 async function loadQuick(){
   try{
     const d=await gfApi("sites_list");
@@ -164,7 +295,16 @@ async function loadQuick(){
   }catch(e){ $("#quick").innerHTML=""; }
 }
 
-gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("start"); renderCycle(); await Promise.all([loadTopics(), loadQuick()]); });
+/* ---- Start ---- */
+gfGate(async()=>{
+  $("#app").style.display="block"; gfMountTopbar("start");
+  try{
+    const [cyc, ms]=await Promise.all([gfApi("cycle_get",{year:NOW.getFullYear()}), gfApi("milestones_list",{all:false})]);
+    CYCLE=cyc; MS=ms.milestones||[];
+    renderCycle(); renderRituals(); renderMilestones();
+  }catch(e){ $("#cycle").innerHTML=`<div class="empty">Zyklus konnte nicht geladen werden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+  await Promise.all([loadTopics(), loadQuick()]);
+});
 </script>
 </body>
 </html>

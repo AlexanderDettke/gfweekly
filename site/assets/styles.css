@@ -3,10 +3,7 @@
    Tokens 1:1 aus docs/spiel/design-export/tokens (Stand 04.09.2026).
    Dunkel ist Standard (:root), Hell über [data-theme="light"].
    Regeln: Archivo, fünf Schriftstufen, Abstände 4/8/12/16/24/32/48, Radien 4/6/8,
-   Schatten nur bei angehobenen Karten und Panels, keine Pillen, keine Farb-Emoji.
-   V9.1: Modernist-Optik (Claude Design 9f0f400a) auf die Habitate-Tokens gelegt — Radius 0 ueberall,
-   Abschnittslinien 2 px, Bauteilrahmen in --border-strong, Beschriftungen buendig links.
-   Farbrollen, Dunkelmodus und Statusfarben bleiben unveraendert Habitate.
+   Rahmen 1 px, Schatten nur bei angehobenen Karten und Panels, keine Pillen, keine Farb-Emoji.
    =========================================================== */
 @import url("https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap");
 
@@ -23,7 +20,6 @@
   --crit:#d98a80; --crit-bg:rgba(217,138,128,0.14); --crit-text:#e8aca4;
   --pos:#8fbf9f; --pos-bg:rgba(143,191,159,0.14);
   --info:#8fb3ba; --info-bg:rgba(127,178,188,0.12);
-  --chart-teal:#5a94a0; --chart-peach:#cfae7e; --chart-coral:#c56a4e; --chart-grid:rgba(233,233,236,0.14);
   --on-band:#17171a; --backdrop:rgba(0,0,0,0.55);
   --muted:var(--text-2);
   /* Schrift */
@@ -32,14 +28,14 @@
   --leading-ui:1.35; --leading-text:1.5;
   /* Abstand, Form, Tiefe, Bewegung */
   --s-4:4px; --s-8:8px; --s-12:12px; --s-16:16px; --s-24:24px; --s-32:32px; --s-48:48px; --ziel-min:44px;
-  --radius-s:0; --radius-m:0; --radius-l:0; --rahmen:2px; --band:6px;
+  --radius-s:4px; --radius-m:6px; --radius-l:8px; --rahmen:1px; --band:6px;
   --shadow:0 4px 16px rgba(0,0,0,0.25); --shadow-card:0 6px 20px rgba(0,0,0,0.3); --shadow-pop:0 8px 24px rgba(0,0,0,0.35);
   --motion-fast:120ms; --motion-base:200ms; --motion-slow:400ms; --motion-ease:cubic-bezier(0.2,0.7,0.3,1);
   color-scheme:dark;
 
   /* Brücke zu den bisherigen GF-Weekly-Namen (Komponentenregeln bleiben, Look kommt aus den Habitate-Tokens) */
   --ink:var(--text); --ink-2:var(--text-2);
-  --line:var(--border-strong); --line-soft:var(--border);
+  --line:var(--border); --line-soft:var(--border);
   --brand:var(--action); --brand-d:var(--action-hover); --brand-soft:var(--accent-soft);
   --accent-d:var(--accent-strong);
   --ok:var(--pos); --ok-soft:var(--pos-bg);
@@ -66,7 +62,6 @@
   --crit:#b04a3e; --crit-bg:rgba(217,138,128,0.18); --crit-text:#93382e;
   --pos:#2a6e46; --pos-bg:rgba(143,191,159,0.22);
   --info:#38626b; --info-bg:rgba(46,106,116,0.1);
-  --chart-teal:#437f8a; --chart-peach:#d3a878; --chart-coral:#c56a4e; --chart-grid:rgba(35,32,27,0.14);
   --on-band:#ffffff; --backdrop:rgba(0,0,0,0.45);
   --muted:var(--text-2);
   --shadow:0 4px 16px rgba(35,32,27,0.14); --shadow-card:0 6px 20px rgba(35,32,27,0.12);
@@ -95,12 +90,12 @@ a:hover{text-decoration:underline}
 /* ---------- Gate ---------- */
 #gate{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:24px;
   background:var(--bg)}
-.gate-card{width:100%;max-width:380px;background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--shadow-3);padding:38px 32px;text-align:left;animation:pop .4s var(--ease)}
+.gate-card{width:100%;max-width:380px;background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--shadow-3);padding:38px 32px;text-align:center;animation:pop .4s var(--ease)}
 @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
-.gate-card .mark{width:54px;height:54px;border-radius:var(--radius-m);margin:0 0 14px;display:grid;place-items:center;background:var(--action);color:#fff;font-weight:600;font-size:20px;box-shadow:none}
+.gate-card .mark{width:54px;height:54px;border-radius:var(--radius-m);margin:0 auto 14px;display:grid;place-items:center;background:var(--action);color:#fff;font-weight:600;font-size:20px;box-shadow:none}
 .gate-card h1{margin:0 0 2px;font-size:22px;letter-spacing:-.02em}
 .gate-card .sub{color:var(--muted);font-size:13px;margin-bottom:20px}
-.gate-card input{width:100%;padding:14px;border:var(--rahmen) solid var(--line);border-radius:var(--radius-m);background:var(--surface-2);text-align:left;font-size:16px}
+.gate-card input{width:100%;padding:14px;border:var(--rahmen) solid var(--line);border-radius:var(--radius-m);background:var(--surface-2);text-align:center;font-size:16px}
 .err{color:var(--danger);font-size:13px;min-height:18px;margin-top:8px}
 .badge-conf{display:inline-block;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;font-weight:600;color:var(--brand);background:var(--brand-soft);padding:4px 11px;border-radius:var(--radius-s);margin-bottom:6px}
 
@@ -141,7 +136,7 @@ a:hover{text-decoration:underline}
 .sec-h{display:flex;align-items:center;gap:11px;margin:0 2px 13px}
 .sec-h h2{font-size:15px;margin:0;font-weight:600;letter-spacing:-.01em}
 .sec-h .hint{font-size:12.5px;color:var(--muted)}
-.sec-h .line{flex:1;height:var(--rahmen);background:var(--line)}
+.sec-h .line{flex:1;height:1px;background:var(--border)}
 
 /* ---------- Dashboard ---------- */
 .dash{display:grid;grid-template-columns:1.25fr 1fr 1fr 1fr;gap:14px;margin:8px 0}
@@ -271,7 +266,7 @@ a:hover{text-decoration:underline}
 .dd-opt input{width:16px;height:16px;accent-color:var(--brand)}
 .dd-team{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 9px 4px;font-weight:600}
 .actions-row{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:6px}
-.btn-sm{font-size:var(--stufe-2);font-weight:600;border-radius:var(--radius-m);min-height:36px;padding:6px 12px;display:inline-flex;align-items:center;justify-content:flex-start;gap:7px}
+.btn-sm{font-size:var(--stufe-2);font-weight:600;border-radius:var(--radius-m);min-height:36px;padding:6px 12px;display:inline-flex;align-items:center;gap:7px}
 .btn-copy{background:var(--brand);color:#fff}.btn-copy:hover{background:var(--brand-d)}
 .btn-asana{background:var(--crit);color:var(--on-band)}.btn-asana:hover{filter:brightness(.95)}
 .btn-soft{background:var(--surface);border:1px solid var(--line);color:var(--ink-2)}.btn-soft:hover{border-color:var(--accent);color:var(--accent-d)}
@@ -439,14 +434,14 @@ a:hover{text-decoration:underline}
 .cycle-legend span{display:flex;align-items:center;gap:8px}
 .cycle-legend i{width:10px;height:10px;border-radius:var(--radius-s);background:var(--c);display:inline-block}
 .cycle-legend em{font-style:normal;color:var(--muted);font-size:12px}
-.cycle-strip{position:relative;padding-top:24px;padding-bottom:34px}
+.cycle-strip{position:relative;padding-top:24px;padding-bottom:40px}
 .cmonths{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}
 .cm{height:34px;border-radius:var(--radius-m);background:var(--s);border:1px solid color-mix(in srgb,var(--c) 35%,transparent);display:grid;place-items:center;font-size:12px;font-weight:600;color:var(--c)}
 .cm.now{background:var(--c);color:var(--on-band)}
-.today{position:absolute;top:0;transform:translateX(-50%);display:flex;flex-direction:column-reverse;align-items:center;pointer-events:none}
-.today i{display:block;width:2px;height:44px;background:var(--ink);border-radius:0}
+.today{position:absolute;top:auto;bottom:40px;transform:translateX(-50%);display:flex;flex-direction:column-reverse;align-items:center;pointer-events:none}
+.today i{display:block;width:2px;height:44px;background:var(--ink);border-radius:2px}
 .today b{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink);margin-bottom:2px;background:var(--surface);padding:1px 6px;border-radius:var(--radius-s);border:1px solid var(--line)}
-.tmark{position:absolute;top:64px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;max-width:110px;text-align:center}
+.tmark{position:absolute;top:auto;bottom:0;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;max-width:110px;text-align:center}
 .tmark i{display:block;width:8px;height:8px;border-radius:var(--radius-s);background:var(--brand);border:2px solid var(--surface);box-shadow:0 0 0 1px var(--brand)}
 .tmark.edge-l{transform:translateX(-5px);align-items:flex-start;text-align:left} .tmark.edge-r{transform:translateX(calc(-100% + 5px));align-items:flex-end;text-align:right}
 .tmark b{font-size:10.5px;font-weight:600;color:var(--muted);line-height:1.2;margin-top:3px}
@@ -470,7 +465,7 @@ a:hover{text-decoration:underline}
 .qh{font-size:11.5px;color:var(--muted);margin-top:auto}
 .sec-h .btn-sm{margin-left:auto}
 @media(max-width:880px){ .cycle-head{grid-template-columns:1fr 1fr} .cycle-legend{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;gap:14px;padding-top:0} }
-@media(max-width:600px){ .cycle-head{grid-template-columns:1fr} .cm span{display:none} .cm{height:22px} .today i{height:30px} .tmark{top:50px;max-width:70px} .tmark b{display:none} .cycle-strip{padding-bottom:16px} .cycle{padding:16px} }
+@media(max-width:600px){ .cycle-head{grid-template-columns:1fr} .cm span{display:none} .cm{height:22px} .today i{height:30px} .today{bottom:16px} .tmark{max-width:70px} .tmark b{display:none} .cycle-strip{padding-bottom:16px} .cycle{padding:16px} }
 
 /* ---------- V9 · Ergänzungen zum Design System ---------- */
 .gate-card .mark,.brand .mark{background:var(--action);color:var(--on-action);box-shadow:none;border-radius:var(--radius-m)}
@@ -489,3 +484,48 @@ h1,h2,h3{text-wrap:balance}
 .empty{border-style:solid}
 .ht-num{font-variant-numeric:tabular-nums}
 @media(max-width:680px){ .nav a .lbl{display:inline} .nav{overflow-x:auto;max-width:100%;flex-wrap:nowrap} .nav a{padding:8px 10px;white-space:nowrap} }
+
+/* ===========================================================
+   V10 · Startseite Stufe 2: Meilensteine, Jahresleiste, Rituale
+   =========================================================== */
+.sec-actions{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.sec-h .sec-actions .btn-sm{margin-left:0}
+.cycle-next .cap.muted{color:var(--muted);font-size:var(--stufe-2);margin-top:6px;line-height:1.4}
+.cycle-yearbar{display:flex;align-items:center;gap:8px;margin:6px 0 2px;font-size:var(--stufe-2);color:var(--muted)}
+.cycle-yearbar b{font-size:var(--stufe-3);color:var(--text);min-width:44px;text-align:center;font-variant-numeric:tabular-nums}
+.cycle-yearbar .hint{margin-left:6px}
+.cycle-strip.has-ms{padding-top:44px}
+.msrow{position:absolute;left:0;right:0;top:0;height:40px}
+.msmark{position:absolute;bottom:6px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:2px}
+.msmark b{font-size:var(--stufe-1);font-weight:600;color:var(--text-2);white-space:nowrap;background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-s);padding:1px 5px}
+.msmark i{display:block;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid var(--accent)}
+.msmark.laufend i{border-top-color:var(--warn)} .msmark.erreicht i{border-top-color:var(--pos)} .msmark.verschoben i{border-top-color:var(--crit)}
+.ms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.ms{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0;transition:box-shadow var(--motion-base) var(--motion-ease)}
+.ms:hover{box-shadow:var(--shadow-card)}
+.ms.st-erreicht{opacity:.7} .ms.st-abgesagt{opacity:.55} .ms.st-abgesagt .ms-title{text-decoration:line-through}
+.ms-top{display:flex;align-items:center;gap:6px}
+.ms-top .icon-btn{margin-left:auto}
+.pill.strand{background:var(--accent-soft);color:var(--accent-strong)}
+.pill.st-geplant{background:var(--fill);color:var(--text-2)} .pill.st-laufend{background:var(--warn-bg);color:var(--warn)} .pill.st-erreicht{background:var(--pos-bg);color:var(--pos)} .pill.st-verschoben{background:var(--crit-bg);color:var(--crit)} .pill.st-abgesagt{background:var(--fill);color:var(--muted)}
+.ms-date{font-size:var(--stufe-2);color:var(--text-2);font-variant-numeric:tabular-nums}
+.ms-date em{font-style:normal;color:var(--muted)}
+.ms-title{font-weight:600;font-size:var(--stufe-4);letter-spacing:-.01em;line-height:1.25}
+.ms-title a{color:var(--text);text-decoration:none} .ms-title a:hover{color:var(--link)}
+.ms-desc{font-size:var(--stufe-2);color:var(--text-2);line-height:1.45}
+.ms-foot{display:flex;justify-content:space-between;gap:8px;font-size:var(--stufe-2);color:var(--muted);margin-top:auto}
+.ms.editcard{grid-column:1/-1}
+.ms.editcard .btn.del{margin-left:auto;color:var(--crit)}
+#msAll.on-edit,#editMode.on-edit{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-strong)}
+/* Rituale abhakbar */
+label.rit{cursor:pointer;align-items:flex-start;gap:12px}
+label.rit .check{margin-top:1px}
+label.rit .rt{flex:1;display:flex;flex-direction:column;gap:2px;color:var(--text)}
+label.rit .rt small{font-size:var(--stufe-1);color:var(--muted)}
+label.rit .rt small.who{color:var(--pos)}
+label.rit.done{opacity:.72} label.rit.done .rt>span,label.rit.done .rt{text-decoration:none}
+label.rit .mini.del{color:var(--muted)} label.rit .mini.del:hover{color:var(--crit);border-color:var(--crit)}
+.rit-add{display:flex;gap:8px;margin-top:10px;align-items:center}
+.rit-add input{flex:1;min-width:200px;border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:9px 11px;background:var(--surface-2);font-size:var(--stufe-3)}
+.rit-add input:focus{outline:none;border-color:var(--accent)}
+@media(max-width:600px){ .msmark b{display:none} .cycle-strip.has-ms{padding-top:30px} .msrow{height:26px} .sec-actions{width:100%} }

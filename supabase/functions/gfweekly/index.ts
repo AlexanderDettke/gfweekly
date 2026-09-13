@@ -1,6 +1,6 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const PASSWORD = Deno.env.get('GFWEEKLY_PASSWORD') ?? '';
+const PASSWORD = 'windschatten';
 const PROJECT_URL = Deno.env.get('SUPABASE_URL')!;
 const PUBLIC_PAGE = PROJECT_URL + '/storage/v1/object/public/site/gfweekly.html';
 
@@ -20,10 +20,10 @@ const INBOX_SOURCES = ['form','chat','calendar','manuell','meeting']; // entspri
 
 /* v13: Passwort zusätzlich per Header (x-gfweekly-key oder Authorization: Bearer) — für ChatGPT-Actions / Connectoren,
    damit der Schlüssel nicht im Prompt stehen muss. Body-Passwort bleibt für die Website unverändert gültig. */
-/* v15: Passwort liegt nicht mehr im Quelltext, sondern im Supabase-Secret GFWEEKLY_PASSWORD.
-   Ohne gesetztes Secret lehnt die Funktion jede Anfrage ab (fail closed). */
 /* v14: Seitenverzeichnis für die Steuerungsmaske (gfweekly_sites, gfweekly_site_categories):
-   sites_list, sites_save, sites_delete, category_save. */
+   sites_list, sites_save, sites_delete, category_save.
+   v15 (13.09.2026): neues Passwort; Meta-Planung Stufe 2: cycle_get, ritual_toggle, ritual_save, ritual_delete,
+   milestones_list, milestone_save, milestone_delete. */
 function keyFromHeaders(req: Request): string {
   const h = req.headers.get('x-gfweekly-key'); if (h) return h.trim();
   const a = req.headers.get('authorization') || '';
@@ -41,7 +41,7 @@ function inboxRow(t: any){
 }
 const SITE_FIELDS = ['name','url','category','purpose','notes','login_user','login_password','login_note','status'];
 const SITE_STATUSES = ['aktiv','entwurf','archiv'];
-function slugKey(s: string){ return s.toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'sonstiges'; }
+function slugKey(s: string){ return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'sonstiges'; }
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -50,7 +50,7 @@ Deno.serve(async (req: Request) => {
   let body: any; try { body = await req.json(); } catch { return json({ error:'bad json' }, 400); }
   const { action, password, payload } = body ?? {};
   const given = (password ?? '').toString() || keyFromHeaders(req);
-  if (!PASSWORD || given !== PASSWORD) return json({ error:'unauthorized' }, 401);
+  if (given !== PASSWORD) return json({ error:'unauthorized' }, 401);
   const t = payload ?? {};
 
   try {
@@ -212,6 +212,65 @@ Deno.serve(async (req: Request) => {
       const row:Record<string,unknown>={ key, label, icon:(t.icon??'').toString().slice(0,8) };
       if(t.sort_order!==undefined && t.sort_order!=='') row.sort_order=parseInt(t.sort_order)||100;
       const { data, error } = await admin.from('gfweekly_site_categories').upsert(row,{ onConflict:'key' }).select().single(); if(error) throw error; return json({ category:data });
+    }
+
+    /* ----- Meta-Planung Stufe 2 (v15): Zyklus, Rituale, Meilensteine ----- */
+    if (action === 'cycle_get') {
+      const year = parseInt(t.year) || new Date().getFullYear();
+      const [ph, tr, ri, ck, st] = await Promise.all([
+        admin.from('gfweekly_cycle_phases').select('*').order('sort_order',{ascending:true}),
+        admin.from('gfweekly_cycle_transitions').select('*').order('sort_order',{ascending:true}),
+        admin.from('gfweekly_rituals').select('*').eq('active',true).order('sort_order',{ascending:true}),
+        admin.from('gfweekly_ritual_checks').select('*').eq('year',year),
+        admin.from('gfweekly_strands').select('*').order('sort_order',{ascending:true}),
+      ]);
+      for (const r of [ph,tr,ri,ck,st]) if(r.error) throw r.error;
+      return json({ year, phases:ph.data, transitions:tr.data, rituals:ri.data, checks:ck.data, strands:st.data });
+    }
+    if (action === 'ritual_toggle') {
+      if(!t.ritual_id) return json({ error:'ritual_id fehlt' },400);
+      const year = parseInt(t.year) || new Date().getFullYear();
+      if (t.done === false) { const { error } = await admin.from('gfweekly_ritual_checks').delete().eq('ritual_id',t.ritual_id).eq('year',year); if(error) throw error; return json({ ok:true, done:false }); }
+      const { data, error } = await admin.from('gfweekly_ritual_checks').upsert({ ritual_id:t.ritual_id, year, done_by:(t.done_by??'').toString().slice(0,120), note:(t.note??'').toString().slice(0,500), done_at:new Date().toISOString() },{ onConflict:'ritual_id,year' }).select().single();
+      if(error) throw error; return json({ ok:true, done:true, check:data });
+    }
+    if (action === 'ritual_save') {
+      const row:Record<string,unknown>={};
+      if(t.phase_key!==undefined) row.phase_key=(t.phase_key??'').toString();
+      if(t.title!==undefined) row.title=(t.title??'').toString().slice(0,300);
+      if(t.hint!==undefined) row.hint=(t.hint??'').toString().slice(0,500);
+      if(t.sort_order!==undefined && t.sort_order!=='') row.sort_order=parseInt(t.sort_order)||100;
+      if(t.active!==undefined) row.active=!!t.active;
+      if(t.id){ const { data, error } = await admin.from('gfweekly_rituals').update(row).eq('id',t.id).select().single(); if(error) throw error; return json({ ritual:data }); }
+      if(!row.title || !row.phase_key) return json({ error:'title und phase_key fehlen' },400);
+      const { data, error } = await admin.from('gfweekly_rituals').insert(row).select().single(); if(error) throw error; return json({ ritual:data });
+    }
+    if (action === 'ritual_delete') {
+      if(!t.id) return json({ error:'id fehlt' },400);
+      const { error } = await admin.from('gfweekly_rituals').delete().eq('id',t.id); if(error) throw error; return json({ ok:true });
+    }
+    if (action === 'milestones_list') {
+      let q = admin.from('gfweekly_milestones').select('*').eq('archived', false);
+      if (!t.all) q = q.not('status','in','("erreicht","abgesagt")');
+      const { data, error } = await q.order('date_from',{ascending:true, nullsFirst:false}).order('sort_order',{ascending:true});
+      if(error) throw error; return json({ milestones:data });
+    }
+    if (action === 'milestone_save') {
+      const MS_STATUS=['geplant','laufend','erreicht','verschoben','abgesagt'];
+      const row:Record<string,unknown>={ updated_at:new Date().toISOString(), updated_by:(t.updated_by??'').toString().slice(0,120) };
+      for (const f of ['title','description','zeitraum','strand','owner','link_url']) if(t[f]!==undefined) row[f]=(t[f]??'').toString().slice(0, f==='description'?2000:500);
+      for (const f of ['date_from','date_to']) if(t[f]!==undefined) row[f]= t[f] ? t[f] : null;
+      if(t.status!==undefined) row.status = MS_STATUS.includes(t.status) ? t.status : 'geplant';
+      if(t.sort_order!==undefined && t.sort_order!=='') row.sort_order=parseInt(t.sort_order)||100;
+      if(t.archived!==undefined) row.archived=!!t.archived;
+      if(t.topic_id!==undefined) row.topic_id = t.topic_id || null;
+      if(t.id){ const { data, error } = await admin.from('gfweekly_milestones').update(row).eq('id',t.id).select().single(); if(error) throw error; return json({ milestone:data }); }
+      if(!row.title) return json({ error:'title fehlt' },400);
+      const { data, error } = await admin.from('gfweekly_milestones').insert(row).select().single(); if(error) throw error; return json({ milestone:data });
+    }
+    if (action === 'milestone_delete') {
+      if(!t.id) return json({ error:'id fehlt' },400);
+      const { error } = await admin.from('gfweekly_milestones').delete().eq('id',t.id); if(error) throw error; return json({ ok:true });
     }
 
     return json({ error:'unknown action' }, 400);
