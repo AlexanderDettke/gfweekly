@@ -25,15 +25,13 @@ V9.1 (13.09.2026) legt die Optik des Design Systems „Modernist" (Claude Design
 Farbrollen, Dunkelmodus und Statusfarben bleiben unverändert Habitate. Modernists roter Akzent (#ec3013) wurde **bewusst nicht** übernommen: er kollidiert mit `--crit` („ausgefallen"), das im Cockpit dieselbe Farbe als Signal trägt. Die vier Diagrammfarben `--chart-teal/-peach/-coral/-grid` sind aus der Habitate-Quelle nachgezogen und stehen für spätere Kennzahl-Visualisierungen bereit.
 
 ## Deploy
-Repo: <https://github.com/AlexanderDettke/gfweekly> (privat — `supabase/functions/gfweekly/index.ts` enthält das Zugangspasswort).
+Repo: <https://github.com/AlexanderDettke/gfweekly> (privat — `supabase/functions/gfweekly/index.ts` enthält das Zugangspasswort und gehört nie in `site/`).
 
-Continuous Deployment ist **noch nicht eingerichtet**. Dafür in Netlify unter Project configuration → Build & deploy → Continuous deployment → Link repository das Repo wählen: Branch `main`, Build command leer, Publish directory `site` (steht bereits in `netlify.toml`). Danach deployt jeder Push auf `main` automatisch.
+**Continuous Deployment ist eingerichtet** (13.09.2026). Netlify baut aus dem Git-Repo: Branch `main`, Build command leer, Publish directory `site` (aus `netlify.toml`). Jeder Push auf `main` deployt automatisch; ein Lauf dauert rund eine Minute. Kontrolle im Deploy-Datensatz über `commit_ref` und `branch` — Git-Deploys tragen den Commit-Hash, manuelle Uploads nicht.
 
-Bis dahin lässt sich von Hand deployen. Der Netlify-MCP-Connector (`deploy-site`) deployt nicht selbst, sondern liefert einen fertigen `npx @netlify/mcp`-Befehl mit eingebettetem Auth-Token zurück. Der läuft **nicht-interaktiv** — anders als `netlify login` und `netlify init`, die beide auf Browser-Klicks warten und darum hier nicht automatisierbar sind. Voraussetzung ist Node, das auf dem Arbeitsrechner nicht installiert ist; es genügt aber ein Tarball von nodejs.org, nach `~/` oder in ein temporäres Verzeichnis entpackt (kein `sudo` nötig).
+Manuell deployen (Notfall, oder wenn CD einmal klemmt): Der Netlify-MCP-Connector (`deploy-site`) deployt nicht selbst, sondern liefert einen fertigen `npx @netlify/mcp`-Befehl mit eingebettetem Auth-Token. Der läuft **nicht-interaktiv** — anders als `netlify login` und `netlify init`, die auf Browser-Klicks warten. Voraussetzung ist Node, das auf dem Arbeitsrechner fehlt; ein Tarball von nodejs.org nach `~/` oder in ein temporäres Verzeichnis genügt (kein `sudo`). Ohne jedes Werkzeug geht auch ein Netlify-Drop des Ordners `site/`.
 
-So entstand der Deploy vom 13.09.2026 (`deploy_source: api`, ohne `commit_ref`). Alternativ ohne jedes Werkzeug: Netlify-Drop des Ordners `site/`.
-
-Repos **verknüpfen** kann der Connector nicht — dafür bleibt nur die Weboberfläche.
+Die Seite wird **ohne Zugangskontrolle ausgeliefert** (`requiresPassword: false`): HTML, CSS und `core.js` kann jeder abrufen, der die URL kennt — `noindex` hält nur Suchmaschinen fern. Die Daten liegen dagegen vollständig hinter dem Passwort der Edge Function. Wer auch das Frontend verbergen will, kann auf dem Pro-Plan Netlifys Passwortschutz auf Seitenebene aktivieren (Project configuration → Visitor access); dann sind es zwei Passwörter hintereinander.
 
 ## Backend
 Tabellen `gfweekly_topics`, `gfweekly_inbox`, `gfweekly_people`, `gfweekly_links`, `gfweekly_protocol_requests`, `gfweekly_assets`, `gfweekly_sites`, `gfweekly_site_categories`. Zugriff ausschließlich über die Edge Function (Passwort-Gate, service_role).
