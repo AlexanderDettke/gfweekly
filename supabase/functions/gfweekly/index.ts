@@ -1,6 +1,6 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const PASSWORD = 'windschatten';
+const PASSWORD = Deno.env.get('GFWEEKLY_PASSWORD') ?? '';
 const PROJECT_URL = Deno.env.get('SUPABASE_URL')!;
 const PUBLIC_PAGE = PROJECT_URL + '/storage/v1/object/public/site/gfweekly.html';
 
@@ -20,9 +20,11 @@ const INBOX_SOURCES = ['form','chat','calendar','manuell','meeting']; // entspri
 
 /* v13: Passwort zusätzlich per Header (x-gfweekly-key oder Authorization: Bearer) — für ChatGPT-Actions / Connectoren,
    damit der Schlüssel nicht im Prompt stehen muss. Body-Passwort bleibt für die Website unverändert gültig. */
+/* v15: Passwort liegt nicht mehr im Quelltext, sondern im Supabase-Secret GFWEEKLY_PASSWORD.
+   Ohne gesetztes Secret lehnt die Funktion jede Anfrage ab (fail closed). */
 /* v14: Seitenverzeichnis für die Steuerungsmaske (gfweekly_sites, gfweekly_site_categories):
    sites_list, sites_save, sites_delete, category_save.
-   v15 (13.09.2026): neues Passwort; Meta-Planung Stufe 2: cycle_get, ritual_toggle, ritual_save, ritual_delete,
+   v16 (13.09.2026): Meta-Planung Stufe 2: cycle_get, ritual_toggle, ritual_save, ritual_delete,
    milestones_list, milestone_save, milestone_delete. */
 function keyFromHeaders(req: Request): string {
   const h = req.headers.get('x-gfweekly-key'); if (h) return h.trim();
@@ -41,7 +43,7 @@ function inboxRow(t: any){
 }
 const SITE_FIELDS = ['name','url','category','purpose','notes','login_user','login_password','login_note','status'];
 const SITE_STATUSES = ['aktiv','entwurf','archiv'];
-function slugKey(s: string){ return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'sonstiges'; }
+function slugKey(s: string){ return s.toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'sonstiges'; }
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -50,11 +52,11 @@ Deno.serve(async (req: Request) => {
   let body: any; try { body = await req.json(); } catch { return json({ error:'bad json' }, 400); }
   const { action, password, payload } = body ?? {};
   const given = (password ?? '').toString() || keyFromHeaders(req);
-  if (given !== PASSWORD) return json({ error:'unauthorized' }, 401);
+  if (!PASSWORD || given !== PASSWORD) return json({ error:'unauthorized' }, 401);
   const t = payload ?? {};
 
   try {
-    if (action === 'ping') return json({ ok:true, version:15 });
+    if (action === 'ping') return json({ ok:true, version:16 });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
