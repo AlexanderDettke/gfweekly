@@ -7,11 +7,11 @@
 <meta name="theme-color" content="#17171a" />
 <title>GF Weekly · Themen · Board</title>
 <meta name="description" content="Themen der Geschäftsleitung als Board, Kacheln oder Liste. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=11" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=11" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=11" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=11" />
-<link rel="stylesheet" href="/assets/styles.css?v=11" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=12" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=12" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=12" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=12" />
+<link rel="stylesheet" href="/assets/styles.css?v=12" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
 </head>
 <body>
@@ -20,15 +20,15 @@
   <div class="gate-card">
     <div class="mark">GF</div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
-    <h1>Themen</h1>
-    <div class="sub">Board · Kacheln · Liste</div>
+    <h1>GF Weekly</h1>
+    <div class="sub">Themen · Geschäftsleitung Wilde Möhre · Alex &amp; Lea</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
     <div class="err" id="gateErr"></div>
   </div>
 </div>
 
-<div class="app wrap" id="app" style="max-width:1400px">
+<div class="app wrap" id="app" style="--maxw:1400px">
   <header id="topbar"></header>
   <div id="subnav"></div>
   <div id="hero"></div>
@@ -59,7 +59,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=11"></script>
+<script src="/assets/core.js?v=12"></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const LANES=[["zu_besprechen","Zu besprechen","var(--accent)"],["in_klaerung","In Klärung","var(--warn)"],["entschieden","Entschieden · nächster Schritt","var(--info)"],["erledigt","Erledigt","var(--pos)"]];
@@ -180,7 +180,7 @@ function bind(){
 let OPEN=null;
 function openPanel(id){
   const t=TOPICS.find(x=>x.id===id); if(!t) return; OPEN=id;
-  const people=[...new Set([...PEOPLE.map(p=>p.name),"Alex","Lea","Sebastian","Lea & Alex"].filter(Boolean))];
+  const people=[...new Set([...PEOPLE.map(p=>p.name),"Alex","Lea","Lea & Alex"].filter(Boolean))];
   $("#pTitle").textContent=t.title;
   $("#pBody").innerHTML=`
     <div class="move-row">${LANES.map(([k,l])=>`<button class="seg ${t.board_lane===k?"on":""}" data-lane="${k}">${l.split(" ·")[0]}</button>`).join("")}</div>

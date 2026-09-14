@@ -10,11 +10,11 @@
 <meta property="og:title" content="GF Weekly · Geschäftsleitung" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre." />
 <meta property="og:image" content="assets/og-image.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=11" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=11" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=11" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=11" />
-<link rel="stylesheet" href="/assets/styles.css?v=11" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=12" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=12" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=12" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=12" />
+<link rel="stylesheet" href="/assets/styles.css?v=12" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
 </head>
 <body>
@@ -24,7 +24,7 @@
     <div class="mark">GF</div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
     <h1>GF Weekly</h1>
-    <div class="sub">Geschäftsleitung · Lea, Alex &amp; Sebastian</div>
+    <div class="sub">Start · Geschäftsleitung Wilde Möhre · Alex &amp; Lea</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
     <div class="err" id="gateErr"></div>
@@ -78,7 +78,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=11"></script>
+<script src="/assets/core.js?v=12"></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const MON=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -306,7 +306,8 @@ async function loadQuick(){
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("start");
   const wd=NOW.toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long"});
-  gfMountHero("ankunft", `Guten Tag, ${gfEsc(gfWho())}`, `${wd} · Geschäftsleitung Wilde Möhre`, {compact:true, aside:`<a class="btn btn-sm" href="capture.html">Thema erfassen</a><a class="btn btn-sm" href="board.html">Board öffnen</a>`});
+  gfMountHero("ankunft", `Guten Tag, ${gfEsc(gfWho())}`, `${wd} · Geschäftsleitung Wilde Möhre`, {aside:`<a class="btn btn-sm" href="capture.html">Thema erfassen</a><a class="btn btn-sm" href="board.html">Board öffnen</a>`});
+  document.addEventListener("gf-who",e=>gfHeroText(`Guten Tag, ${gfEsc(e.detail)}`,null));
   try{
     const [cyc, ms]=await Promise.all([gfApi("cycle_get",{year:NOW.getFullYear()}), gfApi("milestones_list",{all:false})]);
     CYCLE=cyc; MS=ms.milestones||[];

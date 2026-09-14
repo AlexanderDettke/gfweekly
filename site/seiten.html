@@ -10,11 +10,11 @@
 <meta property="og:title" content="GF Weekly · Geschäftsleitung" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre." />
 <meta property="og:image" content="assets/og-image.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=11" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=11" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=11" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=11" />
-<link rel="stylesheet" href="/assets/styles.css?v=11" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=12" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=12" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=12" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=12" />
+<link rel="stylesheet" href="/assets/styles.css?v=12" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
 </head>
 <body>
@@ -24,7 +24,7 @@
     <div class="mark">GF</div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
     <h1>GF Weekly</h1>
-    <div class="sub">Geschäftsleitung · Lea, Alex &amp; Sebastian</div>
+    <div class="sub">Wichtige Seiten · Geschäftsleitung Wilde Möhre · Alex &amp; Lea</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
     <div class="err" id="gateErr"></div>
@@ -38,6 +38,11 @@
 
   <div class="toolbar">
     <div class="search"><input id="search" placeholder="Seiten durchsuchen … (Taste /)" /></div>
+    <div class="segs" id="modeSegs" role="group" aria-label="Ansicht">
+      <button class="seg" data-m="kacheln" title="Vorschaubild, Zweck und Zugang je Seite">Kacheln</button>
+      <button class="seg" data-m="liste" title="Eine Zeile je Seite, Zugang direkt kopierbar">Liste</button>
+      <button class="seg" data-m="schnellstart" title="Nur Bild und Name, zum schnellen Öffnen">Schnellstart</button>
+    </div>
     <div class="segs" id="viewSegs">
       <button class="seg on" data-v="aktiv">Aktiv</button>
       <button class="seg" data-v="alle">Alle inkl. Entwurf &amp; Archiv</button>
@@ -54,10 +59,12 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=11"></script>
+<script src="/assets/core.js?v=12"></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
-let CATS=[], SITES=[], VIEW="aktiv", EDIT=false, Q="", OPEN_EDIT=null, REVEAL=new Set();
+let CATS=[], SITES=[], VIEW="aktiv", MODE="kacheln", EDIT=false, Q="", OPEN_EDIT=null, REVEAL=new Set();
+try{ MODE=localStorage.getItem("gf_sites_mode")||"kacheln"; }catch(e){}
+if(!["kacheln","liste","schnellstart"].includes(MODE)) MODE="kacheln";
 const STATUS_LBL={aktiv:"aktiv",entwurf:"Entwurf",archiv:"Archiv"};
 
 function host(u){ try{ return new URL(u).host.replace(/^www\./,""); }catch(e){ return u; } }
@@ -79,51 +86,92 @@ function render(){
   $("#startStats").innerHTML=`
     <div class="sstat"><div class="k">Seiten</div><div class="v">${SITES.filter(s=>s.status==="aktiv").length}</div></div>
     <div class="sstat"><div class="k">Bereiche</div><div class="v">${CATS.length}</div></div>
-    <div class="sstat"><div class="k">mit Zugang</div><div class="v">${withLogin}</div></div>`;
+    <div class="sstat"><div class="k">mit Zugang</div><div class="v">${withLogin}</div></div>
+    <div class="sstat"><div class="k">mit Vorschau</div><div class="v">${SITES.filter(s=>s.preview).length}</div></div>`;
   $("#editMode").classList.toggle("on-edit",EDIT);
   $("#editMode").textContent = EDIT ? "✓ Fertig" : "✎ Bearbeiten";
 
+  document.querySelectorAll("#modeSegs .seg").forEach(b=>b.classList.toggle("on",b.dataset.m===MODE));
   const order=[...CATS].sort((a,b)=>a.sort_order-b.sort_order||a.label.localeCompare(b.label));
   const extraKeys=[...new Set(visible.map(s=>s.category).filter(k=>!CATS.some(c=>c.key===k)))];
   const groups=[...order, ...extraKeys.map(k=>catOf(k))];
   let html="";
-  for(const c of groups){
-    const items=visible.filter(s=>s.category===c.key);
-    if(!items.length && !(EDIT && OPEN_EDIT && OPEN_EDIT.category===c.key && !OPEN_EDIT.id)) continue;
-    html+=`<div class="group">
-      <div class="group-h"><span>${gfEsc(c.icon||"")}</span> ${gfEsc(c.label)} <span class="n">${items.length}</span></div>
-      <div class="sites-grid">${items.map(card).join("")}${(EDIT&&OPEN_EDIT&&!OPEN_EDIT.id&&OPEN_EDIT.category===c.key)?editForm(OPEN_EDIT):""}</div>
-    </div>`;
+  if(MODE==="liste"){
+    const rows=[]; for(const c of groups){ const items=visible.filter(s=>s.category===c.key); for(const s of items) rows.push(row(s,c)); if(EDIT&&OPEN_EDIT&&!OPEN_EDIT.id&&OPEN_EDIT.category===c.key) rows.push(`<div class="srow-edit">${editForm(OPEN_EDIT)}</div>`); }
+    if(rows.length) html=`<div class="slist"><div class="srow shead"><span></span><span>Seite</span><span>Bereich</span><span>Wozu</span><span>Zugang</span><span></span></div>${rows.join("")}</div>`;
+  } else {
+    for(const c of groups){
+      const items=visible.filter(s=>s.category===c.key);
+      if(!items.length && !(EDIT && OPEN_EDIT && OPEN_EDIT.category===c.key && !OPEN_EDIT.id)) continue;
+      const inner = MODE==="schnellstart" ? `<div class="quick-grid">${items.map(tile).join("")}</div>` : `<div class="sites-grid">${items.map(card).join("")}${(EDIT&&OPEN_EDIT&&!OPEN_EDIT.id&&OPEN_EDIT.category===c.key)?editForm(OPEN_EDIT):""}</div>`;
+      html+=`<div class="group"><div class="group-h">${gfEsc(c.label)} <span class="n">${items.length}</span></div>${inner}</div>`;
+    }
+    if(MODE==="schnellstart" && EDIT && OPEN_EDIT && !OPEN_EDIT.id) html+=`<div class="group"><div class="sites-grid">${editForm(OPEN_EDIT)}</div></div>`;
   }
   if(!html) html=`<div class="empty">${Q?"Keine Seite passt zur Suche.":"Noch keine Seiten hinterlegt."}</div>`;
   $("#groups").innerHTML=html;
-  gfStagger($("#groups"),".site");
+  gfStagger($("#groups"), MODE==="liste"?".srow:not(.shead)":(MODE==="schnellstart"?".qtile":".site"));
   bind();
+}
+
+function pic(s, cls=""){
+  if(s.preview) return `<a class="site-pic ${cls}" href="${gfEsc(s.url)}" target="_blank" rel="noopener" tabindex="-1"><img src="${gfEsc(s.preview)}" alt="Vorschau ${gfEsc(s.name)}" loading="lazy" width="800" height="500"></a>`;
+  return `<a class="site-pic none ${cls}" href="${gfEsc(s.url)}" target="_blank" rel="noopener" tabindex="-1"><span>${gfEsc(host(s.url))}</span></a>`;
+}
+function loginBlock(s, compact=false){
+  const hasLogin=!!(s.login_user||s.login_password||s.login_note);
+  const rev=REVEAL.has(s.id);
+  const pw = s.login_password ? (rev? gfEsc(s.login_password) : "•".repeat(Math.min(10,Math.max(6,s.login_password.length)))) : "";
+  if(!hasLogin) return `<div class="site-login none"><span class="lk">Zugang</span><span class="lnote">${compact?"offen":"kein Login hinterlegt"+(EDIT?" · über ✎ ergänzen":"")}</span></div>`;
+  return `<div class="site-login ${compact?"compact":""}">
+      ${compact?"":`<div class="lk">Zugang</div>`}
+      ${s.login_user?`<div class="lrow"><span class="lv">${gfEsc(s.login_user)}</span><button class="mini" data-act="copy" data-v="user" title="Kopieren">⧉</button></div>`:""}
+      ${s.login_password?`<div class="lrow"><span class="lv mono">${pw}</span><button class="mini" data-act="reveal" title="${rev?"Verbergen":"Anzeigen"}">${rev?"verbergen":"zeigen"}</button><button class="mini" data-act="copy" data-v="pw" title="Kopieren">⧉</button></div>`:""}
+      ${s.login_note?`<div class="lnote">${compact?gfClamp(s.login_note,"ln"+s.id,70):gfEsc(s.login_note)}</div>`:""}
+    </div>`;
+}
+
+/* Liste: eine Zeile je Seite */
+function row(s,c){
+  if(OPEN_EDIT && OPEN_EDIT.id===s.id) return `<div class="srow-edit">${editForm(s)}</div>`;
+  return `<div class="srow site ${s.status!=="aktiv"?"is-"+s.status:""}" data-id="${s.id}">
+    ${pic(s,"thumb")}
+    <div class="sname"><a class="site-name" href="${gfEsc(s.url)}" target="_blank" rel="noopener">${gfEsc(s.name)}</a>${s.status!=="aktiv"?` <span class="pill pill-${s.status}">${STATUS_LBL[s.status]}</span>`:""}<div class="site-host"><span>${gfEsc(host(s.url))}</span><button class="mini" data-act="copyurl" title="Link kopieren">⧉</button></div></div>
+    <div class="scat">${gfEsc(c.label)}</div>
+    <div class="spurp">${s.purpose?gfClamp(s.purpose,"lp"+s.id,110):`<span class="muted">–</span>`}</div>
+    <div class="slog">${loginBlock(s,true)}</div>
+    <div class="sact"><a class="btn btn-sm btn-brand" href="${gfEsc(s.url)}" target="_blank" rel="noopener">Öffnen ↗</a>${EDIT?`<button class="icon-btn edit" title="Bearbeiten" data-act="edit">✎</button>`:""}</div>
+  </div>`;
+}
+
+/* Schnellstart: Bild und Name */
+function tile(s){
+  if(OPEN_EDIT && OPEN_EDIT.id===s.id) return editForm(s);
+  const lock=(s.login_user||s.login_password)?`<span class="qlock" title="Zugang hinterlegt">Zugang</span>`:"";
+  return `<div class="qtile site ${s.status!=="aktiv"?"is-"+s.status:""}" data-id="${s.id}">
+    ${pic(s,"q")}
+    <div class="qname"><a class="site-name" href="${gfEsc(s.url)}" target="_blank" rel="noopener">${gfEsc(s.name)}</a>${lock}${EDIT?`<button class="icon-btn edit" title="Bearbeiten" data-act="edit">✎</button>`:""}</div>
+  </div>`;
 }
 
 function card(s){
   if(OPEN_EDIT && OPEN_EDIT.id===s.id) return editForm(s);
-  const hasLogin=!!(s.login_user||s.login_password||s.login_note);
-  const rev=REVEAL.has(s.id);
-  const pw = s.login_password ? (rev? gfEsc(s.login_password) : "•".repeat(Math.min(10,Math.max(6,s.login_password.length)))) : "";
   return `<article class="site ${s.status!=="aktiv"?"is-"+s.status:""}" data-id="${s.id}">
+    ${pic(s)}
+    <div class="site-body">
     <div class="site-top">
       <a class="site-name" href="${gfEsc(s.url)}" target="_blank" rel="noopener">${gfEsc(s.name)}</a>
       ${s.status!=="aktiv"?`<span class="pill pill-${s.status}">${STATUS_LBL[s.status]}</span>`:""}
       ${EDIT?`<button class="icon-btn edit" title="Bearbeiten" data-act="edit">✎</button>`:""}
     </div>
     <div class="site-host"><span>${gfEsc(host(s.url))}</span><button class="mini" data-act="copyurl" title="Link kopieren">⧉</button></div>
-    ${s.purpose?`<p class="site-purpose">${gfClamp(s.purpose,"sp"+s.id,180)}</p>`:`<p class="site-purpose muted">Zweck noch nicht beschrieben.</p>`}
-    ${s.notes?`<p class="site-notes">${gfClamp(s.notes,"sn"+s.id,160)}</p>`:""}
-    ${hasLogin?`<div class="site-login">
-        <div class="lk">Zugang</div>
-        ${s.login_user?`<div class="lrow"><span class="lv">${gfEsc(s.login_user)}</span><button class="mini" data-act="copy" data-v="user" title="Kopieren">⧉</button></div>`:""}
-        ${s.login_password?`<div class="lrow"><span class="lv mono">${pw}</span><button class="mini" data-act="reveal" title="${rev?"Verbergen":"Anzeigen"}">${rev?"verbergen":"zeigen"}</button><button class="mini" data-act="copy" data-v="pw" title="Kopieren">⧉</button></div>`:""}
-        ${s.login_note?`<div class="lnote">${gfEsc(s.login_note)}</div>`:""}
-      </div>`:`<div class="site-login none"><span class="lk">Zugang</span><span class="lnote">kein Login hinterlegt${EDIT?" · über ✎ ergänzen":""}</span></div>`}
+    ${s.purpose?`<p class="site-purpose">${gfClamp(s.purpose,"sp"+s.id,160)}</p>`:`<p class="site-purpose muted">Zweck noch nicht beschrieben.</p>`}
+    ${s.notes?`<p class="site-notes">${gfClamp(s.notes,"sn"+s.id,120)}</p>`:""}
+    ${loginBlock(s)}
     <div class="site-foot">
       <a class="btn btn-sm btn-brand" href="${gfEsc(s.url)}" target="_blank" rel="noopener">Öffnen ↗</a>
       <span class="site-meta">${s.updated_by?`von ${gfEsc(s.updated_by)} · `:""}${fmtDate(s.updated_at)}</span>
+    </div>
     </div>
   </article>`;
 }
@@ -140,6 +188,7 @@ function editForm(s){
       <div class="fld"><label>Login: Nutzer / E-Mail</label><input name="login_user" value="${gfEsc(s.login_user||"")}" autocomplete="off" /></div>
       <div class="fld"><label>Login: Passwort</label><input name="login_password" value="${gfEsc(s.login_password||"")}" autocomplete="off" /></div>
       <div class="fld ffull"><label>Login-Hinweis (z. B. „Passwort auf Startseite eingeben", „Google-Login mit @wildemoehre.org")</label><input name="login_note" value="${gfEsc(s.login_note||"")}" /></div>
+      <div class="fld ffull"><label>Vorschaubild (Pfad oder URL, z. B. /assets/previews/name.webp)</label><input name="preview" value="${gfEsc(s.preview||"")}" placeholder="/assets/previews/…" /></div>
       <div class="fld"><label>Status</label><select name="status">${["aktiv","entwurf","archiv"].map(v=>`<option value="${v}" ${(s.status||"aktiv")===v?"selected":""}>${STATUS_LBL[v]}</option>`).join("")}</select></div>
       <div class="fld"><label>Reihenfolge</label><input name="sort_order" type="number" value="${s.sort_order??100}" /></div>
     </div>
@@ -192,12 +241,13 @@ function bind(){
 
 $("#search").oninput=e=>{ Q=e.target.value.trim(); render(); };
 document.addEventListener("keydown",e=>{ if(e.key==="/" && document.activeElement.tagName!=="INPUT" && document.activeElement.tagName!=="TEXTAREA"){ e.preventDefault(); $("#search").focus(); } });
+$("#modeSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; MODE=b.dataset.m; try{ localStorage.setItem("gf_sites_mode",MODE); }catch(err){} render(); };
 $("#viewSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; VIEW=b.dataset.v; document.querySelectorAll("#viewSegs .seg").forEach(x=>x.classList.toggle("on",x===b)); render(); };
 $("#editMode").onclick=()=>{ EDIT=!EDIT; if(!EDIT) OPEN_EDIT=null; render(); };
-$("#addSite").onclick=()=>{ EDIT=true; OPEN_EDIT={ id:null, name:"", url:"", category:(CATS[0]||{}).key||"steuerung", purpose:"", notes:"", login_user:"", login_password:"", login_note:"", status:"aktiv", sort_order:100 }; render(); setTimeout(()=>{ const f=$("form.editcard"); if(f){ f.scrollIntoView({behavior:"smooth",block:"center"}); f.querySelector('[name="name"]').focus(); } },50); };
+$("#addSite").onclick=()=>{ EDIT=true; OPEN_EDIT={ id:null, name:"", url:"", category:(CATS[0]||{}).key||"steuerung", purpose:"", notes:"", login_user:"", login_password:"", login_note:"", preview:"", status:"aktiv", sort_order:100 }; render(); setTimeout(()=>{ const f=$("form.editcard"); if(f){ f.scrollIntoView({behavior:"smooth",block:"center"}); f.querySelector('[name="name"]').focus(); } },50); };
 $("#reload").onclick=load;
 
-gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("seiten"); gfMountHero("buehne","Wichtige Seiten","Alle Arbeitsseiten der Geschäftsleitung: was dahinter steckt, wo sie liegen, wie man hineinkommt. Zugangsdaten nur nach dem Entsperren."); await load(); });
+gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("seiten"); gfMountHero("buehne","Wichtige Seiten","Alle Arbeitsseiten der Geschäftsleitung mit Vorschaubild, Zweck und Zugang. Ansicht wählen: Kacheln, Liste oder Schnellstart.",{compact:true}); await load(); });
 </script>
 </body>
 </html>

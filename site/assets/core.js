@@ -1,5 +1,5 @@
 /* ===========================================================
-   GF Weekly · V11 · gemeinsamer Kern
+   GF Weekly · V12 · gemeinsamer Kern
    API-Zugriff, Login-Gate, Navigation, Theme-Umschaltung, Helfer.
    Es werden bewusst KEINE apikey/Authorization-Header gesendet
    (das Supabase-Gateway lehnt sonst ab); Auth läuft über das
@@ -51,50 +51,65 @@ function gfGate(onReady){
   if(gfPW()) attempt(gfPW()); else if(inp) inp.focus();
 }
 
-/* ---- Topbar + Navigation (zentral, einheitlich, klarer Active-State) ---- */
+/* ---- Topbar (V12): zwei ruhige Zeilen auf jeder Breite. Zeile 1 Marke + Modus + Person, Zeile 2 Navigation (+ Unternavigation rechts) ---- */
 function gfMountTopbar(active){
   const el=document.getElementById("topbar"); if(!el) return;
   el.className="topbar";
   el.innerHTML=`
-    <div class="brand"><div class="mark">GF</div><div><h1>GF Weekly</h1><div class="meta">Geschäftsleitung · vertraulich</div></div></div>
-    <div class="spacer"></div>
-    <nav class="nav" aria-label="Hauptnavigation">
-      <a href="index.html" data-k="start"><span class="lbl">Start</span></a>
-      <a href="board.html" data-k="themen"><span class="lbl">Themen</span><span class="nbadge" id="themenBadge" style="display:none">0</span></a>
-      <a href="seiten.html" data-k="seiten"><span class="lbl">Wichtige Seiten</span></a>
-      <a href="checkin.html" data-k="checkin"><span class="lbl">Check-in</span></a>
-      <a href="capture.html" data-k="capture"><span class="lbl">Eingabe</span></a>
-      <a href="bearbeiten.html" data-k="edit"><span class="lbl">Bearbeiten</span></a>
-    </nav>
-    <div class="theme-sw" id="themeSw" role="group" aria-label="Designmodus">
-      <button data-th="dark" title="Dunkel" aria-label="Dunkler Modus">Dunkel</button>
-      <button data-th="light" title="Hell" aria-label="Heller Modus">Hell</button>
+    <div class="tb-row tb-top">
+      <a class="brand" href="index.html"><div class="mark">GF</div><div><h1>GF Weekly</h1><div class="meta">Geschäftsleitung · vertraulich</div></div></a>
+      <div class="tb-ctl">
+        <div class="theme-sw" id="themeSw" role="group" aria-label="Designmodus">
+          <button data-th="dark" aria-label="Dunkler Modus">Dunkel</button>
+          <button data-th="light" aria-label="Heller Modus">Hell</button>
+        </div>
+        <div class="whoami" id="whoSw" role="group" aria-label="Aktive Person"><span>als</span>
+          <button data-w="Alex">Alex</button><button data-w="Lea">Lea</button>
+        </div>
+      </div>
     </div>
-    <div class="whoami"><span>als</span><select id="who" aria-label="Aktive Person"><option>Alex</option><option>Lea</option><option>Sebastian</option></select></div>`;
-  const a=el.querySelector(`[data-k="${active}"]`); if(a) a.classList.add("active");
+    <div class="tb-row tb-nav">
+      <nav class="nav" aria-label="Hauptnavigation">
+        <a href="index.html" data-k="start"><span class="lbl">Start</span></a>
+        <a href="board.html" data-k="themen"><span class="lbl">Themen</span><span class="nbadge" id="themenBadge" style="display:none">0</span></a>
+        <a href="seiten.html" data-k="seiten"><span class="lbl">Wichtige Seiten</span></a>
+        <a href="checkin.html" data-k="checkin"><span class="lbl">Check-in</span></a>
+        <a href="capture.html" data-k="capture"><span class="lbl">Eingabe</span></a>
+        <a href="bearbeiten.html" data-k="edit"><span class="lbl">Bearbeiten</span></a>
+      </nav>
+      <div class="tb-sub" id="subnavSlot"></div>
+    </div>`;
+  const a=el.querySelector(`[data-k="${active}"]`); if(a){ a.classList.add("active"); a.setAttribute("aria-current","page"); }
   const cur=gfTheme();
   el.querySelectorAll("#themeSw button").forEach(b=>{ if(b.dataset.th===cur) b.classList.add("on");
     b.onclick=()=>{ gfApplyTheme(b.dataset.th); el.querySelectorAll("#themeSw button").forEach(x=>x.classList.toggle("on",x.dataset.th===b.dataset.th)); }; });
-  const who=el.querySelector("#who"); who.value=gfWho(); who.onchange=e=>gfSetWho(e.target.value);
+  const w0=gfWho()==="Lea"?"Lea":"Alex"; if(gfWho()!==w0) gfSetWho(w0);
+  el.querySelectorAll("#whoSw button").forEach(b=>{ b.classList.toggle("on",b.dataset.w===w0);
+    b.onclick=()=>{ gfSetWho(b.dataset.w); el.querySelectorAll("#whoSw button").forEach(x=>x.classList.toggle("on",x===b)); document.dispatchEvent(new CustomEvent("gf-who",{detail:b.dataset.w})); }; });
+  const sub=document.getElementById("subnav"); if(sub) el.querySelector("#subnavSlot").appendChild(sub);
   if(active!=="themen") gfApi("list").then(d=>{ const n=(d.topics||[]).filter(t=>t.board_lane==="zu_besprechen" && t.kind!=="recurring").length; const b=el.querySelector("#themenBadge"); if(n>0){ b.textContent=n; b.style.display="inline-flex"; b.title=n+" Themen zu besprechen"; } }).catch(()=>{});
 }
 
-/* ---- Unternavigation „Themen": Board · Kacheln · Liste ---- */
+/* ---- Unternavigation „Themen": Board · Kacheln · Liste (sitzt rechts in der Navigationszeile) ---- */
 function gfMountSubnav(active){
   const el=document.getElementById("subnav"); if(!el) return;
   const items=[["board","board.html?view=board","Board","Spalten nach Ablauf, Prio, Zeitraum oder Person, verschiebbar"],["kacheln","board.html?view=kacheln","Kacheln","Gruppen als Kachelraster"],["liste","cockpit.html","Liste","Ausführliche Liste mit Details, Check-in-Themen und Protokoll"]];
   el.className="subnav";
   el.innerHTML=items.map(([k,h,l,t])=>`<a href="${h}" data-k="${k}" title="${t}" class="${k===active?"on":""}">${l}</a>`).join("");
+  const slot=document.getElementById("subnavSlot"); if(slot && el.parentElement!==slot) slot.appendChild(el);
 }
 
-/* ---- Hero-Band mit Grafik (Bildwelt Wilde Habitate: Low-Poly-Szenen, Text auf Foto mit Scrim) ---- */
+/* ---- Kopfbild (V12): Grafik frei sichtbar, ohne Scrim und ohne Text darauf; Titel und Knöpfe stehen darunter ---- */
 const GF_IMG={ tor:"/assets/img/tor-menschen.webp", ankunft:"/assets/img/ankunft.webp", kiste:"/assets/img/kiste-regen.webp", lager:"/assets/img/lager-begruessung.webp", buehne:"/assets/img/buehne-herbst.webp", lagerfeuer:"/assets/img/lagerfeuer.webp" };
+const GF_IMG_ALT={ tor:"Festivaltor mit ankommenden Menschen", ankunft:"Ankunft auf dem Festivalgelände", kiste:"Kiste im Regen zwischen den Zelten", lager:"Begrüßung im Lager", buehne:"Bühne im Herbstwald", lagerfeuer:"Lagerfeuer am Abend" };
 function gfMountHero(img, title, sub, opts={}){
   const el=document.getElementById("hero"); if(!el) return;
   el.className="hero"+(opts.compact?" compact":"");
-  el.style.setProperty("--hero-img",`url(${GF_IMG[img]||img})`);
-  el.innerHTML=`<div class="hero-text"><h2>${title}</h2>${sub?`<p>${sub}</p>`:""}</div>${opts.aside?`<div class="hero-aside">${opts.aside}</div>`:""}`;
+  const src=GF_IMG[img]||img;
+  el.innerHTML=`<figure class="hero-pic"><img src="${src}" alt="${gfEsc(GF_IMG_ALT[img]||"")}" width="1600" height="900" decoding="async" fetchpriority="high"></figure>
+    <div class="hero-head"><div class="hero-text"><h2 id="heroTitle">${title}</h2>${sub?`<p id="heroSub">${sub}</p>`:""}</div>${opts.aside?`<div class="hero-aside">${opts.aside}</div>`:""}</div>`;
 }
+function gfHeroText(title, sub){ const t=document.getElementById("heroTitle"), s=document.getElementById("heroSub"); if(t&&title!=null) t.innerHTML=title; if(s&&sub!=null) s.innerHTML=sub; }
 
 /* ---- Lange Texte einklappen (ab ~220 Zeichen), Zustand je Schlüssel gemerkt ---- */
 const GF_CLAMP=220;

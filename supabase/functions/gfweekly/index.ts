@@ -41,7 +41,7 @@ function inboxRow(t: any){
     due_hint:(t.due_hint??'').toString().slice(0,60), owner_hint:(t.owner_hint??'').toString().slice(0,120),
   };
 }
-const SITE_FIELDS = ['name','url','category','purpose','notes','login_user','login_password','login_note','status'];
+const SITE_FIELDS = ['name','url','category','purpose','notes','login_user','login_password','login_note','status','preview'];
 const SITE_STATUSES = ['aktiv','entwurf','archiv'];
 function slugKey(s: string){ return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'sonstiges'; }
 
@@ -56,7 +56,7 @@ Deno.serve(async (req: Request) => {
   const t = payload ?? {};
 
   try {
-    if (action === 'ping') return json({ ok:true, version:16 });
+    if (action === 'ping') return json({ ok:true, version:17 });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -106,6 +106,7 @@ Deno.serve(async (req: Request) => {
 
     /* ----- Inbox ----- */
     /* v16: Eingaben landen direkt als Thema in „Zu besprechen" (kein Inbox-Zwischenschritt mehr, Entscheid 13.09.2026).
+       v17: Seiten haben ein Vorschaubild (preview, Pfad unter /assets/previews/).
        Antwortform bleibt kompatibel: item = das angelegte Thema. */
     function topicFromCapture(c: any){
       const raw=(c.raw_text ?? c.title ?? '').toString().trim(); if(!raw) return null;
