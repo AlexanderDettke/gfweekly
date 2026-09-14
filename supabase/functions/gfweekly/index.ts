@@ -43,7 +43,8 @@ function inboxRow(t: any){
 }
 const SITE_FIELDS = ['name','url','category','purpose','notes','login_user','login_password','login_note','status','preview'];
 const SITE_STATUSES = ['aktiv','entwurf','archiv'];
-/* v21 (14.09.2026): Neuigkeiten (gfweekly_news): Ticker, Sichtungskorb (Kandidaten), Themenlage je Strang.
+/* v22 (14.09.2026): Habitat-Punkte, siehe Modul unten (checkin, score_get, score_event, score_events, score_rules; Vergabe in add/capture/update/decision_add/ritual_toggle/session_end/milestone_save).
+   v21 (14.09.2026): Neuigkeiten (gfweekly_news): Ticker, Sichtungskorb (Kandidaten), Themenlage je Strang.
    Befüllt vom täglichen Cowork-Auftrag (news_add_many, Dedup über source_ref), gelesen von site/neuigkeiten.html. */
 const NEWS_KINDS = ['ticker','kandidat','lage'];
 const NEWS_SOURCES = ['notiz','asana','kalender','mail','protokoll','entscheidung','manuell'];
@@ -155,6 +156,160 @@ Regeln: Nichts weglassen, was inhaltlich zählt; nichts hinzuerfinden; Wortlaut 
   return { changes, model, usage: data.usage };
 }
 
+/* ===== v22 (14.09.2026): Habitat-Punkte. Eine Währung (Taler), je Person zugeschrieben, gemeinsamer Jahrestopf.
+   Vergabe passiert serverseitig in den bestehenden Actions (add, capture, update, decision_add, ritual_toggle, session_end,
+   milestone_save) sowie in checkin. Antworten tragen zusätzlich `gains` (Liste der gerade vergebenen Taler).
+   Regeln und Stufen liegen in gfweekly_score_rules und gfweekly_score_levels und lassen sich ohne Code ändern.
+   Konzept: Projektwissen „gfweekly_Plan_V16_Habitatpunkte“. ===== */
+type Gain = { kind:string; points:number; who:string; label:string; icon:string; ref?:string };
+type Rule = { kind:string; points:number; cap_per_day:number|null; label:string; icon:string };
+let RULES_CACHE: { at:number; rules:Record<string,Rule> } | null = null;
+async function scoreRules(): Promise<Record<string,Rule>> {
+  if (RULES_CACHE && Date.now()-RULES_CACHE.at < 60000) return RULES_CACHE.rules;
+  const { data } = await admin.from('gfweekly_score_rules').select('*');
+  const rules: Record<string,Rule> = {}; for (const r of (data||[])) rules[r.kind]=r;
+  RULES_CACHE = { at: Date.now(), rules }; return rules;
+}
+function whoNorm(w: unknown): string { const s=(w??'').toString().toLowerCase(); if(s.includes('lea')) return 'Lea'; if(s.includes('alex')) return 'Alex'; return 'Team'; }
+function dayOf(t: any): string { const d=(t?.local_day??'').toString(); return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : new Date().toISOString().slice(0,10); }
+function isoWeek(day: string): string { const d=new Date(day+'T00:00:00Z'); const dn=(d.getUTCDay()+6)%7; d.setUTCDate(d.getUTCDate()-dn+3); const y=d.getUTCFullYear(); const jan4=new Date(Date.UTC(y,0,4)); const w=1+Math.round(((d.getTime()-jan4.getTime())/86400000-3+((jan4.getUTCDay()+6)%7))/7); return `${y}-W${String(w).padStart(2,'0')}`; }
+function addDays(day: string, n: number){ const d=new Date(day+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
+function isWeekend(day: string){ const g=new Date(day+'T00:00:00Z').getUTCDay(); return g===0||g===6; }
+/* Vergibt Taler. ref_id macht die Vergabe einmalig (je kind, ref_id, who). cap_per_day begrenzt je Person und Tag. */
+async function award(gains: Gain[], kind: string, who: string, refType: string, refId: string, day: string, extra=0, note=''): Promise<Gain|null> {
+  const rules = await scoreRules(); const r = rules[kind]; if(!r) return null;
+  const w = whoNorm(who); const points = (r.points||0) + extra;
+  if (r.cap_per_day) {
+    const { count } = await admin.from('gfweekly_score_events').select('id',{count:'exact',head:true}).eq('kind',kind).eq('who',w).eq('day',day);
+    if ((count||0) >= r.cap_per_day) return null;
+  }
+  const row = { who:w, kind, points, ref_type:refType, ref_id:refId||'', day, week:isoWeek(day), year:parseInt(day.slice(0,4)), note:note.slice(0,300) };
+  const { error } = await admin.from('gfweekly_score_events').insert(row);
+  if (error) { if ((error as any).code==='23505') return null; throw error; }
+  const g: Gain = { kind, points, who:w, label:r.label, icon:r.icon, ref:refId }; gains.push(g); return g;
+}
+async function hasEvent(kind: string, refId: string, who?: string){ let q=admin.from('gfweekly_score_events').select('id',{count:'exact',head:true}).eq('kind',kind).eq('ref_id',refId); if(who) q=q.eq('who',whoNorm(who)); const { count }=await q; return (count||0)>0; }
+function topicComplete(row: any){ return !!((row.title||'').toString().trim() && (row.short_description||'').toString().trim() && ((row.owner||'').toString().trim() || (row.next_action||'').toString().trim())); }
+/* Übergänge eines Themas bewerten (nach Update): erledigt, Altlast, Saat, Bewegen */
+async function scoreTopicTransition(gains: Gain[], before: any, after: any, who: string, day: string){
+  if(!before||!after) return;
+  const wasDone = before.board_lane==='erledigt' || before.status==='erledigt';
+  const isDone = after.board_lane==='erledigt' || after.status==='erledigt';
+  if(isDone && !wasDone){
+    await award(gains,'thema_erledigt',who,'topic',after.id,day);
+    const ageDays=(Date.now()-new Date(after.created_at).getTime())/86400000;
+    if(ageDays>90) await award(gains,'altlast',who,'topic',after.id,day);
+  }
+  const decidedNow = (after.board_lane==='entschieden' && before.board_lane!=='entschieden') || (isDone && !wasDone);
+  if(decidedNow && after.kind!=='recurring'){ const creator=whoNorm(after.created_by); if(creator!=='Team') await award(gains,'saat',creator,'topic',after.id,day); }
+  const hadBoth = (before.owner||'').toString().trim() && (before.next_action||'').toString().trim();
+  const hasBoth = (after.owner||'').toString().trim() && (after.next_action||'').toString().trim();
+  if(hasBoth && !hadBoth) await award(gains,'bewegen',who,'topic',after.id,day);
+}
+/* Serie: Tage in Folge mit Check-in, Wochenenden zählen nicht als Lücke */
+async function streakFor(who: string, day: string){
+  const { data } = await admin.from('gfweekly_checkins').select('day,hour').eq('who',whoNorm(who)).lte('day',day).order('day',{ascending:false}).limit(120);
+  const days=new Set((data||[]).map((r: any)=>r.day)); if(!days.has(day)) return { streak:0, days:[] as string[] };
+  let n=0, cur=day; const list: string[]=[];
+  while(days.has(cur)){ n++; list.push(cur); let prev=addDays(cur,-1); while(isWeekend(prev) && !days.has(prev)) prev=addDays(prev,-1); cur=prev; }
+  return { streak:n, days:list };
+}
+async function doCheckin(gains: Gain[], who: string, day: string, hour: number){
+  const w=whoNorm(who); if(w==='Team') return { first:false, streak:0 };
+  const { error } = await admin.from('gfweekly_checkins').insert({ who:w, day, hour });
+  const first = !error; if(error && (error as any).code!=='23505') throw error;
+  if(first) await award(gains,'einchecken',w,'checkin',`${w}:${day}`,day);
+  const { streak, days } = await streakFor(w, day);
+  if(first){ const start=days[days.length-1]; for(const n of [3,7,14,30]) if(streak===n) await award(gains,`serie_${n}`,w,'serie',`${w}:${start}:${n}`,day); if(streak>30 && streak%30===0) await award(gains,'serie_30',w,'serie',`${w}:${days[days.length-1]}:${streak}`,day,0,`${streak} Tage`); }
+  return { first, streak };
+}
+/* Tages- und Wochenziel */
+const DAY_GOALS: [string,string,string][] = [
+  ['erledigen','Ein Thema erledigen','thema_erledigt'],
+  ['verantwortung','Einem Thema Verantwortung und nächsten Schritt geben','bewegen'],
+  ['ritual','Ein Ritual abhaken','ritual'],
+  ['einbringen','Ein vollständiges Thema einbringen','thema_vollstaendig'],
+  ['entscheiden','Eine Entscheidung festhalten','entscheidung'],
+];
+function dayGoal(day: string){ const n=parseInt(day.replace(/-/g,''),10); return DAY_GOALS[n % DAY_GOALS.length]; }
+async function checkGoals(gains: Gain[], who: string, day: string){
+  const w=whoNorm(who); if(w==='Team') return;
+  const [key,label,kind]=dayGoal(day);
+  const { count } = await admin.from('gfweekly_score_events').select('id',{count:'exact',head:true}).eq('kind',kind).eq('who',w).eq('day',day);
+  if((count||0)>0) await award(gains,'tagesziel',w,'goal',`${w}:${day}:${key}`,day,0,label);
+  const week=isoWeek(day);
+  const [{ count: sess },{ count: dec }] = await Promise.all([
+    admin.from('gfweekly_score_events').select('id',{count:'exact',head:true}).eq('kind','besprechung').eq('week',week),
+    admin.from('gfweekly_score_events').select('id',{count:'exact',head:true}).eq('kind','entscheidung').eq('week',week),
+  ]);
+  if((sess||0)>0 && (dec||0)>=2) for(const p of ['Alex','Lea']) await award(gains,'wochenziel',p,'goal',`${p}:${week}`,day);
+}
+/* Abzeichen: einmal je Jahr, je 25 Taler */
+const BADGES: [string,string,string][] = [
+  ['erste-entscheidung','Erste Entscheidung','Team'],['zehn-entscheidungen','Zehn Entscheidungen','Team'],['altlast','Altlast geräumt','Team'],
+  ['fruehaufsteher','Frühaufsteher','who'],['marathon','Marathon','Team'],['kurz-und-knackig','Kurz und knackig','Team'],['leere-agenda','Leere Agenda','Team'],
+  ['ritualmeister','Ritualmeister','Team'],['meilenstein','Meilenstein gesetzt','Team'],['protokollant','Protokollant','Team'],['wochenmail','Vier Wochen Wochenmail','Team'],
+  ['jahresring','Jahresring','Team'],['drei-tage','Drei Tage in Folge','who'],['volle-woche','Volle Woche','who'],['ein-monat','Ein Monat','who'],
+  ['saatgut','Saatgut','who'],['gaertner','Gärtner','who'],['vollstaendig','Vollständig','who'],['tagesziel-serie','Tagesziel-Serie','who'],
+];
+async function grantBadge(gains: Gain[], key: string, who: string, year: number, day: string, ref=''){
+  const w = BADGES.find(b=>b[0]===key)?.[2]==='who' ? whoNorm(who) : 'Team'; if(w==='Team' && BADGES.find(b=>b[0]===key)?.[2]==='who') return null;
+  const { error } = await admin.from('gfweekly_badges').insert({ key, who:w, year, ref });
+  if(error){ if((error as any).code==='23505') return null; throw error; }
+  const label=BADGES.find(b=>b[0]===key)?.[1]||key;
+  const g=await award(gains,'abzeichen', w==='Team'?'Team':w,'badge',`${key}:${w}:${year}`,day,0,label);
+  if(g){ g.label='Abzeichen: '+label; g.icon='abzeichen-'+key; (g as any).badge=key; }
+  return g;
+}
+async function countEv(kind: string, year: number, who?: string){ let q=admin.from('gfweekly_score_events').select('id',{count:'exact',head:true}).eq('kind',kind).eq('year',year); if(who) q=q.eq('who',who); const { count }=await q; return count||0; }
+async function checkBadges(gains: Gain[], who: string, day: string, ctx: Record<string, any> = {}){
+  const year=parseInt(day.slice(0,4)); const w=whoNorm(who);
+  if(await countEv('entscheidung',year)>=1) await grantBadge(gains,'erste-entscheidung',w,year,day);
+  if(await countEv('entscheidung',year)>=10) await grantBadge(gains,'zehn-entscheidungen',w,year,day);
+  if(await countEv('altlast',year)>=1) await grantBadge(gains,'altlast',w,year,day);
+  if(await countEv('meilenstein',year)>=1) await grantBadge(gains,'meilenstein',w,year,day);
+  if(await countEv('besprechung',year)>=5) await grantBadge(gains,'protokollant',w,year,day);
+  if(w!=='Team'){
+    if(await countEv('thema_neu',year,w)+await countEv('thema_vollstaendig',year,w)>=10) await grantBadge(gains,'saatgut',w,year,day);
+    if(await countEv('saat',year,w)>=5) await grantBadge(gains,'gaertner',w,year,day);
+    if(await countEv('thema_vollstaendig',year,w)>=10) await grantBadge(gains,'vollstaendig',w,year,day);
+    if(await countEv('tagesziel',year,w)>=7) await grantBadge(gains,'tagesziel-serie',w,year,day);
+    const { count: early } = await admin.from('gfweekly_checkins').select('who',{count:'exact',head:true}).eq('who',w).lt('hour',8).gte('day',`${year}-01-01`);
+    if((early||0)>=5) await grantBadge(gains,'fruehaufsteher',w,year,day);
+    if(ctx.streak>=3) await grantBadge(gains,'drei-tage',w,year,day);
+    if(ctx.streak>=7) await grantBadge(gains,'volle-woche',w,year,day);
+    if(ctx.streak>=30) await grantBadge(gains,'ein-monat',w,year,day);
+  }
+  if(ctx.session){ const s=ctx.session; const log=Array.isArray(s.summary)?s.summary:[]; const dur=(new Date(s.ended_at).getTime()-new Date(s.started_at).getTime())/60000;
+    if(log.length>=10) await grantBadge(gains,'marathon',w,year,day,s.id);
+    if(dur<20 && log.filter((l: any)=>l.outcome&&l.outcome!=='besprochen').length>=3) await grantBadge(gains,'kurz-und-knackig',w,year,day,s.id);
+    if(ctx.agendaLeer) await grantBadge(gains,'leere-agenda',w,year,day,s.id); }
+  if(ctx.phaseComplete) await grantBadge(gains,'ritualmeister',w,year,day,ctx.phaseKey||'');
+  const { data: wm } = await admin.from('gfweekly_score_events').select('week').eq('kind','wochenmail').eq('year',year);
+  if(new Set((wm||[]).map((x: any)=>x.week)).size>=4) await grantBadge(gains,'wochenmail',w,year,day);
+}
+async function scoreState(who: string, day: string){
+  const year=parseInt(day.slice(0,4)); const week=isoWeek(day); const w=whoNorm(who);
+  const [{ data: ev },{ data: lv },{ data: bd },{ data: sess }] = await Promise.all([
+    admin.from('gfweekly_score_events').select('who,kind,points,day,week').eq('year',year),
+    admin.from('gfweekly_score_levels').select('*').order('threshold',{ascending:true}),
+    admin.from('gfweekly_badges').select('*').eq('year',year).order('earned_at',{ascending:false}),
+    admin.from('gfweekly_sessions').select('ended_at').not('ended_at','is',null).order('ended_at',{ascending:false}).limit(60),
+  ]);
+  const events=ev||[]; const total=events.reduce((n: number,e: any)=>n+e.points,0);
+  const weekPts=events.filter((e: any)=>e.week===week).reduce((n: number,e: any)=>n+e.points,0);
+  const todayPts=events.filter((e: any)=>e.day===day && e.who===w).reduce((n: number,e: any)=>n+e.points,0);
+  const levels=lv||[]; let level=levels[0], next: any=null; for(const l of levels){ if(total>=l.threshold) level=l; else { next=l; break; } }
+  const rank = weekPts>=600?'gold':weekPts>=350?'silber':weekPts>=150?'bronze':'';
+  const { streak } = w==='Team' ? { streak:0 } : await streakFor(w, day);
+  const weeksWithSession=new Set((sess||[]).map((s: any)=>isoWeek(s.ended_at.slice(0,10)))); let fire=0; while(fire<60 && weeksWithSession.has(isoWeek(addDays(day,-7*fire)))) fire++;
+  const [gk,gl,gkind]=dayGoal(day);
+  const goalDone = events.some((e: any)=>e.kind==='tagesziel' && e.day===day && e.who===w);
+  const weekGoalDone = events.some((e: any)=>e.kind==='wochenziel' && e.week===week);
+  const perKind: Record<string,number> = {}; for(const e of events) perKind[e.kind]=(perKind[e.kind]||0)+e.points;
+  return { year, week, day, who:w, total, weekPts, todayPts, level:{ key:level?.key, label:level?.label, threshold:level?.threshold, image:level?.image }, next: next?{ key:next.key,label:next.label,threshold:next.threshold }:null, rank, streak, fire, goal:{ key:gk, label:gl, kind:gkind, done:goalDone }, weekGoal:{ label:'Eine Besprechung abschließen und zwei Entscheidungen festhalten', done:weekGoalDone }, badges:(bd||[]).map((b: any)=>({ key:b.key, who:b.who, earned_at:b.earned_at, label:(BADGES.find(x=>x[0]===b.key)||[])[1]||b.key })), perKind, checkedInToday: w!=='Team' && streak>0 };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method === 'GET') { try { await ensurePageInStorage(); } catch(_e){} return new Response(null,{ status:302, headers:{ 'Location':PUBLIC_PAGE, 'Cache-Control':'no-store' } }); }
@@ -164,9 +319,10 @@ Deno.serve(async (req: Request) => {
   const given = (password ?? '').toString() || keyFromHeaders(req);
   if (!PASSWORD || given !== PASSWORD) return json({ error:'unauthorized' }, 401);
   const t = payload ?? {};
+  const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:21, secretConfigured: !!PASSWORD, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
+    if (action === 'ping') return json({ ok:true, version:22, secretConfigured: !!PASSWORD, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -186,7 +342,9 @@ Deno.serve(async (req: Request) => {
       for (const f of ['short_description','relevance','relevance_reason','recommendation','owner','delegate_to','involved','needs_input_from','reviewer','approver','next_action','dependencies','notes','frequency']) if (t[f] !== undefined) row[f] = t[f];
       if (t.time_minutes !== undefined && t.time_minutes !== null && t.time_minutes !== '') row.time_minutes = parseInt(t.time_minutes) || null;
       const { data, error } = await admin.from('gfweekly_topics').insert(row).select().single();
-      if (error) throw error; return json({ topic: data });
+      if (error) throw error;
+      if (data.kind!=='recurring') { await award(gains, topicComplete(data)?'thema_vollstaendig':'thema_neu', WHO, 'topic', data.id, DAY); await checkGoals(gains, WHO, DAY); await checkBadges(gains, WHO, DAY); }
+      return json({ topic: data, gains });
     }
     if (action === 'update') {
       if (!t.id) return json({ error:'id fehlt' }, 400);
@@ -201,8 +359,12 @@ Deno.serve(async (req: Request) => {
         if (f === 'last_discussed' || f === 'next_suggested') { patch[f] = t[f] || null; continue; }
         patch[f] = typeof t[f] === 'string' ? t[f] : t[f];
       }
+      const { data: before } = await admin.from('gfweekly_topics').select('*').eq('id', t.id).single();
       const { data, error } = await admin.from('gfweekly_topics').update(patch).eq('id', t.id).select().single();
-      if (error) throw error; return json({ topic: data });
+      if (error) throw error;
+      await scoreTopicTransition(gains, before, data, WHO, DAY);
+      if (gains.length) { await checkGoals(gains, WHO, DAY); await checkBadges(gains, WHO, DAY); }
+      return json({ topic: data, gains });
     }
     if (action === 'delete') {
       if (!t.id) return json({ error:'id fehlt' }, 400);
@@ -256,14 +418,18 @@ Deno.serve(async (req: Request) => {
     if (action === 'capture') {
       const row = topicFromCapture(t); if(!row) return json({ error:'leer' },400);
       const { data, error } = await admin.from('gfweekly_topics').insert(row).select().single();
-      if (error) throw error; return json({ item:data, topic:data });
+      if (error) throw error;
+      await award(gains, topicComplete(data)?'thema_vollstaendig':'thema_neu', WHO, 'topic', data.id, DAY); await checkGoals(gains, WHO, DAY); await checkBadges(gains, WHO, DAY);
+      return json({ item:data, topic:data, gains });
     }
     if (action === 'capture_many') {
       const items = Array.isArray(t.items) ? t.items.slice(0,30) : [];
       const rows = items.map((it: any) => topicFromCapture({ ...it, created_by: it.created_by ?? t.created_by, source: it.source ?? t.source })).filter(Boolean);
       if(!rows.length) return json({ error:'leer' },400);
       const { data, error } = await admin.from('gfweekly_topics').insert(rows).select();
-      if (error) throw error; return json({ items:data, count:data.length });
+      if (error) throw error;
+      for (const d of data) await award(gains, topicComplete(d)?'thema_vollstaendig':'thema_neu', WHO, 'topic', d.id, DAY);
+      return json({ items:data, count:data.length, gains });
     }
     if (action === 'inbox_list') {
       const statuses = Array.isArray(t.statuses)&&t.statuses.length ? t.statuses : ['neu','reviewed'];
@@ -386,7 +552,15 @@ Deno.serve(async (req: Request) => {
       const year = parseInt(t.year) || new Date().getFullYear();
       if (t.done === false) { const { error } = await admin.from('gfweekly_ritual_checks').delete().eq('ritual_id',t.ritual_id).eq('year',year); if(error) throw error; return json({ ok:true, done:false }); }
       const { data, error } = await admin.from('gfweekly_ritual_checks').upsert({ ritual_id:t.ritual_id, year, done_by:(t.done_by??'').toString().slice(0,120), note:(t.note??'').toString().slice(0,500), done_at:new Date().toISOString() },{ onConflict:'ritual_id,year' }).select().single();
-      if(error) throw error; return json({ ok:true, done:true, check:data });
+      if(error) throw error;
+      await award(gains,'ritual',WHO,'ritual',`${t.ritual_id}:${year}`,DAY);
+      let phaseComplete=false, phaseKey='';
+      const { data: rit } = await admin.from('gfweekly_rituals').select('id,phase_key').eq('id',t.ritual_id).single();
+      if(rit){ phaseKey=rit.phase_key; const [{ data: all },{ data: done }] = await Promise.all([admin.from('gfweekly_rituals').select('id').eq('phase_key',rit.phase_key).eq('active',true), admin.from('gfweekly_ritual_checks').select('ritual_id').eq('year',year)]);
+        const doneSet=new Set((done||[]).map((c: any)=>c.ritual_id)); phaseComplete=(all||[]).length>0 && (all||[]).every((r: any)=>doneSet.has(r.id));
+        if(phaseComplete) await award(gains,'phase_komplett','Team','phase',`${rit.phase_key}:${year}`,DAY); }
+      await checkGoals(gains, WHO, DAY); await checkBadges(gains, WHO, DAY, { phaseComplete, phaseKey });
+      return json({ ok:true, done:true, check:data, gains });
     }
     if (action === 'ritual_save') {
       const row:Record<string,unknown>={};
@@ -418,7 +592,10 @@ Deno.serve(async (req: Request) => {
       if(t.sort_order!==undefined && t.sort_order!=='') row.sort_order=parseInt(t.sort_order)||100;
       if(t.archived!==undefined) row.archived=!!t.archived;
       if(t.topic_id!==undefined) row.topic_id = t.topic_id || null;
-      if(t.id){ const { data, error } = await admin.from('gfweekly_milestones').update(row).eq('id',t.id).select().single(); if(error) throw error; return json({ milestone:data }); }
+      if(t.id){ const { data: before } = await admin.from('gfweekly_milestones').select('status').eq('id',t.id).single();
+        const { data, error } = await admin.from('gfweekly_milestones').update(row).eq('id',t.id).select().single(); if(error) throw error;
+        if(data.status==='erreicht' && before?.status!=='erreicht'){ await award(gains,'meilenstein',WHO,'milestone',data.id,DAY); await checkBadges(gains, WHO, DAY); }
+        return json({ milestone:data, gains }); }
       if(!row.title) return json({ error:'title fehlt' },400);
       const { data, error } = await admin.from('gfweekly_milestones').insert(row).select().single(); if(error) throw error; return json({ milestone:data });
     }
@@ -438,7 +615,12 @@ Deno.serve(async (req: Request) => {
       if(t.protocol!==undefined) patch.protocol=(t.protocol??'').toString().slice(0,20000);
       if(t.summary!==undefined) patch.summary=Array.isArray(t.summary)?t.summary.slice(0,200):[];
       if(t.title!==undefined) patch.title=(t.title??'').toString().slice(0,300);
-      const { data, error } = await admin.from('gfweekly_sessions').update(patch).eq('id',t.id).select().single(); if(error) throw error; return json({ session:data });
+      const { data, error } = await admin.from('gfweekly_sessions').update(patch).eq('id',t.id).select().single(); if(error) throw error;
+      const log=Array.isArray(data.summary)?data.summary:[]; const handled=log.filter((l: any)=>l.outcome && l.outcome!=='skip').length;
+      const parts=['Alex','Lea'].filter(p=>(data.participants||'').toLowerCase().includes(p.toLowerCase())); if(!parts.length) parts.push(WHO);
+      for(const p of parts){ if(p==='Team') continue; await award(gains,'besprechung',p,'session',data.id,DAY,handled*5,`${handled} Themen`); }
+      await checkGoals(gains, parts[0]||WHO, DAY); await checkBadges(gains, parts[0]||WHO, DAY, { session:data, agendaLeer: !!t.agenda_leer });
+      return json({ session:data, gains });
     }
     if (action === 'sessions_list') {
       const limit = Math.min(parseInt(t.limit)||30, 200);
@@ -454,7 +636,11 @@ Deno.serve(async (req: Request) => {
         topic_title:(t.topic_title??'').toString().slice(0,500), next_action:(t.next_action??'').toString().slice(0,2000),
         owner:(t.owner??'').toString().slice(0,120), strand:(t.strand??'').toString().slice(0,120), decided_by:(t.decided_by??'').toString().slice(0,120) };
       if(t.decided_at) row.decided_at=t.decided_at;
-      const { data, error } = await admin.from('gfweekly_decisions').insert(row).select().single(); if(error) throw error; return json({ decision:data });
+      const { data, error } = await admin.from('gfweekly_decisions').insert(row).select().single(); if(error) throw error;
+      await award(gains,'entscheidung',WHO,'decision',data.id,DAY);
+      if(data.topic_id){ const { data: tp } = await admin.from('gfweekly_topics').select('*').eq('id',data.topic_id).single(); if(tp && tp.kind!=='recurring'){ const creator=whoNorm(tp.created_by); if(creator!=='Team') await award(gains,'saat',creator,'topic',tp.id,DAY); } }
+      await checkGoals(gains, WHO, DAY); await checkBadges(gains, WHO, DAY);
+      return json({ decision:data, gains });
     }
     if (action === 'decision_update') {
       if(!t.id) return json({ error:'id fehlt' },400);
@@ -540,6 +726,29 @@ Deno.serve(async (req: Request) => {
       if(!t.id) return json({ error:'id fehlt' },400);
       const { error } = await admin.from('gfweekly_news').delete().eq('id',t.id); if(error) throw error; return json({ ok:true });
     }
+
+    /* ----- v22: Habitat-Punkte ----- */
+    if (action === 'checkin') {
+      const hour = Math.max(0, Math.min(23, parseInt(t.hour) || new Date().getHours()));
+      const r = await doCheckin(gains, WHO, DAY, hour);
+      if (r.first) { await checkGoals(gains, WHO, DAY); await checkBadges(gains, WHO, DAY, { streak:r.streak }); }
+      const state = await scoreState(WHO, DAY);
+      return json({ ok:true, first:r.first, streak:r.streak, gains, state });
+    }
+    if (action === 'score_get') return json({ state: await scoreState(WHO, DAY) });
+    if (action === 'score_event') {
+      const allowed = ['wochenmail','protokoll']; const kind=(t.kind??'').toString(); if(!allowed.includes(kind)) return json({ error:'kind nicht erlaubt' },400);
+      const ref = kind==='wochenmail' ? `wochenmail:${isoWeek(DAY)}` : `protokoll:${(t.ref??DAY).toString().slice(0,80)}`;
+      await award(gains, kind, WHO, 'manual', ref, DAY); await checkBadges(gains, WHO, DAY);
+      return json({ ok:true, gains });
+    }
+    if (action === 'score_events') {
+      const limit=Math.min(parseInt(t.limit)||200, 1000);
+      let q=admin.from('gfweekly_score_events').select('*').order('created_at',{ascending:false}).limit(limit);
+      if(t.year) q=q.eq('year',parseInt(t.year)); if(t.who) q=q.eq('who',whoNorm(t.who));
+      const { data, error } = await q; if(error) throw error; return json({ events:data });
+    }
+    if (action === 'score_rules') { const { data } = await admin.from('gfweekly_score_rules').select('*').order('sort_order'); const { data: lv } = await admin.from('gfweekly_score_levels').select('*').order('threshold'); return json({ rules:data, levels:lv, badges: BADGES.map(b=>({ key:b[0], label:b[1], scope:b[2] })), dayGoals: DAY_GOALS.map(g=>({ key:g[0], label:g[1] })) }); }
 
     return json({ error:'unknown action' }, 400);
   } catch (e) { return json({ error:String((e as Error).message ?? e) }, 500); }

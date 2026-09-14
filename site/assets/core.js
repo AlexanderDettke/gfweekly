@@ -1,5 +1,5 @@
 /* ===========================================================
-   GF Weekly · V16 · gemeinsamer Kern
+   GF Weekly · V17 · gemeinsamer Kern
    API-Zugriff, Login-Gate, Navigation, Theme-Umschaltung, Helfer.
    Es werden bewusst KEINE apikey/Authorization-Header gesendet
    (das Supabase-Gateway lehnt sonst ab); Auth läuft über das
@@ -190,6 +190,8 @@ function gfTextModal(title, text, opts={}){
   m.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>m.classList.remove("open"));
   m.onclick=e=>{ if(e.target===m) m.classList.remove("open"); };
   m.querySelector("[data-copy]").onclick=()=>gfCopy(text);
+  /* V17: Protokoll verschickt zählt (5 Taler, einmal je Protokoll), serverseitig eindeutig über den Betreff */
+  if(/Protokoll/i.test(subject)){ const a=m.querySelector('a[href^="mailto:"]'); if(a) a.addEventListener("click",()=>{ gfApi("score_event",{kind:"protokoll", ref:subject}).catch(()=>{}); }); }
   return m;
 }
 function gfFmtDay(d){ return new Date(d).toLocaleDateString("de-DE",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"}); }

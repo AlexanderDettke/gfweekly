@@ -32,6 +32,8 @@
     });
   }
 
+  document.addEventListener("gf-egg-konfetti",()=>konfetti()); /* V17: Stufenaufstieg im Spiel */
+
   /* 2) Der Bus fährt los, wenn die Agenda leer ist */
   let busDone=false;
   function bus(){

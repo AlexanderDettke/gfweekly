@@ -7,11 +7,11 @@
 <meta name="theme-color" content="#17171a" />
 <title>GF Weekly · Themen · Board</title>
 <meta name="description" content="Themen der Geschäftsleitung als Board, Kacheln oder Liste. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=16" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=16" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=16" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=16" />
-<link rel="stylesheet" href="/assets/styles.css?v=16" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=17" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=17" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=17" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=17" />
+<link rel="stylesheet" href="/assets/styles.css?v=17" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
 </head>
 <body>
@@ -64,8 +64,9 @@
 <div class="toast" id="toast"></div>
 <div class="modal-back" id="tidyModal"></div>
 
-<script src="/assets/core.js?v=16"></script>
-<script src="/assets/eggs.js?v=16" defer></script>
+<script src="/assets/core.js?v=17"></script>
+<script src="/assets/game.js?v=17"></script>
+<script src="/assets/eggs.js?v=17" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const LANES=[["zu_besprechen","Zu besprechen","var(--accent)"],["in_klaerung","In Klärung","var(--warn)"],["entschieden","Entschieden · nächster Schritt","var(--info)"],["erledigt","Erledigt","var(--pos)"]];
@@ -116,6 +117,8 @@ function card(t){
 }
 
 /* ---- Rendern ---- */
+const LANE_ICO={zu_besprechen:"spalte-zu-besprechen",in_klaerung:"spalte-in-klaerung",entschieden:"spalte-entschieden",erledigt:"spalte-erledigt",hoch:"tempo-4",mittel:"tempo-2",niedrig:"tempo-1"};
+function laneIco(key){ const k=LANE_ICO[key]||(/^lea\b/i.test(key||"")?"portraet-lea":null); return (k&&window.GF_GAME)?`<img class="lane-ico" src="${GF_GAME.icon(k)}" alt="">`:""; }
 function render(){
   document.querySelectorAll("#groupSegs .seg").forEach(b=>b.classList.toggle("on",b.dataset.g===GROUP));
   $("#showRec").checked=SHOW_REC; $("#showDone").checked=SHOW_DONE;
@@ -123,14 +126,14 @@ function render(){
   const total=cols.reduce((n,c)=>n+c.items.length,0);
   if(VIEW==="board"){
     $("#view").innerHTML=`<div class="board">${cols.map(c=>`<section class="lane" data-col="${gfEsc(c.key)}">
-      <div class="lane-h"><span class="bar" style="--c:${c.color}"></span>${gfEsc(c.label)}<span class="n">${c.items.length}</span></div>
+      <div class="lane-h"><span class="bar" style="--c:${c.color}"></span>${laneIco(c.key)}${gfEsc(c.label)}<span class="n">${c.items.length}</span></div>
       ${c.items.map(card).join("")||`<div class="empty-lane">hierher ziehen</div>`}
     </section>`).join("")}</div>`;
   } else {
     $("#view").innerHTML=`<div class="tiles">${cols.filter(c=>c.items.length).map(c=>`<section class="lane tgroup" data-col="${gfEsc(c.key)}" style="min-height:0">
-      <div class="tgroup-h"><span class="bar" style="--c:${c.color};width:var(--band);height:16px;display:inline-block;border-radius:var(--radius-s);background:var(--c)"></span>${gfEsc(c.label)}<span class="n" style="margin-left:auto;background:var(--fill);border-radius:var(--radius-s);padding:1px 8px;font-size:var(--stufe-1)">${c.items.length}</span></div>
+      <div class="tgroup-h"><span class="bar" style="--c:${c.color};width:var(--band);height:16px;display:inline-block;border-radius:var(--radius-s);background:var(--c)"></span>${laneIco(c.key)}${gfEsc(c.label)}<span class="n" style="margin-left:auto;background:var(--fill);border-radius:var(--radius-s);padding:1px 8px;font-size:var(--stufe-1)">${c.items.length}</span></div>
       <div class="tgrid">${c.items.map(card).join("")}</div>
-    </section>`).join("")||`<div class="empty pic" style="--hero-img:url(/assets/img/lagerfeuer.webp)"><div><h3>Nichts zu zeigen</h3><p>Filter lockern oder ein neues Thema erfassen.</p></div></div>`}</div>`;
+    </section>`).join("")||`<div class="empty soft" style="text-align:center;padding:36px 22px">${window.GF_GAME?`<img class="zpic" src="${GF_GAME.icon("zustand-leer")}" alt="">`:""}<h3>Nichts zu zeigen</h3><p>Filter lockern oder ein neues Thema erfassen.</p></div>`}</div>`;
   }
   gfStagger($("#view"),".bcard"); updateTidyCount();
   if(MEET){ const cid=MEET.queue[MEET.idx]; const c=document.querySelector(`.bcard[data-id="${cid}"]`); if(c) c.classList.add("is-cur"); }

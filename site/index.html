@@ -10,11 +10,11 @@
 <meta property="og:title" content="GF Weekly · Geschäftsleitung" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre." />
 <meta property="og:image" content="assets/og-image.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=16" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=16" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=16" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=16" />
-<link rel="stylesheet" href="/assets/styles.css?v=16" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=17" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=17" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=17" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=17" />
+<link rel="stylesheet" href="/assets/styles.css?v=17" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
 </head>
 <body>
@@ -34,6 +34,9 @@
 <div class="app wrap" id="app">
   <header id="topbar"></header>
   <div id="hero"></div>
+
+  <!-- Habitat: Jahrestopf, Stufe, Tag, Woche, Abzeichen (V17) -->
+  <section class="habitat" id="habitat" aria-label="Habitat-Punkte"></section>
 
   <!-- Zyklus -->
   <section class="cycle" id="cycle"><div class="loading">lädt …</div></section>
@@ -78,8 +81,9 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=16"></script>
-<script src="/assets/eggs.js?v=16" defer></script>
+<script src="/assets/core.js?v=17"></script>
+<script src="/assets/game.js?v=17"></script>
+<script src="/assets/eggs.js?v=17" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const MON=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -176,6 +180,7 @@ function renderRituals(){
   document.dispatchEvent(new CustomEvent("gf-rituals",{detail:{total:list.length, done:n, isCurrent:ph.key===cur.key, phase:ph.label}}));
   $("#rituals").innerHTML= list.length ? list.map((r,i)=>{ const c=done.get(r.id); return `<label class="rit ${c?"done":""}" data-id="${r.id}">
       <input type="checkbox" class="check" ${c?"checked":""} />
+      ${c&&window.GF_GAME?`<img class="stamp" src="${GF_GAME.icon("schatzbuch-stempel-"+STAMPS[i%STAMPS.length])}" alt="" title="Stempel im Schatzbuch">`:""}
       <span class="rt">${gfEsc(r.title)}${r.hint?`<small>${gfEsc(r.hint)}</small>`:""}${c?`<small class="who">✓ ${gfEsc(c.done_by||"")} · ${new Date(c.done_at).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}</small>`:""}</span>
       ${EDIT?`<button class="mini del" data-act="rdel" title="Ritual entfernen">✕</button>`:""}
     </label>`; }).join("") : `<div class="empty soft">Noch keine Rituale für diese Phase.</div>`;
@@ -295,6 +300,45 @@ async function loadTopics(){
   }catch(e){ $("#topGrid").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
 }
 
+/* ---- Habitat (V17): Kopfbild nach Stufe, vier Karten unter dem Kopf ---- */
+const STAMPS=["zelt","feuer","amsel","wasser","baum","stern"];
+const LEVEL_ORDER=["lichtung","lagerplatz","dorf","festival","habitat"];
+function renderHabitat(st){
+  const G=window.GF_GAME; if(!G||!st) return;
+  const img=document.querySelector("#hero .hero-pic img"); const want=G.icon(st.level?.image||"habitat-1-lichtung"); if(img && img.getAttribute("src")!==want){ img.src=want; img.alt=`Habitat-Stufe ${st.level?.label||""}`; }
+  const lvl=st.level||{}, nx=st.next; const base=lvl.threshold||0; const pct=nx?Math.min(100,Math.round((st.total-base)/((nx.threshold-base)||1)*100)):100;
+  const rankImg=st.rank?G.icon("rang-"+st.rank):null; const rankLbl={bronze:"Bronze",silber:"Silber",gold:"Gold"}[st.rank]||"noch kein Rang";
+  const toRank=st.weekPts>=600?"":st.weekPts>=350?`${600-st.weekPts} bis Gold`:st.weekPts>=150?`${350-st.weekPts} bis Silber`:`${150-st.weekPts} bis Bronze`;
+  const badges=(st.badges||[]); const shown=badges.slice(0,6);
+  $("#habitat").innerHTML=`
+    <div class="hab">
+      <div class="k"><img src="${G.icon("punkte-taler")}" alt="">Habitat ${st.year}</div>
+      <div class="v">${st.total}<small>Taler · Stufe ${gfEsc(lvl.label||"")}</small></div>
+      <div class="bar"><i style="--p:${pct}%"></i></div>
+      <div class="steps">${LEVEL_ORDER.map(k=>`<span class="${k===lvl.key?"on":""}">${k.charAt(0).toUpperCase()+k.slice(1)}</span>`).join("")}</div>
+      <div class="cap">${nx?`Noch ${nx.threshold-st.total} Taler bis ${gfEsc(nx.label)}.`:"Das Habitat steht. Alles weitere ist Zugabe."} Gemeinsamer Topf von Alex und Lea, ohne Verfall.</div>
+    </div>
+    <div class="hab">
+      <div class="k"><img src="${G.streakIcon(st.streak)}" alt="">Heute · ${gfEsc(st.who)}</div>
+      <div class="v"><img src="${G.streakIcon(st.streak)}" alt="">${st.streak}<small>${st.streak===1?"Tag":"Tage"} in Folge</small></div>
+      <div class="goal ${st.goal?.done?"done":""}"><img src="${G.icon("punkte-tagesziel")}" alt=""><span>${gfEsc(st.goal?.label||"Tagesziel")}</span><b>${st.goal?.done?"erfüllt":"+10"}</b></div>
+      <div class="cap">${st.todayPts} Taler heute${st.streak>=3?` · nächster Serienbonus bei ${st.streak<7?7:st.streak<14?14:st.streak<30?30:Math.ceil((st.streak+1)/30)*30} Tagen`:st.streak?` · ab 3 Tagen gibt es Serienbonus`:" · einchecken zählt beim ersten Öffnen"}</div>
+    </div>
+    <div class="hab">
+      <div class="k"><img src="${rankImg||G.icon("kpi-punkte")}" alt="">Woche ${gfEsc(st.week.split("-W")[1])}</div>
+      <div class="v">${rankImg?`<img src="${rankImg}" alt="">`:""}${st.weekPts}<small>Taler · ${rankLbl}</small></div>
+      <div class="goal ${st.weekGoal?.done?"done":""}"><img src="${G.icon("punkte-wochenziel")}" alt=""><span>${gfEsc(st.weekGoal?.label||"Wochenziel")}</span><b>${st.weekGoal?.done?"erfüllt":"+40"}</b></div>
+      <div class="cap">${toRank?toRank+" · ":""}Lagerfeuer-Serie: ${st.fire} ${st.fire===1?"Woche":"Wochen"} mit Besprechung</div>
+    </div>
+    <a class="hab" href="entscheidungen.html#abzeichen" style="color:inherit">
+      <div class="k"><img src="${G.icon("abzeichen-merle")}" alt="">Abzeichen</div>
+      <div class="v">${badges.length}<small>von ${G.badges.length} dieses Jahr</small></div>
+      <div class="badges">${shown.map(b=>`<img src="${G.icon("abzeichen-"+b.key)}" alt="${gfEsc(b.label)}" title="${gfEsc(b.label)}${b.who&&b.who!=="Team"?" · "+gfEsc(b.who):""}">`).join("")}${badges.length>6?`<span class="more">+${badges.length-6}</span>`:""}${!badges.length?`<span class="more">Das erste kommt mit der ersten Entscheidung.</span>`:""}</div>
+    </a>`;
+  gfStagger($("#habitat"),".hab");
+}
+document.addEventListener("gf-game",e=>renderHabitat(e.detail));
+
 /* ---- Schnellzugriff ---- */
 async function loadQuick(){
   try{
@@ -308,7 +352,9 @@ async function loadQuick(){
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("start");
   const wd=NOW.toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long"});
-  gfMountHero("ankunft", `Guten Tag, ${gfEsc(gfWho())}`, `${wd} · Geschäftsleitung Wilde Möhre`, {aside:`<a class="btn btn-sm" href="capture.html">Thema erfassen</a><a class="btn btn-sm" href="board.html">Board öffnen</a>`});
+  let lv0=null; try{ lv0=localStorage.getItem("gf_level"); }catch(e){}
+  const heroImg = lv0 && window.GF_GAME ? GF_GAME.icon("habitat-"+(["lichtung","lagerplatz","dorf","festival","habitat"].indexOf(lv0)+1)+"-"+lv0) : "ankunft";
+  gfMountHero(heroImg, `Guten Tag, ${gfEsc(gfWho())}`, `${wd} · Geschäftsleitung Wilde Möhre`, {aside:`<a class="btn btn-sm" href="capture.html">Thema erfassen</a><a class="btn btn-sm" href="board.html">Board öffnen</a>`});
   document.addEventListener("gf-who",e=>gfHeroText(`Guten Tag, ${gfEsc(e.detail)}`,null));
   try{
     const [cyc, ms]=await Promise.all([gfApi("cycle_get",{year:NOW.getFullYear()}), gfApi("milestones_list",{all:false})]);

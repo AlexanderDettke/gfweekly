@@ -18,3 +18,12 @@
 
 /assets/previews/*
   Cache-Control: public,max-age=86400
+
+/assets/game/*
+  Cache-Control: public,max-age=604800
+
+/assets/game.js
+  Cache-Control: public,max-age=0,must-revalidate
+
+/assets/eggs.js
+  Cache-Control: public,max-age=0,must-revalidate

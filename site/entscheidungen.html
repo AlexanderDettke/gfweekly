@@ -7,11 +7,11 @@
 <meta name="theme-color" content="#17171a" />
 <title>GF Weekly · Entscheidungen</title>
 <meta name="description" content="Entscheidungslog, Protokolle und Wochenmail der Geschäftsleitung – Wilde Möhre. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=16" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=16" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=16" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=16" />
-<link rel="stylesheet" href="/assets/styles.css?v=16" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=17" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=17" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=17" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=17" />
+<link rel="stylesheet" href="/assets/styles.css?v=17" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
 </head>
 <body>
@@ -50,12 +50,16 @@
 
   <div class="sec-h" style="margin-top:34px"><h2>Besprechungen</h2><span class="hint">Protokoll öffnen, kopieren oder per Mail verschicken</span><span class="line"></span></div>
   <div id="sessions"><div class="loading">lädt …</div></div>
+
+  <div class="sec-h" id="abzeichen" style="margin-top:34px"><h2>Abzeichen</h2><span class="hint" id="bdgHint">einmal je Jahr, je 25 Taler</span><span class="line"></span></div>
+  <div class="badgebar" id="badges"></div>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=16"></script>
-<script src="/assets/eggs.js?v=16" defer></script>
+<script src="/assets/core.js?v=17"></script>
+<script src="/assets/game.js?v=17"></script>
+<script src="/assets/eggs.js?v=17" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 let DEC=[], SESS=[], TOPICS=[], MS=[], CYC=null, Q="", RANGE=90, EDITING=null;
@@ -72,6 +76,14 @@ async function load(){
     render(); renderSessions();
   }catch(e){ $("#log").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
 }
+
+/* ---- Abzeichenleiste (V17): alle 19, erreichte in Farbe ---- */
+function renderBadges(st){
+  const G=window.GF_GAME; if(!G) return; const got=new Map((st?.badges||[]).map(b=>[b.key,b]));
+  $("#bdgHint").textContent=`${got.size} von ${G.badges.length} · ${st?.year||today.getFullYear()} · je 25 Taler`;
+  $("#badges").innerHTML=G.badges.map(([k,l])=>{ const b=got.get(k); return `<div class="bdg ${b?"":"locked"}" title="${gfEsc(l)}${b?` · ${gfFmtShort(b.earned_at)}${b.who&&b.who!=="Team"?" · "+gfEsc(b.who):""}`:" · noch nicht erreicht"}"><img src="${G.icon("abzeichen-"+k)}" alt=""><div class="bl"><span>${gfEsc(l)}</span><small>${b?`${gfFmtShort(b.earned_at)}${b.who&&b.who!=="Team"?" · "+gfEsc(b.who):""}`:"offen"}</small></div></div>`; }).join("");
+}
+document.addEventListener("gf-game",e=>renderBadges(e.detail));
 
 function visible(){
   const since=RANGE?iso(daysAgo(RANGE)):"0000";
@@ -174,7 +186,9 @@ async function wochenmail(){
   L.push(`Zu besprechen: ${zb.length} Themen · In Klärung: ${kl.length}`); L.push("");
   if(next.length){ L.push("Nächste Meilensteine (30 Tage)"); next.forEach(m=>L.push(`- ${gfFmtShort(m.date_from)}${m.date_to?`–${gfFmtShort(m.date_to)}`:""} ${m.title}${m.strand?` · ${m.strand}`:""}`)); L.push(""); }
   if(CYC){ const tr=(CYC.transitions||[]).map(x=>({...x,d:x.date||x.date_from})).filter(x=>x.d&&x.d>=iso(today)).sort((a,b)=>a.d<b.d?-1:1)[0]; if(tr) L.push(`Nächster Übergang: ${tr.title||tr.label||""} am ${gfFmtShort(tr.d)}`); L.push(""); }
+  const st=window.GF_GAME?.state; if(st){ const rk={bronze:"Bronze",silber:"Silber",gold:"Gold"}[st.rank]||"kein Rang"; L.push(`Habitat-Punkte: ${st.weekPts} Taler diese Woche (${rk}) · ${st.total} im Jahrestopf, Stufe ${st.level?.label||""}${st.badges?.length?` · ${st.badges.length} Abzeichen`:""}`); L.push(""); }
   L.push("Erstellt mit GF Weekly · gfweekly.netlify.app");
+  gfApi("score_event",{kind:"wochenmail"}).catch(()=>{});
   gfTextModal("Wochenmail-Entwurf", L.join("\n"), {subject:`GF-Wochenmail · Woche bis ${gfFmtShort(iso(today))}`, intro:"Entwurf aus Board, Entscheidungslog und Meilensteinen. Vor dem Versand kurz durchlesen und ergänzen."});
 }
 
@@ -185,7 +199,7 @@ $("#addDec").onclick=()=>{ EDITING={id:null, decided_at:iso(today), topic_title:
 
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("themen"); gfMountSubnav("entscheidungen");
-  gfMountHero("lagerfeuer","Entscheidungen","Was wir entschieden haben, wann und mit welchem nächsten Schritt. Darunter die Protokolle der Besprechungen.",{compact:true, aside:`<button class="btn btn-sm" id="mailBtn">Wochenmail erzeugen</button><a class="btn btn-sm" href="board.html?meeting=1">Besprechung starten</a>`});
+  gfMountHero("/assets/game/entscheidungen-kopf.webp","Entscheidungen","Was wir entschieden haben, wann und mit welchem nächsten Schritt. Darunter die Protokolle der Besprechungen.",{compact:true, aside:`<button class="btn btn-sm" id="mailBtn">Wochenmail erzeugen</button><a class="btn btn-sm" href="board.html?meeting=1">Besprechung starten</a>`});
   $("#mailBtn").onclick=wochenmail;
   await load();
 });
