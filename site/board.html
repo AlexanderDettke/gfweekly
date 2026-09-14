@@ -7,11 +7,11 @@
 <meta name="theme-color" content="#17171a" />
 <title>GF Weekly · Themen · Board</title>
 <meta name="description" content="Themen der Geschäftsleitung als Board, Kacheln oder Liste. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=14" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=14" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=14" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=14" />
-<link rel="stylesheet" href="/assets/styles.css?v=14" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=15" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=15" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=15" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=15" />
+<link rel="stylesheet" href="/assets/styles.css?v=15" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
 </head>
 <body>
@@ -44,6 +44,7 @@
     <label class="chk"><input type="checkbox" id="showRec" /> wiederkehrende zeigen</label>
     <label class="chk"><input type="checkbox" id="showDone" /> erledigte zeigen</label>
     <button class="btn btn-sm btn-brand" id="newTopic">＋ Thema</button>
+    <button class="btn btn-sm btn-ghost" id="tidyAll" title="Themen, deren Text noch Marker wie „Titel:“, „Vorschlag:“ oder „Quelle:“ enthält">Aufräumen <span class="nbadge" id="tidyCount" hidden></span></button>
     <button class="btn btn-sm btn-primary" id="meetBtn" title="Themen der Reihe nach durchgehen, Ergebnisse festhalten, am Ende Protokoll">Besprechung starten</button>
   </div>
 
@@ -61,9 +62,10 @@
 </aside>
 
 <div class="toast" id="toast"></div>
+<div class="modal-back" id="tidyModal"></div>
 
-<script src="/assets/core.js?v=14"></script>
-<script src="/assets/eggs.js?v=14" defer></script>
+<script src="/assets/core.js?v=15"></script>
+<script src="/assets/eggs.js?v=15" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const LANES=[["zu_besprechen","Zu besprechen","var(--accent)"],["in_klaerung","In Klärung","var(--warn)"],["entschieden","Entschieden · nächster Schritt","var(--info)"],["erledigt","Erledigt","var(--pos)"]];
@@ -130,7 +132,7 @@ function render(){
       <div class="tgrid">${c.items.map(card).join("")}</div>
     </section>`).join("")||`<div class="empty pic" style="--hero-img:url(/assets/img/lagerfeuer.webp)"><div><h3>Nichts zu zeigen</h3><p>Filter lockern oder ein neues Thema erfassen.</p></div></div>`}</div>`;
   }
-  gfStagger($("#view"),".bcard");
+  gfStagger($("#view"),".bcard"); updateTidyCount();
   if(MEET){ const cid=MEET.queue[MEET.idx]; const c=document.querySelector(`.bcard[data-id="${cid}"]`); if(c) c.classList.add("is-cur"); }
   const hp=$("#hero p"); if(hp) hp.textContent=`${total} Themen · Spalten nach ${ {ablauf:"Ablauf",prio:"Priorität",zeitraum:"Zeitraum",person:"Person"}[GROUP] } · ziehen zum Verschieben, antippen für Details`;
   bind();
@@ -181,12 +183,42 @@ function bind(){
   });
 }
 
-/* ---- Detail-Panel ---- */
-let OPEN=null;
-function openPanel(id){
-  const t=TOPICS.find(x=>x.id===id); if(!t) return; OPEN=id;
-  const people=[...new Set([...PEOPLE.map(p=>p.name),"Alex","Lea","Lea & Alex"].filter(Boolean))];
+/* ---- Detail-Panel (V15: Autosave, kein Verlust getippter Texte) ---- */
+let OPEN=null, P_DIRTY=false, P_TIMER=null, P_BUSY=false;
+const PANEL_FIELDS=["title","priority","next_suggested","owner","kind","short_description","next_action","decision","context","notes"];
+function readPanel(){ const p={}; $("#pBody").querySelectorAll("[name]").forEach(i=>p[i.name]=i.value); return p; }
+function panelChanges(t){ const p=readPanel(), out={}; for(const k of PANEL_FIELDS){ if(!(k in p)) continue; if(p[k]!==((t[k]??"")+"")) out[k]=p[k]; } return out; }
+function setPStatus(txt, cls){ const s=$("#pStatus"); if(s){ s.textContent=txt; s.className="pstatus "+(cls||""); } }
+function markDirty(){ P_DIRTY=true; setPStatus("Ungespeichert …","dirty"); clearTimeout(P_TIMER); P_TIMER=setTimeout(()=>savePanel({silent:true}),1500); }
+function refreshPanelMeta(t){
   $("#pTitle").textContent=t.title;
+  $("#pBody").querySelectorAll("[data-lane]").forEach(b=>b.classList.toggle("on",b.dataset.lane===t.board_lane));
+  const m=$("#pMeta"); if(m) m.innerHTML=`angelegt ${new Date(t.created_at).toLocaleDateString("de-DE")} von ${gfEsc(t.created_by||"–")} · zuletzt geändert ${new Date(t.updated_at).toLocaleDateString("de-DE")}${t.last_discussed?` · zuletzt besprochen ${gfEsc(gfFmtShort(t.last_discussed))}`:""}`;
+}
+/* Speichert alle geänderten Felder (plus optionale Zusatzfelder). Getippter Text bleibt im Panel stehen. */
+async function savePanel(opts={}){
+  const t=TOPICS.find(x=>x.id===OPEN); if(!t) return true;
+  clearTimeout(P_TIMER);
+  const changes=Object.assign(panelChanges(t), opts.extra||{});
+  if(!Object.keys(changes).length){ P_DIRTY=false; if(!opts.silent) setPStatus("Alles gespeichert","ok"); return true; }
+  if(changes.decision && !(t.decision||"").trim() && t.board_lane==="zu_besprechen" && !("board_lane" in changes)){ changes.board_lane="entschieden"; changes.status="offen"; }
+  setPStatus("Speichert …","busy"); P_BUSY=true;
+  try{
+    const d=await gfApi("update",{id:t.id,...changes}); Object.assign(t,d.topic);
+    P_DIRTY=Object.keys(panelChanges(t)).length>0; // während des Speicherns weitergetippt?
+    setPStatus(P_DIRTY?"Ungespeichert …":"Gespeichert "+gfFmtTime(new Date()), P_DIRTY?"dirty":"ok");
+    if(P_DIRTY) markDirty();
+    if(!opts.silent) gfToast(opts.toast||"Gespeichert");
+    render(); if(OPEN===t.id) refreshPanelMeta(t);
+    return true;
+  }catch(e){ setPStatus("Nicht gespeichert: "+(e.message||"Verbindung"),"err"); gfToast("Speichern fehlgeschlagen: "+(e.message||"Verbindung")); return false; }
+  finally{ P_BUSY=false; }
+}
+function openPanel(id){
+  const t=TOPICS.find(x=>x.id===id); if(!t) return;
+  if(OPEN && OPEN!==id && P_DIRTY) savePanel({silent:true});
+  OPEN=id; P_DIRTY=false; clearTimeout(P_TIMER);
+  const people=[...new Set([...PEOPLE.map(p=>p.name),"Alex","Lea","Lea & Alex"].filter(Boolean))];
   $("#pBody").innerHTML=`
     <div class="move-row">${LANES.map(([k,l])=>`<button class="seg ${t.board_lane===k?"on":""}" data-lane="${k}">${l.split(" ·")[0]}</button>`).join("")}</div>
     <div class="fgrid">
@@ -201,17 +233,78 @@ function openPanel(id){
       <div class="fld ffull"><label>Kontext</label><textarea name="context" rows="5">${gfEsc(t.context||"")}</textarea></div>
       <div class="fld ffull"><label>Notizen</label><textarea name="notes">${gfEsc(t.notes||"")}</textarea></div>
     </div>
-    <div class="site-meta">angelegt ${new Date(t.created_at).toLocaleDateString("de-DE")} von ${gfEsc(t.created_by||"–")} · zuletzt geändert ${new Date(t.updated_at).toLocaleDateString("de-DE")}${t.last_discussed?` · zuletzt besprochen ${gfEsc(t.last_discussed)}`:""}</div>`;
-  $("#pFoot").innerHTML=`<button class="btn btn-primary" id="pSave">Speichern</button><button class="btn btn-ghost" id="pDiscussed" title="Setzt „zuletzt besprochen“ auf heute">heute besprochen</button><button class="btn btn-ghost del" id="pDelete" style="margin-left:auto;color:var(--crit)">Löschen</button>`;
-  $("#pBody").querySelectorAll("[data-lane]").forEach(b=>b.onclick=async()=>{ const col=b.dataset.lane; const patch={board_lane:col,status:LANE_STATUS[col]}; Object.assign(t,patch); try{ await gfApi("update",{id:t.id,...patch}); gfToast("Verschoben nach "+LANES.find(l=>l[0]===col)[1].split(" ·")[0]); render(); openPanel(t.id); }catch(e){ gfToast("Fehler: "+e.message); } });
-  $("#pSave").onclick=async()=>{ const p={id:t.id}; $("#pBody").querySelectorAll("[name]").forEach(i=>p[i.name]=i.value); if(p.decision && t.board_lane==="zu_besprechen"){ p.board_lane="entschieden"; } try{ const d=await gfApi("update",p); Object.assign(t,d.topic); gfToast("Gespeichert"); render(); closePanel(); }catch(e){ gfToast("Fehler: "+e.message); } };
-  $("#pDiscussed").onclick=async()=>{ const d=iso(today); try{ await gfApi("update",{id:t.id,last_discussed:d}); t.last_discussed=d; gfToast("Als heute besprochen markiert"); openPanel(t.id); }catch(e){ gfToast("Fehler: "+e.message); } };
-  $("#pDelete").onclick=async()=>{ if(!confirm(`„${t.title}" löschen?`)) return; try{ await gfApi("delete",{id:t.id}); TOPICS=TOPICS.filter(x=>x.id!==t.id); render(); closePanel(); gfToast("Gelöscht"); }catch(e){ gfToast("Fehler: "+e.message); } };
+    <div class="site-meta" id="pMeta"></div>`;
+  $("#pFoot").innerHTML=`<div class="pstatus" id="pStatus"></div>
+    <button class="btn btn-primary" id="pSave">Speichern &amp; schließen</button>
+    <button class="btn btn-ghost" id="pTidy" title="Kontext in Titel, Entscheidung, Nächster Schritt und Notizen aufteilen">Bereinigen</button>
+    <button class="btn btn-ghost" id="pDiscussed" title="Setzt „zuletzt besprochen“ auf heute">heute besprochen</button>
+    <button class="btn btn-ghost del" id="pDelete" style="margin-left:auto;color:var(--crit)">Löschen</button>`;
+  refreshPanelMeta(t);
+  const body=$("#pBody");
+  body.oninput=e=>{ if(e.target.matches("[name]")) markDirty(); };
+  body.onchange=e=>{ if(e.target.matches("[name]")) savePanel({silent:true}); };
+  body.querySelectorAll("[data-lane]").forEach(b=>b.onclick=()=>{ const col=b.dataset.lane; if(col===t.board_lane) return; savePanel({extra:{board_lane:col,status:LANE_STATUS[col]}, toast:"Verschoben nach "+LANES.find(l=>l[0]===col)[1].split(" ·")[0]}); });
+  $("#pSave").onclick=async()=>{ if(await savePanel({silent:true})){ gfToast("Gespeichert"); closePanel(true); } };
+  $("#pTidy").onclick=()=>openTidy(t.id);
+  $("#pDiscussed").onclick=()=>savePanel({extra:{last_discussed:iso(today)}, toast:"Als heute besprochen markiert"});
+  $("#pDelete").onclick=async()=>{ if(!confirm(`„${t.title}" löschen?`)) return; try{ await gfApi("delete",{id:t.id}); TOPICS=TOPICS.filter(x=>x.id!==t.id); P_DIRTY=false; render(); closePanel(true); gfToast("Gelöscht"); }catch(e){ gfToast("Fehler: "+e.message); } };
   $("#panel").classList.add("open"); $("#panel").setAttribute("aria-hidden","false"); $("#panelBack").classList.add("open");
+  const tidy=gfTidyTopic(t); $("#pTidy").classList.toggle("has-hint",!!tidy); if(tidy) $("#pTidy").title="Es gibt Marker im Text („"+tidy.found.slice(0,3).join("“, „")+"“). Aufteilung vorschlagen.";
 }
-function closePanel(){ $("#panel").classList.remove("open"); $("#panel").setAttribute("aria-hidden","true"); $("#panelBack").classList.remove("open"); OPEN=null; }
-$("#pClose").onclick=closePanel; $("#panelBack").onclick=closePanel;
-document.addEventListener("keydown",e=>{ if(e.key==="Escape") closePanel(); if(e.key==="/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); $("#q").focus(); } });
+async function closePanel(force){
+  if(!force && OPEN && P_DIRTY){ const ok=await savePanel({silent:true}); if(!ok && !confirm("Speichern ist fehlgeschlagen. Trotzdem schließen? Die Änderungen gehen dann verloren.")) return; }
+  $("#panel").classList.remove("open"); $("#panel").setAttribute("aria-hidden","true"); $("#panelBack").classList.remove("open"); OPEN=null; P_DIRTY=false; clearTimeout(P_TIMER);
+}
+window.addEventListener("beforeunload",e=>{ if(OPEN && P_DIRTY){ savePanel({silent:true}); e.preventDefault(); e.returnValue=""; } });
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden" && OPEN && P_DIRTY) savePanel({silent:true}); });
+$("#pClose").onclick=()=>closePanel(); $("#panelBack").onclick=()=>closePanel();
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ const tm=document.getElementById("tidyModal"); if(tm&&tm.classList.contains("open")){ tm.classList.remove("open"); return; } closePanel(); } if(e.key==="/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); $("#q").focus(); } });
+
+/* ---- Bereinigen (V15): Marker im Text → Felder ---- */
+function tidyCandidates(){ return TOPICS.filter(t=>!t.archived && (SHOW_DONE||t.board_lane!=="erledigt") && gfTidyTopic(t)); }
+function updateTidyCount(){ const n=tidyCandidates().length; const b=$("#tidyCount"); b.textContent=n; b.hidden=!n; $("#tidyAll").classList.toggle("has-hint",n>0); }
+async function openTidy(id, preset){
+  const t=TOPICS.find(x=>x.id===id); if(!t) return;
+  if(OPEN===id && P_DIRTY) await savePanel({silent:true});
+  const res=preset||gfTidyTopic(t); const ch=res?res.changes:{}; const fields=Object.keys(GF_TIDY_FIELDS).filter(f=>f in ch && (ch[f]||"")!==(t[f]||""));
+  const m=$("#tidyModal");
+  const intro=preset&&preset.ai ? `Vorschlag von Claude${res.note?` · ${gfEsc(res.note)}`:""}. Rechts prüfen, ggf. ändern, dann übernehmen.` : (res ? `Erkannt: „${res.found.map(gfEsc).join("“, „")}“. Links der bisherige Stand, rechts der Vorschlag. Rechts kannst du noch ändern.` : `Keine Marker im Text gefunden. Ein KI-Vorschlag kann den Freitext trotzdem aufteilen.`);
+  m.innerHTML=`<div class="modal tidy" role="dialog" aria-modal="true" aria-label="Bereinigen">
+    <div class="modal-h"><h3>Bereinigen</h3><button class="icon-btn" data-x title="Schließen">✕</button></div>
+    <p class="modal-intro"><b>${gfEsc(t.title.length>90?t.title.slice(0,90)+"…":t.title)}</b><br>${intro}</p>
+    <div class="tidy-body">${fields.map(f=>`<div class="tidy-row"><div class="tidy-k">${GF_TIDY_FIELDS[f]}</div>
+        <div class="tidy-old"><label>bisher</label><div class="tidy-txt">${(t[f]||"").trim()?gfEsc(t[f]):"<i>leer</i>"}</div></div>
+        <div class="tidy-new"><label>neu</label><textarea data-f="${f}" rows="${f==="context"?7:(f==="title"||f==="owner"||f==="short_description"?2:3)}">${gfEsc(ch[f])}</textarea></div>
+      </div>`).join("")||`<div class="tidy-none">Nichts aufzuteilen.</div>`}</div>
+    <div class="modal-f"><button class="btn btn-primary" data-apply ${fields.length?"":"disabled"}>Übernehmen</button><button class="btn btn-ghost" data-ai title="Claude teilt den Text in die Felder auf">KI-Vorschlag</button><span class="tidy-note" data-note></span><button class="btn btn-ghost" data-x style="margin-left:auto">Abbrechen</button></div>
+  </div>`;
+  m.classList.add("open");
+  const close=()=>m.classList.remove("open");
+  m.querySelectorAll("[data-x]").forEach(b=>b.onclick=close); m.onclick=e=>{ if(e.target===m) close(); };
+  m.querySelector("[data-apply]").onclick=async()=>{
+    const patch={id:t.id}; m.querySelectorAll("textarea[data-f]").forEach(a=>{ if(a.value!==((t[a.dataset.f]??"")+"")) patch[a.dataset.f]=a.value; });
+    if(Object.keys(patch).length===1){ close(); return; }
+    try{ const d=await gfApi("update",patch); Object.assign(t,d.topic); render(); if(OPEN===t.id){ P_DIRTY=false; openPanel(t.id); } gfToast("Bereinigt und gespeichert"); close(); }
+    catch(e){ gfToast("Fehler: "+e.message); }
+  };
+  m.querySelector("[data-ai]").onclick=async(ev)=>{
+    const b=ev.currentTarget, note=m.querySelector("[data-note]"); b.disabled=true; note.textContent="Claude liest …";
+    try{ const d=await gfApi("tidy_suggest",{id:t.id}); openTidy(t.id,{ai:true,changes:d.changes||{},found:["KI"],note:d.model?`${d.model}`:""}); }
+    catch(e){ b.disabled=false; note.textContent=/ANTHROPIC_API_KEY|Schl.ssel|key/i.test(e.message||"")?"Kein API-Schlüssel hinterlegt (Supabase-Secret ANTHROPIC_API_KEY).":"Fehler: "+(e.message||"Verbindung"); }
+  };
+}
+function openTidyAll(){
+  const list=tidyCandidates().sort(byLane); const m=$("#tidyModal");
+  m.innerHTML=`<div class="modal tidy" role="dialog" aria-modal="true" aria-label="Aufräumen">
+    <div class="modal-h"><h3>Aufräumen · ${list.length} Themen</h3><button class="icon-btn" data-x title="Schließen">✕</button></div>
+    <p class="modal-intro">Diese Themen tragen noch Eingabe-Marker im Titel oder Kontext. Je Thema den Vorschlag ansehen und übernehmen.</p>
+    <div class="tidy-body">${list.map(t=>{ const r=gfTidyTopic(t); return `<button class="tidy-item" data-id="${t.id}"><span class="pill s-${t.status}">${LANES.find(l=>l[0]===t.board_lane)?.[1].split(" ·")[0]||""}</span><span class="tidy-it">${gfEsc(t.title.length>110?t.title.slice(0,110)+"…":t.title)}</span><span class="tidy-found">${r.found.slice(0,4).map(gfEsc).join(" · ")}</span></button>`; }).join("")||`<div class="tidy-none">Alles aufgeräumt.</div>`}</div>
+    <div class="modal-f"><button class="btn btn-ghost" data-x style="margin-left:auto">Schließen</button></div></div>`;
+  m.classList.add("open");
+  m.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>m.classList.remove("open")); m.onclick=e=>{ if(e.target===m) m.classList.remove("open"); };
+  m.querySelectorAll(".tidy-item").forEach(b=>b.onclick=()=>openTidy(b.dataset.id));
+}
+$("#tidyAll").onclick=openTidyAll;
 
 /* ---- Steuerung ---- */
 $("#groupSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; GROUP=b.dataset.g; localStorage.setItem("gf_board_group",GROUP); render(); };

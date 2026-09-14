@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#17171a" />
-<title>GF Weekly · Check-in</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=14" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=14" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=14" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=14" />
-<link rel="stylesheet" href="/assets/styles.css?v=14" />
+<title>GF Weekly · Check-in vorbereiten</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=15" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=15" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=15" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=15" />
+<link rel="stylesheet" href="/assets/styles.css?v=15" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
 </head>
 <body>
@@ -31,87 +31,110 @@
   <header id="topbar"></header>
   <div id="hero"></div>
 
-  <div class="dash" id="dash" style="grid-template-columns:1fr 1fr 1fr"></div>
+  <div class="dash" id="dash"></div>
 
   <div class="section">
-    <div class="sec-h"><h2>Vorbereitung</h2><span class="hint">was Aufmerksamkeit braucht</span><span class="line"></span></div>
+    <div class="sec-h"><h2>Agenda</h2><span class="hint" id="agendaHint">in der Reihenfolge des Besprechungsmodus</span><span class="line"></span>
+      <label class="chk"><input type="checkbox" id="showRec" /> wiederkehrende zeigen</label>
+      <a class="btn btn-sm btn-primary" href="board.html?meeting=1">Besprechung starten</a>
+      <button class="btn btn-sm btn-ghost" id="copyBtn">Agenda kopieren</button></div>
+    <div class="agenda" id="agenda"></div>
+  </div>
+
+  <div class="section">
+    <div class="sec-h"><h2>Vorbereitung</h2><span class="hint">was vor dem Termin einen Blick braucht</span><span class="line"></span></div>
     <div class="prep-grid" id="prep"></div>
   </div>
 
-  <div class="section">
-    <div class="sec-h"><h2>Agenda</h2><span class="line"></span></div>
-    <div class="toolbar">
-      <button class="btn btn-brand" id="genBtn">Check-in-Agenda generieren</button>
-      <button class="btn btn-ghost" id="copyBtn" style="display:none">Agenda kopieren</button>
-    </div>
-    <div id="agendaWrap"></div>
-  </div>
+  <div class="section" id="lastWrap"></div>
 </div>
+
 <div class="toast" id="toast"></div>
-
-<script src="/assets/core.js?v=14"></script>
-<script src="/assets/eggs.js?v=14" defer></script>
+<script src="/assets/core.js?v=15"></script>
+<script src="/assets/eggs.js?v=15" defer></script>
 <script>
-let topics=[]; const $=s=>document.querySelector(s);
-const ST={offen:"Offen",in_klaerung:"In Klärung",erledigt:"Erledigt"};
-const today=()=>new Date().toISOString().slice(0,10);
+/* V15: Check-in = Vorbereitung auf das Weekly, direkt aus den Board-Spalten (kein eigener Datenstand mehr). */
+const $=s=>document.querySelector(s);
+const LANE_LABEL={zu_besprechen:"Zu besprechen",in_klaerung:"In Klärung",entschieden:"Entschieden",erledigt:"Erledigt"};
+let TOPICS=[], SESSIONS=[], SHOW_REC=localStorage.getItem("gf_board_rec")==="1";
+const NOW=new Date(), today=new Date(NOW.getFullYear(),NOW.getMonth(),NOW.getDate());
+const iso=d=>d.toISOString().slice(0,10);
+function endOfWeek(){ const d=new Date(today); const dow=(d.getDay()+6)%7; d.setDate(d.getDate()+(6-dow)); return d; }
+const ageDays=t=>Math.floor((NOW-new Date(t.created_at))/86400000);
+const who=t=>t.owner||t.delegate_to||"";
+const PO={hoch:0,mittel:1,niedrig:2}, LO={zu_besprechen:0,in_klaerung:1};
 
-gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("checkin"); gfMountHero("lager","Check-in","Agenda für den Kurzabgleich aus den wiederkehrenden Themen und den offenen Prioritäten.",{compact:true}); await load(); });
-async function load(){ const d=await gfApi("list"); topics=d.topics||[]; renderPrep(); }
-
-function isHot(t){ return t.relevance==="kritisch"||t.relevance==="hoch"||t.priority==="hoch"; }
-function discussItems(){
-  const rec=topics.filter(t=>t.kind==="recurring").sort((a,b)=>GF_REL_RANK[a.relevance]-GF_REL_RANK[b.relevance]);
-  const one=topics.filter(t=>t.kind!=="recurring"&&t.status!=="erledigt"&&isHot(t)).sort((a,b)=>(GF_REL_RANK[a.relevance]-GF_REL_RANK[b.relevance])||(GF_PRANK[a.priority]-GF_PRANK[b.priority]));
-  return rec.concat(one);
+function agendaItems(){
+  return TOPICS.filter(t=>!t.archived && (SHOW_REC||t.kind!=="recurring") && (t.board_lane==="zu_besprechen"||t.board_lane==="in_klaerung"))
+    .sort((a,b)=>(LO[a.board_lane]-LO[b.board_lane])||(PO[a.priority]-PO[b.priority])||(a.lane_order-b.lane_order));
 }
-const totalMin=items=>items.reduce((s,t)=>s+gfDefaultTime(t),0);
+function lastSession(){ return SESSIONS.find(s=>s.ended_at)||SESSIONS[0]||null; }
+function sinceDate(){ const s=lastSession(); return s ? new Date(s.ended_at||s.started_at) : new Date(NOW-7*86400000); }
 
-function renderDash(){
-  const items=discussItems();
+function item(t, extra){
+  const ex=extra||"";
+  return `<a class="prep-item link" href="board.html?topic=${t.id}"><div class="pt">${gfEsc(t.title.length>120?t.title.slice(0,120)+"…":t.title)}</div>
+    <div class="pm"><span class="pill p-${t.priority}">${t.priority}</span><span class="pill s-${t.status}">${LANE_LABEL[t.board_lane]||""}</span>${who(t)?`<span class="mchip">${gfEsc(who(t))}</span>`:""}${ex}</div></a>`;
+}
+function col(title, items, emptyText, extraFn){
+  return `<div class="prep-col"><h3>${title} <span style="color:var(--muted)">(${items.length})</span></h3>${items.length?items.map(t=>item(t, extraFn?extraFn(t):"")).join(""):`<div class="prep-item" style="color:var(--muted)">${emptyText}</div>`}</div>`;
+}
+
+function render(){
+  const ag=agendaItems(); const hoch=ag.filter(t=>t.priority==="hoch").length;
+  const since=sinceDate();
+  const open=TOPICS.filter(t=>!t.archived && t.board_lane!=="erledigt");
+  const fresh=open.filter(t=>new Date(t.created_at)>since).sort((a,b)=>a.created_at<b.created_at?1:-1);
+  const due=open.filter(t=>t.next_suggested && new Date(t.next_suggested+"T00:00:00")<=endOfWeek()).sort((a,b)=>a.next_suggested<b.next_suggested?-1:1);
+  const overdue=due.filter(t=>t.next_suggested<iso(today));
+  const stale=open.filter(t=>t.kind!=="recurring" && ageDays(t)>28 && t.board_lane!=="entschieden").sort((a,b)=>a.created_at<b.created_at?-1:1);
+  const decided=TOPICS.filter(t=>!t.archived && t.board_lane==="entschieden").sort((a,b)=>a.lane_order-b.lane_order);
+
   $("#dash").innerHTML=`
-    <div class="stat accent"><div class="k">Geschätzte Dauer</div><div class="v">${totalMin(items)} Min</div><div class="cap">${items.length} Themen vorgeschlagen</div></div>
-    <div class="stat"><div class="k"> Wiederkehrend</div><div class="v">${topics.filter(t=>t.kind==="recurring").length}</div><div class="cap">feste Check-ins</div></div>
-    <div class="stat"><div class="k"> Hohe Relevanz</div><div class="v">${topics.filter(t=>t.kind!=="recurring"&&t.status!=="erledigt"&&isHot(t)).length}</div><div class="cap">offen &amp; wichtig</div></div>`;
-}
-function prepItem(t){ return `<div class="prep-item"><div class="pt">${gfEsc(t.title)}</div><div class="pm">
-  ${t.relevance?`<span class="rel rel-${t.relevance}">${gfRelLabel(t.relevance)}</span>`:""}
-  <span class="mchip time-chip"> ${gfDefaultTime(t)} Min</span>
-  ${t.delegate_to?`<span class="mchip"> ${gfEsc(gfNames(t.delegate_to)[0])}${gfNames(t.delegate_to).length>1?" +"+(gfNames(t.delegate_to).length-1):""}</span>`:(t.owner?`<span class="mchip"> ${gfEsc(t.owner)}</span>`:"")}
-  <span class="pill s-${t.status}">${ST[t.status]||"Check-in"}</span></div></div>`; }
-function col(title,items){ return `<div class="prep-col"><h3>${title} <span style="color:var(--muted)">(${items.length})</span></h3>${items.length?items.map(prepItem).join(""):'<div class="prep-item" style="color:var(--muted)">—</div>'}</div>`; }
-function renderPrep(){
-  renderDash();
-  const rec=topics.filter(t=>t.kind==="recurring");
-  const open=topics.filter(t=>t.kind!=="recurring"&&t.status!=="erledigt");
+    <div class="stat accent"><div class="k">Agenda</div><div class="v">${ag.length}</div><div class="cap">${hoch} mit Priorität hoch</div></div>
+    <div class="stat"><div class="k">Neu</div><div class="v">${fresh.length}</div><div class="cap">seit ${lastSession()?"der letzten Besprechung":"7 Tagen"}</div></div>
+    <div class="stat"><div class="k">Termin</div><div class="v">${due.length}</div><div class="cap">${overdue.length?overdue.length+" überfällig":"diese Woche"}</div></div>
+    <div class="stat"><div class="k">Lange offen</div><div class="v">${stale.length}</div><div class="cap">älter als vier Wochen</div></div>`;
+  document.querySelectorAll(".stat .v").forEach(el=>gfCountUp(el, parseInt(el.textContent)||0));
+
+  $("#showRec").checked=SHOW_REC;
+  $("#agenda").innerHTML = ag.length ? ag.map((t,i)=>`<a class="ag-item link" href="board.html?topic=${t.id}">
+      <div class="ag-h"><span class="ag-num">${i+1}.</span><span class="ag-t">${gfEsc(t.title.length>140?t.title.slice(0,140)+"…":t.title)}</span><span class="ag-min"><span class="pill p-${t.priority}">${t.priority}</span> <span class="pill s-${t.status}">${LANE_LABEL[t.board_lane]}</span></span></div>
+      <div class="ag-meta">${t.short_description?`<div>${gfEsc(t.short_description)}</div>`:""}${t.next_action?`<div><b>Nächster Schritt:</b> ${gfEsc(t.next_action)}</div>`:""}<div>${who(t)?`<b>Verantwortung:</b> ${gfEsc(who(t))} · `:""}${ageDays(t)} Tage alt${t.next_suggested?` · Termin ${gfFmtShort(t.next_suggested)}`:""}${t.last_discussed?` · zuletzt besprochen ${gfFmtShort(t.last_discussed)}`:""}</div></div>
+    </a>`).join("") : `<div class="tidy-none">Nichts zu besprechen. Neue Themen kommen über <a href="capture.html">Eingabe</a> oder das Board.</div>`;
+  $("#agendaHint").textContent=`${ag.length} Themen · Zu besprechen zuerst, dann In Klärung, je Spalte Priorität hoch zuerst`;
+
   $("#prep").innerHTML=
-    col(" Wiederkehrende Check-ins",rec)+
-    col(" Hohe Relevanz / Priorität",open.filter(isHot))+
-    col(" In Klärung",open.filter(t=>t.status==="in_klaerung"))+
-    col(" Mit Abhängigkeiten",open.filter(t=>t.dependencies&&t.dependencies.trim()))+
-    col(" Delegation offen",open.filter(t=>!t.delegate_to&&!t.owner))+
-    col(" Follow-up überfällig",topics.filter(t=>t.next_suggested&&t.next_suggested<today()));
+    col("Neu seit "+(lastSession()?gfFmtShort(since.toISOString()):"7 Tagen"), fresh, "nichts Neues", t=>`<span class="mchip">${gfFmtShort(t.created_at)}${t.created_by?" · "+gfEsc(t.created_by):""}</span>`)+
+    col("Termin diese Woche oder überfällig", due, "keine Termine", t=>`<span class="mchip ${t.next_suggested<iso(today)?"time-chip":""}">${t.next_suggested<iso(today)?"überfällig · ":""}${gfFmtShort(t.next_suggested)}</span>`)+
+    col("Länger als vier Wochen offen", stale, "nichts liegt lange", t=>`<span class="mchip">${ageDays(t)} Tage</span>`)+
+    col("Entschieden, nächster Schritt läuft", decided, "keine offenen Beschlüsse", t=>t.next_action?`<span class="mchip">${gfEsc(t.next_action.length>60?t.next_action.slice(0,60)+"…":t.next_action)}</span>`:`<span class="mchip time-chip">nächster Schritt fehlt</span>`);
+
+  const ls=lastSession();
+  $("#lastWrap").innerHTML= ls ? `<div class="sec-h"><h2>Letzte Besprechung</h2><span class="line"></span><a class="btn btn-sm btn-ghost" href="entscheidungen.html">Entscheidungslog</a></div>
+    <div class="prep-item"><div class="pt">${gfFmtDay(ls.started_at)}${ls.ended_at?` · ${gfFmtTime(ls.started_at)}–${gfFmtTime(ls.ended_at)}`:" · läuft noch"}</div>
+    <div class="pm"><span class="mchip">${gfEsc(ls.participants||"")}</span>${Array.isArray(ls.summary)?`<span class="mchip">${ls.summary.length} Themen behandelt</span><span class="mchip">${ls.summary.filter(x=>x.outcome==="entschieden").length} Entscheidungen</span>`:""}</div></div>` : "";
+  gfStagger($("#agenda"),".ag-item");
 }
 
-let agendaText="";
-function decisionNeeded(t){ const r=(t.recommendation||"").toLowerCase(); return t.relevance==="kritisch"||r.includes("entsch")||/entscheid/i.test(t.title); }
-$("#genBtn").onclick=()=>{
-  const items=discussItems(); if(!items.length){gfToast("Keine Themen für die Agenda");return;}
-  let html=`<div class="agenda">`; let txt="GF Weekly – Check-in-Agenda ("+today()+")\n\n"; let n=0;
-  items.forEach(t=>{ n++; const min=gfDefaultTime(t); const why=t.relevance_reason||t.short_description||"";
-    const goal=t.next_action||(t.recommendation||"Status & nächste Schritte klären");
-    const people=[...gfNames(t.delegate_to),t.owner].filter(Boolean).join(", ")||"Board"; const dec=decisionNeeded(t)?"ja":"nein";
-    html+=`<div class="ag-item"><div class="ag-h"><span class="ag-num">${n}.</span><span class="ag-t">${gfEsc(t.title)}</span><span class="ag-min">${min} Min</span></div>
-      <div class="ag-meta">${why?`<div><b>Warum:</b> ${gfEsc(why)}</div>`:""}<div><b>Ziel:</b> ${gfEsc(goal)}</div>
-      <div><b>Entscheidung nötig:</b> ${dec} · <b>Beteiligt:</b> ${gfEsc(people)}</div>${t.recommendation?`<div><b>Empfehlung:</b> ${gfEsc(t.recommendation)}</div>`:""}</div></div>`;
-    txt+=`${n}. ${t.title} — ${min} Min\n`; if(why)txt+=`   Warum: ${why}\n`; txt+=`   Ziel: ${goal}\n   Entscheidung nötig: ${dec} · Beteiligt: ${people}\n`; if(t.recommendation)txt+=`   Empfehlung: ${t.recommendation}\n`; txt+="\n";
-  });
-  const total=totalMin(items);
-  html+=`<div class="ag-total"> Geschätzte Gesamtdauer: ${total} Minuten · ${n} Themen</div></div>`;
-  txt+=`Geschätzte Gesamtdauer: ${total} Minuten (${n} Themen)\n`;
-  $("#agendaWrap").innerHTML=html; agendaText=txt; $("#copyBtn").style.display="inline-flex"; $("#agendaWrap").scrollIntoView({behavior:"smooth",block:"start"});
-};
-$("#copyBtn").onclick=()=>gfCopy(agendaText);
+function agendaText(){
+  const ag=agendaItems(); const L=[`GF Weekly · Check-in-Agenda · ${gfFmtDay(NOW)}`,""];
+  ag.forEach((t,i)=>{ L.push(`${i+1}. ${t.title} [${LANE_LABEL[t.board_lane]} · ${t.priority}]`); if(t.short_description) L.push(`   ${t.short_description}`); if(t.next_action) L.push(`   Nächster Schritt: ${t.next_action}`); if(who(t)) L.push(`   Verantwortung: ${who(t)}`); L.push(""); });
+  L.push(`${ag.length} Themen · erstellt mit GF Weekly · gfweekly.netlify.app`);
+  return L.join("\n");
+}
+$("#copyBtn").onclick=()=>{ if(!agendaItems().length){ gfToast("Keine Themen in der Agenda"); return; } gfTextModal("Check-in-Agenda", agendaText(), { subject:`GF-Check-in ${gfFmtShort(NOW.toISOString())} · Agenda`, intro:"Zum Kopieren oder per Mail an Alex und Lea." }); };
+$("#showRec").onchange=e=>{ SHOW_REC=e.target.checked; localStorage.setItem("gf_board_rec",SHOW_REC?"1":"0"); render(); };
+
+gfGate(async()=>{
+  $("#app").style.display="block"; gfMountTopbar("checkin");
+  gfMountHero("lager","Check-in vorbereiten","Fünf Minuten vor dem Weekly: was ansteht, was neu ist, was wartet. Alles kommt live aus dem Board.",{compact:true, aside:`<a class="btn btn-sm btn-primary" href="board.html?meeting=1">Besprechung starten</a><a class="btn btn-sm" href="board.html">Zum Board</a>`});
+  $("#dash").innerHTML=gfSkeleton(4,"stat"); $("#agenda").innerHTML=gfSkeleton(3,"");
+  try{
+    const [d,s]=await Promise.all([gfApi("list"), gfApi("sessions_list",{limit:5}).catch(()=>({sessions:[]}))]);
+    TOPICS=d.topics||[]; SESSIONS=s.sessions||[]; render();
+  }catch(e){ $("#agenda").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+});
 </script>
 </body>
 </html>

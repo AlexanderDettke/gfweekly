@@ -45,6 +45,95 @@ const SITE_FIELDS = ['name','url','category','purpose','notes','login_user','log
 const SITE_STATUSES = ['aktiv','entwurf','archiv'];
 function slugKey(s: string){ return s.toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'sonstiges'; }
 
+/* ===== v20 (14.09.2026): Bereinigen. Gleiche Marker-Logik wie gfTidyTopic in site/assets/core.js (dort gepflegt, hier gespiegelt).
+   topicFromCapture zerlegt markierten Eingabetext („Titel: … Worum geht es: … Vorschlag: … Quelle: …“) sofort in Felder,
+   tidy_suggest fragt die Anthropic-API nach einer Aufteilung (Secret ANTHROPIC_API_KEY, optional GFWEEKLY_TIDY_MODEL). ===== */
+const TIDY_MARKERS: [string, string[]][] = [
+  ["title",   ["Titel","Thema","Betreff"]],
+  ["about",   ["Worum geht es","Worum geht’s","Worum geht's","Zusammenfassung","Kurz","Hintergrund","Kontext","Stand","Aktueller Stand","Agenda","Ziel","Situation","Entscheidungsgrundlage","Offen","Offene Fragen","Offene Punkte","Zu entscheiden in dieser Runde","Zu entscheiden","Zu klären","Lage","Ausgangslage"]],
+  ["why",     ["Warum ins Weekly","Warum","Relevanz","Warum jetzt"]],
+  ["next",    ["Vorschlag","Empfehlung","Nächster Schritt","Naechster Schritt","Nächste Schritte","Naechste Schritte","To do","Todo","Maßnahme","Massnahme","Aufgabe","Nächstes"]],
+  ["owner",   ["Verantwortlich","Verantwortliche","Verantwortlichkeit","Verantwortung","Owner","Zuständig","Zustaendig"]],
+  ["decision",["Entscheidung","Entschieden","Beschluss"]],
+  ["notes",   ["Quelle","Quellen","Typ","Eingang","Notiz","Notizen","Hinweis","Anmerkung","Termin","Frist","Fällig","Faellig","Deadline"]],
+];
+const TIDY_KIND: Record<string,string> = {}; TIDY_MARKERS.forEach(([k,ls])=>ls.forEach(l=>TIDY_KIND[l.toLowerCase()]=k));
+const TIDY_ALT = TIDY_MARKERS.flatMap(([,ls])=>ls).sort((a,b)=>b.length-a.length).map(l=>l.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|');
+const TIDY_RE = new RegExp('(?<![A-ZÄÖÜ])('+TIDY_ALT+')\\s*:','gu');
+const TIDY_STRIP_L=/^[\s—–*_#>\u2600-\u27BF\uFE0F\u200D\p{Extended_Pictographic}]+/u, TIDY_STRIP_R=/[\s—–\-•*_#>\u2600-\u27BF\uFE0F\u200D\p{Extended_Pictographic}]+$/u;
+const TIDY_SHORT = new Set(['title','next','owner','decision','notes']);
+type Seg = { kind:string; label:string; text:string };
+function tidyKind(label: string){ return TIDY_KIND[label.trim().replace(/\s+/g,' ').toLowerCase()] || null; }
+function tidyClean(s: string){ return (s||'').replace(TIDY_STRIP_L,'').replace(TIDY_STRIP_R,'').trim(); }
+function tidySegments(text: string): Seg[] {
+  const src=(text||'').replace(/\r/g,'').replace(/^\s*[—–-]{1,2}\s*(.+?)\s*[—–-]{1,2}\s*$/gmu,'\n$1:\n');
+  const raw: Seg[]=[]; let last=0, cur: Seg|null=null;
+  for(const m of src.matchAll(TIDY_RE)){
+    const kind=tidyKind(m[1]); if(!kind) continue;
+    const before=tidyClean(src.slice(last, m.index));
+    if(cur) cur.text=before; else if(before) raw.push({kind:'pre',label:'',text:before});
+    cur={kind,label:m[1].trim(),text:''}; raw.push(cur); last=(m.index as number)+m[0].length;
+  }
+  const tail=tidyClean(src.slice(last)); if(cur) cur.text=tail; else if(tail) raw.push({kind:'pre',label:'',text:tail});
+  const out: Seg[]=[];
+  for(const s of raw){
+    if(TIDY_SHORT.has(s.kind)){ const k=s.text.search(/\n\s*\n/); if(k>0){ out.push({...s,text:s.text.slice(0,k).trim()}); const rest=tidyClean(s.text.slice(k)); if(rest) out.push({kind:'pre',label:'',text:rest}); continue; } }
+    out.push(s);
+  }
+  return out.filter(s=>s.kind!=='pre'||s.text);
+}
+function tidyHasMarkers(text: string){ for(const m of (text||'').matchAll(TIDY_RE)) if(tidyKind(m[1])) return true; return false; }
+function firstSentence(s: string, max=180){ const t=(s||'').replace(/\s+/g,' ').trim(); if(!t) return ''; let m=t.match(/^.{20,}?[.!?](?=\s|$)/); if(m && m[0].length<45){ const m2=t.match(/^.{45,}?[.!?](?=\s|$)/); if(m2 && m2[0].length<=max) m=m2; } const out=(m?m[0]:t); return out.length>max?out.slice(0,max-1).trimEnd()+'…':out; }
+/* Liefert Feldänderungen für ein Thema (title, context, short_description, next_action, owner, decision, notes) oder null. */
+function tidyParse(t: Record<string, any>): { changes: Record<string,string>, found: string[] } | null {
+  const title=(t.title||'').toString().trim(), context=(t.context||'').toString().trim();
+  const titleDump=tidyHasMarkers(title) || title.length>140;
+  const segs=(titleDump?tidySegments(title):[]).concat(tidySegments(context));
+  if(!segs.some(s=>s.kind!=='pre')) return null;
+  const pick=(k: string)=>segs.filter(s=>s.kind===k);
+  const found=[...new Set(segs.filter(s=>s.kind!=='pre').map(s=>s.label))];
+  const ch: Record<string,string>={};
+  let newTitle=pick('title').map(s=>s.text).find(Boolean)||'';
+  if(!newTitle && titleDump){ const ab=pick('about')[0]; newTitle=firstSentence(ab?ab.text:title,120); }
+  if(newTitle){ newTitle=newTitle.replace(/\s+/g,' ').replace(/[.:]\s*$/,'').slice(0,300); if(newTitle!==title && (titleDump||!title)) ch.title=newTitle; }
+  const ctxParts: string[]=[];
+  segs.forEach(s=>{ if(s.kind==='pre'){ if(s.text && s.text!==title) ctxParts.push(s.text); return; } if(s.kind!=='about'||!s.text) return; const plain=/^(worum|zusammenfassung|kurz|kontext|hintergrund|lage|ausgangslage)/i.test(s.label); ctxParts.push(plain?s.text:(s.label+': '+s.text)); });
+  pick('why').forEach(s=>{ if(s.text) ctxParts.push('Warum ins Weekly: '+s.text); });
+  const newCtx=ctxParts.join('\n\n').trim(); if(newCtx!==context) ch.context=newCtx;
+  if(!(t.short_description||'').toString().trim()){ const ab=segs.find(s=>(s.kind==='about'||s.kind==='pre')&&s.text&&s.text!==title); const sd=firstSentence(ab?ab.text:'',180); if(sd && sd!==(ch.title||title)) ch.short_description=sd; }
+  const nx=pick('next').map(s=>s.text).filter(Boolean); if(nx.length){ const cur=(t.next_action||'').toString().trim(); const add=nx.filter(x=>!cur.includes(x)); if(add.length) ch.next_action=[cur,...add].filter(Boolean).join('\n'); }
+  const ow=pick('owner').map(s=>s.text).find(Boolean); if(ow && !(t.owner||'').toString().trim()) ch.owner=ow.split(/[\n;]/)[0].slice(0,120);
+  const dc=pick('decision').map(s=>s.text).filter(Boolean); if(dc.length && !(t.decision||'').toString().trim()) ch.decision=dc.join('\n');
+  const nt=pick('notes').filter(s=>s.text).map(s=>s.label+': '+s.text); if(nt.length){ const cur=(t.notes||'').toString().trim(); const add=nt.filter(x=>!cur.includes(x)); if(add.length) ch.notes=[cur,...add].filter(Boolean).join('\n'); }
+  if(!Object.keys(ch).length) return null;
+  return { changes: ch, found };
+}
+const TIDY_FIELDS = ['title','short_description','context','next_action','owner','decision','notes'];
+async function tidySuggestAI(topic: Record<string, any>){
+  const key = Deno.env.get('ANTHROPIC_API_KEY') || '';
+  if(!key) throw new Error('ANTHROPIC_API_KEY fehlt (Supabase-Secret setzen)');
+  const model = Deno.env.get('GFWEEKLY_TIDY_MODEL') || 'claude-sonnet-5';
+  const current = Object.fromEntries(TIDY_FIELDS.map(f=>[f,(topic[f]??'').toString()]));
+  const system = `Du ordnest Einträge eines Geschäftsführungs-Boards (Wilde Möhre GmbH, Festival- und Kulturbetrieb; Geschäftsführung Alex und Lea) in saubere Felder.
+Felder: title (kurzer Betreff, max. 90 Zeichen, kein Doppelpunkt-Präfix wie „Titel:“), short_description (ein Satz, was das Thema ist), context (Hintergrund, Stand, Fakten, Quellenhinweise in ganzen Sätzen oder knappen Absätzen; behalte alle Fakten, erfinde nichts), next_action (konkreter nächster Schritt, wenn einer im Text steht oder vorgeschlagen wird), owner (eine Person oder „Alex“, „Lea“, „Lea & Alex“, nur wenn im Text genannt), decision (nur was ausdrücklich als entschieden formuliert ist; Vorschläge gehören NICHT hierhin), notes (Quelle, Eingangsweg, Typ, Termine, Randbemerkungen).
+Regeln: Nichts weglassen, was inhaltlich zählt; nichts hinzuerfinden; Wortlaut weitgehend behalten, nur Marker wie „Worum geht es:“ entfernen; Sprache Deutsch; lasse ein Feld unverändert (weg), wenn es schon passend gefüllt ist; gib nur Felder zurück, die sich ändern.`;
+  const body = {
+    model, max_tokens: 2000, system,
+    tools: [{ name:'set_fields', description:'Gibt die bereinigten Felder zurück. Nur geänderte Felder angeben.',
+      input_schema: { type:'object', properties: Object.fromEntries(TIDY_FIELDS.map(f=>[f,{type:'string'}])), additionalProperties:false } }],
+    tool_choice: { type:'tool', name:'set_fields' },
+    messages: [{ role:'user', content: 'Aktueller Eintrag als JSON:\n'+JSON.stringify(current, null, 1) }],
+  };
+  const res = await fetch('https://api.anthropic.com/v1/messages', { method:'POST', headers:{ 'content-type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01' }, body: JSON.stringify(body) });
+  const data = await res.json();
+  if(!res.ok) throw new Error('Anthropic: '+(data?.error?.message || res.status));
+  const tool = (data.content||[]).find((c: any)=>c.type==='tool_use');
+  const input = (tool?.input || {}) as Record<string, unknown>;
+  const changes: Record<string,string> = {};
+  for(const f of TIDY_FIELDS){ const v=input[f]; if(typeof v==='string' && v.trim() && v.trim()!==current[f].trim()) changes[f]=v.trim().slice(0, f==='title'?300:6000); }
+  return { changes, model, usage: data.usage };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method === 'GET') { try { await ensurePageInStorage(); } catch(_e){} return new Response(null,{ status:302, headers:{ 'Location':PUBLIC_PAGE, 'Cache-Control':'no-store' } }); }
@@ -56,7 +145,7 @@ Deno.serve(async (req: Request) => {
   const t = payload ?? {};
 
   try {
-    if (action === 'ping') return json({ ok:true, version:19, secretConfigured: !!PASSWORD });
+    if (action === 'ping') return json({ ok:true, version:20, secretConfigured: !!PASSWORD, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -99,6 +188,18 @@ Deno.serve(async (req: Request) => {
       const { error } = await admin.from('gfweekly_topics').delete().eq('id', t.id);
       if (error) throw error; return json({ ok:true });
     }
+    /* v20: Bereinigen */
+    if (action === 'tidy_parse') {
+      if (!t.id) return json({ error:'id fehlt' }, 400);
+      const { data, error } = await admin.from('gfweekly_topics').select('*').eq('id', t.id).single(); if (error) throw error;
+      return json({ result: tidyParse(data) });
+    }
+    if (action === 'tidy_suggest') {
+      if (!t.id) return json({ error:'id fehlt' }, 400);
+      const { data, error } = await admin.from('gfweekly_topics').select('*').eq('id', t.id).single(); if (error) throw error;
+      const r = await tidySuggestAI(data);
+      return json({ changes: r.changes, model: r.model, usage: r.usage, rules: tidyParse(data)?.changes || null });
+    }
     if (action === 'request_protocol') {
       const { data, error } = await admin.from('gfweekly_protocol_requests').insert({ requested_by:(t.requested_by??'').toString().slice(0,120), note:(t.note??'').toString() }).select().single();
       if (error) throw error; return json({ request: data });
@@ -113,7 +214,7 @@ Deno.serve(async (req: Request) => {
       const raw=(c.raw_text ?? c.title ?? '').toString().trim(); if(!raw) return null;
       const first=raw.split('\n')[0].trim();
       const prio=['hoch','mittel','niedrig'].includes(c.urgency)?c.urgency:(['hoch','mittel','niedrig'].includes(c.priority)?c.priority:'mittel');
-      return {
+      const row: Record<string, any> = {
         title: first.slice(0,300), context: raw.slice(0,4000), priority: prio, status:'offen', kind:'einmalig',
         source: c.source==='chat' ? 'claude' : 'manuell', created_by:(c.created_by??'').toString().slice(0,120),
         board_lane:'zu_besprechen', lane_order: 0,
@@ -121,6 +222,15 @@ Deno.serve(async (req: Request) => {
         involved:(c.stakeholder_hint??'').toString().slice(0,200), dependencies:(c.related_hint??'').toString().slice(0,200),
         notes: c.due_hint ? ('Fällig: '+c.due_hint.toString().slice(0,60)) : '',
       };
+      /* v20: markierter Eingabetext („Titel: … Worum geht es: … Vorschlag: … Quelle: …“) wird sofort in Felder zerlegt.
+         Der Rohtext bleibt vollständig in notes erhalten, falls die Zerlegung etwas falsch zuordnet. */
+      const parsed = tidyParse({ title: raw, context: '', short_description: row.short_description, owner: row.owner, notes: row.notes, next_action: '', decision: '' });
+      if(parsed && (parsed.changes.title || parsed.changes.context)){
+        for(const f of TIDY_FIELDS) if(parsed.changes[f]!==undefined) row[f]=parsed.changes[f];
+        row.title=(row.title||first).toString().slice(0,300);
+        row.notes=[row.notes||'', 'Eingang (Rohtext): '+raw.slice(0,3000)].filter(Boolean).join('\n');
+      }
+      return row;
     }
     if (action === 'capture') {
       const row = topicFromCapture(t); if(!row) return json({ error:'leer' },400);

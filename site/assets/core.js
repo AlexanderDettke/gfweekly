@@ -1,5 +1,5 @@
 /* ===========================================================
-   GF Weekly · V14 · gemeinsamer Kern
+   GF Weekly · V15 · gemeinsamer Kern
    API-Zugriff, Login-Gate, Navigation, Theme-Umschaltung, Helfer.
    Es werden bewusst KEINE apikey/Authorization-Header gesendet
    (das Supabase-Gateway lehnt sonst ab); Auth läuft über das
@@ -15,7 +15,7 @@ function gfEsc(s){ return (s||"").toString().replace(/[&<>"]/g,c=>({"&":"&amp;",
 
 /* ---- API ---- */
 async function gfApi(action, payload){
-  const res = await fetch(GF_FN, { method:"POST", headers:{ "Content-Type":"application/json" },
+  const res = await fetch(GF_FN, { method:"POST", headers:{ "Content-Type":"application/json" }, keepalive:true,
     body: JSON.stringify({ action, password: gfPW(), payload }) });
   let d={}; try{ d = await res.json(); }catch(e){}
   if(res.status===401) throw { auth:true };
@@ -210,3 +210,80 @@ function gfProtocolText(meta, log, openTopics){
   L.push(`Erstellt mit GF Weekly · gfweekly.netlify.app`);
   return L.join("\n");
 }
+
+/* ===========================================================
+   V15 · Bereinigen: markierten Eingabetext in Felder zerlegen.
+   Gleiche Logik liegt in der Edge Function (topicFromCapture, tidyParse),
+   Änderungen bitte an beiden Stellen nachziehen.
+   Rückgabe: { changes:{feld:neuerWert}, found:[Marker…] } oder null, wenn nichts zu tun ist.
+   =========================================================== */
+const GF_TIDY_MARKERS=[
+  ["title",   ["Titel","Thema","Betreff"]],
+  ["about",   ["Worum geht es","Worum geht’s","Worum geht's","Zusammenfassung","Kurz","Hintergrund","Kontext","Stand","Aktueller Stand","Agenda","Ziel","Situation","Entscheidungsgrundlage","Offen","Offene Fragen","Offene Punkte","Zu entscheiden in dieser Runde","Zu entscheiden","Zu klären","Lage","Ausgangslage"]],
+  ["why",     ["Warum ins Weekly","Warum","Relevanz","Warum jetzt"]],
+  ["next",    ["Vorschlag","Empfehlung","Nächster Schritt","Naechster Schritt","Nächste Schritte","Naechste Schritte","To do","Todo","Maßnahme","Massnahme","Aufgabe","Nächstes"]],
+  ["owner",   ["Verantwortlich","Verantwortliche","Verantwortlichkeit","Verantwortung","Owner","Zuständig","Zustaendig"]],
+  ["decision",["Entscheidung","Entschieden","Beschluss"]],
+  ["notes",   ["Quelle","Quellen","Typ","Eingang","Notiz","Notizen","Hinweis","Anmerkung","Termin","Frist","Fällig","Faellig","Deadline"]],
+];
+const GF_TIDY_KIND={}; GF_TIDY_MARKERS.forEach(([k,ls])=>ls.forEach(l=>GF_TIDY_KIND[l.toLowerCase()]=k));
+const GF_TIDY_ALT=GF_TIDY_MARKERS.flatMap(([k,ls])=>ls).sort((a,b)=>b.length-a.length).map(l=>l.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|");
+/* Marker = bekanntes Label (großgeschrieben) + Doppelpunkt. Erlaubt ist davor: Zeilenanfang, Leerraum, Emoji/Strich-Präfix
+   oder ein Kleinbuchstabe bzw. Satzzeichen (der ChatGPT-Kanal klebt Zeilen zusammen: „SchrittWorum geht es:“). */
+const GF_TIDY_LABEL_RE=new RegExp("(?<![A-ZÄÖÜ])("+GF_TIDY_ALT+")\\s*:","gu");
+const GF_TIDY_STRIP_L=/^[\s—–*_#>\u2600-\u27BF\uFE0F\u200D\p{Extended_Pictographic}]+/u, GF_TIDY_STRIP_R=/[\s—–\-•*_#>\u2600-\u27BF\uFE0F\u200D\p{Extended_Pictographic}]+$/u;
+const GF_TIDY_SHORT=new Set(["title","next","owner","decision","notes"]);
+function gfTidyKind(label){ return GF_TIDY_KIND[label.trim().replace(/\s+/g," ").toLowerCase()]||null; }
+function gfTidyClean(s){ return (s||"").replace(GF_TIDY_STRIP_L,"").replace(GF_TIDY_STRIP_R,"").trim(); }
+function gfTidySegments(text){
+  const src=(text||"").replace(/\r/g,"").replace(/^\s*[—–-]{1,2}\s*(.+?)\s*[—–-]{1,2}\s*$/gmu,"\n$1:\n"); // „— Claude-Recherche —“ wird zur Überschrift
+  const raw=[]; let last=0, cur=null;
+  for(const m of src.matchAll(GF_TIDY_LABEL_RE)){
+    const kind=gfTidyKind(m[1]); if(!kind) continue;
+    const before=gfTidyClean(src.slice(last, m.index));
+    if(cur) cur.text=before; else if(before) raw.push({kind:"pre",label:"",text:before});
+    cur={kind,label:m[1].trim(),text:""}; raw.push(cur); last=m.index+m[0].length;
+  }
+  const tail=gfTidyClean(src.slice(last)); if(cur) cur.text=tail; else if(tail) raw.push({kind:"pre",label:"",text:tail});
+  // Kurze Felder enden am ersten Absatzwechsel, der Rest wird wieder Kontext
+  const out=[];
+  for(const s of raw){
+    if(GF_TIDY_SHORT.has(s.kind)){ const k=s.text.search(/\n\s*\n/); if(k>0){ out.push({...s,text:s.text.slice(0,k).trim()}); const rest=gfTidyClean(s.text.slice(k)); if(rest) out.push({kind:"pre",label:"",text:rest}); continue; } }
+    out.push(s);
+  }
+  return out.filter(s=>s.kind!=="pre"||s.text);
+}
+function gfTidyHasMarkers(text){ for(const m of (text||"").matchAll(GF_TIDY_LABEL_RE)) if(gfTidyKind(m[1])) return true; return false; }
+function gfFirstSentence(s, max=180){ const t=(s||"").replace(/\s+/g," ").trim(); if(!t) return ""; let m=t.match(/^.{20,}?[.!?](?=\s|$)/); if(m && m[0].length<45){ const m2=t.match(/^.{45,}?[.!?](?=\s|$)/); if(m2 && m2[0].length<=max) m=m2; } const out=(m?m[0]:t); return out.length>max?out.slice(0,max-1).trimEnd()+"…":out; }
+function gfTidyTopic(t){
+  const title=(t.title||"").trim(), context=(t.context||"").trim();
+  const titleDump=gfTidyHasMarkers(title) || title.length>140;
+  const segs=(titleDump?gfTidySegments(title):[]).concat(gfTidySegments(context));
+  if(!segs.some(s=>s.kind!=="pre")) return null;
+  const pick=k=>segs.filter(s=>s.kind===k);
+  const found=[...new Set(segs.filter(s=>s.kind!=="pre").map(s=>s.label))];
+  const ch={};
+  // Titel
+  let newTitle=pick("title").map(s=>s.text).find(Boolean)||"";
+  if(!newTitle && titleDump){ const ab=pick("about")[0]; newTitle=gfFirstSentence(ab?ab.text:title,120); }
+  if(newTitle){ newTitle=newTitle.replace(/\s+/g," ").replace(/[.:]\s*$/,"").slice(0,300); if(newTitle!==title && (titleDump||!title)) ch.title=newTitle; }
+  // Kontext neu zusammensetzen: Vorspann + Worum/Stand… (Label nur, wenn es nicht „Worum geht es“ ist) + Warum ins Weekly
+  const ctxParts=[];
+  segs.forEach(s=>{ if(s.kind==="pre"){ if(s.text && s.text!==title) ctxParts.push(s.text); return; } if(s.kind!=="about"||!s.text) return; const plain=/^(worum|zusammenfassung|kurz|kontext|hintergrund|lage|ausgangslage)/i.test(s.label); ctxParts.push(plain?s.text:(s.label+": "+s.text)); });
+  pick("why").forEach(s=>{ if(s.text) ctxParts.push("Warum ins Weekly: "+s.text); });
+  const newCtx=ctxParts.join("\n\n").trim();
+  if(newCtx!==context) ch.context=newCtx;
+  // Ein Satz
+  if(!(t.short_description||"").trim()){ const ab=segs.find(s=>(s.kind==="about"||s.kind==="pre")&&s.text&&s.text!==title); const sd=gfFirstSentence(ab?ab.text:"",180); if(sd && sd!==(ch.title||title)) ch.short_description=sd; }
+  // Nächster Schritt
+  const nx=pick("next").map(s=>s.text).filter(Boolean); if(nx.length){ const cur=(t.next_action||"").trim(); const add=nx.filter(x=>!cur.includes(x)); if(add.length) ch.next_action=[cur,...add].filter(Boolean).join("\n"); }
+  // Verantwortung
+  const ow=pick("owner").map(s=>s.text).find(Boolean); if(ow && !(t.owner||"").trim()) ch.owner=ow.split(/[\n;]/)[0].slice(0,120);
+  // Entscheidung
+  const dc=pick("decision").map(s=>s.text).filter(Boolean); if(dc.length && !(t.decision||"").trim()) ch.decision=dc.join("\n");
+  // Notizen (anhängen)
+  const nt=pick("notes").filter(s=>s.text).map(s=>s.label.replace(/^eingang$/i,"Eingang")+": "+s.text); if(nt.length){ const cur=(t.notes||"").trim(); const add=nt.filter(x=>!cur.includes(x)); if(add.length) ch.notes=[cur,...add].filter(Boolean).join("\n"); }
+  if(!Object.keys(ch).length) return null;
+  return { changes:ch, found };
+}
+const GF_TIDY_FIELDS={ title:"Titel", short_description:"Ein Satz", context:"Kontext", next_action:"Nächster Schritt", owner:"Verantwortung", decision:"Entscheidung", notes:"Notizen" };
