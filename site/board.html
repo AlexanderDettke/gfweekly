@@ -7,11 +7,11 @@
 <meta name="theme-color" content="#17171a" />
 <title>GF Weekly · Themen · Board</title>
 <meta name="description" content="Themen der Geschäftsleitung als Board, Kacheln oder Liste. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=13" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=13" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=13" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=13" />
-<link rel="stylesheet" href="/assets/styles.css?v=13" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=14" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=14" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=14" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=14" />
+<link rel="stylesheet" href="/assets/styles.css?v=14" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
 </head>
 <body>
@@ -62,7 +62,8 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=13"></script>
+<script src="/assets/core.js?v=14"></script>
+<script src="/assets/eggs.js?v=14" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const LANES=[["zu_besprechen","Zu besprechen","var(--accent)"],["in_klaerung","In Klärung","var(--warn)"],["entschieden","Entschieden · nächster Schritt","var(--info)"],["erledigt","Erledigt","var(--pos)"]];
@@ -273,6 +274,7 @@ function renderMeet(){
     </div>`;
   let body="";
   if(!cur || !pending.length){
+    if(MEET.log.length) document.dispatchEvent(new CustomEvent("gf-egg-bus"));
     body=`<div class="meet-done"><h3>Alle Themen behandelt.</h3><p>${MEET.log.length} Themen, ${nDec} Entscheidung${nDec===1?"":"en"}. Mit „Beenden · Protokoll“ abschließen oder ein Thema im Board antippen, um es noch einmal aufzurufen.</p></div>`;
   } else {
     const done=doneIds.has(cur.id); const pos=pending.indexOf(cur.id);

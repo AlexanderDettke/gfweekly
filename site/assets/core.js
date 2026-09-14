@@ -1,5 +1,5 @@
 /* ===========================================================
-   GF Weekly · V13 · gemeinsamer Kern
+   GF Weekly · V14 · gemeinsamer Kern
    API-Zugriff, Login-Gate, Navigation, Theme-Umschaltung, Helfer.
    Es werden bewusst KEINE apikey/Authorization-Header gesendet
    (das Supabase-Gateway lehnt sonst ab); Auth läuft über das

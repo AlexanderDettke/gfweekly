@@ -718,3 +718,35 @@ a.stat{color:inherit;text-decoration:none;display:block} a.stat:hover{border-col
 .mark.pic{background:none!important;box-shadow:none;border-radius:0;overflow:visible}
 .mark.pic img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
 .brand .mark.pic{width:38px;height:38px} .gate-card .mark.pic{width:60px;height:60px;margin-bottom:12px}
+
+/* ---------- V14: Easter Eggs ---------- */
+.egg-konfetti{position:fixed;inset:0;pointer-events:none;z-index:99;overflow:hidden}
+.egg-konfetti i{position:absolute;top:-12px;width:8px;height:14px;border-radius:1px;opacity:.95;animation:egg-fall 3s linear forwards}
+@keyframes egg-fall{to{transform:translateY(110vh) rotate(540deg);opacity:.2}}
+.egg-pause{animation:ht-puls .6s var(--motion-ease) 2}
+.egg-bus{position:fixed;left:-260px;bottom:8px;z-index:98;pointer-events:none;animation:egg-drive 6.5s cubic-bezier(.3,.1,.7,.9) forwards;filter:drop-shadow(0 4px 6px rgba(0,0,0,.3))}
+.egg-bus svg{display:block;animation:egg-bob .35s ease-in-out infinite alternate}
+@keyframes egg-drive{to{transform:translateX(calc(100vw + 300px))}}
+@keyframes egg-bob{from{transform:translateY(0)}to{transform:translateY(-2px)}}
+.egg-tuut{position:absolute;left:170px;top:-26px;background:var(--surface);color:var(--text);border:var(--rahmen) solid var(--border-strong);padding:3px 9px;font-size:12px;font-weight:600;border-radius:var(--radius-s);opacity:0;animation:egg-tuut 1.2s 1.6s var(--motion-ease) forwards}
+@keyframes egg-tuut{0%{opacity:0;transform:translateY(6px)}20%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
+.egg-stars{position:absolute;left:0;top:0;width:57.4%;height:100%;pointer-events:none;z-index:1;overflow:hidden}
+.egg-stars i{position:absolute;width:4px;height:4px;border-radius:50%;background:#fffbe8;box-shadow:0 0 8px 2px rgba(255,247,214,.85);animation:egg-twinkle 3s ease-in-out infinite alternate}
+@keyframes egg-twinkle{from{opacity:.15;transform:scale(.7)}to{opacity:1;transform:scale(1.15)}}
+@media(max-width:760px){ .egg-stars{width:100%;height:38vh} }
+.mark.pic.egg-carrot{animation:egg-wiggle .5s var(--motion-ease) 2}
+@keyframes egg-wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
+.egg-badge{display:inline-flex;align-items:center;gap:7px;margin-left:10px;padding:4px 10px 4px 8px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--warn);background:var(--warn-soft,rgba(233,180,72,.15));border:1px solid var(--warn);border-radius:var(--radius-s);vertical-align:middle;cursor:default}
+.egg-fire{width:10px;height:14px;background:linear-gradient(180deg,#f2c14e 0%,#e0722d 55%,#b9501a 100%);clip-path:polygon(50% 0,80% 35%,100% 65%,85% 100%,15% 100%,0 65%,20% 35%);transform-origin:50% 100%}
+.egg-badge:hover .egg-fire{animation:egg-flicker .35s ease-in-out infinite alternate}
+@keyframes egg-flicker{from{transform:scaleY(1) scaleX(1)}to{transform:scaleY(1.25) scaleX(.85)}}
+.mark.pic.egg-fest{position:relative}
+.mark.pic.egg-fest::after{content:"";position:absolute;left:-6px;right:-6px;top:-8px;height:8px;background:
+  linear-gradient(135deg,var(--crit) 50%,transparent 50%) 0 0/8px 8px no-repeat,
+  linear-gradient(135deg,var(--warn) 50%,transparent 50%) 9px 0/8px 8px no-repeat,
+  linear-gradient(135deg,var(--pos) 50%,transparent 50%) 18px 0/8px 8px no-repeat,
+  linear-gradient(135deg,var(--info) 50%,transparent 50%) 27px 0/8px 8px no-repeat,
+  linear-gradient(135deg,var(--accent) 50%,transparent 50%) 36px 0/8px 8px no-repeat,
+  linear-gradient(135deg,var(--crit) 50%,transparent 50%) 45px 0/8px 8px no-repeat;
+  pointer-events:none}
+@media (prefers-reduced-motion:reduce){ .egg-bus,.egg-konfetti{display:none} }

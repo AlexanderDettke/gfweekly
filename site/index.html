@@ -10,11 +10,11 @@
 <meta property="og:title" content="GF Weekly · Geschäftsleitung" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre." />
 <meta property="og:image" content="assets/og-image.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=13" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=13" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=13" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=13" />
-<link rel="stylesheet" href="/assets/styles.css?v=13" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=14" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=14" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=14" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=14" />
+<link rel="stylesheet" href="/assets/styles.css?v=14" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
 </head>
 <body>
@@ -78,7 +78,8 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=13"></script>
+<script src="/assets/core.js?v=14"></script>
+<script src="/assets/eggs.js?v=14" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const MON=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -172,6 +173,7 @@ function renderRituals(){
   const n=list.filter(r=>done.has(r.id)).length;
   $("#ritH").textContent=`Rituale der Phase „${ph.label}"`;
   $("#ritHint").textContent=`${n} von ${list.length} erledigt · ${CYCLE.year}`;
+  document.dispatchEvent(new CustomEvent("gf-rituals",{detail:{total:list.length, done:n, isCurrent:ph.key===cur.key, phase:ph.label}}));
   $("#rituals").innerHTML= list.length ? list.map((r,i)=>{ const c=done.get(r.id); return `<label class="rit ${c?"done":""}" data-id="${r.id}">
       <input type="checkbox" class="check" ${c?"checked":""} />
       <span class="rt">${gfEsc(r.title)}${r.hint?`<small>${gfEsc(r.hint)}</small>`:""}${c?`<small class="who">✓ ${gfEsc(c.done_by||"")} · ${new Date(c.done_at).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}</small>`:""}</span>
