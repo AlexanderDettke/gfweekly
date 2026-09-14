@@ -43,6 +43,27 @@ function inboxRow(t: any){
 }
 const SITE_FIELDS = ['name','url','category','purpose','notes','login_user','login_password','login_note','status','preview'];
 const SITE_STATUSES = ['aktiv','entwurf','archiv'];
+/* v21 (14.09.2026): Neuigkeiten (gfweekly_news): Ticker, Sichtungskorb (Kandidaten), Themenlage je Strang.
+   Befüllt vom täglichen Cowork-Auftrag (news_add_many, Dedup über source_ref), gelesen von site/neuigkeiten.html. */
+const NEWS_KINDS = ['ticker','kandidat','lage'];
+const NEWS_SOURCES = ['notiz','asana','kalender','mail','protokoll','entscheidung','manuell'];
+const NEWS_STATUS = ['neu','gesehen','uebernommen','verworfen'];
+const NEWS_FIELDS = ['who','source','strand','title','body','quote','source_title','source_url','source_ref','relevance','topic_id','status','run_id'];
+function newsRow(n: any){
+  const title=(n.title??'').toString().trim(); if(!title) return null;
+  const row: Record<string, unknown> = {
+    kind: NEWS_KINDS.includes(n.kind) ? n.kind : 'ticker',
+    happened_at: n.happened_at ? new Date(n.happened_at).toISOString() : new Date().toISOString(),
+    who:(n.who??'').toString().slice(0,120), source: NEWS_SOURCES.includes(n.source)?n.source:'notiz',
+    strand:(n.strand??'').toString().slice(0,60), title: title.slice(0,500), body:(n.body??'').toString().slice(0,6000),
+    quote:(n.quote??'').toString().slice(0,3000), source_title:(n.source_title??'').toString().slice(0,300),
+    source_url:(n.source_url??'').toString().slice(0,2000), source_ref:((n.source_ref??'').toString().trim().slice(0,300) || null),
+    relevance: PRIOS.includes(n.relevance)?n.relevance:'mittel', topic_id: n.topic_id||null,
+    status: NEWS_STATUS.includes(n.status)?n.status:'neu', run_id:(n.run_id??'').toString().slice(0,60),
+  };
+  if(isNaN(Date.parse(row.happened_at as string))) row.happened_at=new Date().toISOString();
+  return row;
+}
 function slugKey(s: string){ return s.toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'sonstiges'; }
 
 /* ===== v20 (14.09.2026): Bereinigen. Gleiche Marker-Logik wie gfTidyTopic in site/assets/core.js (dort gepflegt, hier gespiegelt).
@@ -145,7 +166,7 @@ Deno.serve(async (req: Request) => {
   const t = payload ?? {};
 
   try {
-    if (action === 'ping') return json({ ok:true, version:20, secretConfigured: !!PASSWORD, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
+    if (action === 'ping') return json({ ok:true, version:21, secretConfigured: !!PASSWORD, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -453,6 +474,71 @@ Deno.serve(async (req: Request) => {
     if (action === 'decision_delete') {
       if(!t.id) return json({ error:'id fehlt' },400);
       const { error } = await admin.from('gfweekly_decisions').delete().eq('id',t.id); if(error) throw error; return json({ ok:true });
+    }
+
+    /* ----- Neuigkeiten (v21): Ticker, Sichtungskorb, Themenlage ----- */
+    if (action === 'news_add_many') {
+      const items = Array.isArray(t.items) ? t.items.slice(0,500) : [];
+      const rows = items.map(newsRow).filter(Boolean) as Record<string, unknown>[];
+      if(!rows.length) return json({ error:'leer' },400);
+      const lage = rows.filter(r=>r.kind==='lage' && r.source_ref);          // Themenlage: neuester Stand ersetzt den alten
+      const keyed = rows.filter(r=>r.kind!=='lage' && r.source_ref);         // Ticker/Kandidaten: gleiche Quelle nie doppelt
+      const loose = rows.filter(r=>!r.source_ref);
+      let added=0, updated=0;
+      if(lage.length){ const { data, error } = await admin.from('gfweekly_news').upsert(lage,{ onConflict:'source_ref' }).select('id'); if(error) throw error; updated+=data.length; }
+      if(keyed.length){ const { data, error } = await admin.from('gfweekly_news').upsert(keyed,{ onConflict:'source_ref', ignoreDuplicates:true }).select('id'); if(error) throw error; added+=data.length; }
+      if(loose.length){ const { data, error } = await admin.from('gfweekly_news').insert(loose).select('id'); if(error) throw error; added+=data.length; }
+      return json({ ok:true, added, updated, skipped: keyed.length-(added-loose.length) });
+    }
+    if (action === 'news_list') {
+      const limit = Math.min(parseInt(t.limit)||400, 2000);
+      let q = admin.from('gfweekly_news').select('*').order('happened_at',{ascending:false}).limit(limit);
+      if(Array.isArray(t.kinds)&&t.kinds.length) q = q.in('kind', t.kinds.filter((k: string)=>NEWS_KINDS.includes(k)));
+      if(Array.isArray(t.statuses)&&t.statuses.length) q = q.in('status', t.statuses.filter((k: string)=>NEWS_STATUS.includes(k)));
+      if(t.since) q = q.gte('happened_at', t.since);
+      if(t.strand) q = q.eq('strand', t.strand);
+      const { data, error } = await q; if(error) throw error;
+      return json({ items:data });
+    }
+    if (action === 'news_update') {
+      if(!t.id) return json({ error:'id fehlt' },400);
+      const patch:Record<string,unknown>={};
+      for(const f of ['title','body','quote','strand','who','source_title','source_url']) if(t[f]!==undefined) patch[f]=(t[f]??'').toString().slice(0, f==='body'?6000:500);
+      if(t.relevance!==undefined && PRIOS.includes(t.relevance)) patch.relevance=t.relevance;
+      if(t.topic_id!==undefined) patch.topic_id=t.topic_id||null;
+      if(t.status!==undefined){ if(!NEWS_STATUS.includes(t.status)) return json({ error:'status' },400); patch.status=t.status; patch.decided_by=(t.decided_by??'').toString().slice(0,120); patch.decided_at=new Date().toISOString(); }
+      if(!Object.keys(patch).length) return json({ error:'nichts' },400);
+      const { data, error } = await admin.from('gfweekly_news').update(patch).eq('id',t.id).select().single(); if(error) throw error; return json({ item:data });
+    }
+    /* Kandidat übernehmen: neues Thema in „Zu besprechen“ oder Hinweis an ein bestehendes Thema hängen. */
+    if (action === 'news_accept') {
+      if(!t.id) return json({ error:'id fehlt' },400);
+      const { data: n, error:e0 } = await admin.from('gfweekly_news').select('*').eq('id',t.id).single(); if(e0||!n) throw (e0||new Error('Eintrag fehlt'));
+      const src = [n.source_title, n.source_url].filter(Boolean).join(' · ');
+      const when = new Date(n.happened_at).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+      let topic: any = null;
+      if (t.topic_id) {
+        const { data: old, error:e1 } = await admin.from('gfweekly_topics').select('id,notes,context').eq('id',t.topic_id).single(); if(e1||!old) throw (e1||new Error('Thema fehlt'));
+        const note = `Neu erwähnt (${when}${n.source_title?`, ${n.source_title}`:''}): ${n.title}${n.quote?` – „${n.quote}“`:''}${n.source_url?` ${n.source_url}`:''}`;
+        const { data: up, error:e2 } = await admin.from('gfweekly_topics').update({ notes:[(old.notes||'').toString(), note].filter(Boolean).join('\n'), updated_at:new Date().toISOString() }).eq('id',old.id).select().single(); if(e2) throw e2; topic=up;
+      } else {
+        const row: Record<string, unknown> = {
+          title:(t.title ?? n.title).toString().slice(0,300),
+          context:[(t.context ?? n.body).toString(), n.quote?`Aus der Quelle: „${n.quote}“`:''].filter(Boolean).join('\n\n').slice(0,6000),
+          short_description:(t.short_description ?? '').toString().slice(0,200),
+          priority: PRIOS.includes(t.priority) ? t.priority : (n.relevance==='hoch'?'hoch':'mittel'),
+          status:'offen', kind:'einmalig', source:'claude', created_by:(t.decided_by??'Neuigkeiten').toString().slice(0,120),
+          board_lane:'zu_besprechen', lane_order:0, owner:(t.owner??'').toString().slice(0,120), next_action:(t.next_action??'').toString().slice(0,2000),
+          notes:[`Quelle: ${n.source==='notiz'?'Besprechungsnotiz':n.source} ${when}${src?` · ${src}`:''}`, n.who?`Beteiligt: ${n.who}`:''].filter(Boolean).join('\n'),
+        };
+        const { data: nt, error:e3 } = await admin.from('gfweekly_topics').insert(row).select().single(); if(e3) throw e3; topic=nt;
+      }
+      const { data: item, error:e4 } = await admin.from('gfweekly_news').update({ status:'uebernommen', topic_id:topic.id, decided_by:(t.decided_by??'').toString().slice(0,120), decided_at:new Date().toISOString() }).eq('id',n.id).select().single(); if(e4) throw e4;
+      return json({ topic, item });
+    }
+    if (action === 'news_delete') {
+      if(!t.id) return json({ error:'id fehlt' },400);
+      const { error } = await admin.from('gfweekly_news').delete().eq('id',t.id); if(error) throw error; return json({ ok:true });
     }
 
     return json({ error:'unknown action' }, 400);

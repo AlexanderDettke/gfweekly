@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#17171a" />
+<title>GF Weekly · Neuigkeiten</title>
+<meta name="description" content="Neuigkeiten der Geschäftsleitung Wilde Möhre: Ticker, Themenlage, Sichtungskorb. Vertraulich." />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=16" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=16" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=16" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=16" />
+<link rel="stylesheet" href="/assets/styles.css?v=16" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark pic"><img src="/assets/img/flagge-144.png" alt="" width="54" height="54"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>GF Weekly</h1>
+    <div class="sub">Neuigkeiten · Geschäftsleitung Wilde Möhre · Alex &amp; Lea</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+  <div id="hero"></div>
+
+  <section class="start-hero"><div class="start-stats" id="stats"></div></section>
+
+  <div class="toolbar nw-toolbar">
+    <div class="segs" id="jump">
+      <a class="seg on" href="#ticker" data-j="ticker">Ticker</a>
+      <a class="seg" href="#korb" data-j="korb">Sichtungskorb <span class="nbadge" id="korbBadge" hidden>0</span></a>
+      <a class="seg" href="#lage" data-j="lage">Themenlage</a>
+    </div>
+    <div class="segs" id="whoSegs" title="Wessen Ereignisse">
+      <button class="seg on" data-w="">Beide</button><button class="seg" data-w="Alex">Alex</button><button class="seg" data-w="Lea">Lea</button>
+    </div>
+    <div class="segs" id="rangeSegs" title="Zeitraum des Tickers">
+      <button class="seg" data-r="7">7 Tage</button><button class="seg on" data-r="14">14 Tage</button><button class="seg" data-r="30">30 Tage</button><button class="seg" data-r="0">Alle</button>
+    </div>
+    <div class="search"><input id="q" placeholder="Neuigkeiten durchsuchen … (Taste /)" /></div>
+  </div>
+  <div class="chips nw-src" id="srcChips">
+    <button class="chip on" data-s="notiz">Notizen</button>
+    <button class="chip on" data-s="mail">Mails</button>
+    <button class="chip on" data-s="asana">Asana</button>
+    <button class="chip on" data-s="kalender">Kalender</button>
+    <button class="chip on" data-s="entscheidung">Entscheidungen</button>
+  </div>
+
+  <div class="sec-h" id="ticker" style="margin-top:26px"><h2>Ticker</h2><span class="hint">Eine Zeile je Ereignis, neueste oben. Klick öffnet Details und Quelle.</span><span class="line"></span></div>
+  <div id="soon"></div>
+  <div id="feed"><div class="loading">lädt …</div></div>
+
+  <div class="sec-h" id="korb" style="margin-top:38px"><h2>Sichtungskorb</h2><span class="hint">GF-relevante Punkte aus Notizen und Mails. Übernehmen macht daraus ein Thema in „Zu besprechen“.</span><span class="line"></span>
+    <div class="segs" id="relSegs"><button class="seg on" data-rel="">Alle</button><button class="seg" data-rel="hoch">hoch</button><button class="seg" data-rel="mittel">mittel</button><button class="seg" data-rel="niedrig">niedrig</button></div>
+    <label class="chk"><input type="checkbox" id="showDone"> Erledigte zeigen</label>
+  </div>
+  <div id="kand"><div class="loading">lädt …</div></div>
+
+  <div class="sec-h" id="lage" style="margin-top:38px"><h2>Themenlage</h2><span class="hint">Je Strang der Stand in wenigen Sätzen, vom täglichen Lauf nachgeführt.</span><span class="line"></span></div>
+  <div id="lageGrid" class="lage-grid"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/assets/core.js?v=16"></script>
+<script src="/assets/eggs.js?v=16" defer></script>
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+let ITEMS=[], TOPICS=[], STRANDS=[], Q="", WHO="", RANGE=14, REL="", SRC=new Set(["notiz","mail","asana","kalender","entscheidung","protokoll","manuell"]), SHOWDONE=false;
+const NOW=new Date();
+const SRC_LABEL={notiz:"Notiz",mail:"Mail",asana:"Asana",kalender:"Termin",entscheidung:"Entscheidung",protokoll:"Protokoll",manuell:"manuell"};
+const REL_RANK={hoch:0,mittel:1,niedrig:2};
+function seenKey(){ return "gf_news_seen_"+gfWho(); }
+function lastSeen(){ try{ return localStorage.getItem(seenKey())||"1970-01-01"; }catch(e){ return "1970-01-01"; } }
+function markSeen(){ try{ localStorage.setItem(seenKey(), new Date().toISOString()); }catch(e){} render(); gfToast("Als gesehen markiert"); }
+function strandLabel(k){ const s=STRANDS.find(x=>x.key===k); return s?(s.short||s.label):(k||""); }
+function topicOf(id){ return id?TOPICS.find(t=>t.id===id):null; }
+function isNew(x){ return (x.created_at||"")>lastSeen(); }
+function fmtDayLabel(d){ const day=new Date(d); day.setHours(0,0,0,0); const t=new Date(NOW); t.setHours(0,0,0,0); const diff=Math.round((day-t)/86400000); if(diff===0) return "Heute"; if(diff===-1) return "Gestern"; if(diff===1) return "Morgen"; return day.toLocaleDateString("de-DE",{weekday:"long",day:"2-digit",month:"2-digit"}); }
+function whoMatch(x){ if(!WHO) return true; return (x.who||"").includes(WHO); }
+function textMatch(x){ if(!Q) return true; return [x.title,x.body,x.quote,x.who,x.source_title,strandLabel(x.strand)].join(" ").toLowerCase().includes(Q); }
+
+async function load(){
+  try{
+    const [n,t,c]=await Promise.all([gfApi("news_list",{limit:2000}), gfApi("list"), gfApi("cycle_get",{year:NOW.getFullYear()})]);
+    ITEMS=n.items||[]; TOPICS=t.topics||[]; STRANDS=c.strands||[];
+    render();
+  }catch(e){ $("#feed").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+}
+
+function render(){
+  document.querySelectorAll("#whoSegs .seg").forEach(b=>b.classList.toggle("on",b.dataset.w===WHO));
+  document.querySelectorAll("#rangeSegs .seg").forEach(b=>b.classList.toggle("on",+b.dataset.r===RANGE));
+  document.querySelectorAll("#relSegs .seg").forEach(b=>b.classList.toggle("on",b.dataset.rel===REL));
+  document.querySelectorAll("#srcChips .chip").forEach(b=>b.classList.toggle("on",SRC.has(b.dataset.s)));
+  renderStats(); renderTicker(); renderKorb(); renderLage();
+}
+
+function renderStats(){
+  const seen=lastSeen();
+  const neu=ITEMS.filter(x=>x.kind!=="lage" && x.created_at>seen).length;
+  const kand=ITEMS.filter(x=>x.kind==="kandidat"&&x.status==="neu");
+  const hoch=kand.filter(x=>x.relevance==="hoch").length;
+  const w=new Date(NOW-7*86400000).toISOString();
+  const notes=ITEMS.filter(x=>x.kind==="ticker"&&x.source==="notiz"&&x.happened_at>=w&&x.happened_at<=NOW.toISOString()).length;
+  const in7=new Date(+NOW+7*86400000).toISOString();
+  const termine=ITEMS.filter(x=>x.kind==="ticker"&&x.source==="kalender"&&x.happened_at>NOW.toISOString()&&x.happened_at<=in7).length;
+  $("#stats").innerHTML=`
+    <div class="sstat"><div class="k">neu für ${gfEsc(gfWho())}</div><div class="v">${neu}</div></div>
+    <div class="sstat"><div class="k">im Sichtungskorb</div><div class="v">${kand.length}</div></div>
+    <div class="sstat"><div class="k">davon hoch</div><div class="v">${hoch}</div></div>
+    <div class="sstat"><div class="k">Notizen, 7 Tage</div><div class="v">${notes}</div></div>
+    <div class="sstat"><div class="k">Termine, 7 Tage</div><div class="v">${termine}</div></div>`;
+  const b=$("#korbBadge"); b.textContent=kand.length; b.hidden=!kand.length;
+}
+
+function tickerRow(x){
+  const t=topicOf(x.topic_id); const time=gfFmtTime(x.happened_at);
+  const links=`<div class="tk-links">${x.source_url?`<a href="${gfEsc(x.source_url)}" target="_blank" rel="noopener">Quelle öffnen ↗</a>`:""}${t?`<a href="board.html?topic=${t.id}">Thema: ${gfEsc(t.title.slice(0,60))}</a>`:""}<button type="button" class="linkish" data-mk>Als Thema erfassen</button></div>`;
+  return `<article class="tk ${isNew(x)?"is-new":""} src-${x.source}" data-id="${x.id}">
+    <div class="tk-t">${time}</div>
+    <div class="tk-b">
+      <div class="tk-meta"><span class="who">${gfEsc(x.who||"")}</span><span class="pill src ${x.source}">${SRC_LABEL[x.source]||x.source}</span>${x.strand?`<span class="pill strand">${gfEsc(strandLabel(x.strand))}</span>`:""}${isNew(x)?`<span class="dot" title="neu seit deinem letzten Besuch"></span>`:""}</div>
+      <div class="tk-title">${gfEsc(x.title)}</div>
+      <div class="tk-more">${x.body?`<p>${gfEsc(x.body)}</p>`:""}${x.quote?`<blockquote>„${gfEsc(x.quote)}“</blockquote>`:""}${links}</div>
+    </div>
+  </article>`;
+}
+function renderTicker(){
+  const nowIso=NOW.toISOString();
+  const since=RANGE?new Date(NOW-RANGE*86400000).toISOString():"0000";
+  const base=ITEMS.filter(x=>x.kind==="ticker"&&SRC.has(x.source)&&whoMatch(x)&&textMatch(x));
+  const soon=base.filter(x=>x.happened_at>nowIso).sort((a,b)=>a.happened_at<b.happened_at?-1:1);
+  const past=base.filter(x=>x.happened_at<=nowIso&&x.happened_at>=since).sort((a,b)=>a.happened_at<b.happened_at?1:-1);
+  if(soon.length){
+    const days=[...new Set(soon.map(x=>x.happened_at.slice(0,10)))].slice(0,10);
+    $("#soon").innerHTML=`<div class="soon-box"><div class="group-h">Demnächst <span class="n">${soon.length}</span></div>${days.map(d=>`<div class="tk-day"><div class="tk-dayh">${fmtDayLabel(d)}</div>${soon.filter(x=>x.happened_at.slice(0,10)===d).map(tickerRow).join("")}</div>`).join("")}</div>`;
+  } else $("#soon").innerHTML="";
+  if(!past.length){ $("#feed").innerHTML=`<div class="empty soft">${Q?"Nichts gefunden.":"Keine Ereignisse im Zeitraum. Der tägliche Lauf füllt den Ticker jeden Morgen."}</div>`; bindTicker(); return; }
+  const days=[...new Set(past.map(x=>x.happened_at.slice(0,10)))];
+  $("#feed").innerHTML=days.map(d=>`<div class="tk-day"><div class="tk-dayh">${fmtDayLabel(d)}<span class="n">${past.filter(x=>x.happened_at.slice(0,10)===d).length}</span></div>${past.filter(x=>x.happened_at.slice(0,10)===d).map(tickerRow).join("")}</div>`).join("");
+  gfStagger($("#feed"),".tk");
+  bindTicker();
+}
+function bindTicker(){
+  document.querySelectorAll(".tk").forEach(el=>{
+    el.querySelector(".tk-title").onclick=()=>el.classList.toggle("open");
+    const mk=el.querySelector("[data-mk]"); if(mk) mk.onclick=async()=>{ const x=ITEMS.find(i=>i.id===el.dataset.id); if(!confirm(`„${x.title.slice(0,80)}“ als Thema in „Zu besprechen“ anlegen?`)) return; try{ const d=await gfApi("news_accept",{id:x.id,decided_by:gfWho()}); Object.assign(x,d.item); TOPICS.push(d.topic); render(); gfToast("Thema angelegt"); }catch(e){ gfToast("Fehler: "+e.message); } };
+  });
+}
+
+function kandCard(x){
+  const t=topicOf(x.topic_id); const done=x.status!=="neu";
+  const options=TOPICS.filter(t=>t.board_lane!=="erledigt").sort((a,b)=>a.title.localeCompare(b.title,"de")).map(t=>`<option value="${t.id}" ${t.id===x.topic_id?"selected":""}>${gfEsc(t.title.slice(0,90))}</option>`).join("");
+  return `<article class="kand ${done?"done":""} rel-${x.relevance} ${isNew(x)?"is-new":""}" data-id="${x.id}">
+    <div class="kand-h"><span class="pill rel ${x.relevance}">${x.relevance}</span>${x.strand?`<span class="pill strand">${gfEsc(strandLabel(x.strand))}</span>`:""}<span class="pill src ${x.source}">${SRC_LABEL[x.source]||x.source}</span><span class="muted">${gfFmtShort(x.happened_at)} · ${gfEsc(x.who||"")}</span>${done?`<span class="pill st-${x.status}">${x.status==="uebernommen"?"übernommen":x.status}</span>`:""}</div>
+    <h3>${gfEsc(x.title)}</h3>
+    ${x.body?`<p class="kand-b">${gfEsc(x.body)}</p>`:""}
+    ${x.quote?`<blockquote>„${gfEsc(x.quote)}“</blockquote>`:""}
+    <div class="kand-src">${x.source_url?`<a href="${gfEsc(x.source_url)}" target="_blank" rel="noopener">${gfEsc(x.source_title||"Quelle")} ↗</a>`:gfEsc(x.source_title||"")}${t?` · betrifft <a href="board.html?topic=${t.id}">${gfEsc(t.title.slice(0,70))}</a>`:""}</div>
+    ${done?`<div class="kand-f"><span class="muted">${x.decided_by?gfEsc(x.decided_by)+" · ":""}${x.decided_at?gfFmtShort(x.decided_at):""}</span>${x.topic_id?`<a class="btn btn-sm btn-ghost" href="board.html?topic=${x.topic_id}">Thema öffnen</a>`:""}<button class="btn btn-sm btn-ghost" data-act="reopen">Zurück in den Korb</button></div>`
+    :`<div class="kand-f">
+      ${t?`<button class="btn btn-sm btn-primary" data-act="append">An Thema anhängen</button><button class="btn btn-sm btn-ghost" data-act="new">Als neues Thema</button>`:`<button class="btn btn-sm btn-primary" data-act="new">Als Thema übernehmen</button>`}
+      <select class="selectx" data-link title="Mit bestehendem Thema verknüpfen"><option value="">Mit Thema verknüpfen …</option>${options}</select>
+      <button class="btn btn-sm btn-ghost" data-act="dismiss" style="margin-left:auto">Verwerfen</button>
+    </div>`}
+  </article>`;
+}
+function renderKorb(){
+  let k=ITEMS.filter(x=>x.kind==="kandidat"&&whoMatch(x)&&textMatch(x)&&(SHOWDONE||x.status==="neu")&&(!REL||x.relevance===REL));
+  k.sort((a,b)=>(a.status==="neu"?0:1)-(b.status==="neu"?0:1)||REL_RANK[a.relevance]-REL_RANK[b.relevance]||(a.happened_at<b.happened_at?1:-1));
+  if(!k.length){ $("#kand").innerHTML=`<div class="empty soft">${Q||REL?"Nichts gefunden.":"Der Sichtungskorb ist leer. Neue Kandidaten kommen mit dem täglichen Lauf."}</div>`; return; }
+  const groups=[["hoch","Braucht bald eine Entscheidung"],["mittel","In die nächste GF-Runde"],["niedrig","Zur Kenntnis"]];
+  $("#kand").innerHTML=groups.map(([r,l])=>{ const items=k.filter(x=>x.relevance===r); if(!items.length) return ""; return `<div class="group"><div class="group-h">${l} <span class="n">${items.length}</span></div><div class="kand-list">${items.map(kandCard).join("")}</div></div>`; }).join("");
+  gfStagger($("#kand"),".kand"); bindKorb();
+}
+function bindKorb(){
+  document.querySelectorAll(".kand").forEach(el=>{
+    const x=ITEMS.find(i=>i.id===el.dataset.id);
+    el.querySelectorAll("[data-act]").forEach(b=>b.onclick=async()=>{
+      try{
+        if(b.dataset.act==="new"){ const d=await gfApi("news_accept",{id:x.id,decided_by:gfWho()}); Object.assign(x,d.item); TOPICS.push(d.topic); gfToast("Thema angelegt: "+d.topic.title.slice(0,50)); }
+        if(b.dataset.act==="append"){ const d=await gfApi("news_accept",{id:x.id,topic_id:x.topic_id,decided_by:gfWho()}); Object.assign(x,d.item); const i=TOPICS.findIndex(t=>t.id===d.topic.id); if(i>=0) TOPICS[i]=d.topic; gfToast("Hinweis am Thema notiert"); }
+        if(b.dataset.act==="dismiss"){ const d=await gfApi("news_update",{id:x.id,status:"verworfen",decided_by:gfWho()}); Object.assign(x,d.item); gfToast("Verworfen"); }
+        if(b.dataset.act==="reopen"){ const d=await gfApi("news_update",{id:x.id,status:"neu",decided_by:gfWho()}); Object.assign(x,d.item); gfToast("Zurück im Korb"); }
+        render();
+      }catch(e){ gfToast("Fehler: "+e.message); }
+    });
+    const sel=el.querySelector("[data-link]"); if(sel) sel.onchange=async()=>{ if(!sel.value) return; const t=topicOf(sel.value); if(!confirm(`Hinweis an „${t.title.slice(0,70)}“ anhängen und Kandidat als übernommen ablegen?`)){ sel.value=""; return; } try{ const d=await gfApi("news_accept",{id:x.id,topic_id:sel.value,decided_by:gfWho()}); Object.assign(x,d.item); render(); gfToast("Verknüpft"); }catch(e){ gfToast("Fehler: "+e.message); } };
+  });
+}
+
+function renderLage(){
+  const lage=ITEMS.filter(x=>x.kind==="lage");
+  const order=STRANDS.map(s=>s.key);
+  lage.sort((a,b)=>order.indexOf(a.strand)-order.indexOf(b.strand));
+  if(!lage.length){ $("#lageGrid").innerHTML=`<div class="empty soft">Noch keine Themenlage. Der tägliche Lauf schreibt je Strang eine Zusammenfassung.</div>`; return; }
+  $("#lageGrid").innerHTML=lage.filter(textMatch).map(x=>{ const open=ITEMS.filter(k=>k.kind==="kandidat"&&k.status==="neu"&&k.strand===x.strand).length; return `<article class="lage ${isNew(x)?"is-new":""}">
+    <div class="lage-h"><span class="pill strand">${gfEsc(strandLabel(x.strand))}</span><span class="muted">Stand ${gfFmtShort(x.happened_at)}</span>${open?`<a class="nbadge" href="#korb" title="offene Kandidaten in diesem Strang">${open}</a>`:""}</div>
+    <h3>${gfEsc(x.title)}</h3>
+    <div class="lage-b">${gfClamp(x.body,"lage-"+x.strand,320)}</div>
+  </article>`; }).join("");
+  gfStagger($("#lageGrid"),".lage");
+}
+
+$("#q").oninput=e=>{ Q=e.target.value.trim().toLowerCase(); render(); };
+document.addEventListener("keydown",e=>{ if(e.key==="/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); $("#q").focus(); } });
+$("#whoSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; WHO=b.dataset.w; render(); };
+$("#rangeSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; RANGE=+b.dataset.r; render(); };
+$("#relSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; REL=b.dataset.rel; render(); };
+$("#srcChips").onclick=e=>{ const b=e.target.closest(".chip"); if(!b) return; const s=b.dataset.s; if(SRC.has(s)) SRC.delete(s); else SRC.add(s); render(); };
+$("#showDone").onchange=e=>{ SHOWDONE=e.target.checked; render(); };
+document.querySelectorAll("#jump .seg").forEach(a=>a.onclick=()=>{ document.querySelectorAll("#jump .seg").forEach(x=>x.classList.toggle("on",x===a)); });
+document.addEventListener("gf-who",()=>render());
+
+gfGate(async()=>{
+  $("#app").style.display="block"; gfMountTopbar("neuigkeiten");
+  gfMountHero("lager","Neuigkeiten","Was bei Lea und Alex gerade passiert. Der Ticker für den kurzen Blick, die Themenlage zum Einlesen, der Sichtungskorb für die GF-Runde.",{compact:true, aside:`<button class="btn btn-sm" id="seenBtn">Alles gesehen</button><a class="btn btn-sm" href="board.html">Zum Board</a>`});
+  $("#seenBtn").onclick=markSeen;
+  await load();
+  if(location.hash){ const el=document.querySelector(location.hash); if(el) setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"start"}),150); }
+});
+</script>
+</body>
+</html>

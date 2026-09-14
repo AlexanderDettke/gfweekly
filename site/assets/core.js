@@ -1,5 +1,5 @@
 /* ===========================================================
-   GF Weekly · V15 · gemeinsamer Kern
+   GF Weekly · V16 · gemeinsamer Kern
    API-Zugriff, Login-Gate, Navigation, Theme-Umschaltung, Helfer.
    Es werden bewusst KEINE apikey/Authorization-Header gesendet
    (das Supabase-Gateway lehnt sonst ab); Auth läuft über das
@@ -71,6 +71,7 @@ function gfMountTopbar(active){
     <div class="tb-row tb-nav">
       <nav class="nav" aria-label="Hauptnavigation">
         <a href="index.html" data-k="start"><span class="lbl">Start</span></a>
+        <a href="neuigkeiten.html" data-k="neuigkeiten"><span class="lbl">Neuigkeiten</span><span class="nbadge" id="newsBadge" style="display:none">0</span></a>
         <a href="board.html" data-k="themen"><span class="lbl">Themen</span><span class="nbadge" id="themenBadge" style="display:none">0</span></a>
         <a href="seiten.html" data-k="seiten"><span class="lbl">Wichtige Seiten</span></a>
         <a href="checkin.html" data-k="checkin"><span class="lbl">Check-in</span></a>
@@ -87,6 +88,8 @@ function gfMountTopbar(active){
   el.querySelectorAll("#whoSw button").forEach(b=>{ b.classList.toggle("on",b.dataset.w===w0);
     b.onclick=()=>{ gfSetWho(b.dataset.w); el.querySelectorAll("#whoSw button").forEach(x=>x.classList.toggle("on",x===b)); document.dispatchEvent(new CustomEvent("gf-who",{detail:b.dataset.w})); }; });
   const sub=document.getElementById("subnav"); if(sub) el.querySelector("#subnavSlot").appendChild(sub);
+  /* V16: Sichtungskorb-Zähler (Kandidaten mit Status neu) an „Neuigkeiten“ */
+  if(active!=="neuigkeiten") gfApi("news_list",{kinds:["kandidat"],statuses:["neu"],limit:500}).then(d=>{ const n=(d.items||[]).length; const b=el.querySelector("#newsBadge"); if(n>0){ b.textContent=n; b.style.display="inline-flex"; b.title=n+" Kandidaten im Sichtungskorb"; } }).catch(()=>{});
   if(active!=="themen") gfApi("list").then(d=>{ const n=(d.topics||[]).filter(t=>t.board_lane==="zu_besprechen" && t.kind!=="recurring").length; const b=el.querySelector("#themenBadge"); if(n>0){ b.textContent=n; b.style.display="inline-flex"; b.title=n+" Themen zu besprechen"; } }).catch(()=>{});
 }
 
