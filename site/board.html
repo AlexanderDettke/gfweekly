@@ -7,18 +7,18 @@
 <meta name="theme-color" content="#17171a" />
 <title>GF Weekly · Themen · Board</title>
 <meta name="description" content="Themen der Geschäftsleitung als Board, Kacheln oder Liste. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=12" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=12" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=12" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=12" />
-<link rel="stylesheet" href="/assets/styles.css?v=12" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=13" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=13" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=13" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=13" />
+<link rel="stylesheet" href="/assets/styles.css?v=13" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
 </head>
 <body>
 
 <div id="gate">
   <div class="gate-card">
-    <div class="mark">GF</div>
+    <div class="mark pic"><img src="/assets/img/flagge-144.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
     <h1>GF Weekly</h1>
     <div class="sub">Themen · Geschäftsleitung Wilde Möhre · Alex &amp; Lea</div>
@@ -44,9 +44,12 @@
     <label class="chk"><input type="checkbox" id="showRec" /> wiederkehrende zeigen</label>
     <label class="chk"><input type="checkbox" id="showDone" /> erledigte zeigen</label>
     <button class="btn btn-sm btn-brand" id="newTopic">＋ Thema</button>
+    <button class="btn btn-sm btn-primary" id="meetBtn" title="Themen der Reihe nach durchgehen, Ergebnisse festhalten, am Ende Protokoll">Besprechung starten</button>
   </div>
 
+  <section class="meet" id="meet" hidden></section>
   <div id="view"></div>
+  <div class="pop" id="movePop" hidden></div>
 </div>
 
 <!-- Detail-Panel -->
@@ -59,7 +62,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=12"></script>
+<script src="/assets/core.js?v=13"></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const LANES=[["zu_besprechen","Zu besprechen","var(--accent)"],["in_klaerung","In Klärung","var(--warn)"],["entschieden","Entschieden · nächster Schritt","var(--info)"],["erledigt","Erledigt","var(--pos)"]];
@@ -105,7 +108,7 @@ function card(t){
     ${t.short_description?`<div class="bn">${gfClamp(t.short_description,"b"+t.id+"s",120)}</div>`:""}
     ${t.next_action&&t.board_lane!=="erledigt"?`<div class="bn"><b>Nächster Schritt:</b> ${gfClamp(t.next_action,"b"+t.id+"n",120)}</div>`:""}
     ${t.decision&&t.board_lane==="entschieden"?`<div class="bn"><b>Entscheidung:</b> ${gfClamp(t.decision,"b"+t.id+"d",120)}</div>`:""}
-    <div class="bf"><span>${who?gfEsc(who):""}${t.next_suggested?` · ${new Date(t.next_suggested+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}`:""}</span><span class="age" title="Alter des Themas">${age} T</span></div>
+    <div class="bf"><span>${who?gfEsc(who):""}${t.next_suggested?` · ${new Date(t.next_suggested+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}`:""}</span><span class="bf-r"><button class="mv" data-mv="${t.id}" title="Verschieben nach …" aria-label="Verschieben">⇄</button><span class="age" title="Alter des Themas">${age} T</span></span></div>
   </article>`;
 }
 
@@ -127,6 +130,7 @@ function render(){
     </section>`).join("")||`<div class="empty pic" style="--hero-img:url(/assets/img/lagerfeuer.webp)"><div><h3>Nichts zu zeigen</h3><p>Filter lockern oder ein neues Thema erfassen.</p></div></div>`}</div>`;
   }
   gfStagger($("#view"),".bcard");
+  if(MEET){ const cid=MEET.queue[MEET.idx]; const c=document.querySelector(`.bcard[data-id="${cid}"]`); if(c) c.classList.add("is-cur"); }
   const hp=$("#hero p"); if(hp) hp.textContent=`${total} Themen · Spalten nach ${ {ablauf:"Ablauf",prio:"Priorität",zeitraum:"Zeitraum",person:"Person"}[GROUP] } · ziehen zum Verschieben, antippen für Details`;
   bind();
 }
@@ -164,7 +168,7 @@ function bind(){
   document.querySelectorAll(".bcard").forEach(el=>{
     el.addEventListener("dragstart",e=>{ DRAG=el.dataset.id; el.classList.add("dragging"); e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",DRAG); });
     el.addEventListener("dragend",()=>{ el.classList.remove("dragging"); document.querySelectorAll(".lane.over").forEach(l=>l.classList.remove("over")); });
-    el.addEventListener("click",e=>{ if(e.target.closest(".c-more")) return; openPanel(el.dataset.id); });
+    el.addEventListener("click",e=>{ if(e.target.closest(".c-more")) return; if(e.target.closest(".mv")){ e.stopPropagation(); openMovePop(el.dataset.id, e.target.closest(".mv")); return; } if(MEET && MEET.queue.includes(el.dataset.id)){ MEET.idx=MEET.queue.indexOf(el.dataset.id); saveMeet(); renderMeet(); $("#meet").scrollIntoView({behavior:"smooth",block:"start"}); return; } openPanel(el.dataset.id); });
     el.addEventListener("keydown",e=>{ if(e.key==="Enter") openPanel(el.dataset.id); });
   });
   document.querySelectorAll(".lane").forEach(l=>{
@@ -215,11 +219,135 @@ $("#showDone").onchange=e=>{ SHOW_DONE=e.target.checked; localStorage.setItem("g
 $("#q").oninput=e=>{ Q=e.target.value.trim().toLowerCase(); render(); };
 $("#newTopic").onclick=async()=>{ const title=prompt("Neues Thema (Titel):"); if(!title) return; try{ const d=await gfApi("add",{title,priority:"mittel",created_by:gfWho(),board_lane:"zu_besprechen"}); TOPICS.push(d.topic); render(); openPanel(d.topic.id); }catch(e){ gfToast("Fehler: "+e.message); } };
 
+/* ---- Verschieben per Menü (Touch, Tastatur) ---- */
+function openMovePop(id, anchor){
+  const t=TOPICS.find(x=>x.id===id); if(!t) return;
+  const cols=columns(TOPICS).map(c=>({key:c.key,label:c.label}));
+  const cur = GROUP==="ablauf"?t.board_lane:GROUP==="prio"?t.priority:GROUP==="zeitraum"?zeitOf(t):personKey(t);
+  const pop=$("#movePop");
+  pop.innerHTML=`<div class="pop-h">Verschieben nach …</div>${cols.map(c=>`<button class="pop-i ${c.key===cur?"on":""}" data-col="${gfEsc(c.key)}">${gfEsc(c.label.split(" ·")[0])}</button>`).join("")}<button class="pop-i" data-details>Details öffnen</button>`;
+  pop.hidden=false;
+  const r=anchor.getBoundingClientRect(); const w=Math.min(260, window.innerWidth-24);
+  pop.style.left=Math.max(12, Math.min(r.left, window.innerWidth-w-12))+"px"; pop.style.top=(r.bottom+window.scrollY+6)+"px"; pop.style.width=w+"px";
+  pop.querySelectorAll("[data-col]").forEach(b=>b.onclick=()=>{ pop.hidden=true; if(b.dataset.col!==cur) move(id,b.dataset.col,null); });
+  pop.querySelector("[data-details]").onclick=()=>{ pop.hidden=true; openPanel(id); };
+  setTimeout(()=>document.addEventListener("click",closePop,{once:true}),0);
+}
+function closePop(e){ const pop=$("#movePop"); if(e && pop.contains(e.target)){ document.addEventListener("click",closePop,{once:true}); return; } pop.hidden=true; }
+
+/* ---- Besprechungsmodus (Sprint C) ---- */
+let MEET=null, MEET_T=null;
+try{ MEET=JSON.parse(localStorage.getItem("gf_meeting")||"null"); }catch(e){ MEET=null; }
+function saveMeet(){ try{ if(MEET) localStorage.setItem("gf_meeting",JSON.stringify(MEET)); else localStorage.removeItem("gf_meeting"); }catch(e){} }
+function meetQueue(){
+  const v=TOPICS.filter(t=>!t.archived && (SHOW_REC||t.kind!=="recurring") && (t.board_lane==="zu_besprechen"||t.board_lane==="in_klaerung"));
+  const po={hoch:0,mittel:1,niedrig:2}; const lo={zu_besprechen:0,in_klaerung:1};
+  return v.sort((a,b)=>(lo[a.board_lane]-lo[b.board_lane])||(po[a.priority]-po[b.priority])||(a.lane_order-b.lane_order)).map(t=>t.id);
+}
+async function startMeet(){
+  const participants=prompt("Wer ist dabei?","Alex, Lea"); if(participants===null) return;
+  try{
+    const d=await gfApi("session_start",{participants, started_by:gfWho()});
+    MEET={ sessionId:d.session.id, started:d.session.started_at, participants, queue:meetQueue(), idx:0, log:[] };
+    saveMeet(); renderMeet(); render(); gfToast("Besprechung gestartet");
+  }catch(e){ gfToast("Start fehlgeschlagen: "+e.message); }
+}
+function fmtDur(ms){ const s=Math.floor(ms/1000); const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), x=s%60; return (h?h+":":"")+String(m).padStart(2,"0")+":"+String(x).padStart(2,"0"); }
+function renderMeet(){
+  const box=$("#meet"); clearInterval(MEET_T);
+  if(!MEET){ box.hidden=true; box.innerHTML=""; $("#meetBtn").textContent="Besprechung starten"; $("#meetBtn").classList.remove("btn-ghost"); return; }
+  box.hidden=false; $("#meetBtn").textContent="Besprechung läuft …"; $("#meetBtn").classList.add("btn-ghost");
+  // Queue aktualisieren: neue Themen anhängen, erledigte behalten (Log), aktuelle Position halten
+  const fresh=meetQueue(); for(const id of fresh) if(!MEET.queue.includes(id) && !MEET.log.some(l=>l.id===id)) MEET.queue.push(id);
+  MEET.queue=MEET.queue.filter(id=>TOPICS.some(t=>t.id===id));
+  const doneIds=new Set(MEET.log.map(l=>l.id));
+  const pending=MEET.queue.filter(id=>!doneIds.has(id));
+  if(MEET.idx>=MEET.queue.length) MEET.idx=Math.max(0,MEET.queue.length-1);
+  let cur=TOPICS.find(t=>t.id===MEET.queue[MEET.idx]);
+  if(cur && doneIds.has(cur.id) && pending.length){ MEET.idx=MEET.queue.indexOf(pending[0]); cur=TOPICS.find(t=>t.id===pending[0]); }
+  const nDec=MEET.log.filter(l=>l.outcome==="entschieden").length;
+  const head=`<div class="meet-h">
+      <div class="meet-timer" id="meetTimer">00:00</div>
+      <div class="meet-meta"><b>Besprechung</b> · ${gfEsc(MEET.participants)} · ${MEET.log.length} von ${MEET.queue.length} behandelt · ${nDec} Entscheidung${nDec===1?"":"en"}</div>
+      <div class="meet-actions"><button class="btn btn-sm btn-ghost" id="meetPrev" title="Vorheriges Thema">◀</button><button class="btn btn-sm btn-ghost" id="meetNext" title="Nächstes offenes Thema">▶</button><button class="btn btn-sm btn-primary" id="meetEnd">Beenden · Protokoll</button></div>
+    </div>`;
+  let body="";
+  if(!cur || !pending.length){
+    body=`<div class="meet-done"><h3>Alle Themen behandelt.</h3><p>${MEET.log.length} Themen, ${nDec} Entscheidung${nDec===1?"":"en"}. Mit „Beenden · Protokoll“ abschließen oder ein Thema im Board antippen, um es noch einmal aufzurufen.</p></div>`;
+  } else {
+    const done=doneIds.has(cur.id); const pos=pending.indexOf(cur.id);
+    body=`<div class="meet-cur ${done?"is-done":""}" data-id="${cur.id}">
+      <div class="meet-cur-h"><span class="pill p-${cur.priority}">${cur.priority}</span><span class="pill s-${cur.status}">${LANES.find(l=>l[0]===cur.board_lane)?.[1].split(" ·")[0]||""}</span>${cur.kind==="recurring"?`<span class="pill kindtag">wiederkehrend</span>`:""}<span class="meet-pos">${pos>=0?`Thema ${pos+1} von ${pending.length} offen`:"bereits behandelt"} · ${ageDays(cur)} Tage alt</span><button class="btn btn-sm btn-ghost" id="meetDetails" style="margin-left:auto">Details</button></div>
+      <h3 class="meet-title">${gfEsc(cur.title)}</h3>
+      ${cur.short_description?`<p class="meet-desc">${gfEsc(cur.short_description)}</p>`:""}
+      ${cur.context?`<div class="meet-ctx">${gfClamp(cur.context,"m"+cur.id,260)}</div>`:""}
+      <div class="fgrid meet-form">
+        <div class="fld ffull"><label>Entscheidung</label><textarea id="mDecision" rows="2" placeholder="Was ist entschieden? Ein bis zwei Sätze.">${gfEsc(cur.decision||"")}</textarea></div>
+        <div class="fld"><label>Nächster Schritt</label><input id="mNext" value="${gfEsc(cur.next_action||"")}" placeholder="Was passiert als Nächstes?" /></div>
+        <div class="fld"><label>Verantwortung</label><input id="mOwner" list="peopleList2" value="${gfEsc(cur.owner||"")}" /><datalist id="peopleList2">${[...new Set([...PEOPLE.map(p=>p.name),"Alex","Lea","Lea & Alex"])].map(p=>`<option value="${gfEsc(p)}">`).join("")}</datalist></div>
+      </div>
+      <div class="meet-btns">
+        <button class="btn btn-primary" data-o="entschieden" title="Entscheidung festhalten, Thema nach „Entschieden“">Entschieden</button>
+        <button class="btn" data-o="in_klaerung" title="Braucht noch Klärung">In Klärung</button>
+        <button class="btn" data-o="erledigt">Erledigt</button>
+        <button class="btn" data-o="vertagt" data-days="7" title="Termin auf nächste Woche">Vertagen 1 Woche</button>
+        <button class="btn" data-o="vertagt" data-days="30" title="Termin auf nächsten Monat">Vertagen 1 Monat</button>
+        <button class="btn btn-ghost" data-o="besprochen" title="Nur als besprochen markieren, weiter">Besprochen, weiter</button>
+        <button class="btn btn-ghost" data-o="skip" title="Ohne Vermerk zum nächsten Thema">Überspringen</button>
+      </div>
+    </div>`;
+  }
+  box.innerHTML=head+body;
+  const tick=()=>{ const el=$("#meetTimer"); if(el) el.textContent=fmtDur(Date.now()-new Date(MEET.started)); }; tick(); MEET_T=setInterval(tick,1000);
+  $("#meetEnd").onclick=endMeet;
+  $("#meetPrev").onclick=()=>{ if(MEET.idx>0){ MEET.idx--; saveMeet(); renderMeet(); } };
+  $("#meetNext").onclick=()=>{ const nxt=pending.find(id=>MEET.queue.indexOf(id)>MEET.idx)||pending[0]; if(nxt){ MEET.idx=MEET.queue.indexOf(nxt); saveMeet(); renderMeet(); } };
+  const md=$("#meetDetails"); if(md&&cur) md.onclick=()=>openPanel(cur.id);
+  box.querySelectorAll("[data-o]").forEach(b=>b.onclick=()=>meetOutcome(cur, b.dataset.o, parseInt(b.dataset.days)||0));
+  document.querySelectorAll(".bcard.is-cur").forEach(c=>c.classList.remove("is-cur")); if(cur){ const c=document.querySelector(`.bcard[data-id="${cur.id}"]`); if(c) c.classList.add("is-cur"); }
+}
+function advanceMeet(){
+  const doneIds=new Set(MEET.log.map(l=>l.id)); const pending=MEET.queue.filter(id=>!doneIds.has(id));
+  const nxt=pending.find(id=>MEET.queue.indexOf(id)>MEET.idx)||pending[0];
+  if(nxt) MEET.idx=MEET.queue.indexOf(nxt);
+  saveMeet(); renderMeet();
+}
+async function meetOutcome(t, outcome, days){
+  if(outcome==="skip"){ const doneIds=new Set(MEET.log.map(l=>l.id)); const pending=MEET.queue.filter(id=>!doneIds.has(id)&&id!==t.id); const nxt=pending.find(id=>MEET.queue.indexOf(id)>MEET.idx)||pending[0]; if(nxt){ MEET.idx=MEET.queue.indexOf(nxt); saveMeet(); renderMeet(); } else gfToast("Kein weiteres offenes Thema"); return; }
+  const decision=$("#mDecision").value.trim(), next_action=$("#mNext").value.trim(), owner=$("#mOwner").value.trim();
+  if(outcome==="entschieden" && !decision){ gfToast("Bitte die Entscheidung in ein bis zwei Sätzen festhalten."); $("#mDecision").focus(); return; }
+  const patch={ id:t.id, last_discussed:iso(today), next_action, owner };
+  if(decision) patch.decision=decision;
+  let until=null;
+  if(outcome==="entschieden"){ patch.board_lane="entschieden"; patch.status="offen"; }
+  if(outcome==="in_klaerung"){ patch.board_lane="in_klaerung"; patch.status="in_klaerung"; }
+  if(outcome==="erledigt"){ patch.board_lane="erledigt"; patch.status="erledigt"; }
+  if(outcome==="vertagt"){ const d=new Date(today); d.setDate(d.getDate()+days); until=iso(d); patch.next_suggested=until; }
+  try{
+    const d=await gfApi("update",patch); Object.assign(t,d.topic);
+    if(outcome==="entschieden") await gfApi("decision_add",{ topic_id:t.id, session_id:MEET.sessionId, topic_title:t.title, decision, next_action, owner, decided_by:gfWho() });
+    MEET.log=MEET.log.filter(l=>l.id!==t.id); MEET.log.push({ id:t.id, title:t.title, outcome, decision:outcome==="entschieden"?decision:"", next_action, owner, until });
+    gfToast({entschieden:"Entscheidung festgehalten",in_klaerung:"Nach „In Klärung“",erledigt:"Erledigt",vertagt:"Vertagt bis "+gfFmtShort(until),besprochen:"Als besprochen markiert"}[outcome]);
+    render(); advanceMeet();
+  }catch(e){ gfToast("Speichern fehlgeschlagen: "+e.message); }
+}
+async function endMeet(){
+  if(!MEET) return;
+  const ended=new Date().toISOString();
+  const openTopics=TOPICS.filter(t=>t.board_lane==="zu_besprechen" && t.kind!=="recurring" && !MEET.log.some(l=>l.id===t.id));
+  const text=gfProtocolText({started:MEET.started, ended, participants:MEET.participants}, MEET.log, openTopics);
+  try{ await gfApi("session_end",{ id:MEET.sessionId, protocol:text, summary:MEET.log, title:`Besprechung ${gfFmtShort(MEET.started)}` }); }
+  catch(e){ gfToast("Speichern des Protokolls fehlgeschlagen: "+e.message); }
+  MEET=null; saveMeet(); renderMeet(); render();
+  gfTextModal("Protokoll der Besprechung", text, { subject:`GF-Besprechung ${gfFmtShort(ended)} · Protokoll`, intro:"Gespeichert unter Themen › Entscheidungen. Hier kopieren oder per Mail verschicken.", extra:`<a class="btn btn-ghost" href="entscheidungen.html">Entscheidungslog</a>` });
+}
+$("#meetBtn").onclick=()=>{ if(MEET){ $("#meet").scrollIntoView({behavior:"smooth",block:"start"}); return; } startMeet(); };
+
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("themen"); gfMountSubnav(VIEW);
   gfMountHero("lagerfeuer", VIEW==="board"?"Board":"Kacheln", "lädt …", {compact:true, aside:`<a class="btn btn-sm" href="capture.html">Thema erfassen</a><a class="btn btn-sm" href="checkin.html">Check-in vorbereiten</a>`});
   $("#view").innerHTML=`<div class="board">${LANES.map(()=>`<section class="lane">${gfSkeleton(2,"")}</section>`).join("")}</div>`;
-  try{ const [d,p]=await Promise.all([gfApi("list"), gfLoadPeople()]); TOPICS=d.topics||[]; PEOPLE=p||[]; render(); const tid=params.get("topic"); if(tid) openPanel(tid); }
+  try{ const [d,p]=await Promise.all([gfApi("list"), gfLoadPeople()]); TOPICS=d.topics||[]; PEOPLE=p||[]; render(); renderMeet(); const tid=params.get("topic"); if(tid) openPanel(tid); if(params.get("meeting")==="1" && !MEET) startMeet(); }
   catch(e){ $("#view").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
 });
 </script>

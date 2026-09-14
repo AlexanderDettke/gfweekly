@@ -10,18 +10,18 @@
 <meta property="og:title" content="GF Weekly · Geschäftsleitung" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre." />
 <meta property="og:image" content="assets/og-image.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=12" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=12" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=12" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=12" />
-<link rel="stylesheet" href="/assets/styles.css?v=12" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=13" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=13" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=13" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=13" />
+<link rel="stylesheet" href="/assets/styles.css?v=13" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
 </head>
 <body>
 
 <div id="gate">
   <div class="gate-card">
-    <div class="mark">GF</div>
+    <div class="mark pic"><img src="/assets/img/flagge-144.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
     <h1>GF Weekly</h1>
     <div class="sub">Themen · Liste · Geschäftsleitung Wilde Möhre · Alex &amp; Lea</div>
@@ -73,11 +73,11 @@
 </div>
 
 <div class="protocol" id="protoBar" style="display:none">
-  <button class="btn-finish" id="finishBtn">✓ Meeting fertig · Protokoll per Mail</button>
+  <button class="btn-finish" id="finishBtn">Protokoll von heute</button>
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=12"></script>
+<script src="/assets/core.js?v=13"></script>
 <script>
 const ST={offen:"Offen",in_klaerung:"In Klärung",erledigt:"Erledigt"};
 let topics=[], linksByItem={}, openIds=new Set();
@@ -284,9 +284,12 @@ $("#fPerson").onchange=e=>{filter.person=e.target.value;render();};
 $("#fPrio").onchange=e=>{filter.prio=e.target.value;render();};
 $("#search").addEventListener("input",e=>{filter.q=e.target.value.trim();render();});
 $("#reload").onclick=async()=>{ try{ await loadAll(); gfToast("Aktualisiert"); }catch(e){ gfToast("Fehler"); } };
-$("#finishBtn").onclick=async()=>{ const open=topics.filter(t=>t.kind!=="recurring"&&t.status!=="erledigt").length;
-  const msg=open>0?`Protokoll jetzt an Lea & Alex senden?\n\nNoch ${open} Thema/Themen offen – sie werden als „offen / mitzunehmen" geführt.`:"Protokoll mit allen Beschlüssen jetzt senden?";
-  if(!confirm(msg))return; try{ await gfApi("request_protocol",{requested_by:gfWho()}); gfToast("Angefordert – Protokoll-Entwurf folgt "); }catch(e){ gfToast("Anfrage fehlgeschlagen"); } };
+$("#finishBtn").onclick=()=>{ const d=new Date().toISOString().slice(0,10);
+  const disc=topics.filter(t=>t.last_discussed===d);
+  if(!disc.length){ gfTextModal("Protokoll heute", "Heute wurde noch kein Thema als besprochen markiert.\n\nTipp: Im Board „Besprechung starten“ führt Thema für Thema durch die Agenda und erzeugt am Ende das Protokoll automatisch.", {intro:"Kein Protokoll ohne besprochene Themen.", extra:`<a class="btn btn-brand" href="board.html?meeting=1">Besprechung im Board starten</a>`}); return; }
+  const log=disc.map(t=>({ id:t.id, title:t.title, outcome: t.board_lane==="entschieden"?"entschieden":t.board_lane==="erledigt"?"erledigt":t.board_lane==="in_klaerung"?"in_klaerung":"besprochen", decision:t.decision||"", next_action:t.next_action||"", owner:t.owner||"" }));
+  const openT=topics.filter(t=>t.board_lane==="zu_besprechen"&&t.kind!=="recurring"&&t.last_discussed!==d);
+  gfTextModal("Protokoll heute", gfProtocolText({started:new Date(), participants:"Alex, Lea"}, log, openT), {subject:`GF-Besprechung ${gfFmtShort(d)} · Protokoll`, intro:"Aus den heute als besprochen markierten Themen. Für ein vollständiges Protokoll mit Zeiten: Besprechungsmodus im Board."}); };
 </script>
 </body>
 </html>

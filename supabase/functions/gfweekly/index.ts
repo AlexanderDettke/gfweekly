@@ -56,7 +56,7 @@ Deno.serve(async (req: Request) => {
   const t = payload ?? {};
 
   try {
-    if (action === 'ping') return json({ ok:true, version:17 });
+    if (action === 'ping') return json({ ok:true, version:18 });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -107,6 +107,7 @@ Deno.serve(async (req: Request) => {
     /* ----- Inbox ----- */
     /* v16: Eingaben landen direkt als Thema in „Zu besprechen" (kein Inbox-Zwischenschritt mehr, Entscheid 13.09.2026).
        v17: Seiten haben ein Vorschaubild (preview, Pfad unter /assets/previews/).
+       v18: Besprechungen (gfweekly_sessions) und Entscheidungslog (gfweekly_decisions): session_start/end/list/delete, decision_add/update/list/delete.
        Antwortform bleibt kompatibel: item = das angelegte Thema. */
     function topicFromCapture(c: any){
       const raw=(c.raw_text ?? c.title ?? '').toString().trim(); if(!raw) return null;
@@ -293,6 +294,55 @@ Deno.serve(async (req: Request) => {
     if (action === 'milestone_delete') {
       if(!t.id) return json({ error:'id fehlt' },400);
       const { error } = await admin.from('gfweekly_milestones').delete().eq('id',t.id); if(error) throw error; return json({ ok:true });
+    }
+
+    /* ----- Sprint C (v18): Besprechungen und Entscheidungslog ----- */
+    if (action === 'session_start') {
+      const row = { participants:(t.participants??'Alex, Lea').toString().slice(0,300), started_by:(t.started_by??'').toString().slice(0,120), title:(t.title??'').toString().slice(0,300) };
+      const { data, error } = await admin.from('gfweekly_sessions').insert(row).select().single(); if(error) throw error; return json({ session:data });
+    }
+    if (action === 'session_end') {
+      if(!t.id) return json({ error:'id fehlt' },400);
+      const patch:Record<string,unknown> = { ended_at:new Date().toISOString() };
+      if(t.protocol!==undefined) patch.protocol=(t.protocol??'').toString().slice(0,20000);
+      if(t.summary!==undefined) patch.summary=Array.isArray(t.summary)?t.summary.slice(0,200):[];
+      if(t.title!==undefined) patch.title=(t.title??'').toString().slice(0,300);
+      const { data, error } = await admin.from('gfweekly_sessions').update(patch).eq('id',t.id).select().single(); if(error) throw error; return json({ session:data });
+    }
+    if (action === 'sessions_list') {
+      const limit = Math.min(parseInt(t.limit)||30, 200);
+      const { data, error } = await admin.from('gfweekly_sessions').select('*').order('started_at',{ascending:false}).limit(limit); if(error) throw error; return json({ sessions:data });
+    }
+    if (action === 'session_delete') {
+      if(!t.id) return json({ error:'id fehlt' },400);
+      const { error } = await admin.from('gfweekly_sessions').delete().eq('id',t.id); if(error) throw error; return json({ ok:true });
+    }
+    if (action === 'decision_add') {
+      const decision=(t.decision??'').toString().trim().slice(0,4000); if(!decision) return json({ error:'decision fehlt' },400);
+      const row:Record<string,unknown> = { decision, topic_id:t.topic_id||null, session_id:t.session_id||null,
+        topic_title:(t.topic_title??'').toString().slice(0,500), next_action:(t.next_action??'').toString().slice(0,2000),
+        owner:(t.owner??'').toString().slice(0,120), strand:(t.strand??'').toString().slice(0,120), decided_by:(t.decided_by??'').toString().slice(0,120) };
+      if(t.decided_at) row.decided_at=t.decided_at;
+      const { data, error } = await admin.from('gfweekly_decisions').insert(row).select().single(); if(error) throw error; return json({ decision:data });
+    }
+    if (action === 'decision_update') {
+      if(!t.id) return json({ error:'id fehlt' },400);
+      const patch:Record<string,unknown>={};
+      for(const f of ['decision','next_action','owner','strand','topic_title']) if(t[f]!==undefined) patch[f]=(t[f]??'').toString().slice(0, f==='decision'?4000:2000);
+      if(t.decided_at!==undefined) patch.decided_at=t.decided_at||new Date().toISOString().slice(0,10);
+      const { data, error } = await admin.from('gfweekly_decisions').update(patch).eq('id',t.id).select().single(); if(error) throw error; return json({ decision:data });
+    }
+    if (action === 'decisions_list') {
+      let q = admin.from('gfweekly_decisions').select('*').order('decided_at',{ascending:false}).order('created_at',{ascending:false});
+      if(t.topic_id) q = q.eq('topic_id', t.topic_id);
+      if(t.session_id) q = q.eq('session_id', t.session_id);
+      if(t.since) q = q.gte('decided_at', t.since);
+      q = q.limit(Math.min(parseInt(t.limit)||300, 1000));
+      const { data, error } = await q; if(error) throw error; return json({ decisions:data });
+    }
+    if (action === 'decision_delete') {
+      if(!t.id) return json({ error:'id fehlt' },400);
+      const { error } = await admin.from('gfweekly_decisions').delete().eq('id',t.id); if(error) throw error; return json({ ok:true });
     }
 
     return json({ error:'unknown action' }, 400);

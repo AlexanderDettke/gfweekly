@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#17171a" />
+<title>GF Weekly · Entscheidungen</title>
+<meta name="description" content="Entscheidungslog, Protokolle und Wochenmail der Geschäftsleitung – Wilde Möhre. Vertraulich." />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=13" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=13" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=13" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=13" />
+<link rel="stylesheet" href="/assets/styles.css?v=13" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark pic"><img src="/assets/img/flagge-144.png" alt="" width="54" height="54"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>GF Weekly</h1>
+    <div class="sub">Entscheidungen · Geschäftsleitung Wilde Möhre · Alex &amp; Lea</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+  <div id="subnav"></div>
+  <div id="hero"></div>
+
+  <section class="start-hero"><div class="start-stats" id="stats"></div></section>
+
+  <div class="toolbar">
+    <div class="search"><input id="q" placeholder="Entscheidungen durchsuchen … (Taste /)" /></div>
+    <div class="segs" id="rangeSegs">
+      <button class="seg" data-r="30">30 Tage</button>
+      <button class="seg on" data-r="90">Quartal</button>
+      <button class="seg" data-r="365">Jahr</button>
+      <button class="seg" data-r="0">Alle</button>
+    </div>
+    <button class="btn btn-ghost" id="addDec" title="Entscheidung ohne Board-Thema nachtragen">＋ Entscheidung</button>
+  </div>
+
+  <div id="log"><div class="loading">lädt …</div></div>
+
+  <div class="sec-h" style="margin-top:34px"><h2>Besprechungen</h2><span class="hint">Protokoll öffnen, kopieren oder per Mail verschicken</span><span class="line"></span></div>
+  <div id="sessions"><div class="loading">lädt …</div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/assets/core.js?v=13"></script>
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+let DEC=[], SESS=[], TOPICS=[], MS=[], CYC=null, Q="", RANGE=90, EDITING=null;
+const today=new Date(); today.setHours(0,0,0,0);
+function iso(d){ return d.toISOString().slice(0,10); }
+function daysAgo(n){ const d=new Date(today); d.setDate(d.getDate()-n); return d; }
+function monthKey(d){ return d.slice(0,7); }
+function monthLabel(k){ const [y,m]=k.split("-"); return new Date(+y,+m-1,1).toLocaleDateString("de-DE",{month:"long",year:"numeric"}); }
+
+async function load(){
+  try{
+    const [d,s,t]=await Promise.all([gfApi("decisions_list",{limit:1000}), gfApi("sessions_list",{limit:60}), gfApi("list")]);
+    DEC=d.decisions||[]; SESS=s.sessions||[]; TOPICS=t.topics||[];
+    render(); renderSessions();
+  }catch(e){ $("#log").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+}
+
+function visible(){
+  const since=RANGE?iso(daysAgo(RANGE)):"0000";
+  return DEC.filter(x=>x.decided_at>=since && (!Q||[x.topic_title,x.decision,x.next_action,x.owner,x.decided_by].join(" ").toLowerCase().includes(Q)));
+}
+function render(){
+  document.querySelectorAll("#rangeSegs .seg").forEach(b=>b.classList.toggle("on",+b.dataset.r===RANGE));
+  const v=visible();
+  const week=DEC.filter(x=>x.decided_at>=iso(daysAgo(7))).length;
+  const open=TOPICS.filter(t=>t.board_lane==="zu_besprechen"&&t.kind!=="recurring").length;
+  $("#stats").innerHTML=`
+    <div class="sstat"><div class="k">Entscheidungen</div><div class="v">${DEC.length}</div></div>
+    <div class="sstat"><div class="k">letzte 7 Tage</div><div class="v">${week}</div></div>
+    <div class="sstat"><div class="k">Besprechungen</div><div class="v">${SESS.filter(s=>s.ended_at).length}</div></div>
+    <div class="sstat"><div class="k">zu besprechen</div><div class="v">${open}</div></div>`;
+  if(!v.length && !EDITING){ $("#log").innerHTML=`<div class="empty pic" style="--hero-img:url(/assets/img/lagerfeuer.webp)"><div><h3>${Q?"Nichts gefunden.":"Noch keine Entscheidungen im Zeitraum."}</h3><p>Entscheidungen entstehen im Besprechungsmodus des Boards oder über „＋ Entscheidung“.</p></div></div>`; return; }
+  const months=[...new Set(v.map(x=>monthKey(x.decided_at)))];
+  let html= EDITING&&!EDITING.id ? editForm(EDITING) : "";
+  for(const m of months){
+    const items=v.filter(x=>monthKey(x.decided_at)===m);
+    html+=`<div class="group"><div class="group-h">${monthLabel(m)} <span class="n">${items.length}</span></div><div class="dlist">${items.map(row).join("")}</div></div>`;
+  }
+  $("#log").innerHTML=html; gfStagger($("#log"),".drow"); bind();
+}
+function row(x){
+  if(EDITING && EDITING.id===x.id) return editForm(x);
+  const t=x.topic_id?TOPICS.find(y=>y.id===x.topic_id):null;
+  return `<article class="drow" data-id="${x.id}">
+    <div class="dd"><b>${gfFmtShort(x.decided_at)}</b>${x.decided_by?`<span>${gfEsc(x.decided_by)}</span>`:""}</div>
+    <div class="db">
+      <div class="dt">${t?`<a href="board.html?topic=${t.id}">${gfEsc(x.topic_title||t.title)}</a>`:gfEsc(x.topic_title||"Ohne Thema")}${t&&t.board_lane==="erledigt"?` <span class="pill s-erledigt">erledigt</span>`:""}</div>
+      <div class="dx">${gfClamp(x.decision,"d"+x.id,240)}</div>
+      ${x.next_action||x.owner?`<div class="dn">${x.next_action?`<b>Nächster Schritt:</b> ${gfEsc(x.next_action)}`:""}${x.owner?` <span class="muted">· ${gfEsc(x.owner)}</span>`:""}</div>`:""}
+    </div>
+    <div class="da"><button class="icon-btn" data-act="edit" title="Bearbeiten">✎</button><button class="icon-btn" data-act="del" title="Löschen">✕</button></div>
+  </article>`;
+}
+function editForm(x){
+  return `<form class="drow editcard" data-id="${x.id||""}" style="display:block;padding:14px 16px">
+    <div class="fgrid">
+      <div class="fld"><label>Datum</label><input name="decided_at" type="date" value="${x.decided_at||iso(today)}" required /></div>
+      <div class="fld"><label>Thema</label><input name="topic_title" value="${gfEsc(x.topic_title||"")}" placeholder="Worum ging es?" /></div>
+      <div class="fld ffull"><label>Entscheidung</label><textarea name="decision" rows="2" required>${gfEsc(x.decision||"")}</textarea></div>
+      <div class="fld"><label>Nächster Schritt</label><input name="next_action" value="${gfEsc(x.next_action||"")}" /></div>
+      <div class="fld"><label>Verantwortung</label><input name="owner" value="${gfEsc(x.owner||"")}" /></div>
+    </div>
+    <div class="actions-row" style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-primary" type="submit">Speichern</button><button class="btn btn-ghost" type="button" data-act="cancel">Abbrechen</button></div>
+  </form>`;
+}
+function bind(){
+  document.querySelectorAll(".drow[data-id] [data-act]").forEach(b=>b.onclick=async ev=>{
+    ev.preventDefault(); const el=b.closest(".drow"); const id=el.dataset.id; const x=DEC.find(d=>d.id===id);
+    if(b.dataset.act==="edit"){ EDITING={...x}; render(); }
+    if(b.dataset.act==="cancel"){ EDITING=null; render(); }
+    if(b.dataset.act==="del"){ if(!confirm("Diese Entscheidung aus dem Log löschen?")) return; try{ await gfApi("decision_delete",{id}); DEC=DEC.filter(d=>d.id!==id); render(); gfToast("Gelöscht"); }catch(e){ gfToast("Fehler: "+e.message); } }
+  });
+  document.querySelectorAll("form.editcard").forEach(f=>f.onsubmit=async ev=>{
+    ev.preventDefault(); const fd=new FormData(f); const p={}; for(const [k,v] of fd.entries()) p[k]=v.trim();
+    try{
+      if(f.dataset.id){ const d=await gfApi("decision_update",{id:f.dataset.id,...p}); DEC=DEC.map(x=>x.id===d.decision.id?d.decision:x); }
+      else { const d=await gfApi("decision_add",{...p, decided_by:gfWho()}); DEC.unshift(d.decision); }
+      EDITING=null; render(); gfToast("Gespeichert");
+    }catch(e){ gfToast("Fehler: "+e.message); }
+  });
+}
+
+function renderSessions(){
+  const done=SESS.filter(s=>s.ended_at);
+  if(!done.length){ $("#sessions").innerHTML=`<div class="empty">Noch keine abgeschlossene Besprechung. Im Board „Besprechung starten“, am Ende entsteht hier das Protokoll.</div>`; return; }
+  $("#sessions").innerHTML=`<div class="dlist">${done.map(s=>{ const log=Array.isArray(s.summary)?s.summary:[]; const nd=log.filter(l=>l.outcome==="entschieden").length; const dur=Math.round((new Date(s.ended_at)-new Date(s.started_at))/60000);
+    return `<article class="drow srow-s" data-sid="${s.id}">
+      <div class="dd"><b>${gfFmtShort(s.started_at)}</b><span>${gfFmtTime(s.started_at)} · ${dur} min</span></div>
+      <div class="db"><div class="dt">${gfEsc(s.title||"Besprechung")}</div><div class="dn">${gfEsc(s.participants)} · ${log.length} Themen behandelt · ${nd} Entscheidung${nd===1?"":"en"}</div></div>
+      <div class="da"><button class="btn btn-sm" data-proto>Protokoll</button><button class="icon-btn" data-sdel title="Löschen">✕</button></div>
+    </article>`; }).join("")}</div>`;
+  document.querySelectorAll("[data-proto]").forEach(b=>b.onclick=()=>{ const s=SESS.find(x=>x.id===b.closest(".drow").dataset.sid); gfTextModal(`Protokoll · ${gfFmtShort(s.started_at)}`, s.protocol||"(kein Protokolltext gespeichert)", {subject:`GF-Besprechung ${gfFmtShort(s.started_at)} · Protokoll`}); });
+  document.querySelectorAll("[data-sdel]").forEach(b=>b.onclick=async()=>{ const id=b.closest(".drow").dataset.sid; if(!confirm("Besprechung samt Protokoll löschen? Entscheidungen bleiben im Log.")) return; try{ await gfApi("session_delete",{id}); SESS=SESS.filter(s=>s.id!==id); renderSessions(); render(); gfToast("Gelöscht"); }catch(e){ gfToast("Fehler: "+e.message); } });
+}
+
+/* ---- Wochenmail: Entscheidungen der Woche, offene Prioritäten, nächste Meilensteine ---- */
+async function wochenmail(){
+  try{
+    const [ms,cyc]=await Promise.all([gfApi("milestones_list",{all:false}), gfApi("cycle_get",{year:today.getFullYear()})]);
+    MS=ms.milestones||[]; CYC=cyc;
+  }catch(e){ MS=[]; CYC=null; }
+  const since=iso(daysAgo(7));
+  const dec=DEC.filter(x=>x.decided_at>=since);
+  const hoch=TOPICS.filter(t=>t.priority==="hoch"&&t.status!=="erledigt"&&t.kind!=="recurring").slice(0,8);
+  const zb=TOPICS.filter(t=>t.board_lane==="zu_besprechen"&&t.kind!=="recurring");
+  const kl=TOPICS.filter(t=>t.board_lane==="in_klaerung");
+  const in30=iso(daysAgo(-30));
+  const next=MS.filter(m=>m.date_from&&m.date_from>=iso(today)&&m.date_from<=in30).slice(0,6);
+  const L=[];
+  L.push(`GF-Wochenmail Wilde Möhre · Woche bis ${gfFmtShort(iso(today))}`);
+  L.push(`Von: ${gfWho()} · Stand ${gfFmtDay(today)}`); L.push("");
+  L.push(`Entscheidungen der Woche (${dec.length})`);
+  if(dec.length) dec.forEach((x,i)=>L.push(`${i+1}. ${x.topic_title?x.topic_title+": ":""}${x.decision}${x.next_action?` → ${x.next_action}`:""}${x.owner?` (${x.owner})`:""}`)); else L.push("- keine");
+  L.push("");
+  L.push(`Priorität hoch, offen (${hoch.length})`); hoch.forEach(t=>L.push(`- ${t.title}${t.owner?` (${t.owner})`:""}${t.next_action?`: ${t.next_action}`:""}`)); if(!hoch.length) L.push("- keine"); L.push("");
+  L.push(`Zu besprechen: ${zb.length} Themen · In Klärung: ${kl.length}`); L.push("");
+  if(next.length){ L.push("Nächste Meilensteine (30 Tage)"); next.forEach(m=>L.push(`- ${gfFmtShort(m.date_from)}${m.date_to?`–${gfFmtShort(m.date_to)}`:""} ${m.title}${m.strand?` · ${m.strand}`:""}`)); L.push(""); }
+  if(CYC){ const tr=(CYC.transitions||[]).map(x=>({...x,d:x.date||x.date_from})).filter(x=>x.d&&x.d>=iso(today)).sort((a,b)=>a.d<b.d?-1:1)[0]; if(tr) L.push(`Nächster Übergang: ${tr.title||tr.label||""} am ${gfFmtShort(tr.d)}`); L.push(""); }
+  L.push("Erstellt mit GF Weekly · gfweekly.netlify.app");
+  gfTextModal("Wochenmail-Entwurf", L.join("\n"), {subject:`GF-Wochenmail · Woche bis ${gfFmtShort(iso(today))}`, intro:"Entwurf aus Board, Entscheidungslog und Meilensteinen. Vor dem Versand kurz durchlesen und ergänzen."});
+}
+
+$("#q").oninput=e=>{ Q=e.target.value.trim().toLowerCase(); render(); };
+document.addEventListener("keydown",e=>{ if(e.key==="/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); $("#q").focus(); } });
+$("#rangeSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; RANGE=+b.dataset.r; render(); };
+$("#addDec").onclick=()=>{ EDITING={id:null, decided_at:iso(today), topic_title:"", decision:"", next_action:"", owner:""}; render(); setTimeout(()=>{ const f=$("form.editcard"); if(f){ f.scrollIntoView({behavior:"smooth",block:"center"}); f.querySelector('[name="decision"]').focus(); } },50); };
+
+gfGate(async()=>{
+  $("#app").style.display="block"; gfMountTopbar("themen"); gfMountSubnav("entscheidungen");
+  gfMountHero("lagerfeuer","Entscheidungen","Was wir entschieden haben, wann und mit welchem nächsten Schritt. Darunter die Protokolle der Besprechungen.",{compact:true, aside:`<button class="btn btn-sm" id="mailBtn">Wochenmail erzeugen</button><a class="btn btn-sm" href="board.html?meeting=1">Besprechung starten</a>`});
+  $("#mailBtn").onclick=wochenmail;
+  await load();
+});
+</script>
+</body>
+</html>

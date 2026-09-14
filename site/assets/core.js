@@ -1,5 +1,5 @@
 /* ===========================================================
-   GF Weekly · V12 · gemeinsamer Kern
+   GF Weekly · V13 · gemeinsamer Kern
    API-Zugriff, Login-Gate, Navigation, Theme-Umschaltung, Helfer.
    Es werden bewusst KEINE apikey/Authorization-Header gesendet
    (das Supabase-Gateway lehnt sonst ab); Auth läuft über das
@@ -57,7 +57,7 @@ function gfMountTopbar(active){
   el.className="topbar";
   el.innerHTML=`
     <div class="tb-row tb-top">
-      <a class="brand" href="index.html"><div class="mark">GF</div><div><h1>GF Weekly</h1><div class="meta">Geschäftsleitung · vertraulich</div></div></a>
+      <a class="brand" href="index.html"><div class="mark pic"><img src="/assets/img/flagge-72.png" srcset="/assets/img/flagge-144.png 2x" alt="" width="36" height="36"></div><div><h1>GF Weekly</h1><div class="meta">Geschäftsleitung · vertraulich</div></div></a>
       <div class="tb-ctl">
         <div class="theme-sw" id="themeSw" role="group" aria-label="Designmodus">
           <button data-th="dark" aria-label="Dunkler Modus">Dunkel</button>
@@ -93,7 +93,7 @@ function gfMountTopbar(active){
 /* ---- Unternavigation „Themen": Board · Kacheln · Liste (sitzt rechts in der Navigationszeile) ---- */
 function gfMountSubnav(active){
   const el=document.getElementById("subnav"); if(!el) return;
-  const items=[["board","board.html?view=board","Board","Spalten nach Ablauf, Prio, Zeitraum oder Person, verschiebbar"],["kacheln","board.html?view=kacheln","Kacheln","Gruppen als Kachelraster"],["liste","cockpit.html","Liste","Ausführliche Liste mit Details, Check-in-Themen und Protokoll"]];
+  const items=[["board","board.html?view=board","Board","Spalten nach Ablauf, Prio, Zeitraum oder Person, verschiebbar"],["kacheln","board.html?view=kacheln","Kacheln","Gruppen als Kachelraster"],["liste","cockpit.html","Liste","Ausführliche Liste mit Details, Check-in-Themen und Protokoll"],["entscheidungen","entscheidungen.html","Entscheidungen","Entscheidungslog, Protokolle der Besprechungen, Wochenmail"]];
   el.className="subnav";
   el.innerHTML=items.map(([k,h,l,t])=>`<a href="${h}" data-k="${k}" title="${t}" class="${k===active?"on":""}">${l}</a>`).join("");
   const slot=document.getElementById("subnavSlot"); if(slot && el.parentElement!==slot) slot.appendChild(el);
@@ -168,4 +168,45 @@ function gfAsanaText(t){
          `Empfehlung: ${t.recommendation||"—"}\n`+
          `Nächster Schritt: ${t.next_action||"—"}\n`+
          `Quelle: GF Weekly`;
+}
+
+/* ---- V13: Modal mit Text (Protokoll, Wochenmail): kopieren, per Mail, schließen ---- */
+const GF_MAIL_TO="alex@wildemoehre.org,lea@wildemoehre.org";
+function gfTextModal(title, text, opts={}){
+  let m=document.getElementById("gfModal");
+  if(!m){ m=document.createElement("div"); m.id="gfModal"; m.className="modal-back"; document.body.appendChild(m); }
+  const subject=opts.subject||title;
+  const mailto=`mailto:${opts.to||GF_MAIL_TO}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+  m.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="${gfEsc(title)}">
+    <div class="modal-h"><h3>${gfEsc(title)}</h3><button class="icon-btn" data-x title="Schließen">✕</button></div>
+    ${opts.intro?`<p class="modal-intro">${opts.intro}</p>`:""}
+    <textarea class="modal-text" readonly>${gfEsc(text)}</textarea>
+    <div class="modal-f"><button class="btn btn-primary" data-copy>Kopieren</button><a class="btn btn-ghost" href="${mailto}">Per Mail senden</a>${opts.extra||""}<button class="btn btn-ghost" data-x style="margin-left:auto">Schließen</button></div>
+  </div>`;
+  m.classList.add("open");
+  m.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>m.classList.remove("open"));
+  m.onclick=e=>{ if(e.target===m) m.classList.remove("open"); };
+  m.querySelector("[data-copy]").onclick=()=>gfCopy(text);
+  return m;
+}
+function gfFmtDay(d){ return new Date(d).toLocaleDateString("de-DE",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"}); }
+function gfFmtShort(d){ return d?new Date(d.length===10?d+"T00:00:00":d).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}):""; }
+function gfFmtTime(d){ return new Date(d).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}); }
+
+/* Protokolltext aus einem Besprechungs-Log: Einträge {title, outcome, decision, next_action, owner, until} */
+function gfProtocolText(meta, log, openTopics){
+  const L=[]; const dur=meta.ended&&meta.started?Math.round((new Date(meta.ended)-new Date(meta.started))/60000):null;
+  L.push(`GF-Besprechung Wilde Möhre · ${gfFmtDay(meta.started||Date.now())}${meta.started?` · ${gfFmtTime(meta.started)}${meta.ended?"–"+gfFmtTime(meta.ended):""}`:""}${dur!=null?` (${dur} min)`:""}`);
+  if(meta.participants) L.push(`Teilnehmende: ${meta.participants}`);
+  L.push("");
+  const grp=(key,label,fmt)=>{ const items=log.filter(e=>e.outcome===key); if(!items.length) return; L.push(label); items.forEach((e,i)=>L.push(fmt(e,i+1))); L.push(""); };
+  grp("entschieden","Entscheidungen",(e,i)=>`${i}. ${e.title}: ${e.decision||"–"}${e.next_action?`
+   Nächster Schritt: ${e.next_action}`:""}${e.owner?` (Verantwortung: ${e.owner})`:""}`);
+  grp("in_klaerung","In Klärung",(e)=>`- ${e.title}${e.next_action?`: ${e.next_action}`:""}${e.owner?` (${e.owner})`:""}`);
+  grp("erledigt","Erledigt",(e)=>`- ${e.title}`);
+  grp("vertagt","Vertagt",(e)=>`- ${e.title}${e.until?` → ${gfFmtShort(e.until)}`:""}`);
+  grp("besprochen","Besprochen ohne Beschluss",(e)=>`- ${e.title}${e.next_action?`: ${e.next_action}`:""}`);
+  if(openTopics&&openTopics.length){ L.push(`Offen geblieben (zu besprechen): ${openTopics.length}`); openTopics.slice(0,12).forEach(t=>L.push(`- ${t.title}${t.priority==="hoch"?" (hoch)":""}`)); if(openTopics.length>12) L.push(`- … und ${openTopics.length-12} weitere`); L.push(""); }
+  L.push(`Erstellt mit GF Weekly · gfweekly.netlify.app`);
+  return L.join("\n");
 }

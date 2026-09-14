@@ -667,3 +667,54 @@ a.stat{color:inherit;text-decoration:none;display:block} a.stat:hover{border-col
 .qtile .qname .site-name{font-size:var(--stufe-2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .qlock{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--action);background:var(--brand-soft);padding:2px 6px;border-radius:var(--radius-s);flex:0 0 auto}
 @media(max-width:600px){ .quick-grid{grid-template-columns:repeat(2,1fr)} }
+
+/* ---------- V13: Besprechungsmodus, Verschieben-Menü, Text-Modal ---------- */
+.bf-r{display:inline-flex;align-items:center;gap:6px}
+.mv{width:24px;height:22px;display:grid;place-items:center;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface);color:var(--text-2);font-size:13px;line-height:1;opacity:.55;transition:opacity var(--motion-fast),background var(--motion-fast)}
+.mv:hover,.bcard:hover .mv,.bcard:focus-within .mv{opacity:1;background:var(--surface-2)}
+@media(hover:none){ .mv{opacity:1} }
+.pop[hidden]{display:none}
+.pop{position:absolute;z-index:70;background:var(--surface);border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);box-shadow:var(--shadow-pop);padding:6px;display:flex;flex-direction:column;gap:2px}
+.pop-h{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:6px 10px 4px}
+.pop-i{text-align:left;padding:9px 10px;border-radius:var(--radius-s);font-size:var(--stufe-2);font-weight:500;color:var(--text);background:none}
+.pop-i:hover{background:var(--surface-2)} .pop-i.on{background:var(--action);color:var(--on-action)}
+.bcard.is-cur{outline:3px solid var(--action);outline-offset:2px}
+.meet{border:var(--rahmen) solid var(--action);border-radius:var(--radius-l);background:var(--surface);margin:0 0 16px;overflow:hidden}
+.meet-h{display:flex;align-items:center;gap:14px;padding:10px 14px;background:var(--action);color:var(--on-action);flex-wrap:wrap}
+.meet-timer{font-variant-numeric:tabular-nums;font-weight:600;font-size:var(--stufe-4);letter-spacing:.02em;min-width:70px}
+.meet-meta{font-size:var(--stufe-2);flex:1;min-width:200px;opacity:.95}
+.meet-actions{display:flex;gap:6px}
+.meet-h .btn{border-color:rgba(255,255,255,.35);color:var(--on-action);background:rgba(255,255,255,.12)} .meet-h .btn:hover{background:rgba(255,255,255,.22)}
+.meet-h .btn.btn-primary{background:var(--surface);color:var(--text);border-color:var(--surface)} .meet-h .btn.btn-primary:hover{background:var(--surface-2)}
+.meet-cur{padding:16px 18px 18px}
+.meet-cur-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.meet-pos{font-size:var(--stufe-1);color:var(--muted)}
+.meet-title{margin:0 0 6px;font-size:var(--stufe-5);letter-spacing:-.01em}
+.meet-desc{margin:0 0 8px;color:var(--text-2);font-size:var(--stufe-3)}
+.meet-ctx{font-size:var(--stufe-2);color:var(--text-2);line-height:1.5;border-left:3px solid var(--line);padding-left:10px;margin:0 0 12px;white-space:pre-line}
+.meet-form{margin-bottom:12px}
+.meet-btns{display:flex;gap:8px;flex-wrap:wrap}
+.meet-done{padding:22px 18px} .meet-done h3{margin:0 0 6px} .meet-done p{margin:0;color:var(--text-2)}
+.modal-back{position:fixed;inset:0;background:var(--backdrop);z-index:80;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-back.open{display:flex}
+.modal{width:100%;max-width:760px;max-height:90vh;display:flex;flex-direction:column;background:var(--surface);border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-l);box-shadow:var(--shadow-pop);animation:pop .3s var(--ease)}
+.modal-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:var(--rahmen) solid var(--border)} .modal-h h3{margin:0;font-size:var(--stufe-4)}
+.modal-intro{margin:0;padding:10px 18px 0;color:var(--text-2);font-size:var(--stufe-2)}
+.modal-text{flex:1;min-height:260px;margin:12px 18px 0;padding:12px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-s);color:var(--text);resize:vertical;white-space:pre-wrap}
+.modal-f{display:flex;gap:8px;flex-wrap:wrap;padding:14px 18px}
+@media(max-width:600px){ .meet-actions{width:100%;justify-content:flex-end} .modal-text{min-height:200px} }
+
+/* Entscheidungslog */
+.dlist{display:flex;flex-direction:column;gap:8px}
+.drow{display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:14px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-m);padding:12px 14px;box-shadow:var(--shadow-1)}
+.drow .dd{display:flex;flex-direction:column;gap:2px;font-size:var(--stufe-2);color:var(--text-2)} .drow .dd b{color:var(--text);font-variant-numeric:tabular-nums}
+.drow .dt{font-weight:600;font-size:var(--stufe-3);margin-bottom:3px} .drow .dt a{color:inherit}
+.drow .dx{font-size:var(--stufe-3);line-height:1.5}
+.drow .dn{font-size:var(--stufe-2);color:var(--text-2);margin-top:4px}
+.drow .da{display:flex;gap:4px;align-items:center}
+@media(max-width:600px){ .drow{grid-template-columns:1fr;gap:6px} .drow .dd{flex-direction:row;gap:8px} .drow .da{justify-content:flex-end} }
+
+/* Marke: Fahne mit Haken (V13) statt GF-Kachel */
+.mark.pic{background:none!important;box-shadow:none;border-radius:0;overflow:visible}
+.mark.pic img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
+.brand .mark.pic{width:38px;height:38px} .gate-card .mark.pic{width:60px;height:60px;margin-bottom:12px}
