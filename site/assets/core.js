@@ -150,7 +150,7 @@ const GF_IMG={ tor:"/assets/img/tor-menschen.webp", ankunft:"/assets/img/ankunft
 const GF_IMG_ALT={ tor:"Festivaltor mit ankommenden Menschen", ankunft:"Ankunft auf dem Festivalgelände", kiste:"Kiste im Regen zwischen den Zelten", lager:"Begrüßung im Lager", buehne:"Bühne im Herbstwald", lagerfeuer:"Lagerfeuer am Abend", karten:"Kartentisch mit Plänen vor der Waldlichtung", aufbau:"Bühnenaufbau auf dem Festivalgelände", pflege:"Herbstlager mit Notizbuch am Feuer", entscheidungen:"Richterhammer und Wegweiser im Abendlicht", wochenmail:"Brief mit Siegel, Feder und Kaffeebecher" };
 function gfMountHero(img, title, sub, opts={}){
   const el=document.getElementById("hero"); if(!el) return;
-  el.className="hero"+(opts.compact?" compact":"");
+  el.className="hero"+(opts.compact?" compact":"")+(opts.slim?" slim":"");
   const src=GF_IMG[img]||img;
   el.innerHTML=`<figure class="hero-pic"><img src="${src}" alt="${gfEsc(GF_IMG_ALT[img]||"")}" width="1600" height="900" decoding="async" fetchpriority="high"></figure>
     <div class="hero-head"><div class="hero-text"><h2 id="heroTitle">${title}</h2>${sub?`<p id="heroSub">${sub}</p>`:""}</div>${opts.aside?`<div class="hero-aside">${opts.aside}</div>`:""}</div>`;
@@ -335,3 +335,83 @@ function gfTidyTopic(t){
   return { changes:ch, found };
 }
 const GF_TIDY_FIELDS={ title:"Titel", short_description:"Ein Satz", context:"Kontext", next_action:"Nächster Schritt", owner:"Verantwortung", decision:"Entscheidung", notes:"Notizen" };
+
+/* ===========================================================
+   V19 (15.09.2026) · Neuigkeiten schlank: Laufband, Detailfenster, Gesehen-Marke.
+   Wird von neuigkeiten.html und index.html genutzt. Die Marke „gesehen“ liegt je Person in localStorage gf_news_seen_<Person>.
+   =========================================================== */
+const GF_NEWS_SRC={ notiz:"Notiz", mail:"Mail", asana:"Asana", kalender:"Termin", entscheidung:"Entscheidung", protokoll:"Protokoll", manuell:"manuell" };
+function gfNewsSeenKey(){ return "gf_news_seen_"+gfWho(); }
+function gfNewsLastSeen(){ try{ return localStorage.getItem(gfNewsSeenKey())||"1970-01-01"; }catch(e){ return "1970-01-01"; } }
+function gfNewsMarkSeen(){ try{ localStorage.setItem(gfNewsSeenKey(), new Date().toISOString()); }catch(e){} }
+function gfNewsIsNew(x){ return (x.created_at||"")>gfNewsLastSeen(); }
+/* Kurze Zeitangabe: „heute 14:20“, „gestern 09:10“, „Mo 08.09.“, Zukunft „Do 17.09. 10:00“ */
+function gfNewsWhen(iso){
+  if(!iso) return "";
+  const d=new Date(iso), t=new Date(); const day=new Date(d); day.setHours(0,0,0,0); t.setHours(0,0,0,0);
+  const diff=Math.round((day-t)/86400000); const hm=d.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
+  if(diff===0) return "heute "+hm; if(diff===-1) return "gestern "+hm; if(diff===1) return "morgen "+hm;
+  const wd=d.toLocaleDateString("de-DE",{weekday:"short",day:"2-digit",month:"2-digit"}).replace(",","");
+  return diff>1 ? wd+" "+hm : wd;
+}
+/* Personen als Avatare (Alex, Lea), sonst als Text */
+function gfNewsWho(who, cls="av-k"){
+  const names=(who||"").split(/\s*(?:,|&|\+|\/| und )\s*/).map(s=>s.trim()).filter(Boolean); if(!names.length) return "";
+  const av=names.map(n=>gfAvatarTag(n,cls)).filter(Boolean).join("");
+  const rest=names.filter(n=>!GF_AVATAR[n]);
+  return `<span class="nw-who" title="${gfEsc(names.join(", "))}">${av}${rest.length?`<span class="nw-who-t">${gfEsc(rest.join(", "))}</span>`:""}</span>`;
+}
+/* Detailfenster zu einem Ereignis (Ticker oder Kandidat) */
+function gfNewsModal(x, opts={}){
+  let m=document.getElementById("gfModal");
+  if(!m){ m=document.createElement("div"); m.id="gfModal"; m.className="modal-back"; document.body.appendChild(m); }
+  const topic=opts.topic||null;
+  m.innerHTML=`<div class="modal nw-modal" role="dialog" aria-modal="true" aria-label="${gfEsc(x.title)}">
+    <div class="modal-h"><h3>${gfEsc(x.title)}</h3><button class="icon-btn" data-x title="Schließen">✕</button></div>
+    <div class="nw-mbody">
+      <div class="nw-mmeta"><span class="nw-src src-${gfEsc(x.source)}">${GF_NEWS_SRC[x.source]||gfEsc(x.source||"")}</span><span>${gfEsc(gfNewsWhen(x.happened_at))}</span>${x.who?gfNewsWho(x.who):""}${opts.strand?`<span>${gfEsc(opts.strand)}</span>`:""}${x.relevance?`<span class="nw-rel rel-${x.relevance}">${x.relevance}</span>`:""}</div>
+      ${x.body?`<p>${gfEsc(x.body)}</p>`:""}
+      ${x.quote?`<blockquote>„${gfEsc(x.quote)}“</blockquote>`:""}
+      <div class="tk-links">${x.source_url?`<a href="${gfEsc(x.source_url)}" target="_blank" rel="noopener">${gfEsc(x.source_title||"Quelle öffnen")} ↗</a>`:(x.source_title?`<span class="nw-srct">${gfEsc(x.source_title)}</span>`:"")}${topic?`<a href="board.html?topic=${topic.id}">Thema: ${gfEsc(topic.title.slice(0,60))}</a>`:""}${opts.links||""}</div>
+    </div>
+    <div class="modal-f">${opts.actions||""}<button class="btn btn-ghost" data-x style="margin-left:auto">Schließen</button></div>
+  </div>`;
+  m.classList.add("open");
+  m.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>m.classList.remove("open"));
+  m.onclick=e=>{ if(e.target===m) m.classList.remove("open"); };
+  const esc=e=>{ if(e.key==="Escape"){ m.classList.remove("open"); document.removeEventListener("keydown",esc); } }; document.addEventListener("keydown",esc);
+  return m;
+}
+/* Auswahl fürs Laufband: neu seit dem letzten Besuch, sonst die letzten 24 Stunden, sonst die letzten sechs; höchstens 20, neueste zuerst */
+function gfBandPick(items){
+  const t=items.filter(x=>x.kind==="ticker").sort((a,b)=>a.happened_at<b.happened_at?1:-1);
+  const now=new Date(), nowIso=now.toISOString();
+  const past=t.filter(x=>x.happened_at<=nowIso);
+  let pick=past.filter(gfNewsIsNew); let mode="neu";
+  if(!pick.length){ const d=new Date(now-86400000).toISOString(); pick=past.filter(x=>x.happened_at>=d); mode="24h"; }
+  if(!pick.length){ pick=past.slice(0,6); mode="zuletzt"; }
+  return { items:pick.slice(0,20), mode };
+}
+/* Laufband: eine Zeile, läuft von rechts nach links, hält bei Berührung, Klick öffnet das Ereignis.
+   Bei „Bewegung reduzieren“ steht es und lässt sich seitlich schieben. Passt der Inhalt in die Breite, läuft nichts. */
+function gfMountBand(el, pick, opts={}){
+  if(!el) return; const items=pick.items||[]; const mode=pick.mode||"neu";
+  if(!items.length){ el.innerHTML=""; el.hidden=true; return; }
+  el.hidden=false;
+  const label={neu:"Neu für dich", "24h":"Letzte 24 Stunden", zuletzt:"Zuletzt"}[mode]||"Neu";
+  const item=x=>`<button type="button" class="bi src-${gfEsc(x.source)} ${gfNewsIsNew(x)?"is-new":""}" data-id="${x.id}" title="${gfEsc(GF_NEWS_SRC[x.source]||x.source)}: ${gfEsc(x.title)}"><span class="bt">${gfEsc(gfNewsWhen(x.happened_at))}</span>${gfNewsWho(x.who,"av-b")}<span class="bx">${gfEsc(x.title)}</span></button>`;
+  const set=items.map(item).join("");
+  const head=opts.link?`<a class="band-l" href="${opts.link}" title="Neuigkeiten öffnen"><span class="band-lt">${label}</span><b>${items.length}</b></a>`:`<span class="band-l"><span class="band-lt">${label}</span><b>${items.length}</b></span>`;
+  el.innerHTML=`<div class="band" role="region" aria-label="Laufband Neuigkeiten">${head}<div class="band-vp"><div class="band-track"><div class="band-set">${set}</div><div class="band-set dup" aria-hidden="true">${set}</div></div></div><button type="button" class="band-p" aria-label="Laufband anhalten" title="Anhalten / weiter">❚❚</button></div>`;
+  const band=el.querySelector(".band"), track=el.querySelector(".band-track"), vp=el.querySelector(".band-vp"), p=el.querySelector(".band-p");
+  const fit=()=>{ const w=el.querySelector(".band-set").getBoundingClientRect().width; const fits=w<=vp.getBoundingClientRect().width-8; band.classList.toggle("static",fits); track.style.setProperty("--dur", Math.max(18, Math.round(w/55))+"s"); p.hidden=fits; };
+  requestAnimationFrame(fit); if(!el.__bandRO && window.ResizeObserver){ el.__bandRO=new ResizeObserver(()=>fit()); el.__bandRO.observe(vp); }
+  p.onclick=()=>{ const on=band.classList.toggle("paused"); p.textContent=on?"▶":"❚❚"; p.setAttribute("aria-label",on?"Laufband weiterlaufen lassen":"Laufband anhalten"); };
+  el.querySelectorAll(".bi").forEach(b=>b.onclick=()=>{ const x=items.find(i=>i.id===b.dataset.id); if(!x) return; if(opts.onOpen) opts.onOpen(x); else gfNewsModal(x,{links:opts.link?`<a href="${opts.link}">Alle Neuigkeiten</a>`:""}); });
+}
+/* Startseite: Laufband laden (Ticker der letzten 14 Tage) */
+async function gfLoadBand(el, opts={}){
+  if(!el) return;
+  try{ const since=new Date(Date.now()-14*86400000).toISOString(); const d=await gfApi("news_list",{kinds:["ticker"],since,limit:300}); gfMountBand(el, gfBandPick(d.items||[]), opts); }
+  catch(e){ el.innerHTML=""; el.hidden=true; }
+}

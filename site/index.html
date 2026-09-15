@@ -10,11 +10,11 @@
 <meta property="og:title" content="Das Hohe Haus · Geschäftsführung der Wilden Habitate" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre." />
 <meta property="og:image" content="assets/og-image.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=18" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=18" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=18" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=18" />
-<link rel="stylesheet" href="/assets/styles.css?v=18" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=19" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=19" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=19" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=19" />
+<link rel="stylesheet" href="/assets/styles.css?v=19" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -34,6 +34,9 @@
 <div class="app wrap" id="app">
   <header id="topbar"></header>
   <div id="hero"></div>
+
+  <!-- V19: Laufband mit dem Neuesten aus Neuigkeiten -->
+  <div class="nw" id="band" hidden></div>
 
   <!-- Habitat: Jahrestopf, Stufe, Tag, Woche, Abzeichen (V17) -->
   <section class="habitat" id="habitat" aria-label="Habitat-Punkte"></section>
@@ -81,9 +84,9 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=18"></script>
-<script src="/assets/game.js?v=18"></script>
-<script src="/assets/eggs.js?v=18" defer></script>
+<script src="/assets/core.js?v=19"></script>
+<script src="/assets/game.js?v=19"></script>
+<script src="/assets/eggs.js?v=19" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const MON=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -362,7 +365,8 @@ gfGate(async()=>{
     renderCycle(); renderRituals(); renderMilestones();
     const ph=phaseOf(NOW); const hd=document.querySelector("#hero .hero-date"); if(hd) hd.textContent=`${wd} · Phase ${ph.label} · ${GF_APP_SUB}`;
   }catch(e){ $("#cycle").innerHTML=`<div class="empty">Zyklus konnte nicht geladen werden: ${gfEsc(e.message||"Verbindung")}</div>`; }
-  await Promise.all([loadTopics(), loadQuick()]);
+  await Promise.all([loadTopics(), loadQuick(), gfLoadBand($("#band"),{link:"neuigkeiten.html"})]);
+  document.addEventListener("gf-who",()=>gfLoadBand($("#band"),{link:"neuigkeiten.html"}));
 });
 </script>
 </body>

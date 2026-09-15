@@ -6,12 +6,12 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#17171a" />
 <title>Das Hohe Haus · Neuigkeiten</title>
-<meta name="description" content="Neuigkeiten der Geschäftsleitung Wilde Möhre: Ticker, Themenlage, Sichtungskorb. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=18" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=18" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=18" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=18" />
-<link rel="stylesheet" href="/assets/styles.css?v=18" />
+<meta name="description" content="Neuigkeiten der Geschäftsleitung Wilde Möhre: Laufband, Ticker, Sichtungskorb, Themenlage. Vertraulich." />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=19" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=19" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=19" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=19" />
+<link rel="stylesheet" href="/assets/styles.css?v=19" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -28,68 +28,73 @@
   </div>
 </div>
 
-<div class="app wrap" id="app">
+<div class="app wrap nw" id="app">
   <header id="topbar"></header>
   <div id="hero"></div>
 
-  <section class="start-hero"><div class="start-stats" id="stats"></div></section>
+  <!-- V19: Laufband mit dem Neuesten -->
+  <div id="band" hidden></div>
 
-  <div class="toolbar nw-toolbar">
-    <div class="segs" id="jump">
-      <a class="seg on" href="#ticker" data-j="ticker">Ticker</a>
-      <a class="seg" href="#korb" data-j="korb">Sichtungskorb <span class="nbadge" id="korbBadge" hidden>0</span></a>
-      <a class="seg" href="#lage" data-j="lage">Themenlage</a>
+  <!-- V19: eine Zeile Steuerung: drei Zahlen, Person, Filter, Alles gesehen -->
+  <div class="nw-top">
+    <div class="nw-kpis" id="stats"></div>
+    <div class="nw-ctl">
+      <div class="segs" id="whoSegs" title="Wessen Ereignisse">
+        <button class="seg on" data-w="">Beide</button><button class="seg seg-av" data-w="Alex"><img src="/assets/img/avatar-alex.webp" alt="" width="20" height="20">Alex</button><button class="seg seg-av" data-w="Lea"><img src="/assets/img/avatar-lea.webp" alt="" width="20" height="20">Lea</button>
+      </div>
+      <button type="button" class="btn btn-sm btn-ghost nw-fbtn" id="filterBtn" aria-expanded="false" aria-controls="filterPanel">Filter <span class="n" id="filterN" hidden>0</span></button>
+      <button type="button" class="btn btn-sm btn-ghost" id="seenBtn" title="Alle Ereignisse als gesehen markieren">Alles gesehen</button>
     </div>
-    <div class="segs" id="whoSegs" title="Wessen Ereignisse">
-      <button class="seg on" data-w="">Beide</button><button class="seg seg-av" data-w="Alex"><img src="/assets/img/avatar-alex.webp" alt="" width="20" height="20">Alex</button><button class="seg seg-av" data-w="Lea"><img src="/assets/img/avatar-lea.webp" alt="" width="20" height="20">Lea</button>
-    </div>
-    <div class="segs" id="rangeSegs" title="Zeitraum des Tickers">
-      <button class="seg" data-r="7">7 Tage</button><button class="seg on" data-r="14">14 Tage</button><button class="seg" data-r="30">30 Tage</button><button class="seg" data-r="0">Alle</button>
-    </div>
-    <div class="search"><input id="q" placeholder="Neuigkeiten durchsuchen … (Taste /)" /></div>
   </div>
-  <div class="chips nw-src" id="srcChips">
-    <button class="chip on" data-s="notiz">Notizen</button>
-    <button class="chip on" data-s="mail">Mails</button>
-    <button class="chip on" data-s="asana">Asana</button>
-    <button class="chip on" data-s="kalender">Kalender</button>
-    <button class="chip on" data-s="entscheidung">Entscheidungen</button>
+  <div class="nw-filter" id="filterPanel" hidden>
+    <div class="nf-row"><span class="nf-l">Zeitraum</span><div class="segs" id="rangeSegs" title="Zeitraum des Tickers"><button class="seg" data-r="7">7 Tage</button><button class="seg on" data-r="14">14 Tage</button><button class="seg" data-r="30">30 Tage</button><button class="seg" data-r="0">Alle</button></div></div>
+    <div class="nf-row"><span class="nf-l">Quellen</span><div class="chips nw-src" id="srcChips"><button class="chip on" data-s="notiz">Notizen</button><button class="chip on" data-s="mail">Mails</button><button class="chip on" data-s="asana">Asana</button><button class="chip on" data-s="kalender">Kalender</button><button class="chip on" data-s="entscheidung">Entscheidungen</button></div></div>
+    <div class="nf-row"><span class="nf-l">Korb</span><div class="segs" id="relSegs"><button class="seg on" data-rel="">Alle</button><button class="seg" data-rel="hoch">hoch</button><button class="seg" data-rel="mittel">mittel</button><button class="seg" data-rel="niedrig">niedrig</button></div><label class="chk"><input type="checkbox" id="showDone"> Erledigte zeigen</label></div>
+    <div class="nf-row"><span class="nf-l">Suche</span><div class="search"><input id="q" placeholder="Neuigkeiten durchsuchen … (Taste /)" /></div><button type="button" class="btn btn-sm btn-ghost" id="filterReset">Zurücksetzen</button></div>
   </div>
 
-  <div class="sec-h" id="ticker" style="margin-top:26px"><h2>Ticker</h2><span class="hint">Eine Zeile je Ereignis, neueste oben. Klick öffnet Details und Quelle.</span><span class="line"></span></div>
-  <div id="soon"></div>
-  <div id="feed"><div class="loading">lädt …</div></div>
+  <!-- Drei Abschnitte, jeder auf- und zuklappbar, Zustand gemerkt -->
+  <details class="nw-sec" id="ticker" data-sec="ticker" open>
+    <summary><h2>Ticker</h2><span class="n" id="tickerN"></span><span class="hint">Eine Zeile je Ereignis, heute und gestern offen, ältere Tage zugeklappt. Klick öffnet Details.</span><span class="chev"></span></summary>
+    <div class="nw-body"><div id="soon"></div><div id="feed"><div class="loading">lädt …</div></div></div>
+  </details>
 
-  <div class="sec-h" id="korb" style="margin-top:38px"><h2>Sichtungskorb</h2><span class="hint">GF-relevante Punkte aus Notizen und Mails. Übernehmen macht daraus ein Thema in „Zu besprechen“.</span><span class="line"></span>
-    <div class="segs" id="relSegs"><button class="seg on" data-rel="">Alle</button><button class="seg" data-rel="hoch">hoch</button><button class="seg" data-rel="mittel">mittel</button><button class="seg" data-rel="niedrig">niedrig</button></div>
-    <label class="chk"><input type="checkbox" id="showDone"> Erledigte zeigen</label>
-  </div>
-  <div id="kand"><div class="loading">lädt …</div></div>
+  <details class="nw-sec" id="korb" data-sec="korb" open>
+    <summary><h2>Sichtungskorb</h2><span class="n" id="korbN"></span><span class="hint">GF-relevante Punkte aus Notizen und Mails. Nur „Braucht bald eine Entscheidung“ ist offen.</span><span class="chev"></span></summary>
+    <div class="nw-body" id="kand"><div class="loading">lädt …</div></div>
+  </details>
 
-  <div class="sec-h" id="lage" style="margin-top:38px"><h2>Themenlage</h2><span class="hint">Je Strang der Stand in wenigen Sätzen, vom täglichen Lauf nachgeführt.</span><span class="line"></span></div>
-  <div id="lageGrid" class="lage-grid"></div>
+  <details class="nw-sec" id="lage" data-sec="lage" open>
+    <summary><h2>Themenlage</h2><span class="n" id="lageN"></span><span class="hint">Je Strang eine Zeile, vom täglichen Lauf nachgeführt. Klick zeigt den ganzen Stand.</span><span class="chev"></span></summary>
+    <div class="nw-body" id="lageList"></div>
+  </details>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=18"></script>
-<script src="/assets/game.js?v=18"></script>
-<script src="/assets/eggs.js?v=18" defer></script>
+<script src="/assets/core.js?v=19"></script>
+<script src="/assets/game.js?v=19"></script>
+<script src="/assets/eggs.js?v=19" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
-let ITEMS=[], TOPICS=[], STRANDS=[], Q="", WHO="", RANGE=14, REL="", SRC=new Set(["notiz","mail","asana","kalender","entscheidung","protokoll","manuell"]), SHOWDONE=false;
+const SRC_ALL=["notiz","mail","asana","kalender","entscheidung"];
+let ITEMS=[], TOPICS=[], STRANDS=[], Q="", WHO="", RANGE=14, REL="", SRC=new Set([...SRC_ALL,"protokoll","manuell"]), SHOWDONE=false;
 const NOW=new Date();
-const SRC_LABEL={notiz:"Notiz",mail:"Mail",asana:"Asana",kalender:"Termin",entscheidung:"Entscheidung",protokoll:"Protokoll",manuell:"manuell"};
 const REL_RANK={hoch:0,mittel:1,niedrig:2};
-function seenKey(){ return "gf_news_seen_"+gfWho(); }
-function lastSeen(){ try{ return localStorage.getItem(seenKey())||"1970-01-01"; }catch(e){ return "1970-01-01"; } }
-function markSeen(){ try{ localStorage.setItem(seenKey(), new Date().toISOString()); }catch(e){} render(); gfToast("Als gesehen markiert"); }
+const REL_LABEL={hoch:"Braucht bald eine Entscheidung",mittel:"In die nächste GF-Runde",niedrig:"Zur Kenntnis"};
+const isNew=gfNewsIsNew;
 function strandLabel(k){ const s=STRANDS.find(x=>x.key===k); return s?(s.short||s.label):(k||""); }
 function topicOf(id){ return id?TOPICS.find(t=>t.id===id):null; }
-function isNew(x){ return (x.created_at||"")>lastSeen(); }
 function fmtDayLabel(d){ const day=new Date(d); day.setHours(0,0,0,0); const t=new Date(NOW); t.setHours(0,0,0,0); const diff=Math.round((day-t)/86400000); if(diff===0) return "Heute"; if(diff===-1) return "Gestern"; if(diff===1) return "Morgen"; return day.toLocaleDateString("de-DE",{weekday:"long",day:"2-digit",month:"2-digit"}); }
 function whoMatch(x){ if(!WHO) return true; return (x.who||"").includes(WHO); }
 function textMatch(x){ if(!Q) return true; return [x.title,x.body,x.quote,x.who,x.source_title,strandLabel(x.strand)].join(" ").toLowerCase().includes(Q); }
+function chev(){ return `<span class="chev" aria-hidden="true"></span>`; }
+/* gemerkter Auf/Zu-Zustand */
+function remembered(key, def){ try{ const v=localStorage.getItem("gf_nw_"+key); return v===null?def:v==="1"; }catch(e){ return def; } }
+function remember(key, open){ try{ localStorage.setItem("gf_nw_"+key, open?"1":"0"); }catch(e){} }
+function bindDetails(root){
+  (root||document).querySelectorAll("details[data-sec]").forEach(d=>{ if(d.__bound) return; d.__bound=true; const k=d.dataset.sec; d.open=remembered(k, d.hasAttribute("data-def")?d.dataset.def==="1":d.open); d.addEventListener("toggle",()=>remember(k,d.open)); });
+}
 
 async function load(){
   try{
@@ -104,38 +109,41 @@ function render(){
   document.querySelectorAll("#rangeSegs .seg").forEach(b=>b.classList.toggle("on",+b.dataset.r===RANGE));
   document.querySelectorAll("#relSegs .seg").forEach(b=>b.classList.toggle("on",b.dataset.rel===REL));
   document.querySelectorAll("#srcChips .chip").forEach(b=>b.classList.toggle("on",SRC.has(b.dataset.s)));
-  renderStats(); renderTicker(); renderKorb(); renderLage();
+  renderFilterN(); renderStats(); renderBand(); renderTicker(); renderKorb(); renderLage();
 }
+function activeFilters(){ let n=0; if(RANGE!==14) n++; if(SRC_ALL.some(s=>!SRC.has(s))) n++; if(Q) n++; if(REL) n++; if(SHOWDONE) n++; return n; }
+function renderFilterN(){ const n=activeFilters(); const b=$("#filterN"); b.textContent=n; b.hidden=!n; $("#filterBtn").classList.toggle("on",!!n); }
 
 function renderStats(){
-  const seen=lastSeen();
+  const seen=gfNewsLastSeen();
   const neu=ITEMS.filter(x=>x.kind!=="lage" && x.created_at>seen).length;
   const kand=ITEMS.filter(x=>x.kind==="kandidat"&&x.status==="neu");
   const hoch=kand.filter(x=>x.relevance==="hoch").length;
-  const w=new Date(NOW-7*86400000).toISOString();
-  const notes=ITEMS.filter(x=>x.kind==="ticker"&&x.source==="notiz"&&x.happened_at>=w&&x.happened_at<=NOW.toISOString()).length;
   const in7=new Date(+NOW+7*86400000).toISOString();
   const termine=ITEMS.filter(x=>x.kind==="ticker"&&x.source==="kalender"&&x.happened_at>NOW.toISOString()&&x.happened_at<=in7).length;
   $("#stats").innerHTML=`
-    <div class="sstat"><div class="k">neu für ${gfEsc(gfWho())}</div><div class="v">${neu}</div></div>
-    <div class="sstat"><div class="k">im Sichtungskorb</div><div class="v">${kand.length}</div></div>
-    <div class="sstat"><div class="k">davon hoch</div><div class="v">${hoch}</div></div>
-    <div class="sstat"><div class="k">Notizen, 7 Tage</div><div class="v">${notes}</div></div>
-    <div class="sstat"><div class="k">Termine, 7 Tage</div><div class="v">${termine}</div></div>`;
-  const b=$("#korbBadge"); b.textContent=kand.length; b.hidden=!kand.length;
+    <div class="kpi ${neu?"hot":""}"><b>${neu}</b><span>neu für ${gfEsc(gfWho())}</span></div>
+    <a class="kpi ${hoch?"crit":""}" href="#korb"><b>${hoch}</b><span>hoch im Korb</span></a>
+    <a class="kpi" href="#ticker"><b>${termine}</b><span>Termine, 7 Tage</span></a>`;
 }
 
+function renderBand(){ gfMountBand($("#band"), gfBandPick(ITEMS), { onOpen:x=>openItem(x) }); }
+function openItem(x){ gfNewsModal(x,{ topic:topicOf(x.topic_id), strand:strandLabel(x.strand), actions: x.kind==="ticker"&&!x.topic_id?`<button class="btn btn-sm btn-ghost" id="mdMk">Als Thema erfassen</button>`:"" }); const mk=$("#mdMk"); if(mk) mk.onclick=()=>acceptAsTopic(x); }
+async function acceptAsTopic(x){ if(!confirm(`„${x.title.slice(0,80)}“ als Thema in „Zu besprechen“ anlegen?`)) return; try{ const d=await gfApi("news_accept",{id:x.id,decided_by:gfWho()}); Object.assign(x,d.item); TOPICS.push(d.topic); render(); const m=document.getElementById("gfModal"); if(m) m.classList.remove("open"); gfToast("Thema angelegt"); }catch(e){ gfToast("Fehler: "+e.message); } }
+
+/* ---- Ticker: eine Zeile je Ereignis, Tage als Klappgruppen ---- */
 function tickerRow(x){
-  const t=topicOf(x.topic_id); const time=gfFmtTime(x.happened_at);
-  const links=`<div class="tk-links">${x.source_url?`<a href="${gfEsc(x.source_url)}" target="_blank" rel="noopener">Quelle öffnen ↗</a>`:""}${t?`<a href="board.html?topic=${t.id}">Thema: ${gfEsc(t.title.slice(0,60))}</a>`:""}<button type="button" class="linkish" data-mk>Als Thema erfassen</button></div>`;
-  return `<article class="tk ${isNew(x)?"is-new":""} src-${x.source}" data-id="${x.id}">
-    <div class="tk-t">${time}</div>
-    <div class="tk-b">
-      <div class="tk-meta"><span class="who">${gfEsc(x.who||"")}</span><span class="pill src ${x.source}">${SRC_LABEL[x.source]||x.source}</span>${x.strand?`<span class="pill strand">${gfEsc(strandLabel(x.strand))}</span>`:""}${isNew(x)?`<span class="dot" title="neu seit deinem letzten Besuch"></span>`:""}</div>
-      <div class="tk-title">${gfEsc(x.title)}</div>
-      <div class="tk-more">${x.body?`<p>${gfEsc(x.body)}</p>`:""}${x.quote?`<blockquote>„${gfEsc(x.quote)}“</blockquote>`:""}${links}</div>
-    </div>
+  const t=topicOf(x.topic_id);
+  const links=`<div class="tk-links">${x.source_url?`<a href="${gfEsc(x.source_url)}" target="_blank" rel="noopener">${gfEsc(x.source_title||"Quelle öffnen")} ↗</a>`:""}${t?`<a href="board.html?topic=${t.id}">Thema: ${gfEsc(t.title.slice(0,60))}</a>`:`<button type="button" class="linkish" data-mk>Als Thema erfassen</button>`}</div>`;
+  return `<article class="tk src-${gfEsc(x.source)} ${isNew(x)?"is-new":""}" data-id="${x.id}">
+    <button type="button" class="tk-row" aria-expanded="false" title="${gfEsc(GF_NEWS_SRC[x.source]||x.source)}${x.strand?" · "+gfEsc(strandLabel(x.strand)):""}">
+      <span class="tk-t">${gfFmtTime(x.happened_at)}</span>${gfNewsWho(x.who)}<span class="tk-title">${gfEsc(x.title)}</span>${x.strand?`<span class="tk-strand">${gfEsc(strandLabel(x.strand))}</span>`:""}${chev()}
+    </button>
+    <div class="tk-more">${x.body?`<p>${gfEsc(x.body)}</p>`:""}${x.quote?`<blockquote>„${gfEsc(x.quote)}“</blockquote>`:""}${links}</div>
   </article>`;
+}
+function dayGroup(d, rows, open, extra=""){
+  return `<details class="tk-day" ${open?"open":""}><summary class="tk-dayh">${fmtDayLabel(d)}<span class="n">${rows.length}</span>${extra}${chev()}</summary><div class="tk-rows">${rows.map(tickerRow).join("")}</div></details>`;
 }
 function renderTicker(){
   const nowIso=NOW.toISOString();
@@ -143,51 +151,58 @@ function renderTicker(){
   const base=ITEMS.filter(x=>x.kind==="ticker"&&SRC.has(x.source)&&whoMatch(x)&&textMatch(x));
   const soon=base.filter(x=>x.happened_at>nowIso).sort((a,b)=>a.happened_at<b.happened_at?-1:1);
   const past=base.filter(x=>x.happened_at<=nowIso&&x.happened_at>=since).sort((a,b)=>a.happened_at<b.happened_at?1:-1);
+  $("#tickerN").textContent=past.length+(soon.length?` + ${soon.length} demnächst`:"");
   if(soon.length){
-    const days=[...new Set(soon.map(x=>x.happened_at.slice(0,10)))].slice(0,10);
-    $("#soon").innerHTML=`<div class="soon-box"><div class="group-h">Demnächst <span class="n">${soon.length}</span></div>${days.map(d=>`<div class="tk-day"><div class="tk-dayh">${fmtDayLabel(d)}</div>${soon.filter(x=>x.happened_at.slice(0,10)===d).map(tickerRow).join("")}</div>`).join("")}</div>`;
+    const next=soon[0]; const days=[...new Set(soon.map(x=>x.happened_at.slice(0,10)))].slice(0,10);
+    $("#soon").innerHTML=`<details class="tk-day soon" data-sec="soon" data-def="0"><summary class="tk-dayh">Demnächst<span class="n">${soon.length}</span><span class="tk-next">nächster: ${gfEsc(gfNewsWhen(next.happened_at))} · ${gfEsc(next.title)}</span>${chev()}</summary><div class="tk-rows">${days.map(d=>`<div class="tk-sub">${fmtDayLabel(d)}</div>`+soon.filter(x=>x.happened_at.slice(0,10)===d).map(tickerRow).join("")).join("")}</div></details>`;
   } else $("#soon").innerHTML="";
-  if(!past.length){ $("#feed").innerHTML=`<div class="empty soft">${Q?"Nichts gefunden.":"Keine Ereignisse im Zeitraum. Der tägliche Lauf füllt den Ticker jeden Morgen."}</div>`; bindTicker(); return; }
+  if(!past.length){ $("#feed").innerHTML=`<div class="empty soft">${Q?"Nichts gefunden.":"Keine Ereignisse im Zeitraum. Der tägliche Lauf füllt den Ticker jeden Morgen."}</div>`; bindTicker(); bindDetails($("#soon")); return; }
   const days=[...new Set(past.map(x=>x.happened_at.slice(0,10)))];
-  $("#feed").innerHTML=days.map(d=>`<div class="tk-day"><div class="tk-dayh">${fmtDayLabel(d)}<span class="n">${past.filter(x=>x.happened_at.slice(0,10)===d).length}</span></div>${past.filter(x=>x.happened_at.slice(0,10)===d).map(tickerRow).join("")}</div>`).join("");
-  gfStagger($("#feed"),".tk");
-  bindTicker();
+  $("#feed").innerHTML=days.map((d,i)=>{ const rows=past.filter(x=>x.happened_at.slice(0,10)===d); const open=i<2||rows.some(isNew); const nn=rows.filter(isNew).length; return dayGroup(d,rows,open, nn&&!open?`<span class="n hot">${nn} neu</span>`:""); }).join("");
+  gfStagger($("#feed"),".tk-day");
+  bindTicker(); bindDetails($("#soon"));
 }
 function bindTicker(){
   document.querySelectorAll(".tk").forEach(el=>{
-    el.querySelector(".tk-title").onclick=()=>el.classList.toggle("open");
-    const mk=el.querySelector("[data-mk]"); if(mk) mk.onclick=async()=>{ const x=ITEMS.find(i=>i.id===el.dataset.id); if(!confirm(`„${x.title.slice(0,80)}“ als Thema in „Zu besprechen“ anlegen?`)) return; try{ const d=await gfApi("news_accept",{id:x.id,decided_by:gfWho()}); Object.assign(x,d.item); TOPICS.push(d.topic); render(); gfToast("Thema angelegt"); }catch(e){ gfToast("Fehler: "+e.message); } };
+    const row=el.querySelector(".tk-row"); row.onclick=()=>{ const o=el.classList.toggle("open"); row.setAttribute("aria-expanded",o?"true":"false"); };
+    const mk=el.querySelector("[data-mk]"); if(mk) mk.onclick=()=>acceptAsTopic(ITEMS.find(i=>i.id===el.dataset.id));
   });
 }
 
-function kandCard(x){
+/* ---- Sichtungskorb: drei Klappgruppen, Kandidaten als Zeilen ---- */
+function kandRow(x){
   const t=topicOf(x.topic_id); const done=x.status!=="neu";
   const options=TOPICS.filter(t=>t.board_lane!=="erledigt").sort((a,b)=>a.title.localeCompare(b.title,"de")).map(t=>`<option value="${t.id}" ${t.id===x.topic_id?"selected":""}>${gfEsc(t.title.slice(0,90))}</option>`).join("");
-  return `<article class="kand ${done?"done":""} rel-${x.relevance} ${isNew(x)?"is-new":""}" data-id="${x.id}">
-    <div class="kand-h"><span class="pill rel ${x.relevance}">${x.relevance}</span>${x.strand?`<span class="pill strand">${gfEsc(strandLabel(x.strand))}</span>`:""}<span class="pill src ${x.source}">${SRC_LABEL[x.source]||x.source}</span><span class="muted">${gfFmtShort(x.happened_at)} · ${gfEsc(x.who||"")}</span>${done?`<span class="pill st-${x.status}">${x.status==="uebernommen"?"übernommen":x.status}</span>`:""}</div>
-    <h3>${gfEsc(x.title)}</h3>
-    ${x.body?`<p class="kand-b">${gfEsc(x.body)}</p>`:""}
-    ${x.quote?`<blockquote>„${gfEsc(x.quote)}“</blockquote>`:""}
-    <div class="kand-src">${x.source_url?`<a href="${gfEsc(x.source_url)}" target="_blank" rel="noopener">${gfEsc(x.source_title||"Quelle")} ↗</a>`:gfEsc(x.source_title||"")}${t?` · betrifft <a href="board.html?topic=${t.id}">${gfEsc(t.title.slice(0,70))}</a>`:""}</div>
-    ${done?`<div class="kand-f"><span class="muted">${x.decided_by?gfEsc(x.decided_by)+" · ":""}${x.decided_at?gfFmtShort(x.decided_at):""}</span>${x.topic_id?`<a class="btn btn-sm btn-ghost" href="board.html?topic=${x.topic_id}">Thema öffnen</a>`:""}<button class="btn btn-sm btn-ghost" data-act="reopen">Zurück in den Korb</button></div>`
-    :`<div class="kand-f">
-      ${t?`<button class="btn btn-sm btn-primary" data-act="append">An Thema anhängen</button><button class="btn btn-sm btn-ghost" data-act="new">Als neues Thema</button>`:`<button class="btn btn-sm btn-primary" data-act="new">Als Thema übernehmen</button>`}
-      <select class="selectx" data-link title="Mit bestehendem Thema verknüpfen"><option value="">Mit Thema verknüpfen …</option>${options}</select>
-      <button class="btn btn-sm btn-ghost" data-act="dismiss" style="margin-left:auto">Verwerfen</button>
-    </div>`}
+  const meta=[x.strand?strandLabel(x.strand):"", gfFmtShort(x.happened_at).slice(0,6), x.who||""].filter(Boolean);
+  return `<article class="kd rel-${x.relevance} ${done?"done":""} ${isNew(x)?"is-new":""}" data-id="${x.id}">
+    <button type="button" class="kd-row" aria-expanded="false" title="${gfEsc(GF_NEWS_SRC[x.source]||x.source)} · ${gfEsc(x.relevance)}">
+      <span class="kd-rel" aria-hidden="true"></span><span class="kd-title">${gfEsc(x.title)}</span><span class="kd-meta">${meta.map(gfEsc).join(" · ")}</span>${done?`<span class="nw-st st-${x.status}">${x.status==="uebernommen"?"übernommen":x.status}</span>`:""}${chev()}
+    </button>
+    <div class="kd-more">
+      ${x.body?`<p>${gfEsc(x.body)}</p>`:""}
+      ${x.quote?`<blockquote>„${gfEsc(x.quote)}“</blockquote>`:""}
+      <div class="tk-links">${x.source_url?`<a href="${gfEsc(x.source_url)}" target="_blank" rel="noopener">${gfEsc(x.source_title||"Quelle")} ↗</a>`:(x.source_title?`<span class="nw-srct">${gfEsc(x.source_title)}</span>`:"")}${t?`<a href="board.html?topic=${t.id}">betrifft: ${gfEsc(t.title.slice(0,70))}</a>`:""}</div>
+      ${done?`<div class="kd-f"><span class="nw-srct">${x.decided_by?gfEsc(x.decided_by)+" · ":""}${x.decided_at?gfFmtShort(x.decided_at):""}</span>${x.topic_id?`<a class="btn btn-sm btn-ghost" href="board.html?topic=${x.topic_id}">Thema öffnen</a>`:""}<button class="btn btn-sm btn-ghost" data-act="reopen">Zurück in den Korb</button></div>`
+      :`<div class="kd-f">
+        ${t?`<button class="btn btn-sm btn-primary" data-act="append">An Thema anhängen</button><button class="btn btn-sm btn-ghost" data-act="new">Als neues Thema</button>`:`<button class="btn btn-sm btn-primary" data-act="new">Als Thema übernehmen</button>`}
+        <select class="selectx" data-link title="Mit bestehendem Thema verknüpfen"><option value="">Mit Thema verknüpfen …</option>${options}</select>
+        <button class="btn btn-sm btn-ghost" data-act="dismiss" style="margin-left:auto">Verwerfen</button>
+      </div>`}
+    </div>
   </article>`;
 }
 function renderKorb(){
   let k=ITEMS.filter(x=>x.kind==="kandidat"&&whoMatch(x)&&textMatch(x)&&(SHOWDONE||x.status==="neu")&&(!REL||x.relevance===REL));
   k.sort((a,b)=>(a.status==="neu"?0:1)-(b.status==="neu"?0:1)||REL_RANK[a.relevance]-REL_RANK[b.relevance]||(a.happened_at<b.happened_at?1:-1));
+  $("#korbN").textContent=k.length;
   if(!k.length){ $("#kand").innerHTML=`<div class="empty soft">${Q||REL?"Nichts gefunden.":"Der Sichtungskorb ist leer. Neue Kandidaten kommen mit dem täglichen Lauf."}</div>`; return; }
-  const groups=[["hoch","Braucht bald eine Entscheidung"],["mittel","In die nächste GF-Runde"],["niedrig","Zur Kenntnis"]];
-  $("#kand").innerHTML=groups.map(([r,l])=>{ const items=k.filter(x=>x.relevance===r); if(!items.length) return ""; return `<div class="group"><div class="group-h">${l} <span class="n">${items.length}</span></div><div class="kand-list">${items.map(kandCard).join("")}</div></div>`; }).join("");
-  gfStagger($("#kand"),".kand"); bindKorb();
+  $("#kand").innerHTML=["hoch","mittel","niedrig"].map(r=>{ const items=k.filter(x=>x.relevance===r); if(!items.length) return ""; const nn=items.filter(isNew).length; return `<details class="kgroup rel-${r}" data-sec="korb-${r}" data-def="${r==="hoch"?1:0}"><summary class="group-h">${REL_LABEL[r]}<span class="n">${items.length}</span>${nn?`<span class="n hot">${nn} neu</span>`:""}${chev()}</summary><div class="kd-list">${items.map(kandRow).join("")}</div></details>`; }).join("");
+  bindDetails($("#kand")); gfStagger($("#kand"),".kd"); bindKorb();
 }
 function bindKorb(){
-  document.querySelectorAll(".kand").forEach(el=>{
+  document.querySelectorAll(".kd").forEach(el=>{
     const x=ITEMS.find(i=>i.id===el.dataset.id);
+    const row=el.querySelector(".kd-row"); row.onclick=()=>{ const o=el.classList.toggle("open"); row.setAttribute("aria-expanded",o?"true":"false"); };
     el.querySelectorAll("[data-act]").forEach(b=>b.onclick=async()=>{
       try{
         if(b.dataset.act==="new"){ const d=await gfApi("news_accept",{id:x.id,decided_by:gfWho()}); Object.assign(x,d.item); TOPICS.push(d.topic); gfToast("Thema angelegt: "+d.topic.title.slice(0,50)); }
@@ -201,35 +216,42 @@ function bindKorb(){
   });
 }
 
+/* ---- Themenlage: eine Zeile je Strang ---- */
 function renderLage(){
-  const lage=ITEMS.filter(x=>x.kind==="lage");
+  const lage=ITEMS.filter(x=>x.kind==="lage"&&textMatch(x));
   const order=STRANDS.map(s=>s.key);
   lage.sort((a,b)=>order.indexOf(a.strand)-order.indexOf(b.strand));
-  if(!lage.length){ $("#lageGrid").innerHTML=`<div class="empty soft">Noch keine Themenlage. Der tägliche Lauf schreibt je Strang eine Zusammenfassung.</div>`; return; }
-  $("#lageGrid").innerHTML=lage.filter(textMatch).map(x=>{ const open=ITEMS.filter(k=>k.kind==="kandidat"&&k.status==="neu"&&k.strand===x.strand).length; return `<article class="lage ${isNew(x)?"is-new":""}">
-    <div class="lage-h"><span class="pill strand">${gfEsc(strandLabel(x.strand))}</span><span class="muted">Stand ${gfFmtShort(x.happened_at)}</span>${open?`<a class="nbadge" href="#korb" title="offene Kandidaten in diesem Strang">${open}</a>`:""}</div>
-    <h3>${gfEsc(x.title)}</h3>
-    <div class="lage-b">${gfClamp(x.body,"lage-"+x.strand,320)}</div>
+  $("#lageN").textContent=lage.length;
+  if(!lage.length){ $("#lageList").innerHTML=`<div class="empty soft">${Q?"Nichts gefunden.":"Noch keine Themenlage. Der tägliche Lauf schreibt je Strang eine Zusammenfassung."}</div>`; return; }
+  $("#lageList").innerHTML=lage.map(x=>{ const open=ITEMS.filter(k=>k.kind==="kandidat"&&k.status==="neu"&&k.strand===x.strand).length; return `<article class="lg ${isNew(x)?"is-new":""}" data-id="${x.id}">
+    <button type="button" class="lg-row" aria-expanded="false"><span class="lg-s">${gfEsc(strandLabel(x.strand))}</span><span class="lg-t"><b>${gfEsc(x.title)}</b><span class="lg-p">${gfEsc(gfFirstSentence(x.body,160))}</span></span>${open?`<a class="n hot lg-k" href="#korb" title="offene Kandidaten in diesem Strang">${open}</a>`:""}<span class="lg-d">${gfEsc(gfFmtShort(x.happened_at).slice(0,6))}</span>${chev()}</button>
+    <div class="lg-more"><p>${gfEsc(x.body)}</p></div>
   </article>`; }).join("");
-  gfStagger($("#lageGrid"),".lage");
+  document.querySelectorAll(".lg").forEach(el=>{ const row=el.querySelector(".lg-row"); row.onclick=e=>{ if(e.target.closest("a")) return; const o=el.classList.toggle("open"); row.setAttribute("aria-expanded",o?"true":"false"); }; });
+  gfStagger($("#lageList"),".lg");
 }
 
+/* ---- Steuerung ---- */
+function setFilter(open){ const p=$("#filterPanel"); p.hidden=!open; $("#filterBtn").setAttribute("aria-expanded",open?"true":"false"); try{ sessionStorage.setItem("gf_nw_filter",open?"1":"0"); }catch(e){} }
+$("#filterBtn").onclick=()=>setFilter($("#filterPanel").hidden);
+$("#filterReset").onclick=()=>{ RANGE=14; SRC=new Set([...SRC_ALL,"protokoll","manuell"]); Q=""; $("#q").value=""; REL=""; SHOWDONE=false; $("#showDone").checked=false; render(); };
 $("#q").oninput=e=>{ Q=e.target.value.trim().toLowerCase(); render(); };
-document.addEventListener("keydown",e=>{ if(e.key==="/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); $("#q").focus(); } });
+document.addEventListener("keydown",e=>{ if(e.key==="/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); setFilter(true); $("#q").focus(); } });
 $("#whoSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; WHO=b.dataset.w; render(); };
 $("#rangeSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; RANGE=+b.dataset.r; render(); };
 $("#relSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; REL=b.dataset.rel; render(); };
 $("#srcChips").onclick=e=>{ const b=e.target.closest(".chip"); if(!b) return; const s=b.dataset.s; if(SRC.has(s)) SRC.delete(s); else SRC.add(s); render(); };
 $("#showDone").onchange=e=>{ SHOWDONE=e.target.checked; render(); };
-document.querySelectorAll("#jump .seg").forEach(a=>a.onclick=()=>{ document.querySelectorAll("#jump .seg").forEach(x=>x.classList.toggle("on",x===a)); });
+$("#seenBtn").onclick=()=>{ gfNewsMarkSeen(); render(); gfToast("Als gesehen markiert"); };
 document.addEventListener("gf-who",()=>render());
 
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("neuigkeiten");
-  gfMountHero("ankunft","Neuigkeiten","Was bei Lea und Alex gerade passiert. Der Ticker für den kurzen Blick, die Themenlage zum Einlesen, der Sichtungskorb für die GF-Runde.",{compact:true, aside:`<button class="btn btn-sm" id="seenBtn">Alles gesehen</button><a class="btn btn-sm" href="board.html">Zum Board</a>`});
-  $("#seenBtn").onclick=markSeen;
+  gfMountHero("ankunft","Neuigkeiten","Was bei Lea und Alex gerade passiert. Das Laufband für den kurzen Blick, der Ticker nach Tagen, der Sichtungskorb für die GF-Runde, die Themenlage zum Einlesen.",{compact:true, slim:true, aside:`<a class="btn btn-sm" href="board.html">Zum Board</a>`});
+  bindDetails(document);
+  let f=false; try{ f=sessionStorage.getItem("gf_nw_filter")==="1"; }catch(e){} if(f) setFilter(true);
   await load();
-  if(location.hash){ const el=document.querySelector(location.hash); if(el) setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"start"}),150); }
+  if(location.hash){ const el=document.querySelector(location.hash); if(el){ if(el.tagName==="DETAILS") el.open=true; setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"start"}),150); } }
 });
 </script>
 </body>
