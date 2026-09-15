@@ -17,7 +17,7 @@
 
 <div id="gate">
   <div class="gate-card">
-    <div class="mark pic"><img src="/assets/img/flagge-144.png" alt="" width="54" height="54"></div>
+    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
     <h1>Das Hohe Haus</h1>
     <div class="sub">Check-in · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
@@ -121,7 +121,7 @@ function render(){
 function agendaText(){
   const ag=agendaItems(); const L=[`Das Hohe Haus · Check-in-Agenda · ${gfFmtDay(NOW)}`,""];
   ag.forEach((t,i)=>{ L.push(`${i+1}. ${t.title} [${LANE_LABEL[t.board_lane]} · ${t.priority}]`); if(t.short_description) L.push(`   ${t.short_description}`); if(t.next_action) L.push(`   Nächster Schritt: ${t.next_action}`); if(who(t)) L.push(`   Verantwortung: ${who(t)}`); L.push(""); });
-  L.push(`${ag.length} Themen · erstellt mit Das Hohe Haus · gfweekly.netlify.app`);
+  L.push(`${ag.length} Themen · erstellt mit Das Hohe Haus · hohes-haus.netlify.app`);
   return L.join("\n");
 }
 $("#copyBtn").onclick=()=>{ if(!agendaItems().length){ gfToast("Keine Themen in der Agenda"); return; } gfTextModal("Check-in-Agenda", agendaText(), { subject:`GF-Check-in ${gfFmtShort(NOW.toISOString())} · Agenda`, intro:"Zum Kopieren oder per Mail an Alex und Lea." }); };

@@ -18,7 +18,7 @@
 
 <div id="gate">
   <div class="gate-card">
-    <div class="mark pic"><img src="/assets/img/flagge-144.png" alt="" width="54" height="54"></div>
+    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
     <h1>Das Hohe Haus</h1>
     <div class="sub">Entscheidungen · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
@@ -187,7 +187,7 @@ async function wochenmail(){
   if(next.length){ L.push("Nächste Meilensteine (30 Tage)"); next.forEach(m=>L.push(`- ${gfFmtShort(m.date_from)}${m.date_to?`–${gfFmtShort(m.date_to)}`:""} ${m.title}${m.strand?` · ${m.strand}`:""}`)); L.push(""); }
   if(CYC){ const tr=(CYC.transitions||[]).map(x=>({...x,d:x.date||x.date_from})).filter(x=>x.d&&x.d>=iso(today)).sort((a,b)=>a.d<b.d?-1:1)[0]; if(tr) L.push(`Nächster Übergang: ${tr.title||tr.label||""} am ${gfFmtShort(tr.d)}`); L.push(""); }
   const st=window.GF_GAME?.state; if(st){ const rk={bronze:"Bronze",silber:"Silber",gold:"Gold"}[st.rank]||"kein Rang"; L.push(`Habitat-Punkte: ${st.weekPts} Taler diese Woche (${rk}) · ${st.total} im Jahrestopf, Stufe ${st.level?.label||""}${st.badges?.length?` · ${st.badges.length} Abzeichen`:""}`); L.push(""); }
-  L.push("Erstellt mit Das Hohe Haus · gfweekly.netlify.app");
+  L.push("Erstellt mit Das Hohe Haus · hohes-haus.netlify.app");
   gfApi("score_event",{kind:"wochenmail"}).catch(()=>{});
   gfTextModal("Wochenmail-Entwurf", L.join("\n"), {pic:"wochenmail", subject:`GF-Wochenmail · Woche bis ${gfFmtShort(iso(today))}`, intro:"Entwurf aus Board, Entscheidungslog und Meilensteinen. Vor dem Versand kurz durchlesen und ergänzen."});
 }

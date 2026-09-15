@@ -21,7 +21,7 @@
 
 <div id="gate">
   <div class="gate-card">
-    <div class="mark pic"><img src="/assets/img/flagge-144.png" alt="" width="54" height="54"></div>
+    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
     <h1>Das Hohe Haus</h1>
     <div class="sub">Große Fragen. Klare Entscheidungen. Gelegentlich Kaffee oder besser Wein?</div>
@@ -319,7 +319,7 @@ function renderHabitat(st){
       <div class="cap">${nx?`Noch ${nx.threshold-st.total} Taler bis ${gfEsc(nx.label)}.`:"Das Habitat steht. Alles weitere ist Zugabe."} Gemeinsamer Topf von Alex und Lea, ohne Verfall.</div>
     </div>
     <div class="hab">
-      <div class="k"><img src="${G.streakIcon(st.streak)}" alt="">Heute · ${gfEsc(st.who)}</div>
+      <div class="k">${gfAvatarTag(st.who,"av-k")}Heute · ${gfEsc(st.who)}</div>
       <div class="v"><img src="${G.streakIcon(st.streak)}" alt="">${st.streak}<small>${st.streak===1?"Tag":"Tage"} in Folge</small></div>
       <div class="goal ${st.goal?.done?"done":""}"><img src="${G.icon("punkte-tagesziel")}" alt=""><span>${gfEsc(st.goal?.label||"Tagesziel")}</span><b>${st.goal?.done?"erfüllt":"+10"}</b></div>
       <div class="cap">${st.todayPts} Taler heute${st.streak>=3?` · nächster Serienbonus bei ${st.streak<7?7:st.streak<14?14:st.streak<30?30:Math.ceil((st.streak+1)/30)*30} Tagen`:st.streak?` · ab 3 Tagen gibt es Serienbonus`:" · einchecken zählt beim ersten Öffnen"}</div>
@@ -343,7 +343,7 @@ document.addEventListener("gf-game",e=>renderHabitat(e.detail));
 async function loadQuick(){
   try{
     const d=await gfApi("sites_list");
-    const sites=(d.sites||[]).filter(s=>s.status==="aktiv" && s.category==="steuerung" && !/gfweekly\.netlify\.app/.test(s.url)).slice(0,6);
+    const sites=(d.sites||[]).filter(s=>s.status==="aktiv" && s.category==="steuerung" && !/gfweekly\.netlify\.app|hohes-haus\.netlify\.app/.test(s.url)).slice(0,6);
     $("#quick").innerHTML=sites.map(s=>`<a class="qcard" href="${gfEsc(s.url)}" target="_blank" rel="noopener"><div class="qn">${gfEsc(s.name)}</div><div class="qp">${gfEsc(s.purpose||"")}</div><div class="qh">${gfEsc((()=>{try{return new URL(s.url).host}catch(e){return s.url}})())} ↗</div></a>`).join("") || `<div class="empty soft">Noch keine Seiten im Bereich Steuerung &amp; Planung.</div>`;
   }catch(e){ $("#quick").innerHTML=""; }
 }
@@ -354,8 +354,8 @@ gfGate(async()=>{
   const wd=NOW.toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long"});
   let lv0=null; try{ lv0=localStorage.getItem("gf_level"); }catch(e){}
   const heroImg = lv0 && window.GF_GAME ? GF_GAME.icon("habitat-"+(["lichtung","lagerplatz","dorf","festival","habitat"].indexOf(lv0)+1)+"-"+lv0) : "ankunft";
-  gfMountHero(heroImg, `Guten Tag, ${gfEsc(gfWho())}`, `${GF_APP_MOTTO}<span class="hero-date">${wd} · ${GF_APP_SUB}</span>`, {aside:`<a class="btn btn-sm" href="capture.html">Thema erfassen</a><a class="btn btn-sm" href="board.html">Board öffnen</a>`});
-  document.addEventListener("gf-who",e=>gfHeroText(`Guten Tag, ${gfEsc(e.detail)}`,null));
+  gfMountHero(heroImg, `${gfAvatarTag(gfWho(),"hero-av")}Guten Tag, ${gfEsc(gfWho())}`, `${GF_APP_MOTTO}<span class="hero-date">${wd} · ${GF_APP_SUB}</span>`, {aside:`<a class="btn btn-sm" href="capture.html">Thema erfassen</a><a class="btn btn-sm" href="board.html">Board öffnen</a>`});
+  document.addEventListener("gf-who",e=>gfHeroText(`${gfAvatarTag(e.detail,"hero-av")}Guten Tag, ${gfEsc(e.detail)}`,null));
   try{
     const [cyc, ms]=await Promise.all([gfApi("cycle_get",{year:NOW.getFullYear()}), gfApi("milestones_list",{all:false})]);
     CYCLE=cyc; MS=ms.milestones||[];

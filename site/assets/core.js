@@ -57,6 +57,8 @@ function gfGate(onReady){
 const GF_APP_NAME="Das Hohe Haus";
 const GF_APP_SUB="Geschäftsführung der Wilden Habitate";
 const GF_APP_MOTTO="Große Fragen. Klare Entscheidungen. Gelegentlich Kaffee oder besser Wein?";
+const GF_AVATAR={ Alex:"/assets/img/avatar-alex.webp", Lea:"/assets/img/avatar-lea.webp" };
+function gfAvatarTag(who, cls="av"){ const w=(who||"").trim(); const src=GF_AVATAR[w]; return src?`<img class="${cls}" src="${src}" alt="" width="32" height="32" loading="lazy">`:""; }
 const GF_ICONS={
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M10 20v-5h4v5"/></svg>',
   bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2H4.5L6 16Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
@@ -102,7 +104,7 @@ function gfMountTopbar(active){
     <div class="sb-backdrop" id="navBackdrop"></div>
     <aside class="sidebar" id="sidebar" aria-label="Navigation">
       <div class="sb-head">
-        <a class="brand" href="index.html"><div class="mark pic"><img src="/assets/img/flagge-72.png" srcset="/assets/img/flagge-144.png 2x" alt="" width="36" height="36"></div><div class="brand-txt"><h1>${GF_APP_NAME}</h1><div class="meta">${GF_APP_SUB}</div></div></a>
+        <a class="brand" href="index.html"><div class="mark pic"><img src="/assets/img/burg-144.png" srcset="/assets/img/burg-288.png 2x" alt="" width="36" height="36"></div><div class="brand-txt"><h1>${GF_APP_NAME}</h1><div class="meta">${GF_APP_SUB}</div></div></a>
         <button class="sb-toggle" id="navToggle" aria-label="Menü einklappen" title="Menü einklappen">${GF_ICONS.chev}</button>
         <button class="sb-close" id="navClose" aria-label="Menü schließen">${GF_ICONS.x}</button>
       </div>
@@ -110,7 +112,7 @@ function gfMountTopbar(active){
       <div class="sb-foot">
         <div class="tb-ctl">
           ${themeSw("themeSw")}
-          <div class="whoami" id="whoSw" role="group" aria-label="Aktive Person"><span>als</span><button data-w="Alex">Alex</button><button data-w="Lea">Lea</button></div>
+          <div class="whoami" id="whoSw" role="group" aria-label="Aktive Person"><span>als</span><button data-w="Alex">${gfAvatarTag("Alex")}<span>Alex</span></button><button data-w="Lea">${gfAvatarTag("Lea")}<span>Lea</span></button></div>
         </div>
         <div class="sb-drawer-only">${themeSw("themeSw2")}</div>
       </div>
@@ -253,7 +255,7 @@ function gfProtocolText(meta, log, openTopics){
   grp("vertagt","Vertagt",(e)=>`- ${e.title}${e.until?` → ${gfFmtShort(e.until)}`:""}`);
   grp("besprochen","Besprochen ohne Beschluss",(e)=>`- ${e.title}${e.next_action?`: ${e.next_action}`:""}`);
   if(openTopics&&openTopics.length){ L.push(`Offen geblieben (zu besprechen): ${openTopics.length}`); openTopics.slice(0,12).forEach(t=>L.push(`- ${t.title}${t.priority==="hoch"?" (hoch)":""}`)); if(openTopics.length>12) L.push(`- … und ${openTopics.length-12} weitere`); L.push(""); }
-  L.push(`Erstellt mit Das Hohe Haus · gfweekly.netlify.app`);
+  L.push(`Erstellt mit Das Hohe Haus · hohes-haus.netlify.app`);
   return L.join("\n");
 }
 

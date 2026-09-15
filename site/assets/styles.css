@@ -996,3 +996,18 @@ html[data-nav="drawer"] .sb-nav a{min-height:44px}
 .hero-date{display:block;margin-top:4px;color:var(--text-3);font-size:var(--stufe-2)}
 .modal-pic{margin:14px 18px 4px;border:var(--rahmen) solid var(--border);overflow:hidden;background:var(--photo-bg)} .modal-pic img{display:block;width:100%;aspect-ratio:4/1;object-fit:cover;object-position:center 40%}
 @media (prefers-reduced-motion:reduce){ .sidebar{transition:none} }
+
+/* V18.1 · Strohburg als Marke, Richterhammer als Favicon, Avatare bei Alex und Lea */
+.mark.pic img{filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+.sidebar .brand .mark.pic{width:40px;height:40px} .gate-card .mark.pic{width:64px;height:64px}
+.whoami button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.whoami button .av{width:22px;height:22px;border-radius:50%;object-fit:cover;display:block;flex:0 0 auto}
+.whoami button.on .av{box-shadow:0 0 0 2px rgba(255,255,255,.55)}
+html[data-nav="rail"] .sb-foot .whoami button span{display:none}
+html[data-nav="rail"] .sb-foot .whoami button{height:34px}
+html[data-nav="rail"] .sb-foot .whoami button .av{width:24px;height:24px}
+.mb-slot .whoami button span{display:none} .mb-slot .whoami button{min-width:40px;padding:0 6px}
+.hero-av{width:44px;height:44px;border-radius:50%;object-fit:cover;vertical-align:-12px;margin-right:10px;border:2px solid var(--border-strong);background:var(--surface)}
+.hero.compact .hero-av{width:36px;height:36px;vertical-align:-10px}
+.av-k{width:18px;height:18px;border-radius:50%;object-fit:cover;vertical-align:-4px;margin-right:6px}
+.seg.seg-av{display:inline-flex;align-items:center;gap:6px} .seg.seg-av img{width:20px;height:20px;border-radius:50%;object-fit:cover;display:block}
