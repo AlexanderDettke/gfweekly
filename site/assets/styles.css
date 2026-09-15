@@ -920,3 +920,79 @@ a.stat{color:inherit;text-decoration:none;display:block} a.stat:hover{border-col
 
 /* Leerzustände mit Bild */
 .empty .zpic{width:96px;height:96px;object-fit:contain;display:block;margin:0 auto 6px;opacity:.9}
+
+/* ===========================================================
+   V18 · Das Hohe Haus: Seitenleiste links (offen / schmal / Schublade), Kopfbilder je Seite
+   =========================================================== */
+:root{ --nav-w:264px; --rail-w:68px; --mbar-h:54px }
+.topbar{position:static;display:contents;padding:0;margin:0;border:0;background:none}
+html[data-nav="open"] body{padding-left:var(--nav-w)}
+html[data-nav="rail"] body{padding-left:var(--rail-w)}
+html[data-nav="drawer"] body{padding-top:calc(var(--mbar-h) + env(safe-area-inset-top,0px))}
+html[data-nav="open"] .app,html[data-nav="rail"] .app{padding-top:22px}
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--nav-w);z-index:60;display:flex;flex-direction:column;background:var(--header-bg);border-right:var(--rahmen) solid var(--border);transition:width var(--motion-base) var(--motion-ease),transform var(--motion-base) var(--motion-ease)}
+html[data-nav="rail"] .sidebar{width:var(--rail-w)}
+.sb-head{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:14px 10px 12px 14px;border-bottom:var(--rahmen) solid var(--border);min-height:74px}
+.sidebar .brand{gap:10px;flex:1;min-width:0} .sidebar .brand>div{display:block} .sidebar .brand .brand-txt{min-width:0} .sidebar .brand .mark.pic{width:36px;height:36px}
+.sidebar .brand h1{font-size:1.02rem;white-space:normal;line-height:1.15;letter-spacing:-.01em}
+.sidebar .brand .meta{display:block;font-size:11px;line-height:1.3;margin-top:3px;color:var(--text-3)}
+.sb-toggle,.sb-close{width:32px;height:32px;display:grid;place-items:center;color:var(--text-2);flex:0 0 auto}
+.sb-toggle:hover,.sb-close:hover{background:var(--fill);color:var(--text)}
+.sb-toggle svg,.sb-close svg{width:18px;height:18px;transition:transform var(--motion-base) var(--motion-ease)}
+.sb-close{display:none}
+html[data-nav="rail"] .sb-toggle svg{transform:rotate(180deg)}
+.sb-nav{display:block;flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 10px 16px;scrollbar-width:thin}
+.sb-group{margin:0 0 12px}
+.sb-gl{font-size:var(--stufe-1);text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);padding:8px 10px 6px;font-weight:600}
+.sb-nav a{display:flex;align-items:center;gap:11px;padding:9px 10px 9px 9px;border:0;border-left:3px solid transparent;margin:0;border-radius:0;color:var(--text-2);font-size:var(--stufe-3);font-weight:500;white-space:nowrap;min-height:40px;position:relative;text-decoration:none}
+.sb-nav a:hover{background:var(--fill);color:var(--text)}
+.sb-nav a.active,.sb-nav a.active:hover{background:var(--accent-soft);color:var(--text);border-left-color:var(--accent);border-bottom:0}
+.sb-nav a .ic{display:grid;place-items:center;width:22px;height:22px;flex:0 0 auto;color:inherit} .sb-nav a .ic svg{width:20px;height:20px;display:block}
+.sb-nav a .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.sb-nav a .nbadge{margin-left:auto;display:inline-flex;align-items:center;justify-content:center}
+.sb-sub{display:flex;flex-direction:column;margin:2px 0 6px}
+.sb-sub a{padding:6px 10px 6px 45px;min-height:32px;font-size:var(--stufe-2);color:var(--text-3);border-left:3px solid transparent}
+.sb-sub a::before{content:"";width:5px;height:5px;background:currentColor;opacity:.45;position:absolute;left:31px;top:50%;transform:translateY(-50%)}
+.sb-sub a:hover{color:var(--text)}
+.sb-sub a.on{color:var(--text);background:var(--fill-soft)} .sb-sub a.on::before{opacity:1;background:var(--accent)}
+.sb-foot{padding:12px 10px calc(12px + env(safe-area-inset-bottom,0px));border-top:var(--rahmen) solid var(--border);display:flex;flex-direction:column;gap:8px}
+.sb-foot .tb-ctl{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.sb-foot .theme-sw,.sb-foot .whoami{display:flex} .sb-foot .theme-sw button,.sb-foot .whoami button{flex:1}
+.sb-foot .whoami span{flex:0 0 auto}
+.sb-foot .gamebar{justify-content:stretch} .sb-foot .gamebar .taler{flex:1} .sb-foot .gamebar .lvl{display:flex}
+.sb-drawer-only{display:none}
+/* Schmale Symbolleiste */
+html[data-nav="rail"] .sidebar .brand .brand-txt,html[data-nav="rail"] .sb-gl,html[data-nav="rail"] .sb-nav a .lbl,html[data-nav="rail"] .sb-sub,html[data-nav="rail"] .sb-foot .whoami span,html[data-nav="rail"] .sb-foot .gamebar .lvl{display:none}
+html[data-nav="rail"] .sb-head{flex-direction:column;padding:12px 0 10px;gap:8px;justify-content:center;min-height:0}
+html[data-nav="rail"] .sidebar .brand{flex:0 0 auto;justify-content:center}
+html[data-nav="rail"] .sb-nav{padding:10px 6px}
+html[data-nav="rail"] .sb-nav a{justify-content:center;padding:10px 0;border-left:0;border-right:3px solid transparent}
+html[data-nav="rail"] .sb-nav a.active{border-right-color:var(--accent)}
+html[data-nav="rail"] .sb-nav a .nbadge{position:absolute;top:3px;right:9px;margin:0;font-size:9.5px;padding:0 4px;min-width:15px;line-height:15px}
+html[data-nav="rail"] .sb-group{margin:0 0 8px;padding:0 0 8px;border-bottom:1px solid var(--border)} html[data-nav="rail"] .sb-group:last-child{border-bottom:0}
+html[data-nav="rail"] .sb-foot{padding:10px 6px calc(10px + env(safe-area-inset-bottom,0px))}
+html[data-nav="rail"] .sb-foot .theme-sw,html[data-nav="rail"] .sb-foot .whoami{flex-direction:column;gap:2px}
+html[data-nav="rail"] .sb-foot .theme-sw button,html[data-nav="rail"] .sb-foot .whoami button{min-width:0;width:100%;height:30px;padding:0;font-size:var(--stufe-1)}
+html[data-nav="rail"] .sb-foot .gamebar{flex-direction:column;gap:4px}
+html[data-nav="rail"] .sb-foot .gamebar .taler,html[data-nav="rail"] .sb-foot .gamebar .flame{padding:0 6px;justify-content:center;height:34px}
+/* Schmale Kopfzeile und Schublade (unter 1024 px) */
+.mbar,.sb-backdrop{display:none}
+html[data-nav="drawer"] .mbar{display:flex;position:fixed;top:0;left:0;right:0;height:calc(var(--mbar-h) + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 10px 0 6px;z-index:50;align-items:center;gap:6px;background:var(--header-bg);border-bottom:var(--rahmen) solid var(--border)}
+.mb-menu{width:42px;height:42px;display:grid;place-items:center;color:var(--text);flex:0 0 auto} .mb-menu svg{width:22px;height:22px} .mb-menu:hover{background:var(--fill)}
+.mb-title{font-weight:600;font-size:1rem;color:var(--text);text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.01em}
+.mb-title:hover{text-decoration:none}
+.mb-slot{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.mb-slot .tb-ctl{display:flex;align-items:center;gap:6px}
+.mb-slot .theme-sw{display:none}
+.mb-slot .whoami span{display:none}
+html[data-nav="drawer"] .sidebar{transform:translateX(-100%);width:min(304px,86vw);z-index:70;box-shadow:none;transition:transform var(--motion-base) var(--motion-ease)}
+html[data-nav="drawer"][data-drawer="open"] .sidebar{transform:none;box-shadow:var(--shadow-pop)}
+html[data-nav="drawer"][data-drawer="open"] .sb-backdrop{display:block;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:65}
+html[data-nav="drawer"] .sb-toggle{display:none} html[data-nav="drawer"] .sb-close{display:grid}
+html[data-nav="drawer"] .sb-drawer-only{display:block} html[data-nav="drawer"] .sb-drawer-only .theme-sw{display:flex} html[data-nav="drawer"] .sb-drawer-only .theme-sw button{flex:1}
+html[data-nav="drawer"] .sb-nav a{min-height:44px}
+@media(max-width:1023px){ .sidebar .brand .meta{display:block} .sidebar .brand>div{display:block} }
+/* Kopfbild: Datum unter dem Motto (Startseite), Bild im Textmodal (Wochenmail) */
+.hero-date{display:block;margin-top:4px;color:var(--text-3);font-size:var(--stufe-2)}
+.modal-pic{margin:14px 18px 4px;border:var(--rahmen) solid var(--border);overflow:hidden;background:var(--photo-bg)} .modal-pic img{display:block;width:100%;aspect-ratio:4/1;object-fit:cover;object-position:center 40%}
+@media (prefers-reduced-motion:reduce){ .sidebar{transition:none} }

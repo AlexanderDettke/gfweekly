@@ -1,5 +1,5 @@
 /* ===========================================================
-   GF Weekly · Habitat-Punkte (V17)
+   Das Hohe Haus · Habitat-Punkte (V17)
    Spielschicht über dem Cockpit: Einchecken beim Entsperren,
    Serie, Taler-Zähler in der Kopfzeile, aufsteigende Marker
    bei jedem Gewinn, Tageskarte, Abzeichen- und Stufenkarten.

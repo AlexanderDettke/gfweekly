@@ -1,5 +1,5 @@
 /* ===========================================================
-   GF Weekly · V17 · gemeinsamer Kern
+   Das Hohe Haus (vormals GF Weekly) · V18 · gemeinsamer Kern
    API-Zugriff, Login-Gate, Navigation, Theme-Umschaltung, Helfer.
    Es werden bewusst KEINE apikey/Authorization-Header gesendet
    (das Supabase-Gateway lehnt sonst ab); Auth läuft über das
@@ -51,60 +51,101 @@ function gfGate(onReady){
   if(gfPW()) attempt(gfPW()); else if(inp) inp.focus();
 }
 
-/* ---- Topbar (V12): zwei ruhige Zeilen auf jeder Breite. Zeile 1 Marke + Modus + Person, Zeile 2 Navigation (+ Unternavigation rechts) ---- */
+/* ---- Seitenleiste (V18): links, einklappbar zur Symbolleiste, am Handy als Schublade hinter einer schmalen Kopfzeile.
+   Gruppen: Heute (Start, Neuigkeiten, Check-in) · Arbeiten (Themen mit Board/Kacheln/Liste/Entscheidungen, Eingabe) · Verwalten (Wichtige Seiten, Bearbeiten).
+   Unten: Habitat-Taler (game.js hängt sich an .tb-ctl), Dunkel/Hell, Person. Zustand offen/schmal in localStorage gf_nav. ---- */
+const GF_APP_NAME="Das Hohe Haus";
+const GF_APP_SUB="Geschäftsführung der Wilden Habitate";
+const GF_APP_MOTTO="Große Fragen. Klare Entscheidungen. Gelegentlich Kaffee oder besser Wein?";
+const GF_ICONS={
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M10 20v-5h4v5"/></svg>',
+  bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2H4.5L6 16Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17"/><path d="M9 4.5V3h6v1.5"/><path d="m8.5 13 2.5 2.5 4.5-5"/></svg>',
+  board:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="5" height="16"/><rect x="9.5" y="4" width="5" height="11"/><rect x="15.5" y="4" width="5" height="7"/></svg>',
+  pen:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l11-11-4-4L4 16v4Z"/><path d="m13 7 4 4"/></svg>',
+  grid:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><path d="M13 16.5h7M16.5 13v7"/></svg>',
+  sliders:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="var(--header-bg,#111)"/><circle cx="15" cy="12" r="2" fill="var(--header-bg,#111)"/><circle cx="7" cy="17" r="2" fill="var(--header-bg,#111)"/></svg>',
+  menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg>'
+};
+const GF_NAV=[
+  ["Heute",[["start","index.html","Start","home",null,"Zyklus, Kennzahlen, Rituale, Habitat"],["neuigkeiten","neuigkeiten.html","Neuigkeiten","bell","newsBadge","Ticker, Sichtungskorb, Themenlage"],["checkin","checkin.html","Check-in","check",null,"Vorbereitung auf das Weekly"]]],
+  ["Arbeiten",[["themen","board.html","Themen","board","themenBadge","Board, Kacheln, Liste, Entscheidungen"],["capture","capture.html","Eingabe","pen",null,"Thema erfassen"]]],
+  ["Verwalten",[["seiten","seiten.html","Wichtige Seiten","grid",null,"Arbeitsseiten mit Zugang"],["edit","bearbeiten.html","Bearbeiten","sliders",null,"Themen, Personen, Links pflegen"]]]
+];
+const GF_SUBNAV=[["board","board.html?view=board","Board","Spalten nach Ablauf, Prio, Zeitraum oder Person, verschiebbar"],["kacheln","board.html?view=kacheln","Kacheln","Gruppen als Kachelraster"],["liste","cockpit.html","Liste","Ausführliche Liste mit Details und Protokoll"],["entscheidungen","entscheidungen.html","Entscheidungen","Entscheidungslog, Protokolle der Besprechungen, Wochenmail"]];
+function gfNavMode(){
+  if(window.matchMedia("(max-width:1023px)").matches) return "drawer";
+  let s=null; try{ s=localStorage.getItem("gf_nav"); }catch(e){}
+  return (s==="open"||s==="rail") ? s : (window.matchMedia("(min-width:1280px)").matches ? "open" : "rail");
+}
+function gfApplyNav(){
+  const m=gfNavMode(), h=document.documentElement; h.dataset.nav=m; if(m!=="drawer") delete h.dataset.drawer;
+  const ctl=document.querySelector("#topbar .tb-ctl"), foot=document.querySelector("#topbar .sb-foot"), slot=document.getElementById("mbSlot");
+  if(ctl&&foot&&slot){ const want=(m==="drawer")?slot:foot; if(ctl.parentElement!==want) want.prepend(ctl); }
+  const t=document.getElementById("navToggle"); if(t){ const l=(m==="rail")?"Menü ausklappen":"Menü einklappen"; t.setAttribute("aria-label",l); t.title=l; }
+  const sb=document.getElementById("sidebar"); if(sb) sb.setAttribute("aria-hidden", m==="drawer" && h.dataset.drawer!=="open" ? "true":"false");
+}
+function gfDrawer(open){ const h=document.documentElement; if(open) h.dataset.drawer="open"; else delete h.dataset.drawer; const b=document.getElementById("navOpen"); if(b) b.setAttribute("aria-expanded", open?"true":"false"); const sb=document.getElementById("sidebar"); if(sb) sb.setAttribute("aria-hidden", open?"false":"true"); if(open){ const f=sb&&sb.querySelector("a.active")||sb&&sb.querySelector("a"); if(f) setTimeout(()=>f.focus(),60); } }
 function gfMountTopbar(active){
   const el=document.getElementById("topbar"); if(!el) return;
   el.className="topbar";
+  const themeSw=(id)=>`<div class="theme-sw" id="${id}" role="group" aria-label="Designmodus"><button data-th="dark" aria-label="Dunkler Modus">Dunkel</button><button data-th="light" aria-label="Heller Modus">Hell</button></div>`;
+  const groups=GF_NAV.map(([g,items])=>`<div class="sb-group"><div class="sb-gl">${g}</div>${items.map(([k,h,l,ic,badge,tip])=>`<a href="${h}" data-k="${k}" title="${gfEsc(tip||l)}"><span class="ic">${GF_ICONS[ic]||""}</span><span class="lbl">${l}</span>${badge?`<span class="nbadge" id="${badge}" style="display:none">0</span>`:""}</a>${k==="themen"?`<div class="sb-sub" id="subnavSlot">${GF_SUBNAV.map(([sk,sh,sl,st])=>`<a href="${sh}" data-sk="${sk}" title="${gfEsc(st)}">${sl}</a>`).join("")}</div>`:""}`).join("")}</div>`).join("");
   el.innerHTML=`
-    <div class="tb-row tb-top">
-      <a class="brand" href="index.html"><div class="mark pic"><img src="/assets/img/flagge-72.png" srcset="/assets/img/flagge-144.png 2x" alt="" width="36" height="36"></div><div><h1>GF Weekly</h1><div class="meta">Geschäftsleitung · vertraulich</div></div></a>
-      <div class="tb-ctl">
-        <div class="theme-sw" id="themeSw" role="group" aria-label="Designmodus">
-          <button data-th="dark" aria-label="Dunkler Modus">Dunkel</button>
-          <button data-th="light" aria-label="Heller Modus">Hell</button>
-        </div>
-        <div class="whoami" id="whoSw" role="group" aria-label="Aktive Person"><span>als</span>
-          <button data-w="Alex">Alex</button><button data-w="Lea">Lea</button>
-        </div>
-      </div>
+    <div class="mbar" id="mbar">
+      <button class="mb-menu" id="navOpen" aria-label="Menü öffnen" aria-controls="sidebar" aria-expanded="false">${GF_ICONS.menu}</button>
+      <a class="mb-title" href="index.html">${GF_APP_NAME}</a>
+      <div class="mb-slot" id="mbSlot"></div>
     </div>
-    <div class="tb-row tb-nav">
-      <nav class="nav" aria-label="Hauptnavigation">
-        <a href="index.html" data-k="start"><span class="lbl">Start</span></a>
-        <a href="neuigkeiten.html" data-k="neuigkeiten"><span class="lbl">Neuigkeiten</span><span class="nbadge" id="newsBadge" style="display:none">0</span></a>
-        <a href="board.html" data-k="themen"><span class="lbl">Themen</span><span class="nbadge" id="themenBadge" style="display:none">0</span></a>
-        <a href="seiten.html" data-k="seiten"><span class="lbl">Wichtige Seiten</span></a>
-        <a href="checkin.html" data-k="checkin"><span class="lbl">Check-in</span></a>
-        <a href="capture.html" data-k="capture"><span class="lbl">Eingabe</span></a>
-        <a href="bearbeiten.html" data-k="edit"><span class="lbl">Bearbeiten</span></a>
-      </nav>
-      <div class="tb-sub" id="subnavSlot"></div>
-    </div>`;
-  const a=el.querySelector(`[data-k="${active}"]`); if(a){ a.classList.add("active"); a.setAttribute("aria-current","page"); }
+    <div class="sb-backdrop" id="navBackdrop"></div>
+    <aside class="sidebar" id="sidebar" aria-label="Navigation">
+      <div class="sb-head">
+        <a class="brand" href="index.html"><div class="mark pic"><img src="/assets/img/flagge-72.png" srcset="/assets/img/flagge-144.png 2x" alt="" width="36" height="36"></div><div class="brand-txt"><h1>${GF_APP_NAME}</h1><div class="meta">${GF_APP_SUB}</div></div></a>
+        <button class="sb-toggle" id="navToggle" aria-label="Menü einklappen" title="Menü einklappen">${GF_ICONS.chev}</button>
+        <button class="sb-close" id="navClose" aria-label="Menü schließen">${GF_ICONS.x}</button>
+      </div>
+      <nav class="nav sb-nav" aria-label="Hauptnavigation">${groups}</nav>
+      <div class="sb-foot">
+        <div class="tb-ctl">
+          ${themeSw("themeSw")}
+          <div class="whoami" id="whoSw" role="group" aria-label="Aktive Person"><span>als</span><button data-w="Alex">Alex</button><button data-w="Lea">Lea</button></div>
+        </div>
+        <div class="sb-drawer-only">${themeSw("themeSw2")}</div>
+      </div>
+    </aside>`;
+  const a=el.querySelector(`.sb-nav a[data-k="${active}"]`); if(a){ a.classList.add("active"); a.setAttribute("aria-current","page"); }
   const cur=gfTheme();
-  el.querySelectorAll("#themeSw button").forEach(b=>{ if(b.dataset.th===cur) b.classList.add("on");
-    b.onclick=()=>{ gfApplyTheme(b.dataset.th); el.querySelectorAll("#themeSw button").forEach(x=>x.classList.toggle("on",x.dataset.th===b.dataset.th)); }; });
+  el.querySelectorAll(".theme-sw button").forEach(b=>{ if(b.dataset.th===cur) b.classList.add("on");
+    b.onclick=()=>{ gfApplyTheme(b.dataset.th); el.querySelectorAll(".theme-sw button").forEach(x=>x.classList.toggle("on",x.dataset.th===b.dataset.th)); }; });
   const w0=gfWho()==="Lea"?"Lea":"Alex"; if(gfWho()!==w0) gfSetWho(w0);
   el.querySelectorAll("#whoSw button").forEach(b=>{ b.classList.toggle("on",b.dataset.w===w0);
     b.onclick=()=>{ gfSetWho(b.dataset.w); el.querySelectorAll("#whoSw button").forEach(x=>x.classList.toggle("on",x===b)); document.dispatchEvent(new CustomEvent("gf-who",{detail:b.dataset.w})); }; });
-  const sub=document.getElementById("subnav"); if(sub) el.querySelector("#subnavSlot").appendChild(sub);
+  /* Ein-/Ausklappen, Schublade */
+  el.querySelector("#navToggle").onclick=()=>{ const m=gfNavMode()==="rail"?"open":"rail"; try{ localStorage.setItem("gf_nav",m); }catch(e){} gfApplyNav(); };
+  el.querySelector("#navOpen").onclick=()=>gfDrawer(true);
+  el.querySelector("#navClose").onclick=()=>gfDrawer(false);
+  el.querySelector("#navBackdrop").onclick=()=>gfDrawer(false);
+  el.querySelectorAll(".sb-nav a").forEach(x=>x.addEventListener("click",()=>{ if(document.documentElement.dataset.nav==="drawer") gfDrawer(false); }));
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape" && document.documentElement.dataset.drawer==="open") gfDrawer(false); });
+  if(!window.__gfNavMQ){ window.__gfNavMQ=true; [window.matchMedia("(max-width:1023px)"),window.matchMedia("(min-width:1280px)")].forEach(mq=>mq.addEventListener("change",gfApplyNav)); }
+  gfApplyNav();
+  const legacy=document.getElementById("subnav"); if(legacy){ legacy.style.display="none"; legacy.innerHTML=""; }
   /* V16: Sichtungskorb-Zähler (Kandidaten mit Status neu) an „Neuigkeiten“ */
   if(active!=="neuigkeiten") gfApi("news_list",{kinds:["kandidat"],statuses:["neu"],limit:500}).then(d=>{ const n=(d.items||[]).length; const b=el.querySelector("#newsBadge"); if(n>0){ b.textContent=n; b.style.display="inline-flex"; b.title=n+" Kandidaten im Sichtungskorb"; } }).catch(()=>{});
   if(active!=="themen") gfApi("list").then(d=>{ const n=(d.topics||[]).filter(t=>t.board_lane==="zu_besprechen" && t.kind!=="recurring").length; const b=el.querySelector("#themenBadge"); if(n>0){ b.textContent=n; b.style.display="inline-flex"; b.title=n+" Themen zu besprechen"; } }).catch(()=>{});
 }
 
-/* ---- Unternavigation „Themen": Board · Kacheln · Liste (sitzt rechts in der Navigationszeile) ---- */
+/* ---- Unternavigation „Themen“ (V18): sitzt als Einrückung unter „Themen“ in der Seitenleiste; hier wird nur der aktive Punkt markiert ---- */
 function gfMountSubnav(active){
-  const el=document.getElementById("subnav"); if(!el) return;
-  const items=[["board","board.html?view=board","Board","Spalten nach Ablauf, Prio, Zeitraum oder Person, verschiebbar"],["kacheln","board.html?view=kacheln","Kacheln","Gruppen als Kachelraster"],["liste","cockpit.html","Liste","Ausführliche Liste mit Details, Check-in-Themen und Protokoll"],["entscheidungen","entscheidungen.html","Entscheidungen","Entscheidungslog, Protokolle der Besprechungen, Wochenmail"]];
-  el.className="subnav";
-  el.innerHTML=items.map(([k,h,l,t])=>`<a href="${h}" data-k="${k}" title="${t}" class="${k===active?"on":""}">${l}</a>`).join("");
-  const slot=document.getElementById("subnavSlot"); if(slot && el.parentElement!==slot) slot.appendChild(el);
+  document.querySelectorAll("#subnavSlot a").forEach(x=>x.classList.toggle("on", x.dataset.sk===active));
+  const legacy=document.getElementById("subnav"); if(legacy){ legacy.style.display="none"; legacy.innerHTML=""; }
 }
 
 /* ---- Kopfbild (V12): Grafik frei sichtbar, ohne Scrim und ohne Text darauf; Titel und Knöpfe stehen darunter ---- */
-const GF_IMG={ tor:"/assets/img/tor-menschen.webp", ankunft:"/assets/img/ankunft.webp", kiste:"/assets/img/kiste-regen.webp", lager:"/assets/img/lager-begruessung.webp", buehne:"/assets/img/buehne-herbst.webp", lagerfeuer:"/assets/img/lagerfeuer.webp" };
-const GF_IMG_ALT={ tor:"Festivaltor mit ankommenden Menschen", ankunft:"Ankunft auf dem Festivalgelände", kiste:"Kiste im Regen zwischen den Zelten", lager:"Begrüßung im Lager", buehne:"Bühne im Herbstwald", lagerfeuer:"Lagerfeuer am Abend" };
+const GF_IMG={ tor:"/assets/img/tor-menschen.webp", ankunft:"/assets/img/ankunft.webp", kiste:"/assets/img/kiste-regen.webp", lager:"/assets/img/lager-begruessung.webp", buehne:"/assets/img/buehne-herbst.webp", lagerfeuer:"/assets/img/lagerfeuer.webp", karten:"/assets/game/phase-planung-szene.webp", aufbau:"/assets/game/phase-produktion-szene.webp", pflege:"/assets/game/phase-verbesserung-szene.webp", entscheidungen:"/assets/game/entscheidungen-kopf.webp", wochenmail:"/assets/game/wochenmail-kopf.webp" };
+const GF_IMG_ALT={ tor:"Festivaltor mit ankommenden Menschen", ankunft:"Ankunft auf dem Festivalgelände", kiste:"Kiste im Regen zwischen den Zelten", lager:"Begrüßung im Lager", buehne:"Bühne im Herbstwald", lagerfeuer:"Lagerfeuer am Abend", karten:"Kartentisch mit Plänen vor der Waldlichtung", aufbau:"Bühnenaufbau auf dem Festivalgelände", pflege:"Herbstlager mit Notizbuch am Feuer", entscheidungen:"Richterhammer und Wegweiser im Abendlicht", wochenmail:"Brief mit Siegel, Feder und Kaffeebecher" };
 function gfMountHero(img, title, sub, opts={}){
   const el=document.getElementById("hero"); if(!el) return;
   el.className="hero"+(opts.compact?" compact":"");
@@ -170,7 +211,7 @@ function gfAsanaText(t){
          `Kontext: ${t.short_description||(t.context||"").split("\n")[0]||"—"}\n`+
          `Empfehlung: ${t.recommendation||"—"}\n`+
          `Nächster Schritt: ${t.next_action||"—"}\n`+
-         `Quelle: GF Weekly`;
+         `Quelle: Das Hohe Haus`;
 }
 
 /* ---- V13: Modal mit Text (Protokoll, Wochenmail): kopieren, per Mail, schließen ---- */
@@ -182,7 +223,7 @@ function gfTextModal(title, text, opts={}){
   const mailto=`mailto:${opts.to||GF_MAIL_TO}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
   m.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="${gfEsc(title)}">
     <div class="modal-h"><h3>${gfEsc(title)}</h3><button class="icon-btn" data-x title="Schließen">✕</button></div>
-    ${opts.intro?`<p class="modal-intro">${opts.intro}</p>`:""}
+    ${opts.pic?`<figure class="modal-pic"><img src="${GF_IMG[opts.pic]||opts.pic}" alt="${gfEsc(GF_IMG_ALT[opts.pic]||"")}"></figure>`:""}${opts.intro?`<p class="modal-intro">${opts.intro}</p>`:""}
     <textarea class="modal-text" readonly>${gfEsc(text)}</textarea>
     <div class="modal-f"><button class="btn btn-primary" data-copy>Kopieren</button><a class="btn btn-ghost" href="${mailto}">Per Mail senden</a>${opts.extra||""}<button class="btn btn-ghost" data-x style="margin-left:auto">Schließen</button></div>
   </div>`;
@@ -212,7 +253,7 @@ function gfProtocolText(meta, log, openTopics){
   grp("vertagt","Vertagt",(e)=>`- ${e.title}${e.until?` → ${gfFmtShort(e.until)}`:""}`);
   grp("besprochen","Besprochen ohne Beschluss",(e)=>`- ${e.title}${e.next_action?`: ${e.next_action}`:""}`);
   if(openTopics&&openTopics.length){ L.push(`Offen geblieben (zu besprechen): ${openTopics.length}`); openTopics.slice(0,12).forEach(t=>L.push(`- ${t.title}${t.priority==="hoch"?" (hoch)":""}`)); if(openTopics.length>12) L.push(`- … und ${openTopics.length-12} weitere`); L.push(""); }
-  L.push(`Erstellt mit GF Weekly · gfweekly.netlify.app`);
+  L.push(`Erstellt mit Das Hohe Haus · gfweekly.netlify.app`);
   return L.join("\n");
 }
 

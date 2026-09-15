@@ -1,5 +1,5 @@
 /* ===========================================================
-   GF Weekly · Easter Eggs (V14)
+   Das Hohe Haus · Easter Eggs (V14)
    Sechs kleine Überraschungen. Alle harmlos, alle ohne Ton,
    alle respektieren prefers-reduced-motion. Zum Testen:
    ?egg=fest | ?egg=nacht | ?egg=bus | ?egg=konfetti | ?egg=moehre
@@ -49,8 +49,8 @@
     if(!isNight) return;
     const gate=$("#gate"); if(!gate) return;
     if(!$(".egg-stars",gate) && !REDUCED){ const s=document.createElement("div"); s.className="egg-stars"; for(let i=0;i<26;i++){ const st=document.createElement("i"); st.style.left=(Math.random()*100)+"%"; st.style.top=(Math.random()*38)+"%"; st.style.animationDelay=(Math.random()*4)+"s"; st.style.animationDuration=(2.4+Math.random()*2.6)+"s"; s.appendChild(st); } gate.prepend(s); }
-    const sub=$(".gate-card .sub",gate); if(sub && !/Feierabend/.test(sub.textContent)) sub.textContent=sub.textContent.replace("Geschäftsleitung Wilde Möhre","Geschäftsleitung · eigentlich Feierabend");
-    const meta=$(".brand .meta"); if(meta && !/Feierabend/.test(meta.textContent)) meta.textContent="Geschäftsleitung · eigentlich Feierabend";
+    const sub=$(".gate-card .sub",gate); if(sub && !/Feierabend/.test(sub.textContent)){ const t=sub.textContent.replace(/Geschäftsführung der Wilden Habitate|Geschäftsleitung Wilde Möhre/,"eigentlich Feierabend"); if(t!==sub.textContent) sub.textContent=t; } /* V18: nur zuweisen, wenn sich etwas ändert (sonst Endlosschleife mit dem MutationObserver) */
+    const meta=$(".brand .meta"); if(meta && !/Feierabend/.test(meta.textContent)) meta.textContent="Wilde Habitate · eigentlich Feierabend";
   }
 
   /* 4) Möhre-Code: „möhre“ tippen */

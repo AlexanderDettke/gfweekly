@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#17171a" />
-<title>GF Weekly · Check-in vorbereiten</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=17" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=17" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=17" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=17" />
-<link rel="stylesheet" href="/assets/styles.css?v=17" />
-<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
+<title>Das Hohe Haus · Check-in vorbereiten</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=18" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=18" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=18" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=18" />
+<link rel="stylesheet" href="/assets/styles.css?v=18" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
 
@@ -19,8 +19,8 @@
   <div class="gate-card">
     <div class="mark pic"><img src="/assets/img/flagge-144.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
-    <h1>GF Weekly</h1>
-    <div class="sub">Check-in · Geschäftsleitung Wilde Möhre · Alex &amp; Lea</div>
+    <h1>Das Hohe Haus</h1>
+    <div class="sub">Check-in · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
     <div class="err" id="gateErr"></div>
@@ -50,9 +50,9 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=17"></script>
-<script src="/assets/game.js?v=17"></script>
-<script src="/assets/eggs.js?v=17" defer></script>
+<script src="/assets/core.js?v=18"></script>
+<script src="/assets/game.js?v=18"></script>
+<script src="/assets/eggs.js?v=18" defer></script>
 <script>
 /* V15: Check-in = Vorbereitung auf das Weekly, direkt aus den Board-Spalten (kein eigener Datenstand mehr). */
 const $=s=>document.querySelector(s);
@@ -119,9 +119,9 @@ function render(){
 }
 
 function agendaText(){
-  const ag=agendaItems(); const L=[`GF Weekly · Check-in-Agenda · ${gfFmtDay(NOW)}`,""];
+  const ag=agendaItems(); const L=[`Das Hohe Haus · Check-in-Agenda · ${gfFmtDay(NOW)}`,""];
   ag.forEach((t,i)=>{ L.push(`${i+1}. ${t.title} [${LANE_LABEL[t.board_lane]} · ${t.priority}]`); if(t.short_description) L.push(`   ${t.short_description}`); if(t.next_action) L.push(`   Nächster Schritt: ${t.next_action}`); if(who(t)) L.push(`   Verantwortung: ${who(t)}`); L.push(""); });
-  L.push(`${ag.length} Themen · erstellt mit GF Weekly · gfweekly.netlify.app`);
+  L.push(`${ag.length} Themen · erstellt mit Das Hohe Haus · gfweekly.netlify.app`);
   return L.join("\n");
 }
 $("#copyBtn").onclick=()=>{ if(!agendaItems().length){ gfToast("Keine Themen in der Agenda"); return; } gfTextModal("Check-in-Agenda", agendaText(), { subject:`GF-Check-in ${gfFmtShort(NOW.toISOString())} · Agenda`, intro:"Zum Kopieren oder per Mail an Alex und Lea." }); };

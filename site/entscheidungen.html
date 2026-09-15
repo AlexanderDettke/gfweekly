@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#17171a" />
-<title>GF Weekly · Entscheidungen</title>
+<title>Das Hohe Haus · Entscheidungen</title>
 <meta name="description" content="Entscheidungslog, Protokolle und Wochenmail der Geschäftsleitung – Wilde Möhre. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=17" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=17" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=17" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=17" />
-<link rel="stylesheet" href="/assets/styles.css?v=17" />
-<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=18" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=18" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=18" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=18" />
+<link rel="stylesheet" href="/assets/styles.css?v=18" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
 
@@ -20,8 +20,8 @@
   <div class="gate-card">
     <div class="mark pic"><img src="/assets/img/flagge-144.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
-    <h1>GF Weekly</h1>
-    <div class="sub">Entscheidungen · Geschäftsleitung Wilde Möhre · Alex &amp; Lea</div>
+    <h1>Das Hohe Haus</h1>
+    <div class="sub">Entscheidungen · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
     <div class="err" id="gateErr"></div>
@@ -57,9 +57,9 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=17"></script>
-<script src="/assets/game.js?v=17"></script>
-<script src="/assets/eggs.js?v=17" defer></script>
+<script src="/assets/core.js?v=18"></script>
+<script src="/assets/game.js?v=18"></script>
+<script src="/assets/eggs.js?v=18" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 let DEC=[], SESS=[], TOPICS=[], MS=[], CYC=null, Q="", RANGE=90, EDITING=null;
@@ -187,9 +187,9 @@ async function wochenmail(){
   if(next.length){ L.push("Nächste Meilensteine (30 Tage)"); next.forEach(m=>L.push(`- ${gfFmtShort(m.date_from)}${m.date_to?`–${gfFmtShort(m.date_to)}`:""} ${m.title}${m.strand?` · ${m.strand}`:""}`)); L.push(""); }
   if(CYC){ const tr=(CYC.transitions||[]).map(x=>({...x,d:x.date||x.date_from})).filter(x=>x.d&&x.d>=iso(today)).sort((a,b)=>a.d<b.d?-1:1)[0]; if(tr) L.push(`Nächster Übergang: ${tr.title||tr.label||""} am ${gfFmtShort(tr.d)}`); L.push(""); }
   const st=window.GF_GAME?.state; if(st){ const rk={bronze:"Bronze",silber:"Silber",gold:"Gold"}[st.rank]||"kein Rang"; L.push(`Habitat-Punkte: ${st.weekPts} Taler diese Woche (${rk}) · ${st.total} im Jahrestopf, Stufe ${st.level?.label||""}${st.badges?.length?` · ${st.badges.length} Abzeichen`:""}`); L.push(""); }
-  L.push("Erstellt mit GF Weekly · gfweekly.netlify.app");
+  L.push("Erstellt mit Das Hohe Haus · gfweekly.netlify.app");
   gfApi("score_event",{kind:"wochenmail"}).catch(()=>{});
-  gfTextModal("Wochenmail-Entwurf", L.join("\n"), {subject:`GF-Wochenmail · Woche bis ${gfFmtShort(iso(today))}`, intro:"Entwurf aus Board, Entscheidungslog und Meilensteinen. Vor dem Versand kurz durchlesen und ergänzen."});
+  gfTextModal("Wochenmail-Entwurf", L.join("\n"), {pic:"wochenmail", subject:`GF-Wochenmail · Woche bis ${gfFmtShort(iso(today))}`, intro:"Entwurf aus Board, Entscheidungslog und Meilensteinen. Vor dem Versand kurz durchlesen und ergänzen."});
 }
 
 $("#q").oninput=e=>{ Q=e.target.value.trim().toLowerCase(); render(); };
@@ -199,7 +199,7 @@ $("#addDec").onclick=()=>{ EDITING={id:null, decided_at:iso(today), topic_title:
 
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("themen"); gfMountSubnav("entscheidungen");
-  gfMountHero("/assets/game/entscheidungen-kopf.webp","Entscheidungen","Was wir entschieden haben, wann und mit welchem nächsten Schritt. Darunter die Protokolle der Besprechungen.",{compact:true, aside:`<button class="btn btn-sm" id="mailBtn">Wochenmail erzeugen</button><a class="btn btn-sm" href="board.html?meeting=1">Besprechung starten</a>`});
+  gfMountHero("entscheidungen","Entscheidungen","Was wir entschieden haben, wann und mit welchem nächsten Schritt. Darunter die Protokolle der Besprechungen.",{compact:true, aside:`<button class="btn btn-sm" id="mailBtn">Wochenmail erzeugen</button><a class="btn btn-sm" href="board.html?meeting=1">Besprechung starten</a>`});
   $("#mailBtn").onclick=wochenmail;
   await load();
 });

@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#17171a" />
-<title>GF Weekly · Bearbeiten</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=17" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=17" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=17" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=17" />
-<link rel="stylesheet" href="/assets/styles.css?v=17" />
-<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
+<title>Das Hohe Haus · Bearbeiten</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=18" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=18" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=18" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=18" />
+<link rel="stylesheet" href="/assets/styles.css?v=18" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
 
@@ -19,8 +19,8 @@
   <div class="gate-card">
     <div class="mark pic"><img src="/assets/img/flagge-144.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
-    <h1>GF Weekly</h1>
-    <div class="sub">Bearbeiten · Geschäftsleitung Wilde Möhre · Alex &amp; Lea</div>
+    <h1>Das Hohe Haus</h1>
+    <div class="sub">Bearbeiten · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
     <div class="err" id="gateErr"></div>
@@ -29,6 +29,7 @@
 
 <div class="app wrap" id="app">
   <header id="topbar"></header>
+  <div id="hero"></div>
 
   <div class="toolbar">
     <div class="segs" id="tabs">
@@ -68,9 +69,9 @@
 <datalist id="peopleDL"></datalist>
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=17"></script>
-<script src="/assets/game.js?v=17"></script>
-<script src="/assets/eggs.js?v=17" defer></script>
+<script src="/assets/core.js?v=18"></script>
+<script src="/assets/game.js?v=18"></script>
+<script src="/assets/eggs.js?v=18" defer></script>
 <script>
 let topics=[], people=[], linksByItem={}, openIds=new Set();
 const $=s=>document.querySelector(s);
@@ -78,7 +79,7 @@ const REL=["","niedrig","mittel","hoch","kritisch"], SRC=["manuell","ki","pruefe
 const LT=["coda","drive","gdoc","gsheet","gslides","email","url","note","file","other"];
 const DSTATE=["","Delegation vorbereitet","Notification nötig","Mail-Entwurf nötig"];
 
-gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("edit"); await loadAll(); });
+gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("edit"); gfMountHero("pflege","Bearbeiten","Themen, Check-ins, Personen und Links pflegen. Hier wird geordnet, was im Board keinen Platz braucht.",{compact:true}); await loadAll(); });
 async function loadAll(){
   const [d,p,l]=await Promise.all([gfApi("list"),gfApi("people_list"),gfApi("links_all").catch(()=>({links:[]}))]);
   topics=d.topics||[]; people=p.people||[];

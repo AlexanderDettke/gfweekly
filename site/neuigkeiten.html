@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#17171a" />
-<title>GF Weekly · Neuigkeiten</title>
+<title>Das Hohe Haus · Neuigkeiten</title>
 <meta name="description" content="Neuigkeiten der Geschäftsleitung Wilde Möhre: Ticker, Themenlage, Sichtungskorb. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=17" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=17" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=17" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=17" />
-<link rel="stylesheet" href="/assets/styles.css?v=17" />
-<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=18" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=18" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=18" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=18" />
+<link rel="stylesheet" href="/assets/styles.css?v=18" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
 
@@ -20,8 +20,8 @@
   <div class="gate-card">
     <div class="mark pic"><img src="/assets/img/flagge-144.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
-    <h1>GF Weekly</h1>
-    <div class="sub">Neuigkeiten · Geschäftsleitung Wilde Möhre · Alex &amp; Lea</div>
+    <h1>Das Hohe Haus</h1>
+    <div class="sub">Neuigkeiten · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
     <div class="err" id="gateErr"></div>
@@ -72,9 +72,9 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=17"></script>
-<script src="/assets/game.js?v=17"></script>
-<script src="/assets/eggs.js?v=17" defer></script>
+<script src="/assets/core.js?v=18"></script>
+<script src="/assets/game.js?v=18"></script>
+<script src="/assets/eggs.js?v=18" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 let ITEMS=[], TOPICS=[], STRANDS=[], Q="", WHO="", RANGE=14, REL="", SRC=new Set(["notiz","mail","asana","kalender","entscheidung","protokoll","manuell"]), SHOWDONE=false;
@@ -226,7 +226,7 @@ document.addEventListener("gf-who",()=>render());
 
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("neuigkeiten");
-  gfMountHero("lager","Neuigkeiten","Was bei Lea und Alex gerade passiert. Der Ticker für den kurzen Blick, die Themenlage zum Einlesen, der Sichtungskorb für die GF-Runde.",{compact:true, aside:`<button class="btn btn-sm" id="seenBtn">Alles gesehen</button><a class="btn btn-sm" href="board.html">Zum Board</a>`});
+  gfMountHero("ankunft","Neuigkeiten","Was bei Lea und Alex gerade passiert. Der Ticker für den kurzen Blick, die Themenlage zum Einlesen, der Sichtungskorb für die GF-Runde.",{compact:true, aside:`<button class="btn btn-sm" id="seenBtn">Alles gesehen</button><a class="btn btn-sm" href="board.html">Zum Board</a>`});
   $("#seenBtn").onclick=markSeen;
   await load();
   if(location.hash){ const el=document.querySelector(location.hash); if(el) setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"start"}),150); }

@@ -5,17 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#17171a" />
-<title>GF Weekly · Start</title>
+<title>Das Hohe Haus · Start</title>
 <meta name="description" content="Startseite der Geschäftsleitung: Jahreszyklus, Meilensteine, wichtigste Themen, Rituale. Vertraulich." />
-<meta property="og:title" content="GF Weekly · Geschäftsleitung" />
+<meta property="og:title" content="Das Hohe Haus · Geschäftsführung der Wilden Habitate" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre." />
 <meta property="og:image" content="assets/og-image.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=17" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=17" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=17" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=17" />
-<link rel="stylesheet" href="/assets/styles.css?v=17" />
-<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";})();</script>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=18" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=18" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=18" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=18" />
+<link rel="stylesheet" href="/assets/styles.css?v=18" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
 
@@ -23,8 +23,8 @@
   <div class="gate-card">
     <div class="mark pic"><img src="/assets/img/flagge-144.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
-    <h1>GF Weekly</h1>
-    <div class="sub">Start · Geschäftsleitung Wilde Möhre · Alex &amp; Lea</div>
+    <h1>Das Hohe Haus</h1>
+    <div class="sub">Große Fragen. Klare Entscheidungen. Gelegentlich Kaffee oder besser Wein?</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
     <div class="err" id="gateErr"></div>
@@ -81,9 +81,9 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=17"></script>
-<script src="/assets/game.js?v=17"></script>
-<script src="/assets/eggs.js?v=17" defer></script>
+<script src="/assets/core.js?v=18"></script>
+<script src="/assets/game.js?v=18"></script>
+<script src="/assets/eggs.js?v=18" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const MON=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -354,13 +354,13 @@ gfGate(async()=>{
   const wd=NOW.toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long"});
   let lv0=null; try{ lv0=localStorage.getItem("gf_level"); }catch(e){}
   const heroImg = lv0 && window.GF_GAME ? GF_GAME.icon("habitat-"+(["lichtung","lagerplatz","dorf","festival","habitat"].indexOf(lv0)+1)+"-"+lv0) : "ankunft";
-  gfMountHero(heroImg, `Guten Tag, ${gfEsc(gfWho())}`, `${wd} · Geschäftsleitung Wilde Möhre`, {aside:`<a class="btn btn-sm" href="capture.html">Thema erfassen</a><a class="btn btn-sm" href="board.html">Board öffnen</a>`});
+  gfMountHero(heroImg, `Guten Tag, ${gfEsc(gfWho())}`, `${GF_APP_MOTTO}<span class="hero-date">${wd} · ${GF_APP_SUB}</span>`, {aside:`<a class="btn btn-sm" href="capture.html">Thema erfassen</a><a class="btn btn-sm" href="board.html">Board öffnen</a>`});
   document.addEventListener("gf-who",e=>gfHeroText(`Guten Tag, ${gfEsc(e.detail)}`,null));
   try{
     const [cyc, ms]=await Promise.all([gfApi("cycle_get",{year:NOW.getFullYear()}), gfApi("milestones_list",{all:false})]);
     CYCLE=cyc; MS=ms.milestones||[];
     renderCycle(); renderRituals(); renderMilestones();
-    const ph=phaseOf(NOW); const hp=document.querySelector("#hero p"); if(hp) hp.textContent=`${wd} · Phase ${ph.label}`;
+    const ph=phaseOf(NOW); const hd=document.querySelector("#hero .hero-date"); if(hd) hd.textContent=`${wd} · Phase ${ph.label} · ${GF_APP_SUB}`;
   }catch(e){ $("#cycle").innerHTML=`<div class="empty">Zyklus konnte nicht geladen werden: ${gfEsc(e.message||"Verbindung")}</div>`; }
   await Promise.all([loadTopics(), loadQuick()]);
 });
