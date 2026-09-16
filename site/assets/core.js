@@ -415,3 +415,101 @@ async function gfLoadBand(el, opts={}){
   try{ const since=new Date(Date.now()-14*86400000).toISOString(); const d=await gfApi("news_list",{kinds:["ticker"],since,limit:300}); gfMountBand(el, gfBandPick(d.items||[]), opts); }
   catch(e){ el.innerHTML=""; el.hidden=true; }
 }
+
+/* ===========================================================
+   V20 (16.09.2026) · Team, letzte 3 Monate: Schnelleinschätzung aus der Team- und Partneranalyse auf der Startseite.
+   Liest die Aktion overview der Edge Function „tpa“ (gleiches Passwort). Faktenlage = Belege nach Richtung und Monat;
+   Trend = Gesamtwert (Mittel der sechs Werte, im Browser gerechnet) letzte bestätigte Einschätzung gegen den jüngeren Stand;
+   stammt der jüngere Stand aus einem unbestätigten Entwurf, ist er als Entwurf gekennzeichnet. Nichts wird hier geschrieben.
+   =========================================================== */
+const GF_TPA_FN="https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/tpa";
+const GF_TPA_URL="https://team-partner-analyse.netlify.app";
+const GF_TPA_AVATAR={ alex:"Alex", lea:"Lea" };
+async function gfTpaApi(action, payload){
+  const res=await fetch(GF_TPA_FN,{ method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ action, password:gfPW(), payload }) });
+  let d={}; try{ d=await res.json(); }catch(e){}
+  if(res.status===401) throw { auth:true, message:"Die Analyse kennt dieses Passwort nicht." };
+  if(!res.ok) throw new Error(d.error||("HTTP "+res.status));
+  return d;
+}
+function gfTeamOverall(scores){ const v=Object.values(scores||{}).filter(x=>typeof x==="number"); if(!v.length) return null; return Math.round(v.reduce((a,b)=>a+b,0)/v.length); }
+function gfTeamMonthLabel(m){ const d=new Date(m+"-01T00:00:00"); return d.toLocaleDateString("de-DE",{month:"short"}).replace(".",""); }
+function gfTeamShortDate(iso){ return iso?new Date(iso.length===10?iso+"T00:00:00":iso).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}):""; }
+/* Trend je Person: Basis = letzte bestätigte Einschätzung; Stand = jüngerer Entwurf (gekennzeichnet) oder, ohne Entwurf, die letzte bestätigte gegen die vorherige */
+function gfTeamTrend(p){
+  const latest=p.latest, draft=p.draft, prev=p.previous;
+  if(draft && (!latest || draft.assessed_at>latest.assessed_at)){ return { base:latest?gfTeamOverall(latest.scores):null, baseOn:latest?latest.assessed_at:null, cur:gfTeamOverall(draft.scores), curOn:draft.assessed_at, curScores:draft.scores, baseScores:latest?latest.scores:{}, draft:true }; }
+  if(latest && prev){ return { base:gfTeamOverall(prev.scores), baseOn:prev.assessed_at, cur:gfTeamOverall(latest.scores), curOn:latest.assessed_at, curScores:latest.scores, baseScores:prev.scores, draft:false }; }
+  if(latest){ return { base:null, baseOn:null, cur:gfTeamOverall(latest.scores), curOn:latest.assessed_at, curScores:latest.scores, baseScores:{}, draft:false }; }
+  return null;
+}
+function gfTeamTrendHTML(t){
+  if(!t || t.cur==null) return `<span class="tm-none" title="Noch keine Einschätzung">–</span>`;
+  const d=(t.base!=null)?t.cur-t.base:null;
+  const arrow=d==null?"":(Math.abs(d)<2?`<span class="tm-flat">·</span>`:(d>0?`<span class="tm-up">▲${d}</span>`:`<span class="tm-down">▼${Math.abs(d)}</span>`));
+  const title=d==null?`Gesamtwert ${t.cur} (Stand ${gfTeamShortDate(t.curOn)})`:`${t.base} (${gfTeamShortDate(t.baseOn)}) → ${t.cur} (${gfTeamShortDate(t.curOn)})${t.draft?", Stand aus unbestätigtem Entwurf":""}`;
+  return `<span class="tm-trend ${t.draft?"is-draft":""}" title="${gfEsc(title)}"><b>${t.cur}</b>${arrow}${t.draft?`<i class="tm-dtag">Entwurf</i>`:""}</span>`;
+}
+function gfTeamMonths(ev, months, max){
+  return `<span class="tm-months" aria-hidden="true">${months.map(m=>{ const o=(ev.months||{})[m]||{stuetzt:0,neutral:0,schwaecht:0}; const tot=o.stuetzt+o.neutral+o.schwaecht; const h=x=>max?Math.round(x/max*100):0; return `<span class="tm-col" title="${gfEsc(gfTeamMonthLabel(m))}: ${tot} Belege (${o.stuetzt} stützen, ${o.neutral} neutral, ${o.schwaecht} schwächen)"><span class="tm-stack">${o.schwaecht?`<i class="w" style="height:${h(o.schwaecht)}%"></i>`:""}${o.neutral?`<i class="n" style="height:${h(o.neutral)}%"></i>`:""}${o.stuetzt?`<i class="s" style="height:${h(o.stuetzt)}%"></i>`:""}</span><small>${gfEsc(gfTeamMonthLabel(m))}</small></span>`; }).join("")}</span>`;
+}
+function gfTeamBar(ev){
+  const tot=ev.total||0; if(!tot) return `<span class="tm-bar empty" title="Keine Belege im Zeitraum"><small>keine Belege</small></span>`;
+  const w=x=>Math.round(x/tot*100);
+  return `<span class="tm-bar" title="${tot} Belege: ${ev.stuetzt} stützen, ${ev.neutral} neutral, ${ev.schwaecht} schwächen${ev.proposals?`, ${ev.proposals} ungeprüft`:""}"><span class="tm-seg s" style="width:${w(ev.stuetzt)}%"></span><span class="tm-seg n" style="width:${w(ev.neutral)}%"></span><span class="tm-seg w" style="width:${w(ev.schwaecht)}%"></span></span><span class="tm-nums"><b>${tot}</b><span class="s">${ev.stuetzt}</span><span class="w">${ev.schwaecht}</span></span>`;
+}
+function gfTeamAvatar(p){
+  const who=GF_TPA_AVATAR[p.id]; const av=who?gfAvatarTag(who,"tm-av"):""; if(av) return av;
+  return `<span class="tm-ini" aria-hidden="true">${gfEsc((p.initials||p.name||"?").slice(0,2))}</span>`;
+}
+function gfTeamRow(p, months, max, dims){
+  const t=gfTeamTrend(p); const ev=p.evidence||{total:0};
+  const deltas=t&&t.base!=null?dims.map(d=>{ const a=t.baseScores?.[d.key], b=t.curScores?.[d.key]; if(typeof a!=="number"||typeof b!=="number") return ""; const x=b-a; return `<span class="tm-dim ${x>1?"up":(x<-1?"down":"")}">${gfEsc(d.short_label)} <b>${b}</b>${Math.abs(x)>=2?`<i>${x>0?"+":""}${x}</i>`:""}</span>`; }).join(""):"";
+  const link=`${GF_TPA_URL}/person.html?id=${encodeURIComponent(p.id)}`;
+  return `<article class="tm" data-id="${gfEsc(p.id)}">
+    <button type="button" class="tm-row" aria-expanded="false">
+      ${gfTeamAvatar(p)}
+      <span class="tm-name"><b>${gfEsc(p.name)}</b><small>${gfEsc((p.role||"").split(/[·;(]/)[0].trim())}</small></span>
+      ${gfTeamMonths(ev,months,max)}
+      <span class="tm-belege">${gfTeamBar(ev)}</span>
+      ${gfTeamTrendHTML(t)}
+      <span class="tm-last">${ev.last_on?`zuletzt ${gfEsc(gfTeamShortDate(ev.last_on))}`:""}</span>
+      <span class="chev" aria-hidden="true"></span>
+    </button>
+    <div class="tm-more">
+      ${ev.last_summary?`<p class="tm-sum"><span>Letzter Beleg (${gfEsc(gfTeamShortDate(ev.last_on))}):</span> ${gfEsc(ev.last_summary)}</p>`:""}
+      ${deltas?`<div class="tm-dims">${deltas}</div>`:(t&&t.cur!=null?`<div class="tm-dims">${dims.map(d=>{ const b=t.curScores?.[d.key]; return typeof b==="number"?`<span class="tm-dim">${gfEsc(d.short_label)} <b>${b}</b></span>`:""; }).join("")}</div>`:"")}
+      <div class="tk-links">${t?`<span class="nw-srct">${t.draft?`Stand aus KI-Entwurf vom ${gfEsc(gfTeamShortDate(t.curOn))}, noch nicht bestätigt${t.baseOn?`; Basis bestätigt ${gfEsc(gfTeamShortDate(t.baseOn))}`:""}`:`Bestätigt ${gfEsc(gfTeamShortDate(t.curOn))}${t.baseOn?`, davor ${gfEsc(gfTeamShortDate(t.baseOn))}`:""}`}${ev.proposals?` · ${ev.proposals} Belege ungeprüft`:""}</span>`:""}<a href="${link}" target="_blank" rel="noopener">In der Analyse öffnen ↗</a></div>
+    </div>
+  </article>`;
+}
+function gfRenderTeam(el, data, circle){
+  const people=(data.people||[]).filter(p=>p.circle===circle).sort((a,b)=>(a.is_leader?0:1)-(b.is_leader?0:1)||(b.evidence?.total||0)-(a.evidence?.total||0)||a.name.localeCompare(b.name,"de"));
+  const months=data.months||[]; const dims=(data.dimensions||[]).slice().sort((a,b)=>(a.sort||0)-(b.sort||0));
+  let max=0; people.forEach(p=>months.forEach(m=>{ const o=(p.evidence?.months||{})[m]; if(o) max=Math.max(max,o.stuetzt+o.neutral+o.schwaecht); }));
+  const body=el.querySelector(".tm-list");
+  body.innerHTML=people.length?people.map(p=>gfTeamRow(p,months,max,dims)).join(""):`<div class="empty soft">Keine aktiven Personen in diesem Kreis.</div>`;
+  const n=el.querySelector(".tm-n"); if(n) n.textContent=people.length;
+  const drafts=people.filter(p=>gfTeamTrend(p)?.draft).length; const hint=el.querySelector(".tm-hint"); if(hint) hint.textContent=drafts?`${drafts} von ${people.length} Trends aus unbestätigten Entwürfen`:"";
+  body.querySelectorAll(".tm").forEach(row=>{ const b=row.querySelector(".tm-row"); b.onclick=e=>{ if(e.target.closest("a")) return; const o=row.classList.toggle("open"); b.setAttribute("aria-expanded",o?"true":"false"); }; });
+  gfStagger(body,".tm");
+}
+async function gfLoadTeam(el){
+  if(!el) return;
+  const circles=[["team","Team"],["geschaeftsfuehrung","GF"],["partner","Partner"],["support","Support"]];
+  let circle="team"; try{ circle=localStorage.getItem("gf_team_circle")||"team"; }catch(e){}
+  let open=true; try{ open=localStorage.getItem("gf_nw_team")!=="0"; }catch(e){}
+  el.innerHTML=`<details class="nw-sec tm-sec" ${open?"open":""}>
+    <summary><h2>Team, letzte 3 Monate</h2><span class="n tm-n"></span><span class="hint">Belege nach Richtung je Monat, Gesamtwert und Trend aus der Team- und Partneranalyse. Klick öffnet Details.</span><span class="tm-hint"></span><span class="chev"></span></summary>
+    <div class="nw-body">
+      <div class="tm-top"><div class="segs tm-segs">${circles.map(([k,l])=>`<button type="button" class="seg ${k===circle?"on":""}" data-c="${k}">${l}</button>`).join("")}</div><span class="tm-legend"><i class="s"></i>stützt <i class="n"></i>neutral <i class="w"></i>schwächt <i class="d"></i>Entwurf</span><a class="btn btn-sm btn-ghost" href="${GF_TPA_URL}" target="_blank" rel="noopener">Zur Analyse ↗</a></div>
+      <div class="tm-list"><div class="loading">lädt …</div></div>
+    </div>
+  </details>`;
+  const det=el.querySelector("details"); det.addEventListener("toggle",()=>{ try{ localStorage.setItem("gf_nw_team",det.open?"1":"0"); }catch(e){} });
+  let data=null;
+  try{ data=await gfTpaApi("overview",{days:90}); }
+  catch(e){ el.querySelector(".tm-list").innerHTML=`<div class="empty soft">${gfEsc(e.message||"Die Analyse ist gerade nicht erreichbar.")}${e.auth?` <a href="${GF_TPA_URL}" target="_blank" rel="noopener">Analyse öffnen ↗</a>`:""}</div>`; return; }
+  gfRenderTeam(el,data,circle);
+  el.querySelectorAll(".tm-segs .seg").forEach(b=>b.onclick=()=>{ circle=b.dataset.c; el.querySelectorAll(".tm-segs .seg").forEach(x=>x.classList.toggle("on",x===b)); try{ localStorage.setItem("gf_team_circle",circle); }catch(e){} gfRenderTeam(el,data,circle); });
+}
