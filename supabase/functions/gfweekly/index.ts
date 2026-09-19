@@ -43,11 +43,12 @@ function inboxRow(t: any){
 }
 const SITE_FIELDS = ['name','url','category','purpose','notes','login_user','login_password','login_note','status','preview'];
 const SITE_STATUSES = ['aktiv','entwurf','archiv'];
-/* v22 (14.09.2026): Habitat-Punkte, siehe Modul unten (checkin, score_get, score_event, score_events, score_rules; Vergabe in add/capture/update/decision_add/ritual_toggle/session_end/milestone_save).
+/* v27 (20.09.2026): Plattformen: platform_digest {days}, platform_feed {platform, since, limit} lesen die Views hh_feed_habitate/hh_feed_partner/hh_partner_stand/hh_habitate_offen (nur SELECT, nie Schreiben in vvp_*); NEWS_SOURCES um 'plattform'.
+   v22 (14.09.2026): Habitat-Punkte, siehe Modul unten (checkin, score_get, score_event, score_events, score_rules; Vergabe in add/capture/update/decision_add/ritual_toggle/session_end/milestone_save).
    v21 (14.09.2026): Neuigkeiten (gfweekly_news): Ticker, Sichtungskorb (Kandidaten), Themenlage je Strang.
    Befüllt vom täglichen Cowork-Auftrag (news_add_many, Dedup über source_ref), gelesen von site/neuigkeiten.html. */
 const NEWS_KINDS = ['ticker','kandidat','lage'];
-const NEWS_SOURCES = ['notiz','asana','kalender','mail','protokoll','entscheidung','manuell'];
+const NEWS_SOURCES = ['notiz','asana','kalender','mail','protokoll','entscheidung','manuell','plattform']; // v27: plattform (Wilde Habitate, Wild Wild Partner)
 const NEWS_STATUS = ['neu','gesehen','uebernommen','verworfen'];
 const NEWS_FIELDS = ['who','source','strand','title','body','quote','source_title','source_url','source_ref','relevance','topic_id','status','run_id'];
 function newsRow(n: any){
@@ -322,7 +323,7 @@ Deno.serve(async (req: Request) => {
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:22, secretConfigured: !!PASSWORD, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
+    if (action === 'ping') return json({ ok:true, version:27, secretConfigured: !!PASSWORD, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -695,6 +696,44 @@ Deno.serve(async (req: Request) => {
       if(t.status!==undefined){ if(!NEWS_STATUS.includes(t.status)) return json({ error:'status' },400); patch.status=t.status; patch.decided_by=(t.decided_by??'').toString().slice(0,120); patch.decided_at=new Date().toISOString(); }
       if(!Object.keys(patch).length) return json({ error:'nichts' },400);
       const { data, error } = await admin.from('gfweekly_news').update(patch).eq('id',t.id).select().single(); if(error) throw error; return json({ item:data });
+    }
+    /* ----- Plattformen (v27, 20.09.2026): Executive Briefing aus Wilde Habitate (vvp_*) und Wild Wild Partner.
+       Nur lesend über die Views hh_feed_habitate, hh_feed_partner, hh_partner_stand, hh_habitate_offen (Migration 20260920_hh_feeds).
+       Nichts wird gespeichert, nichts gerechnet, was nicht aus den Views kommt. Zeitfenster 1 bis 90 Tage, Standard 7. ----- */
+    if (action === 'platform_digest') {
+      const days = Math.min(90, Math.max(1, parseInt(t.days)||7));
+      const since = new Date(Date.now()-days*86400000).toISOString();
+      const today = new Date().toLocaleDateString('sv-SE',{ timeZone:'Europe/Berlin' });
+      const counts = (rows: any[]) => { const by: Record<string,number> = {}; for(const r of rows) by[r.kind]=(by[r.kind]||0)+1; return { total: rows.length, by_kind: by }; };
+      const [hab, wwp, stand, offen] = await Promise.all([
+        admin.from('hh_feed_habitate').select('*').gte('happened_at', since).order('happened_at',{ascending:false}).limit(500),
+        admin.from('hh_feed_partner').select('*').gte('happened_at', since).order('happened_at',{ascending:false}).limit(500),
+        admin.from('hh_partner_stand').select('*').order('updated_at',{ascending:false}),
+        admin.from('hh_habitate_offen').select('*').order('updated_at',{ascending:false}),
+      ]);
+      for(const r of [hab,wwp,stand,offen]) if(r.error) throw r.error;
+      const habRows = hab.data||[], wwpRows = wwp.data||[], standRows = stand.data||[], offenRows = offen.data||[];
+      const moved = standRows.filter((p: any)=>p.updated_at && p.updated_at>=since);
+      const upcoming = standRows.filter((p: any)=>p.target_on && p.target_on>=today && !['closed','paused'].includes(p.stage||'')).sort((a: any,b: any)=>a.target_on.localeCompare(b.target_on)).slice(0,3);
+      const overdue = standRows.filter((p: any)=>p.overdue);
+      const strip = (p: any) => ({ name:p.name, lane:p.lane, stage:p.stage, owner:p.owner, signal:(p.signal||'').slice(0,220), next_action:p.next_action, target_on:p.target_on, waiting_for:p.waiting_for, overdue:!!p.overdue, updated_at:p.updated_at });
+      return json({ days, since, today,
+        habitate: { url:'https://wilde-habitate.netlify.app', ...counts(habRows), latest: habRows.slice(0,10),
+          decisions: habRows.filter((r: any)=>['entscheidung','entscheidung_status','habitat_entscheidung'].includes(r.kind)).length,
+          open: { total: offenRows.length, by_urgency: offenRows.reduce((a: Record<string,number>, r: any)=>{ a[r.dringlichkeit]=(a[r.dringlichkeit]||0)+1; return a; },{}), overdue: offenRows.filter((r: any)=>r.dringlichkeit==='überfällig'||r.dringlichkeit==='blockiert').length,
+                   latest: offenRows.slice(0,5).map((r: any)=>({ frage:r.frage, dringlichkeit:r.dringlichkeit, wer:r.wer_entscheidet, updated_at:r.updated_at })) } },
+        wwp: { url:'https://wild-wild-partner.netlify.app', ...counts(wwpRows), latest: wwpRows.slice(0,10),
+          partners_moved: moved.map(strip), partners_moved_count: moved.length,
+          overdue: overdue.map(strip), overdue_count: overdue.length, upcoming: upcoming.map(strip) } });
+    }
+    if (action === 'platform_feed') {
+      const view = t.platform==='wwp' ? 'hh_feed_partner' : t.platform==='habitate' ? 'hh_feed_habitate' : null;
+      if(!view) return json({ error:'platform: habitate oder wwp' },400);
+      const limit = Math.min(parseInt(t.limit)||100, 500);
+      const since = t.since ? new Date(t.since) : new Date(Date.now()-7*86400000);
+      const minSince = new Date(Date.now()-90*86400000); const s0 = (isNaN(since.getTime()) || since<minSince ? minSince : since).toISOString();
+      const { data, error } = await admin.from(view).select('*').gte('happened_at', s0).order('happened_at',{ascending:false}).limit(limit);
+      if(error) throw error; return json({ platform:t.platform, since:s0, items:data });
     }
     /* Kandidat übernehmen: neues Thema in „Zu besprechen“ oder Hinweis an ein bestehendes Thema hängen. */
     if (action === 'news_accept') {
