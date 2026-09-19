@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#17171a" />
 <title>Das Hohe Haus · Bearbeiten</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=20" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=20" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=20" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=20" />
-<link rel="stylesheet" href="/assets/styles.css?v=20" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=21" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=21" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=21" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=21" />
+<link rel="stylesheet" href="/assets/styles.css?v=21" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -43,8 +43,8 @@
     <div class="add">
       <div class="row">
         <input class="title" id="newTitle" placeholder="Neues Thema / Check-in anlegen …" />
-        <select id="newKind" class="select"><option value="einmalig">Typ: Thema (einmalig)</option><option value="recurring">Typ: Wiederkehrend</option></select>
-        <select id="newPrio" class="select"><option value="hoch">hoch</option><option value="mittel" selected>mittel</option><option value="niedrig">niedrig</option></select>
+        <div class="fchips" role="group" aria-label="Typ"><input type="hidden" id="newKind" value="einmalig"><button type="button" class="chip on" data-v="einmalig" aria-pressed="true">Thema</button><button type="button" class="chip" data-v="recurring" aria-pressed="false">Wiederkehrend</button></div>
+        <div class="fchips" role="group" aria-label="Priorität"><input type="hidden" id="newPrio" value="mittel"><button type="button" class="chip" data-v="hoch" aria-pressed="false">Hoch</button><button type="button" class="chip on" data-v="mittel" aria-pressed="true">Mittel</button><button type="button" class="chip" data-v="niedrig" aria-pressed="false">Niedrig</button></div>
         <button class="btn btn-brand" id="addBtn">＋ Anlegen</button>
       </div>
     </div>
@@ -69,9 +69,9 @@
 <datalist id="peopleDL"></datalist>
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=20"></script>
-<script src="/assets/game.js?v=20"></script>
-<script src="/assets/eggs.js?v=20" defer></script>
+<script src="/assets/core.js?v=21"></script>
+<script src="/assets/game.js?v=21"></script>
+<script src="/assets/eggs.js?v=21" defer></script>
 <script>
 let topics=[], people=[], linksByItem={}, openIds=new Set();
 const $=s=>document.querySelector(s);
@@ -92,7 +92,8 @@ document.querySelectorAll("#tabs .seg").forEach(s=>s.onclick=()=>{document.query
 $("#reload").onclick=async()=>{try{await loadAll();gfToast("Aktualisiert");}catch(e){gfToast("Fehler");}};
 
 function opt(v,cur){ return `<option value="${v}" ${cur===v?"selected":""}>${v||"—"}</option>`; }
-function selField(label,name,cur,opts){ return `<div class="fld"><label>${label}</label><select data-f="${name}">${opts.map(o=>opt(o,cur)).join("")}</select></div>`; }
+const CHIP_LBL={einmalig:"Einmalig",recurring:"Wiederkehrend",offen:"Offen",in_klaerung:"In Klärung",erledigt:"Erledigt",hoch:"Hoch",mittel:"Mittel",niedrig:"Niedrig",kritisch:"Kritisch",manuell:"Manuell",ki:"KI",pruefen:"Prüfen",bestaetigt:"Bestätigt","":"—"};
+function selField(label,name,cur,opts){ return `<div class="fld"><label>${label}</label>${gfChips(name,opts.map(o=>[o,CHIP_LBL[o]??o]),cur||"",{attr:`data-f="${name}"`,label,cls:"compact"})}</div>`; }
 const PEOPLEFIELDS=["owner","delegate_to","involved","needs_input_from","reviewer","approver"];
 function txtField(label,name,cur,full){ return `<div class="fld ${full?'ffull':''}"><label>${label}</label><input data-f="${name}" value="${gfEsc(cur)}" ${PEOPLEFIELDS.includes(name)?'list="peopleDL"':''}></div>`; }
 function areaField(label,name,cur){ return `<div class="fld ffull"><label>${label}</label><textarea data-f="${name}">${gfEsc(cur)}</textarea></div>`; }
@@ -111,7 +112,7 @@ function editCard(t){
         ${selField("Status","status",t.status,["offen","in_klaerung","erledigt"])}
         ${selField("Relevanz","relevance",t.relevance||"",REL)}
         ${selField("Relevanz-Quelle","relevance_source",t.relevance_source||"manuell",SRC)}
-        <div class="fld"><label>Zeit (Min)</label><input data-f="time_minutes" type="number" value="${t.time_minutes||""}"></div>
+        <div class="fld"><label>Zeit (Min)</label>${gfStepper("time_minutes",t.time_minutes||"",{attr:`data-f="time_minutes"`,min:0,max:120,step:5,label:"Zeit in Minuten"})}</div>
         <div class="fld"><label>Rhythmus</label><input data-f="frequency" value="${gfEsc(t.frequency)}" placeholder="z.B. wöchentlich"></div>
         ${txtField("Owner","owner",t.owner)}
         ${txtField("Delegiert an (Komma-getrennt)","delegate_to",t.delegate_to,true)}
@@ -135,7 +136,7 @@ function editCard(t){
         <div class="linklist" data-links>${links.map(linkRow).join("")||'<div class="dtext" style="color:var(--muted)">noch keine</div>'}</div>
         <div class="row" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px">
           <input class="txt lk-title" placeholder="Titel" style="flex:1;min-width:120px">
-          <select class="select lk-type">${LT.map(x=>`<option value="${x}">${x}</option>`).join("")}</select>
+          ${gfChips("lk-type",LT,LT[0],{attr:`class="lk-type"`,label:"Art des Links",cls:"compact"})}
           <input class="txt lk-url" placeholder="URL / Referenz" style="flex:2;min-width:160px">
           <button class="btn btn-ghost lk-add">＋ Link</button>
         </div>

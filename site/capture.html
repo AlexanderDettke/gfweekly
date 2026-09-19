@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#17171a" />
 <title>Das Hohe Haus · Eingabe</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=20" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=20" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=20" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=20" />
-<link rel="stylesheet" href="/assets/styles.css?v=20" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=21" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=21" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=21" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=21" />
+<link rel="stylesheet" href="/assets/styles.css?v=21" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -49,7 +49,7 @@
       <div class="row2"><div><label>Projekt / Bereich</label><input class="txt" id="related" placeholder="z.B. Kommunen, Website"></div><div><label>Stakeholder</label><input class="txt" id="stake" placeholder="z.B. Kulturorte"></div></div>
       <div class="row2"><div><label>Verantwortlich</label><input class="txt" id="owner" placeholder="Name (optional)"></div><div><label>Fällig bis</label><input class="txt" id="due" type="date"></div></div>
     </div>
-    <button class="btn btn-primary" id="sendBtn" style="width:100%;justify-content:center;margin-top:20px;padding:15px;font-size:16px">Ab ins Board →</button>
+    <button class="btn btn-primary" id="sendBtn" style="width:100%;justify-content:center;margin-top:20px;padding:15px;font-size:16px">Ins Board schicken →</button>
   </div>
 
   <div class="add okcard" id="ok" style="display:none;border-radius:var(--r-xl)">
@@ -60,9 +60,9 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=20"></script>
-<script src="/assets/game.js?v=20"></script>
-<script src="/assets/eggs.js?v=20" defer></script>
+<script src="/assets/core.js?v=21"></script>
+<script src="/assets/game.js?v=21"></script>
+<script src="/assets/eggs.js?v=21" defer></script>
 <script>
 const $=s=>document.querySelector(s); let pick={who:gfWho(),urg:"",typ:""};
 gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("capture"); gfMountHero("kiste","Eingabe","Einfach lostippen oder diktieren. Alles landet als Thema im Board unter „Zu besprechen“.",{compact:true}); initPicks(); });

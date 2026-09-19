@@ -10,11 +10,11 @@
 <meta property="og:title" content="Das Hohe Haus · Geschäftsführung der Wilden Habitate" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre." />
 <meta property="og:image" content="assets/og-image.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=20" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=20" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=20" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=20" />
-<link rel="stylesheet" href="/assets/styles.css?v=20" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=21" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=21" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=21" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=21" />
+<link rel="stylesheet" href="/assets/styles.css?v=21" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -58,14 +58,14 @@
         <button class="seg" data-v="in_klaerung">In Klärung</button>
         <button class="seg" data-v="erledigt">Erledigt</button>
       </div>
-      <select id="fPerson" class="select"><option value="">Alle Personen</option></select>
-      <select id="fPrio" class="select"><option value="">Alle Prioritäten</option><option value="hoch">hoch</option><option value="mittel">mittel</option><option value="niedrig">niedrig</option></select>
+      <span id="fPersonWrap"></span>
+      <div class="fchips compact" role="group" aria-label="Priorität"><input type="hidden" id="fPrio" value=""><button type="button" class="chip on" data-v="" aria-pressed="true">Alle Prioritäten</button><button type="button" class="chip" data-v="hoch" aria-pressed="false">Hoch</button><button type="button" class="chip" data-v="mittel" aria-pressed="false">Mittel</button><button type="button" class="chip" data-v="niedrig" aria-pressed="false">Niedrig</button></div>
       <button class="btn btn-ghost" id="reload" title="Aktualisieren">↻</button>
     </div>
     <div class="add">
       <div class="row">
         <input class="title" id="newTitle" placeholder="Neues Thema eintragen …" />
-        <select id="newPrio" class="select"><option value="hoch">Priorität: hoch</option><option value="mittel" selected>Priorität: mittel</option><option value="niedrig">Priorität: niedrig</option></select>
+        <div class="fchips" role="group" aria-label="Priorität"><input type="hidden" id="newPrio" value="mittel"><button type="button" class="chip" data-v="hoch" aria-pressed="false">Hoch</button><button type="button" class="chip on" data-v="mittel" aria-pressed="true">Mittel</button><button type="button" class="chip" data-v="niedrig" aria-pressed="false">Niedrig</button></div>
         <button class="btn btn-brand" id="addBtn">＋ Hinzufügen</button>
       </div>
     </div>
@@ -78,9 +78,9 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=20"></script>
-<script src="/assets/game.js?v=20"></script>
-<script src="/assets/eggs.js?v=20" defer></script>
+<script src="/assets/core.js?v=21"></script>
+<script src="/assets/game.js?v=21"></script>
+<script src="/assets/eggs.js?v=21" defer></script>
 <script>
 const ST={offen:"Offen",in_klaerung:"In Klärung",erledigt:"Erledigt"};
 let topics=[], linksByItem={}, openIds=new Set();
@@ -98,8 +98,9 @@ async function boot(){
   await loadAll();
 }
 function fillPersonFilter(){
-  const sel=$("#fPerson"); const names=gfAssignable().map(p=>p.name).filter(Boolean);
-  sel.innerHTML='<option value="">Alle Personen</option>'+names.map(n=>`<option>${gfEsc(n)}</option>`).join("")+'<option value="Claude">Von Claude</option>';
+  const names=gfAssignable().map(p=>p.name).filter(Boolean);
+  $("#fPersonWrap").innerHTML=gfChips("fPerson",[["","Alle Personen"],...names.map(n=>[n,n]),["Claude","Von Claude"]],filter.person||"",{attr:'id="fPerson"',label:"Person",cls:"compact"});
+  $("#fPerson").onchange=e=>{filter.person=e.target.value;render();};
 }
 async function loadAll(){
   const [d,l]=await Promise.all([gfApi("list"), gfApi("links_all").catch(()=>({links:[]}))]);
@@ -162,11 +163,7 @@ function detailHtml(t){
     h+=`<div class="dsection"><div class="dlabel">Rhythmus</div><div class="dtext">${gfEsc(t.frequency||"—")}${t.last_discussed?` · zuletzt besprochen: ${gfEsc(t.last_discussed)}`:""}</div></div>`;
   }
   h+=`<div class="card-foot">
-    <select class="selectx status-sel">
-      <option value="offen" ${t.status==="offen"?"selected":""}>Offen</option>
-      <option value="in_klaerung" ${t.status==="in_klaerung"?"selected":""}>In Klärung</option>
-      <option value="erledigt" ${t.status==="erledigt"?"selected":""}>Erledigt</option>
-    </select>
+    ${gfChips("status",[["offen","Offen"],["in_klaerung","In Klärung"],["erledigt","Erledigt"]],t.status||"offen",{attr:'class="status-sel"',label:"Status",cls:"compact"})}
     <span class="saved">✓ gespeichert</span>
     <a class="del" href="bearbeiten.html" style="text-decoration:none">alle Felder bearbeiten ›</a>
   </div></div>`;
@@ -243,7 +240,7 @@ function render(){
   const list=$("#list"); const one=topics.filter(t=>t.kind!=="recurring"); const filtered=one.filter(passFilter);
   if(!one.length){ list.innerHTML=`<div class="empty"><div class="ico"></div><h3>Noch keine Themen</h3><p>Oben eintragen oder über „Eingabe" erfassen. Vor Terminen ergänzt Claude automatisch Infos &amp; Vorschläge.</p></div>`; return; }
   if(!filtered.length){ list.innerHTML=`<div class="empty"><div class="ico"></div><h3>Keine Treffer</h3><p>Mit diesen Filtern gibt es nichts.</p><p style="margin-top:12px"><button class="btn btn-ghost" id="resetF">Filter zurücksetzen</button></p></div>`;
-    $("#resetF").onclick=()=>{filter={status:"alle",person:"",prio:"",q:""};$("#search").value="";$("#fPerson").value="";$("#fPrio").value="";document.querySelectorAll("#statusSegs .seg").forEach(s=>s.classList.toggle("on",s.dataset.v==="alle"));render();}; return; }
+    $("#resetF").onclick=()=>{filter={status:"alle",person:"",prio:"",q:""};$("#search").value="";gfChipsSet($("#fPerson"),"");gfChipsSet($("#fPrio"),"");document.querySelectorAll("#statusSegs .seg").forEach(s=>s.classList.toggle("on",s.dataset.v==="alle"));render();}; return; }
   const order=["offen","in_klaerung","erledigt"]; let html="";
   for(const st of order){ const items=filtered.filter(t=>t.status===st); if(!items.length) continue;
     items.sort((a,b)=>(GF_PRANK[a.priority]-GF_PRANK[b.priority])||(new Date(a.created_at)-new Date(b.created_at)));
@@ -284,7 +281,6 @@ async function addTopic(){ const title=$("#newTitle").value.trim(); if(!title){$
   try{ const d=await gfApi("add",{title,priority:$("#newPrio").value,created_by:gfWho(),source:"manuell",kind:"einmalig"}); if(d.topic)topics.push(d.topic); $("#newTitle").value=""; render(); gfToast("Thema hinzugefügt"); }catch(e){ gfToast("Konnte nicht hinzufügen"); } }
 $("#addBtn").onclick=addTopic; $("#newTitle").addEventListener("keydown",e=>{if(e.key==="Enter")addTopic();});
 document.querySelectorAll("#statusSegs .seg").forEach(s=>s.onclick=()=>{document.querySelectorAll("#statusSegs .seg").forEach(x=>x.classList.remove("on"));s.classList.add("on");filter.status=s.dataset.v;render();});
-$("#fPerson").onchange=e=>{filter.person=e.target.value;render();};
 $("#fPrio").onchange=e=>{filter.prio=e.target.value;render();};
 $("#search").addEventListener("input",e=>{filter.q=e.target.value.trim();render();});
 $("#reload").onclick=async()=>{ try{ await loadAll(); gfToast("Aktualisiert"); }catch(e){ gfToast("Fehler"); } };

@@ -7,11 +7,11 @@
 <meta name="theme-color" content="#17171a" />
 <title>Das Hohe Haus · Themen · Board</title>
 <meta name="description" content="Themen der Geschäftsleitung als Board, Kacheln oder Liste. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=20" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=20" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=20" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=20" />
-<link rel="stylesheet" href="/assets/styles.css?v=20" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=21" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=21" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=21" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=21" />
+<link rel="stylesheet" href="/assets/styles.css?v=21" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -64,9 +64,9 @@
 <div class="toast" id="toast"></div>
 <div class="modal-back" id="tidyModal"></div>
 
-<script src="/assets/core.js?v=20"></script>
-<script src="/assets/game.js?v=20"></script>
-<script src="/assets/eggs.js?v=20" defer></script>
+<script src="/assets/core.js?v=21"></script>
+<script src="/assets/game.js?v=21"></script>
+<script src="/assets/eggs.js?v=21" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const LANES=[["zu_besprechen","Zu besprechen","var(--accent)"],["in_klaerung","In Klärung","var(--warn)"],["entschieden","Entschieden · nächster Schritt","var(--info)"],["erledigt","Erledigt","var(--pos)"]];
@@ -226,10 +226,10 @@ function openPanel(id){
     <div class="move-row">${LANES.map(([k,l])=>`<button class="seg ${t.board_lane===k?"on":""}" data-lane="${k}">${l.split(" ·")[0]}</button>`).join("")}</div>
     <div class="fgrid">
       <div class="fld ffull"><label>Titel</label><input name="title" value="${gfEsc(t.title)}" /></div>
-      <div class="fld"><label>Priorität</label><select name="priority">${PRIOS.map(([k,l])=>`<option value="${k}" ${t.priority===k?"selected":""}>${l}</option>`).join("")}</select></div>
+      <div class="fld"><label>Priorität</label>${gfChips("priority",PRIOS.map(([k,l])=>[k,l]),t.priority||"mittel",{label:"Priorität"})}</div>
       <div class="fld"><label>Termin</label><input name="next_suggested" type="date" value="${t.next_suggested||""}" /></div>
       <div class="fld"><label>Verantwortung</label><input name="owner" list="peopleList" value="${gfEsc(t.owner||"")}" /><datalist id="peopleList">${people.map(p=>`<option value="${gfEsc(p)}">`).join("")}</datalist></div>
-      <div class="fld"><label>Art</label><select name="kind"><option value="einmalig" ${t.kind!=="recurring"?"selected":""}>einmalig</option><option value="recurring" ${t.kind==="recurring"?"selected":""}>wiederkehrend</option></select></div>
+      <div class="fld"><label>Art</label>${gfChips("kind",[["einmalig","Einmalig"],["recurring","Wiederkehrend"]],t.kind==="recurring"?"recurring":"einmalig",{label:"Art"})}</div>
       <div class="fld ffull"><label>Ein Satz</label><input name="short_description" value="${gfEsc(t.short_description||"")}" /></div>
       <div class="fld ffull"><label>Nächster Schritt</label><textarea name="next_action">${gfEsc(t.next_action||"")}</textarea></div>
       <div class="fld ffull"><label>Entscheidung</label><textarea name="decision">${gfEsc(t.decision||"")}</textarea></div>
@@ -279,7 +279,7 @@ async function openTidy(id, preset){
         <div class="tidy-old"><label>bisher</label><div class="tidy-txt">${(t[f]||"").trim()?gfEsc(t[f]):"<i>leer</i>"}</div></div>
         <div class="tidy-new"><label>neu</label><textarea data-f="${f}" rows="${f==="context"?7:(f==="title"||f==="owner"||f==="short_description"?2:3)}">${gfEsc(ch[f])}</textarea></div>
       </div>`).join("")||`<div class="tidy-none">Nichts aufzuteilen.</div>`}</div>
-    <div class="modal-f"><button class="btn btn-primary" data-apply ${fields.length?"":"disabled"}>Übernehmen</button><button class="btn btn-ghost" data-ai title="Claude teilt den Text in die Felder auf">KI-Vorschlag</button><span class="tidy-note" data-note></span><button class="btn btn-ghost" data-x style="margin-left:auto">Abbrechen</button></div>
+    <div class="modal-f"><button class="btn btn-primary" data-apply ${fields.length?"":'disabled title="Nichts zu übernehmen: kein Feld hat sich geändert"'}>Übernehmen</button><button class="btn btn-ghost" data-ai title="Claude teilt den Text in die Felder auf">KI-Vorschlag</button><span class="tidy-note" data-note></span><button class="btn btn-ghost" data-x style="margin-left:auto">Abbrechen</button></div>
   </div>`;
   m.classList.add("open");
   const close=()=>m.classList.remove("open");
