@@ -10,11 +10,11 @@
 <meta property="og:title" content="Das Hohe Haus · Geschäftsführung der Wilden Habitate" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre." />
 <meta property="og:image" content="assets/og-image.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=20" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=20" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=20" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=20" />
-<link rel="stylesheet" href="/assets/styles.css?v=20" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=21" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=21" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=21" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=21" />
+<link rel="stylesheet" href="/assets/styles.css?v=21" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -40,6 +40,7 @@
 
   <!-- V20: Team, letzte 3 Monate (aus der Team- und Partneranalyse, Edge Function tpa, Aktion overview) -->
   <section class="nw" id="team" aria-label="Team, letzte 3 Monate"></section>
+  <section class="nw" id="platforms" aria-label="Plattformen, letzte 7 Tage"></section>
 
   <!-- Habitat: Jahrestopf, Stufe, Tag, Woche, Abzeichen (V17) -->
   <section class="habitat" id="habitat" aria-label="Habitat-Punkte"></section>
@@ -87,9 +88,9 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=20"></script>
-<script src="/assets/game.js?v=20"></script>
-<script src="/assets/eggs.js?v=20" defer></script>
+<script src="/assets/core.js?v=21"></script>
+<script src="/assets/game.js?v=21"></script>
+<script src="/assets/eggs.js?v=21" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const MON=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -225,19 +226,19 @@ function msCard(m){
   </article>`;
 }
 function msForm(m){
-  const strands=(CYCLE?.strands||[]).map(s=>`<option value="${s.key}" ${s.key===m.strand?"selected":""}>${gfEsc(s.label)}</option>`).join("");
+  const strands=(CYCLE?.strands||[]).map(s=>[s.key,s.short||s.label]);
   return `<form class="ms editcard" data-id="${m.id||""}">
     <div class="fgrid">
       <div class="fld ffull"><label>Titel</label><input name="title" value="${gfEsc(m.title||"")}" required /></div>
-      <div class="fld"><label>Strang</label><select name="strand">${strands}</select></div>
-      <div class="fld"><label>Status</label><select name="status">${Object.entries(MS_STATUS).map(([k,v])=>`<option value="${k}" ${(m.status||"geplant")===k?"selected":""}>${v}</option>`).join("")}</select></div>
+      <div class="fld ffull"><label>Strang</label>${gfChips("strand",strands,m.strand||strands[0]?.[0]||"",{label:"Strang",cls:"compact"})}</div>
+      <div class="fld ffull"><label>Status</label>${gfChips("status",Object.entries(MS_STATUS),m.status||"geplant",{label:"Status",cls:"compact"})}</div>
       <div class="fld"><label>Datum von</label><input name="date_from" type="date" value="${m.date_from||""}" /></div>
       <div class="fld"><label>Datum bis (optional)</label><input name="date_to" type="date" value="${m.date_to||""}" /></div>
       <div class="fld"><label>Zeitraum als Text (wenn kein Datum)</label><input name="zeitraum" value="${gfEsc(m.zeitraum||"")}" placeholder="z. B. Q1 2027" /></div>
       <div class="fld"><label>Verantwortung</label><input name="owner" value="${gfEsc(m.owner||"")}" placeholder="z. B. Lea" /></div>
       <div class="fld ffull"><label>Beschreibung</label><textarea name="description" rows="2">${gfEsc(m.description||"")}</textarea></div>
       <div class="fld ffull"><label>Link (optional)</label><input name="link_url" type="url" value="${gfEsc(m.link_url||"")}" placeholder="https://…" /></div>
-      <div class="fld"><label>Reihenfolge</label><input name="sort_order" type="number" value="${m.sort_order??100}" /></div>
+      <div class="fld"><label>Reihenfolge</label>${gfStepper("sort_order",m.sort_order??100,{min:0,max:999,step:10,label:"Reihenfolge"})}</div>
     </div>
     <div class="actions-row">
       <button class="btn btn-primary" type="submit">Speichern</button>
@@ -368,7 +369,7 @@ gfGate(async()=>{
     renderCycle(); renderRituals(); renderMilestones();
     const ph=phaseOf(NOW); const hd=document.querySelector("#hero .hero-date"); if(hd) hd.textContent=`${wd} · Phase ${ph.label} · ${GF_APP_SUB}`;
   }catch(e){ $("#cycle").innerHTML=`<div class="empty">Zyklus konnte nicht geladen werden: ${gfEsc(e.message||"Verbindung")}</div>`; }
-  await Promise.all([loadTopics(), loadQuick(), gfLoadBand($("#band"),{link:"neuigkeiten.html"}), gfLoadTeam($("#team"))]);
+  await Promise.all([loadTopics(), loadQuick(), gfLoadBand($("#band"),{link:"neuigkeiten.html"}), gfLoadTeam($("#team")), gfLoadPlatforms($("#platforms"),{days:7})]);
   document.addEventListener("gf-who",()=>gfLoadBand($("#band"),{link:"neuigkeiten.html"}));
 });
 </script>

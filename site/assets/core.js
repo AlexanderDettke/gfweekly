@@ -1,6 +1,8 @@
 /* ===========================================================
-   Das Hohe Haus (vormals GF Weekly) · V18 · gemeinsamer Kern
+   Das Hohe Haus (vormals GF Weekly) · V21 · gemeinsamer Kern
    API-Zugriff, Login-Gate, Navigation, Theme-Umschaltung, Helfer.
+   V21: Element-Bausteine des Design-Systems (Chip-Reihe statt <select>, Stepper statt <input type=number>,
+   Zustand als Symbol plus Wort, KPI-Kachel) und der Plattform-Block (Wilde Habitate, Wild Wild Partner).
    Es werden bewusst KEINE apikey/Authorization-Header gesendet
    (das Supabase-Gateway lehnt sonst ab); Auth läuft über das
    Passwort im Request-Body (serverseitig in der Edge Function geprüft).
@@ -31,6 +33,59 @@ function gfToast(m){
   t.textContent=m; t.classList.add("show"); clearTimeout(_gft); _gft=setTimeout(()=>t.classList.remove("show"),2600);
 }
 function gfCopy(text){ try{ navigator.clipboard.writeText(text); gfToast("In die Zwischenablage kopiert"); }catch(e){ gfToast("Kopieren nicht möglich"); } }
+
+/* ---- V21 · Element-Bausteine des Design-Systems ----
+   gfChips(name, options, cur, opts): Chip-Reihe mit genau einem gewählten Chip statt <select>. Der Wert liegt in einem
+   versteckten <input>, das name/id/data-f/class aus opts.attr trägt; Klick setzt den Wert und feuert input+change (bubbelnd),
+   damit FormData, readPanel(), onchange und Autosave unverändert funktionieren. options: ["a","b"] oder [["wert","Beschriftung"]].
+   gfStepper(name, cur, opts): − Zahl + statt <input type=number>; Grenzen mit Grund im Titel des deaktivierten Knopfs.
+   gfZustand(kind, wort): Kennzeichen immer Symbol + Wort (● ○ ✓ ⚠ ↑ ↓ → ✕), nie nur Farbe.
+   gfKachel({icon,value,label,unit,tone,trend,href,title}): KPI-Kachel, Icon oben, Zahl unten (tabular), Beschriftung darunter. */
+function gfChips(name, options, cur, opts={}){
+  const attr=opts.attr||`name="${name}"`, v0=(cur??"")+"";
+  const chips=options.map(o=>{ const [v,l]=Array.isArray(o)?o:[o,(o===""?"—":o)]; const on=v0===(v+""); return `<button type="button" class="chip${on?" on":""}${v==="__new"?" neu":""}" data-v="${gfEsc(v)}" aria-pressed="${on}">${gfEsc(l)}</button>`; }).join("");
+  return `<div class="fchips${opts.cls?" "+opts.cls:""}" role="group"${opts.label?` aria-label="${gfEsc(opts.label)}"`:""}><input type="hidden" ${attr} value="${gfEsc(v0)}">${chips}</div>`;
+}
+function gfChipsSet(input, value, fire=false){
+  if(!input) return; const wrap=input.closest(".fchips"); const v=(value??"")+""; input.value=v;
+  if(wrap) wrap.querySelectorAll(".chip").forEach(c=>{ const on=c.dataset.v===v; c.classList.toggle("on",on); c.setAttribute("aria-pressed",on?"true":"false"); });
+  if(fire){ input.dispatchEvent(new Event("input",{bubbles:true})); input.dispatchEvent(new Event("change",{bubbles:true})); }
+}
+function gfStepper(name, cur, opts={}){
+  const attr=opts.attr||`name="${name}"`, min=opts.min??0, max=opts.max??9999, step=opts.step??1, v=(cur===""||cur==null)?"":Number(cur);
+  return `<div class="stepper" data-min="${min}" data-max="${max}" data-step="${step}"${opts.label?` aria-label="${gfEsc(opts.label)}"`:""}><button type="button" data-d="-1" aria-label="Weniger" ${v!==""&&v<=min?`disabled title="Kleinster Wert ist ${min}"`:""}>−</button><input type="text" inputmode="numeric" ${attr} value="${v===""?"":v}" placeholder="${opts.placeholder||""}"><button type="button" data-d="1" aria-label="Mehr" ${v!==""&&v>=max?`disabled title="Größter Wert ist ${max}"`:""}>+</button></div>`;
+}
+function gfStepperSync(st){
+  const inp=st.querySelector("input"), min=Number(st.dataset.min), max=Number(st.dataset.max), v=inp.value===""?null:Number(inp.value);
+  const [m,p]=st.querySelectorAll("button"); m.disabled=v!==null&&v<=min; p.disabled=v!==null&&v>=max;
+  m.title=m.disabled?`Kleinster Wert ist ${min}`:""; p.title=p.disabled?`Größter Wert ist ${max}`:"";
+}
+document.addEventListener("click",e=>{
+  const chip=e.target.closest(".fchips .chip");
+  if(chip){ const wrap=chip.closest(".fchips"), input=wrap.querySelector("input[type=hidden]"); if(input.value!==chip.dataset.v) gfChipsSet(input, chip.dataset.v, true); return; }
+  const sb=e.target.closest(".stepper button[data-d]");
+  if(sb){ const st=sb.closest(".stepper"), inp=st.querySelector("input"), step=Number(st.dataset.step)||1, min=Number(st.dataset.min), max=Number(st.dataset.max);
+    const cur=inp.value===""?(Number(sb.dataset.d)>0?min-step:min+step):Number(inp.value); let v=cur+Number(sb.dataset.d)*step; v=Math.min(max,Math.max(min,v)); inp.value=v; gfStepperSync(st);
+    inp.dispatchEvent(new Event("input",{bubbles:true})); inp.dispatchEvent(new Event("change",{bubbles:true})); }
+});
+document.addEventListener("input",e=>{ const st=e.target.closest&&e.target.closest(".stepper"); if(st&&e.target.tagName==="INPUT"){ e.target.value=e.target.value.replace(/[^\d-]/g,""); gfStepperSync(st); } });
+const GF_ZST={ pos:"✓", ok:"✓", warn:"⚠", crit:"✕", info:"●", action:"●", offen:"○", up:"↑", down:"↓", flat:"→", neutral:"○" };
+function gfZustand(kind, wort, opts={}){ const tone=({ok:"pos",offen:"",neutral:"",up:"pos",down:"crit",flat:""})[kind]??kind; return `<span class="zst${tone?" "+tone:""}"${opts.title?` title="${gfEsc(opts.title)}"`:""}><i aria-hidden="true">${GF_ZST[kind]||"●"}</i>${gfEsc(wort)}</span>`; }
+const GF_KK_ICON={
+  ereignis:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h13"/><circle cx="18" cy="12" r="2"/></svg>',
+  entscheidung:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 8l7-5 7 5M4 14l3-6 3 6a3 3 0 0 1-6 0zM14 14l3-6 3 6a3 3 0 0 1-6 0z"/></svg>',
+  partner:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2.5 19a5.5 5.5 0 0 1 11 0M10.5 19a5.5 5.5 0 0 1 11 0"/></svg>',
+  frist:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 14v3l2 1"/></svg>',
+  release:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7 12 3 4 7v10l8 4 8-4z"/><path d="M4 7l8 4 8-4M12 11v10"/></svg>',
+  meilenstein:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4M6 4h11l-2 4 2 4H6"/></svg>',
+  zahl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16M8 15l4-5 3 3 5-6"/></svg>'
+};
+function gfFmtInt(n){ return (Number(n)||0).toLocaleString("de-DE"); }
+function gfKachel(o){
+  const tag=o.href?"a":"div", href=o.href?` href="${gfEsc(o.href)}"${/^https?:/.test(o.href)?' target="_blank" rel="noopener"':""}`:"";
+  const trend=o.trend?`<span class="kk-trend ${o.trend}" aria-label="${o.trend==="up"?"steigt":o.trend==="down"?"fällt":"gleich"}">${GF_ZST[o.trend]}</span>`:"";
+  return `<${tag} class="kk${o.tone?" "+o.tone:""}${o.href?" link":""}"${href}${o.title?` title="${gfEsc(o.title)}"`:""}><span class="kk-i" aria-hidden="true">${GF_KK_ICON[o.icon]||GF_KK_ICON.zahl}</span><span class="kk-v"><span class="ht-num">${typeof o.value==="number"?gfFmtInt(o.value):gfEsc(o.value??"–")}</span>${o.unit?`<small>${gfEsc(o.unit)}</small>`:""}${trend}</span><span class="kk-l">${gfEsc(o.label)}</span></${tag}>`;
+}
 
 /* ---- Theme (dark Standard / light), persistiert in localStorage ---- */
 function gfTheme(){ const t=localStorage.getItem("gf_theme"); return (t==="light"||t==="dark") ? t : (t==="colorful" ? "light" : "dark"); }
@@ -340,7 +395,7 @@ const GF_TIDY_FIELDS={ title:"Titel", short_description:"Ein Satz", context:"Kon
    V19 (15.09.2026) · Neuigkeiten schlank: Laufband, Detailfenster, Gesehen-Marke.
    Wird von neuigkeiten.html und index.html genutzt. Die Marke „gesehen“ liegt je Person in localStorage gf_news_seen_<Person>.
    =========================================================== */
-const GF_NEWS_SRC={ notiz:"Notiz", mail:"Mail", asana:"Asana", kalender:"Termin", entscheidung:"Entscheidung", protokoll:"Protokoll", manuell:"manuell" };
+const GF_NEWS_SRC={ notiz:"Notiz", mail:"Mail", asana:"Asana", kalender:"Termin", entscheidung:"Entscheidung", protokoll:"Protokoll", manuell:"manuell", plattform:"Plattform" };
 function gfNewsSeenKey(){ return "gf_news_seen_"+gfWho(); }
 function gfNewsLastSeen(){ try{ return localStorage.getItem(gfNewsSeenKey())||"1970-01-01"; }catch(e){ return "1970-01-01"; } }
 function gfNewsMarkSeen(){ try{ localStorage.setItem(gfNewsSeenKey(), new Date().toISOString()); }catch(e){} }
@@ -512,4 +567,71 @@ async function gfLoadTeam(el){
   catch(e){ el.querySelector(".tm-list").innerHTML=`<div class="empty soft">${gfEsc(e.message||"Die Analyse ist gerade nicht erreichbar.")}${e.auth?` <a href="${GF_TPA_URL}" target="_blank" rel="noopener">Analyse öffnen ↗</a>`:""}</div>`; return; }
   gfRenderTeam(el,data,circle);
   el.querySelectorAll(".tm-segs .seg").forEach(b=>b.onclick=()=>{ circle=b.dataset.c; el.querySelectorAll(".tm-segs .seg").forEach(x=>x.classList.toggle("on",x===b)); try{ localStorage.setItem("gf_team_circle",circle); }catch(e){} gfRenderTeam(el,data,circle); });
+}
+
+/* ===== V21 (20.09.2026) · Plattformen, letzte 7 Tage (Startseite): Wilde Habitate und Wild Wild Partner.
+   Fakten live aus platform_digest (Views hh_feed_*), Briefing-Text aus gfweekly_news (kind lage, Strang habitate bzw. wwp),
+   geschrieben vom täglichen Lauf. Das Hohe Haus liest nur. ===== */
+const GF_PLATFORMS=[
+  { key:"habitate", strand:"habitate", name:"Wilde Habitate", sub:"Plattform · Planung, Entscheidungen, Changelog", url:"https://wilde-habitate.netlify.app" },
+  { key:"wwp", strand:"wwp", name:"Wild Wild Partner", sub:"Plattform · Partnergespräche", url:"https://wild-wild-partner.netlify.app" },
+];
+const GF_PF_KIND={ release:"Release", entscheidung:"Entscheidung", entscheidung_status:"Entscheidung", meilenstein:"Meilenstein", habitat_entscheidung:"Habitat-Entscheidung", invest_fahrplan:"Invest-Fahrplan", invest_aenderung:"Investition", launch_plan:"Launch-Plan", gp_vorschlag:"Partner-Vorschlag", gp_kommentar:"Kommentar",
+  email:"Mail", note:"Notiz", meeting:"Treffen", offer:"Angebot", data:"Daten", decision:"Entscheidung", nda:"NDA", stand:"Stand" };
+const GF_PF_STAGE={ outreach:"Ansprache", qualification:"Qualifizierung", scheduling:"Terminfindung", waiting:"Wartet", data_pending:"Daten offen", offer_pending:"Angebot offen", offer_received:"Angebot da", negotiation:"Verhandlung", closed:"Abgeschlossen", paused:"Pausiert" };
+function gfPfWho(w){ const s=(w||"").toString(); if(/^alex/i.test(s)) return "Alex"; if(/^lea/i.test(s)) return "Lea"; if(/together|beide/i.test(s)) return "Alex, Lea"; return s; }
+function gfPfRow(x){
+  const who=gfPfWho(x.who); const kind=GF_PF_KIND[x.kind]||x.kind||"";
+  const title=(x.title||"").replace(/Stand: ([a-z_]+)$/, (m,st)=>"Stand: "+(GF_PF_STAGE[st]||st));
+  return `<article class="tk src-plattform pf-ev"><button type="button" class="tk-row" aria-expanded="false" title="${gfEsc(kind)}">
+    <span class="tk-t">${gfEsc(gfNewsWhen(x.happened_at))}</span>${who?gfNewsWho(who):'<span class="nw-who"></span>'}<span class="tk-title">${gfEsc(title)}</span><span class="tk-strand">${gfEsc(kind)}</span><span class="chev"></span>
+  </button><div class="tk-more"><p>${gfEsc(x.body||"")}</p>${x.url?`<div class="tk-links"><a href="${gfEsc(x.url)}" target="_blank" rel="noopener">Zur Plattform ↗</a></div>`:""}</div></article>`;
+}
+function gfPfLage(lage){
+  if(!lage) return `<p class="pf-lage muted">Noch kein Briefing-Absatz. Der tägliche Lauf schreibt ihn ab dem nächsten Morgen.</p>`;
+  return `<div class="pf-lage"><p>${gfEsc(lage.body||lage.title||"")}</p><span class="lg-d">Stand ${gfEsc(gfFmtShort(lage.created_at||lage.happened_at))}</span></div>`;
+}
+function gfPfCard(pf, d, lage, days){
+  const evs=(d&&d.latest)||[]; const total=d?d.total:0;
+  let k2, k3;
+  if(pf.key==="wwp"){
+    k2=gfKachel({ icon:"partner", value:d?d.partners_moved_count:0, label:"Partner mit Bewegung" });
+    k3=gfKachel({ icon:"frist", value:d?d.overdue_count:0, label:"Zieldaten überfällig", tone:d&&d.overdue_count?"warn":"" });
+  } else {
+    k2=gfKachel({ icon:"entscheidung", value:d?d.open.total:0, label:"Entscheidungen offen", tone:d&&d.open.by_urgency&&d.open.by_urgency.blockiert?"warn":"" });
+    k3=gfKachel({ icon:"frist", value:d?d.open.overdue:0, label:"überfällig oder blockiert", tone:d&&d.open.overdue?"warn":"" });
+  }
+  const k1=gfKachel({ icon:"ereignis", value:total, label:`Ereignisse, ${days} Tage` });
+  let extra="";
+  if(pf.key==="wwp" && d && d.upcoming && d.upcoming.length){
+    extra=`<div class="pf-next"><span class="ht-label">Nächste Zieldaten</span>${d.upcoming.map(p=>`<span class="pf-nx">${gfEsc(gfFmtShort(p.target_on))} · <b>${gfEsc(p.name)}</b> · ${gfEsc(GF_PF_STAGE[p.stage]||p.stage||"")}</span>`).join("")}</div>`;
+  }
+  if(pf.key==="habitate" && d && d.open && d.open.latest && d.open.latest.length){
+    extra=`<div class="pf-next"><span class="ht-label">Offen, zuletzt bewegt</span>${d.open.latest.slice(0,3).map(o=>`<span class="pf-nx">${gfZustand(o.dringlichkeit==="bald"||o.dringlichkeit==="blockiert"||o.dringlichkeit==="überfällig"?"warn":"offen", o.dringlichkeit)} <b>${gfEsc(o.frage)}</b>${o.wer?` · ${gfEsc(o.wer)}`:""}</span>`).join("")}</div>`;
+  }
+  const rows=evs.slice(0,5).map(gfPfRow).join("") || `<div class="empty soft">Keine Ereignisse in den letzten ${days} Tagen.</div>`;
+  return `<article class="pf-card" data-pf="${pf.key}">
+    <header class="pf-head"><div><h3>${gfEsc(pf.name)}</h3><span class="pf-sub">${gfEsc(pf.sub)}</span></div><a class="btn btn-ghost btn-sm" href="${pf.url}" target="_blank" rel="noopener">Zur Plattform ↗</a></header>
+    <div class="kk-row">${k1}${k2}${k3}</div>
+    ${gfPfLage(lage)}
+    ${extra}
+    <div class="tk-rows pf-rows">${rows}</div>
+  </article>`;
+}
+async function gfLoadPlatforms(el, opts={}){
+  if(!el) return; const days=opts.days||7;
+  let open=true; try{ open=localStorage.getItem("gf_nw_platforms")!=="0"; }catch(e){}
+  el.innerHTML=`<details class="nw-sec pf-sec" ${open?"open":""}>
+    <summary><h2>Plattformen, letzte ${days} Tage</h2><span class="n pf-n"></span><span class="hint">Was sich in Wilde Habitate und Wild Wild Partner bewegt hat: Zahlen live aus der Datenbank, Briefing vom täglichen Lauf.</span><span class="chev"></span></summary>
+    <div class="nw-body"><div class="pf-grid">${gfSkeleton(2,"pf-card")}</div></div>
+  </details>`;
+  const det=el.querySelector("details"); det.addEventListener("toggle",()=>{ try{ localStorage.setItem("gf_nw_platforms",det.open?"1":"0"); }catch(e){} });
+  let digest=null, lage=[];
+  try{ [digest, lage]=await Promise.all([ gfApi("platform_digest",{days}), gfApi("news_list",{kinds:["lage"],limit:50}).then(r=>(r.items||[]).filter(x=>x.strand==="habitate"||x.strand==="wwp")).catch(()=>[]) ]); }
+  catch(e){ el.querySelector(".pf-grid").innerHTML=`<div class="empty soft">${gfEsc(e.message||"Die Plattformdaten sind gerade nicht erreichbar.")}</div>`; return; }
+  const lageOf=k=>lage.filter(x=>x.strand===k).sort((a,b)=>(b.created_at||"").localeCompare(a.created_at||""))[0]||null;
+  el.querySelector(".pf-grid").innerHTML=GF_PLATFORMS.map(pf=>gfPfCard(pf, digest[pf.key], lageOf(pf.strand), digest.days||days)).join("");
+  const n=(digest.habitate?.total||0)+(digest.wwp?.total||0); const nEl=el.querySelector(".pf-n"); if(nEl) nEl.textContent=gfFmtInt(n);
+  el.querySelectorAll(".pf-ev .tk-row").forEach(row=>row.onclick=()=>{ const a=row.closest(".tk"); const o=a.classList.toggle("open"); row.setAttribute("aria-expanded",o?"true":"false"); });
+  gfStagger(el,".pf-card");
 }

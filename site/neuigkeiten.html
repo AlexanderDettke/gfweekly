@@ -7,11 +7,11 @@
 <meta name="theme-color" content="#17171a" />
 <title>Das Hohe Haus · Neuigkeiten</title>
 <meta name="description" content="Neuigkeiten der Geschäftsleitung Wilde Möhre: Laufband, Ticker, Sichtungskorb, Themenlage. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=20" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=20" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=20" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=20" />
-<link rel="stylesheet" href="/assets/styles.css?v=20" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=21" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=21" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=21" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=21" />
+<link rel="stylesheet" href="/assets/styles.css?v=21" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -48,7 +48,7 @@
   </div>
   <div class="nw-filter" id="filterPanel" hidden>
     <div class="nf-row"><span class="nf-l">Zeitraum</span><div class="segs" id="rangeSegs" title="Zeitraum des Tickers"><button class="seg" data-r="7">7 Tage</button><button class="seg on" data-r="14">14 Tage</button><button class="seg" data-r="30">30 Tage</button><button class="seg" data-r="0">Alle</button></div></div>
-    <div class="nf-row"><span class="nf-l">Quellen</span><div class="chips nw-src" id="srcChips"><button class="chip on" data-s="notiz">Notizen</button><button class="chip on" data-s="mail">Mails</button><button class="chip on" data-s="asana">Asana</button><button class="chip on" data-s="kalender">Kalender</button><button class="chip on" data-s="entscheidung">Entscheidungen</button></div></div>
+    <div class="nf-row"><span class="nf-l">Quellen</span><div class="chips nw-src" id="srcChips"><button class="chip on" data-s="notiz">Notizen</button><button class="chip on" data-s="mail">Mails</button><button class="chip on" data-s="asana">Asana</button><button class="chip on" data-s="kalender">Kalender</button><button class="chip on" data-s="entscheidung">Entscheidungen</button><button class="chip on" data-s="plattform">Plattform</button></div></div>
     <div class="nf-row"><span class="nf-l">Korb</span><div class="segs" id="relSegs"><button class="seg on" data-rel="">Alle</button><button class="seg" data-rel="hoch">hoch</button><button class="seg" data-rel="mittel">mittel</button><button class="seg" data-rel="niedrig">niedrig</button></div><label class="chk"><input type="checkbox" id="showDone"> Erledigte zeigen</label></div>
     <div class="nf-row"><span class="nf-l">Suche</span><div class="search"><input id="q" placeholder="Neuigkeiten durchsuchen … (Taste /)" /></div><button type="button" class="btn btn-sm btn-ghost" id="filterReset">Zurücksetzen</button></div>
   </div>
@@ -72,12 +72,12 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=20"></script>
-<script src="/assets/game.js?v=20"></script>
-<script src="/assets/eggs.js?v=20" defer></script>
+<script src="/assets/core.js?v=21"></script>
+<script src="/assets/game.js?v=21"></script>
+<script src="/assets/eggs.js?v=21" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
-const SRC_ALL=["notiz","mail","asana","kalender","entscheidung"];
+const SRC_ALL=["notiz","mail","asana","kalender","entscheidung","plattform"];
 let ITEMS=[], TOPICS=[], STRANDS=[], Q="", WHO="", RANGE=14, REL="", SRC=new Set([...SRC_ALL,"protokoll","manuell"]), SHOWDONE=false;
 const NOW=new Date();
 const REL_RANK={hoch:0,mittel:1,niedrig:2};
@@ -137,7 +137,7 @@ function tickerRow(x){
   const links=`<div class="tk-links">${x.source_url?`<a href="${gfEsc(x.source_url)}" target="_blank" rel="noopener">${gfEsc(x.source_title||"Quelle öffnen")} ↗</a>`:""}${t?`<a href="board.html?topic=${t.id}">Thema: ${gfEsc(t.title.slice(0,60))}</a>`:`<button type="button" class="linkish" data-mk>Als Thema erfassen</button>`}</div>`;
   return `<article class="tk src-${gfEsc(x.source)} ${isNew(x)?"is-new":""}" data-id="${x.id}">
     <button type="button" class="tk-row" aria-expanded="false" title="${gfEsc(GF_NEWS_SRC[x.source]||x.source)}${x.strand?" · "+gfEsc(strandLabel(x.strand)):""}">
-      <span class="tk-t">${gfFmtTime(x.happened_at)}</span>${gfNewsWho(x.who)}<span class="tk-title">${gfEsc(x.title)}</span>${x.strand?`<span class="tk-strand">${gfEsc(strandLabel(x.strand))}</span>`:""}${chev()}
+      <span class="tk-t">${gfFmtTime(x.happened_at)}</span>${gfNewsWho(x.who)}<span class="tk-title">${gfEsc(x.title)}</span><span class="tk-strand">${gfEsc(GF_NEWS_SRC[x.source]||x.source||"")}${x.strand?" · "+gfEsc(strandLabel(x.strand)):""}</span>${chev()}
     </button>
     <div class="tk-more">${x.body?`<p>${gfEsc(x.body)}</p>`:""}${x.quote?`<blockquote>„${gfEsc(x.quote)}“</blockquote>`:""}${links}</div>
   </article>`;
@@ -185,7 +185,7 @@ function kandRow(x){
       ${done?`<div class="kd-f"><span class="nw-srct">${x.decided_by?gfEsc(x.decided_by)+" · ":""}${x.decided_at?gfFmtShort(x.decided_at):""}</span>${x.topic_id?`<a class="btn btn-sm btn-ghost" href="board.html?topic=${x.topic_id}">Thema öffnen</a>`:""}<button class="btn btn-sm btn-ghost" data-act="reopen">Zurück in den Korb</button></div>`
       :`<div class="kd-f">
         ${t?`<button class="btn btn-sm btn-primary" data-act="append">An Thema anhängen</button><button class="btn btn-sm btn-ghost" data-act="new">Als neues Thema</button>`:`<button class="btn btn-sm btn-primary" data-act="new">Als Thema übernehmen</button>`}
-        <select class="selectx" data-link title="Mit bestehendem Thema verknüpfen"><option value="">Mit Thema verknüpfen …</option>${options}</select>
+        <select class="selectx" data-link aria-label="Mit bestehendem Thema verknüpfen" title="Mit bestehendem Thema verknüpfen (Liste, weil bis zu 70 Themen)"><option value="">Mit Thema verknüpfen …</option>${options}</select>
         <button class="btn btn-sm btn-ghost" data-act="dismiss" style="margin-left:auto">Verwerfen</button>
       </div>`}
     </div>
