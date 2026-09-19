@@ -589,7 +589,7 @@ function gfPfRow(x){
 }
 function gfPfLage(lage){
   if(!lage) return `<p class="pf-lage muted">Noch kein Briefing-Absatz. Der tägliche Lauf schreibt ihn ab dem nächsten Morgen.</p>`;
-  return `<div class="pf-lage"><p>${gfEsc(lage.body||lage.title||"")}</p><span class="lg-d">Stand ${gfEsc(gfFmtShort(lage.created_at||lage.happened_at))}</span></div>`;
+  return `<div class="pf-lage"><p>${gfEsc(lage.body||lage.title||"")}</p><span class="lg-d">Stand ${gfEsc(gfFmtShort(lage.happened_at||lage.created_at))}</span></div>`;
 }
 function gfPfCard(pf, d, lage, days){
   const evs=(d&&d.latest)||[]; const total=d?d.total:0;
