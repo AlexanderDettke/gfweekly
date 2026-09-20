@@ -1267,3 +1267,23 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 .pf-rows .tk-more{padding-left:12px}
 .pf-rows .empty.soft{padding:14px;border-style:dashed}
 @media(max-width:760px){ .pf-head{flex-direction:column} .pf-rows .tk-row{grid-template-columns:auto minmax(0,1fr) 14px} .pf-rows .tk-row .nw-who,.pf-rows .tk-row .tk-strand{display:none} }
+
+/* ---- V22b · Aufräumen (Pförtner) ---- */
+.au-kpis{margin-bottom:12px}
+.au-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 0 12px;border-bottom:var(--rahmen) solid var(--line-soft);margin-bottom:10px}
+.au-sp{flex:1 1 auto}
+.au-list{display:flex;flex-direction:column;gap:8px}
+.au-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 18px;align-items:start;padding:12px 14px;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);transition:opacity var(--dauer-2,200ms) ease,border-color var(--dauer-1,120ms) ease}
+.au-row.is-prop{border-left:3px dashed var(--border-strong)}
+.au-row.is-ok{border-left:3px solid var(--pos)}
+.au-main{min-width:0;display:flex;flex-direction:column;gap:4px}
+.au-meta{font-size:var(--stufe-1);color:var(--text-3);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.au-title{font-size:var(--stufe-3);font-weight:600;letter-spacing:-.005em;line-height:1.3;color:var(--text)}
+.au-text{font-size:var(--stufe-2);color:var(--text-2);line-height:1.5;max-width:70ch}
+.au-note{font-size:var(--stufe-1);color:var(--text-3);font-style:italic}
+.au-ctl{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.au-gate .chip{min-height:28px;padding:3px 9px;font-size:var(--stufe-1)}
+.fchips .chip.prop,.fchips .chip.on.prop{background:transparent;color:var(--text);border:var(--rahmen) dashed var(--action);font-weight:600}
+.au-frist{display:inline-flex;align-items:center;gap:6px;font-size:var(--stufe-1);color:var(--text-3)}
+.au-frist input{font:inherit;font-size:var(--stufe-1);color:var(--text-2);background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-s);padding:3px 6px;min-height:28px}
+@media(max-width:760px){ .au-row{grid-template-columns:1fr} .au-ctl{align-items:flex-start} .au-bar .au-sp{display:none} .au-bar .btn{margin-left:auto} }

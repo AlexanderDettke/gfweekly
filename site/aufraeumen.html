@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#17171a" />
+<title>Das Hohe Haus · Aufräumen</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=22" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=22" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=22" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=22" />
+<link rel="stylesheet" href="/assets/styles.css?v=22" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Das Hohe Haus</h1>
+    <div class="sub">Aufräumen · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+  <div id="hero"></div>
+
+  <div class="kk-row au-kpis" id="kpis"></div>
+
+  <div class="au-bar">
+    <div class="fchips compact" id="fGate" role="group" aria-label="Ausgang"><input type="hidden" id="fGateV" value=""><button type="button" class="chip on" data-v="" aria-pressed="true">Alle</button><button type="button" class="chip" data-v="gf" aria-pressed="false">GF gemeinsam</button><button type="button" class="chip" data-v="alex" aria-pressed="false">Alex</button><button type="button" class="chip" data-v="lea" aria-pressed="false">Lea</button><button type="button" class="chip" data-v="team" aria-pressed="false">Team</button><button type="button" class="chip" data-v="plattform" aria-pressed="false">Plattform</button><button type="button" class="chip" data-v="warten" aria-pressed="false">Kann warten</button></div>
+    <label class="chk"><input type="checkbox" id="onlyOpen" checked> nur unbestätigte</label>
+    <span class="au-sp"></span>
+    <button class="btn btn-ghost btn-sm" id="acceptRest" title="Übernimmt den Vorschlag des Laufs für alle noch unbestätigten Zeilen der aktuellen Ansicht">Alle Vorschläge übernehmen</button>
+  </div>
+
+  <div class="au-list" id="list"><div class="loading">lädt …</div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/assets/core.js?v=22"></script>
+<script src="/assets/game.js?v=22"></script>
+<script src="/assets/eggs.js?v=22" defer></script>
+<script>
+/* V22b · Aufräumen: alle offenen Themen und Kandidaten einmal durch den Pförtner. Je Zeile der Vorschlag des Laufs
+   (gate_by = lauf, gestrichelt), eine Chip-Reihe mit den sechs Ausgängen, ein Datumsfeld für die Frist. Klick auf einen
+   Chip bestätigt sofort (gate_set, gate_by = Person). „Alle Vorschläge übernehmen“ bestätigt den Rest der Ansicht. */
+const $=s=>document.querySelector(s);
+const GATE_LBL={gf:"GF gemeinsam",alex:"Alex",lea:"Lea",team:"Team",plattform:"Plattform",warten:"Kann warten"};
+const GATE_TONE={gf:"action",alex:"",lea:"",team:"",plattform:"info",warten:""};
+let ITEMS=[], FILTER="", ONLY_OPEN=true, STRANDS=[];
+function strandLabel(k){ const s=STRANDS.find(x=>x.key===k); return s?(s.short||s.label):(k||""); }
+function fmtD(d){ return d?new Date(d.length===10?d+"T00:00:00":d).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}):""; }
+function isProposal(x){ return !x.gate || x.gate_by==="lauf"; }
+
+function renderKpis(){
+  const open=ITEMS.filter(isProposal).length, gf=ITEMS.filter(x=>x.gate==="gf").length, gfOk=ITEMS.filter(x=>x.gate==="gf"&&!isProposal(x)).length;
+  $("#kpis").innerHTML=[
+    gfKachel({icon:"ereignis",value:ITEMS.length,label:"Einträge gesamt"}),
+    gfKachel({icon:"frist",value:open,label:"noch unbestätigt",tone:open?"warn":"pos"}),
+    gfKachel({icon:"entscheidung",value:gf,label:"gehören der GF",unit:gfOk?`${gfOk} bestätigt`:"",tone:gf>25?"warn":""}),
+    gfKachel({icon:"partner",value:ITEMS.filter(x=>x.gate==="lea"||x.gate==="alex"||x.gate==="team").length,label:"zugewiesen"}),
+  ].join("");
+}
+function row(x){
+  const prop=isProposal(x); const k=x.kind==="thema"?"Thema":"Kandidat";
+  const meta=[k, x.strand?strandLabel(x.strand):"", x.kind==="thema"?(x.priority||""):(x.relevance||""), x.who||x.owner||""].filter(Boolean).join(" · ");
+  const text=x.kind==="thema"?(x.short_description||gfFirstSentence(x.context||"",200)):gfFirstSentence(x.body||"",220);
+  const chips=Object.keys(GATE_LBL).map(g=>`<button type="button" class="chip${x.gate===g?" on":""}${x.gate===g&&prop?" prop":""}" data-v="${g}" aria-pressed="${x.gate===g}">${GATE_LBL[g]}</button>`).join("");
+  return `<article class="au-row ${prop?"is-prop":"is-ok"}" data-kind="${x.kind}" data-id="${x.id}">
+    <div class="au-main">
+      <div class="au-meta">${gfEsc(meta)}${prop?` · ${gfZustand("offen","Vorschlag")}`:` · ${gfZustand("ok","bestätigt")}`}</div>
+      <div class="au-title">${gfEsc(x.title||"")}</div>
+      ${text?`<div class="au-text">${gfEsc(text)}</div>`:""}
+      ${x.gate_note?`<div class="au-note">${gfEsc(x.gate_note)}</div>`:""}
+    </div>
+    <div class="au-ctl">
+      <div class="fchips compact au-gate" role="group" aria-label="Ausgang"><input type="hidden" name="gate" value="${gfEsc(x.gate||"")}">${chips}</div>
+      <label class="au-frist"><span>Frist</span><input type="date" value="${x.gate_frist||""}"></label>
+    </div>
+  </article>`;
+}
+function render(){
+  renderKpis();
+  let list=ITEMS.filter(x=>!FILTER||x.gate===FILTER).filter(x=>!ONLY_OPEN||isProposal(x));
+  if(!list.length){ $("#list").innerHTML=`<div class="empty soft">${ONLY_OPEN?"Alles bestätigt. Nichts wartet mehr auf einen Ausgang.":"Nichts in dieser Ansicht."}</div>`; return; }
+  $("#list").innerHTML=list.map(row).join("");
+  gfStagger($("#list"),".au-row");
+}
+async function setGate(el, gate, frist){
+  const id=el.dataset.id, kind=el.dataset.kind; const x=ITEMS.find(i=>i.id===id&&i.kind===kind); if(!x) return;
+  try{
+    const p={kind,id,gate,by:gfWho()}; if(frist!==undefined) p.frist=frist;
+    const d=await gfApi("gate_set",p); Object.assign(x,{gate:d.item.gate,gate_by:d.item.gate_by,gate_at:d.item.gate_at,gate_frist:d.item.gate_frist});
+    el.outerHTML=row(x); renderKpis();
+    if(ONLY_OPEN){ const n=$("#list").querySelector(`[data-id="${id}"]`); if(n) setTimeout(()=>{ n.style.opacity=".35"; setTimeout(()=>{ n.remove(); if(!$("#list").children.length) render(); },250); },600); }
+  }catch(e){ gfToast("Fehler: "+(e.message||"speichern")); }
+}
+$("#list").addEventListener("click",e=>{
+  const chip=e.target.closest(".au-gate .chip"); if(!chip) return;
+  e.stopImmediatePropagation();
+  const el=chip.closest(".au-row"); const frist=el.querySelector(".au-frist input").value||null;
+  setGate(el, chip.dataset.v, frist);
+},true);
+$("#list").addEventListener("change",e=>{
+  if(!e.target.matches(".au-frist input")) return;
+  const el=e.target.closest(".au-row"); const x=ITEMS.find(i=>i.id===el.dataset.id&&i.kind===el.dataset.kind);
+  if(x&&x.gate) setGate(el, x.gate, e.target.value||null);
+});
+$("#fGate").addEventListener("click",e=>{ const c=e.target.closest(".chip"); if(!c) return; setTimeout(()=>{ FILTER=$("#fGateV").value; render(); },0); });
+$("#onlyOpen").onchange=e=>{ ONLY_OPEN=e.target.checked; render(); };
+$("#acceptRest").onclick=async()=>{
+  const list=ITEMS.filter(x=>isProposal(x)&&x.gate&&(!FILTER||x.gate===FILTER));
+  if(!list.length) return gfToast("Nichts zu übernehmen");
+  if(!confirm(`${list.length} Vorschläge so übernehmen, wie der Lauf sie gesetzt hat?`)) return;
+  try{ const d=await gfApi("gate_set_many",{by:gfWho(),items:list.map(x=>({kind:x.kind,id:x.id,gate:x.gate}))}); list.forEach(x=>{ x.gate_by=gfWho(); }); gfToast(`${d.updated} übernommen`); render(); }
+  catch(e){ gfToast("Fehler: "+e.message); }
+};
+async function load(){
+  const [g,c]=await Promise.all([gfApi("gate_list",{limit:1000}), gfApi("cycle_get").catch(()=>({strands:[]}))]);
+  ITEMS=g.items||[]; STRANDS=c.strands||[]; render();
+}
+gfGate(async()=>{
+  $("#app").style.display="block"; gfMountTopbar("aufraeumen");
+  gfMountHero("pflege","Aufräumen","Jeder Eintrag bekommt einen Ausgang: wer entscheidet, oder ob es warten kann. Der Lauf hat vorsortiert, ein Klick bestätigt oder korrigiert. Frist nur, wenn etwas passiert, wenn nichts entschieden wird.",{compact:true});
+  await load();
+});
+</script>
+</body>
+</html>
