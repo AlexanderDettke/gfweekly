@@ -122,13 +122,14 @@ const GF_ICONS={
   pen:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l11-11-4-4L4 16v4Z"/><path d="m13 7 4 4"/></svg>',
   grid:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><path d="M13 16.5h7M16.5 13v7"/></svg>',
   sliders:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="var(--header-bg,#111)"/><circle cx="15" cy="12" r="2" fill="var(--header-bg,#111)"/><circle cx="7" cy="17" r="2" fill="var(--header-bg,#111)"/></svg>',
+  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
   menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
   chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg>',
   x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg>'
 };
 const GF_NAV=[
-  ["Heute",[["start","index.html","Start","home",null,"Zyklus, Kennzahlen, Rituale, Habitat"],["neuigkeiten","neuigkeiten.html","Neuigkeiten","bell","newsBadge","Ticker, Sichtungskorb, Themenlage"],["checkin","checkin.html","Check-in","check",null,"Vorbereitung auf das Weekly"]]],
-  ["Arbeiten",[["themen","board.html","Themen","board","themenBadge","Board, Kacheln, Liste, Entscheidungen"],["capture","capture.html","Eingabe","pen",null,"Thema erfassen"]]],
+  ["Heute",[["start","index.html","Für dich","home",null,"Deine Entscheidungen, seit gestern, nächste Fristen"],["neuigkeiten","neuigkeiten.html","Neuigkeiten","bell","newsBadge","Ticker, Sichtungskorb, Themenlage"],["checkin","checkin.html","Check-in","check",null,"Vorbereitung auf das Weekly"]]],
+  ["Arbeiten",[["themen","board.html","Themen","board","themenBadge","Board, Kacheln, Liste, Entscheidungen"],["jahr","jahr.html","Jahr","cal",null,"Zyklus, Meilensteine, Rituale, Team, Plattformen, Habitat"],["capture","capture.html","Eingabe","pen",null,"Thema erfassen"]]],
   ["Verwalten",[["seiten","seiten.html","Wichtige Seiten","grid",null,"Arbeitsseiten mit Zugang"],["edit","bearbeiten.html","Bearbeiten","sliders",null,"Themen, Personen, Links pflegen"],["aufraeumen","aufraeumen.html","Aufräumen","check",null,"Jedem Eintrag einen Ausgang geben"]]]
 ];
 const GF_SUBNAV=[["board","board.html?view=board","Board","Spalten nach Ablauf, Prio, Zeitraum oder Person, verschiebbar"],["kacheln","board.html?view=kacheln","Kacheln","Gruppen als Kachelraster"],["liste","cockpit.html","Liste","Ausführliche Liste mit Details und Protokoll"],["entscheidungen","entscheidungen.html","Entscheidungen","Entscheidungslog, Protokolle der Besprechungen, Wochenmail"]];

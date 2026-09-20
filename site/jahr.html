@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#17171a" />
+<title>Das Hohe Haus · Jahr</title>
+<meta name="description" content="Jahr: Zyklus, Jahreszyklus, Meilensteine, wichtigste Themen, Rituale. Vertraulich." />
+<meta property="og:title" content="Das Hohe Haus · Geschäftsführung der Wilden Habitate" />
+<meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung – Wilde Möhre." />
+<meta property="og:image" content="assets/og-image.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=22" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=22" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=22" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=22" />
+<link rel="stylesheet" href="/assets/styles.css?v=22" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Das Hohe Haus</h1>
+    <div class="sub">Große Fragen. Klare Entscheidungen. Gelegentlich Kaffee oder besser Wein?</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+  <div id="hero"></div>
+
+  <!-- V19: Laufband mit dem Neuesten aus Neuigkeiten -->
+  <div class="nw" id="band" hidden></div>
+
+  <!-- V20: Team, letzte 3 Monate (aus der Team- und Partneranalyse, Edge Function tpa, Aktion overview) -->
+  <section class="nw" id="team" aria-label="Team, letzte 3 Monate"></section>
+  <section class="nw" id="platforms" aria-label="Plattformen, letzte 7 Tage"></section>
+
+  <!-- Habitat: Jahrestopf, Stufe, Tag, Woche, Abzeichen (V17) -->
+  <section class="habitat" id="habitat" aria-label="Habitat-Punkte"></section>
+
+  <!-- Zyklus -->
+  <section class="cycle" id="cycle"><div class="loading">lädt …</div></section>
+
+  <!-- Kennzahlen -->
+  <div class="dash" id="dash"></div>
+
+  <!-- Meilensteine -->
+  <div class="section">
+    <div class="sec-h"><h2>Nächste Meilensteine</h2><span class="hint" id="msHint">je Strang, nach Datum</span><span class="line"></span>
+      <div class="sec-actions">
+        <button class="btn btn-sm btn-ghost" id="msAll" title="Auch erreichte und abgesagte anzeigen">alle</button>
+        <button class="btn btn-sm btn-ghost" id="editMode" title="Bearbeiten ein/aus">✎ Bearbeiten</button>
+        <button class="btn btn-sm btn-brand" id="addMs">＋ Meilenstein</button>
+      </div>
+    </div>
+    <div class="ms-grid" id="msGrid"><div class="loading">lädt …</div></div>
+  </div>
+
+  <!-- Themen -->
+  <div class="section">
+    <div class="sec-h"><h2>Wichtigste Themen</h2><span class="hint">Priorität hoch · offen oder in Klärung</span><span class="line"></span><a class="btn btn-sm btn-ghost" href="board.html">Zum Board →</a></div>
+    <div class="top-grid" id="topGrid"><div class="loading">lädt …</div></div>
+  </div>
+
+  <!-- Rituale -->
+  <div class="section">
+    <div class="sec-h"><h2 id="ritH">Rituale</h2><span class="hint" id="ritHint">abhaken je Jahr</span><span class="line"></span><div class="segs" id="ritSegs"></div></div>
+    <div class="rit-wrap" id="rituals"></div>
+    <div class="rit-add" id="ritAdd" style="display:none">
+      <input id="ritNew" placeholder="Neues Ritual für diese Phase …" />
+      <button class="btn btn-sm btn-brand" id="ritNewBtn">＋ Ritual</button>
+    </div>
+  </div>
+
+  <!-- Schnellzugriff -->
+  <div class="section">
+    <div class="sec-h"><h2>Schnellzugriff</h2><span class="hint">Steuerung &amp; Planung</span><span class="line"></span><a class="btn btn-sm btn-ghost" href="seiten.html">Alle Seiten →</a></div>
+    <div class="quick" id="quick"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/assets/core.js?v=22"></script>
+<script src="/assets/game.js?v=22"></script>
+<script src="/assets/eggs.js?v=22" defer></script>
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const MON=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+const TOK={ info:["var(--info)","var(--info-bg)"], warn:["var(--warn)","var(--warn-bg)"], pos:["var(--pos)","var(--pos-bg)"], accent:["var(--accent)","var(--accent-soft)"], crit:["var(--crit)","var(--crit-bg)"] };
+const MS_STATUS={geplant:"geplant",laufend:"laufend",erreicht:"erreicht",verschoben:"verschoben",abgesagt:"abgesagt"};
+const ST={offen:"Offen",in_klaerung:"In Klärung",erledigt:"Erledigt"};
+
+/* ---- Zustand ---- */
+const NOW=new Date();
+let CYCLE=null;            // { year, phases, transitions, rituals, checks, strands }
+let MS=[];                 // Meilensteine
+let VIEW_YEAR=NOW.getFullYear();
+let RIT_PHASE=null;        // Phase-Key für die Ritualliste
+let EDIT=false, MS_ALL=false, OPEN_MS=null;
+
+/* ---- Helfer ---- */
+function col(tok){ return (TOK[tok]||TOK.info)[0]; } function soft(tok){ return (TOK[tok]||TOK.info)[1]; }
+function phaseOf(date){ const m=date.getMonth()+1; return CYCLE.phases.find(p=>(p.months||[]).includes(m)) || CYCLE.phases[0]; }
+function nextTransition(date){
+  const y=date.getFullYear();
+  const c=CYCLE.transitions.flatMap(t=>[new Date(y,t.month-1,t.day), new Date(y+1,t.month-1,t.day)].map(d=>({d,t}))).filter(x=>x.d>date).sort((a,b)=>a.d-b.d);
+  return c[0];
+}
+function daysBetween(a,b){ return Math.round((b-a)/86400000); }
+function fmtD(d){ return d.toLocaleDateString("de-DE",{day:"2-digit",month:"long",year:"numeric"}); }
+function fmtShort(iso){ if(!iso) return ""; const d=new Date(iso+"T00:00:00"); return d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}); }
+function fmtRange(m){
+  if(m.date_from && m.date_to && m.date_to!==m.date_from){ const a=new Date(m.date_from+"T00:00:00"), b=new Date(m.date_to+"T00:00:00"); const sameM=a.getMonth()===b.getMonth()&&a.getFullYear()===b.getFullYear(); return sameM ? `${a.getDate()}. bis ${b.getDate()}. ${a.toLocaleDateString("de-DE",{month:"long",year:"numeric"})}` : `${fmtShort(m.date_from)} bis ${fmtShort(m.date_to)}`; }
+  if(m.date_from) return fmtD(new Date(m.date_from+"T00:00:00"));
+  return m.zeitraum || "ohne Termin";
+}
+function strandOf(k){ return (CYCLE?.strands||[]).find(s=>s.key===k) || {key:k,label:k,short:k}; }
+function daysTo(iso){ return daysBetween(new Date(NOW.getFullYear(),NOW.getMonth(),NOW.getDate()), new Date(iso+"T00:00:00")); }
+
+/* ---- Zyklus ---- */
+function renderCycle(){
+  const ph=phaseOf(NOW); const nt=nextTransition(NOW);
+  const yStart=new Date(VIEW_YEAR,0,1), yEnd=new Date(VIEW_YEAR+1,0,1);
+  const isThisYear=VIEW_YEAR===NOW.getFullYear();
+  const pct=((NOW-yStart)/(yEnd-yStart)*100).toFixed(2);
+  const phStart=new Date(NOW.getFullYear(), ph.months[0]-1, 1);
+  const week=Math.floor(daysBetween(phStart,NOW)/7)+1;
+  const months=MON.map((m,i)=>{ const p=phaseOf(new Date(VIEW_YEAR,i,1)); return `<div class="cm ${isThisYear&&i===NOW.getMonth()?"now":""}" style="--c:${col(p.color_token)};--s:${soft(p.color_token)}"><span>${m}</span></div>`; }).join("");
+  const marks=CYCLE.transitions.map(t=>{ const d=new Date(VIEW_YEAR,t.month-1,t.day); const x=((d-yStart)/(yEnd-yStart)*100).toFixed(2); const edge=x<4?" edge-l":(x>96?" edge-r":""); return `<div class="tmark${edge}" style="left:${x}%" title="${gfEsc(t.label)} · ${fmtD(d)}${t.description?" · "+gfEsc(t.description):""}"><i></i><b>${gfEsc(t.label)}</b></div>`; }).join("");
+  const msMarks=MS.filter(m=>m.date_from && new Date(m.date_from+"T00:00:00").getFullYear()===VIEW_YEAR && m.status!=="abgesagt").map(m=>{
+    const d=new Date(m.date_from+"T00:00:00"); const x=((d-yStart)/(yEnd-yStart)*100).toFixed(2); const s=strandOf(m.strand);
+    return `<div class="msmark ${m.status}" style="left:${x}%" title="${gfEsc(m.title)} · ${gfEsc(fmtRange(m))}"><i></i><b>${gfEsc(s.short)}</b></div>`; }).join("");
+  $("#cycle").innerHTML=`
+    <div class="cycle-head">
+      <div class="cycle-now" style="--c:${col(ph.color_token)};--s:${soft(ph.color_token)}">
+        <div class="k">Aktuelle Phase · Woche ${week}</div>
+        <div class="v">${gfEsc(ph.label)}</div>
+        <div class="lead">${gfEsc(ph.lead||"")}</div>
+      </div>
+      <div class="cycle-next">
+        <div class="k">Nächster Übergang</div>
+        <div class="v2">${gfEsc(nt.t.label)}</div>
+        <div class="cap">${fmtD(nt.d)} · in ${daysBetween(NOW,nt.d)} Tagen</div>
+        ${nt.t.description?`<div class="cap muted">${gfEsc(nt.t.description)}</div>`:""}
+      </div>
+      <div class="cycle-legend">
+        ${CYCLE.phases.map(p=>`<span style="--c:${col(p.color_token)}"><i></i>${gfEsc(p.label)} <em>${MON[p.months[0]-1]}–${MON[p.months[p.months.length-1]-1]}</em></span>`).join("")}
+      </div>
+    </div>
+    <div class="cycle-yearbar">
+      <button class="mini" id="yPrev" title="Vorjahr">←</button>
+      <b>${VIEW_YEAR}</b>
+      <button class="mini" id="yNext" title="Folgejahr">→</button>
+      ${isThisYear?"":`<button class="btn btn-sm btn-ghost" id="yNow">zurück zu ${NOW.getFullYear()}</button>`}
+      <span class="hint">${msMarks?"Meilensteine auf der Leiste: Strang-Kürzel, Titel beim Zeigen":"keine Meilensteine mit Datum in diesem Jahr"}</span>
+    </div>
+    <div class="cycle-strip ${msMarks?"has-ms":""}">
+      <div class="msrow">${msMarks}</div>
+      <div class="cmonths">${months}</div>
+      ${isThisYear?`<div class="today" style="left:${pct}%"><i></i><b>heute</b></div>`:""}
+      ${marks}
+    </div>`;
+  $("#yPrev").onclick=()=>{ VIEW_YEAR--; renderCycle(); };
+  $("#yNext").onclick=()=>{ VIEW_YEAR++; renderCycle(); };
+  const yn=$("#yNow"); if(yn) yn.onclick=()=>{ VIEW_YEAR=NOW.getFullYear(); renderCycle(); };
+}
+
+/* ---- Rituale ---- */
+function renderRituals(){
+  const cur=phaseOf(NOW); if(!RIT_PHASE) RIT_PHASE=cur.key;
+  const ph=CYCLE.phases.find(p=>p.key===RIT_PHASE)||cur;
+  $("#ritSegs").innerHTML=CYCLE.phases.map(p=>`<button class="seg ${p.key===ph.key?"on":""}" data-k="${p.key}">${gfEsc(p.label)}${p.key===cur.key?" · jetzt":""}</button>`).join("");
+  $("#ritSegs").querySelectorAll(".seg").forEach(b=>b.onclick=()=>{ RIT_PHASE=b.dataset.k; renderRituals(); });
+  const list=CYCLE.rituals.filter(r=>r.phase_key===ph.key);
+  const done=new Map(CYCLE.checks.map(c=>[c.ritual_id,c]));
+  const n=list.filter(r=>done.has(r.id)).length;
+  $("#ritH").textContent=`Rituale der Phase „${ph.label}"`;
+  $("#ritHint").textContent=`${n} von ${list.length} erledigt · ${CYCLE.year}`;
+  document.dispatchEvent(new CustomEvent("gf-rituals",{detail:{total:list.length, done:n, isCurrent:ph.key===cur.key, phase:ph.label}}));
+  $("#rituals").innerHTML= list.length ? list.map((r,i)=>{ const c=done.get(r.id); return `<label class="rit ${c?"done":""}" data-id="${r.id}">
+      <input type="checkbox" class="check" ${c?"checked":""} />
+      ${c&&window.GF_GAME?`<img class="stamp" src="${GF_GAME.icon("schatzbuch-stempel-"+STAMPS[i%STAMPS.length])}" alt="" title="Stempel im Schatzbuch">`:""}
+      <span class="rt">${gfEsc(r.title)}${r.hint?`<small>${gfEsc(r.hint)}</small>`:""}${c?`<small class="who">✓ ${gfEsc(c.done_by||"")} · ${new Date(c.done_at).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}</small>`:""}</span>
+      ${EDIT?`<button class="mini del" data-act="rdel" title="Ritual entfernen">✕</button>`:""}
+    </label>`; }).join("") : `<div class="empty soft">Noch keine Rituale für diese Phase.</div>`;
+  $("#rituals").querySelectorAll(".rit").forEach(el=>{
+    const id=el.dataset.id;
+    el.querySelector("input").onchange=async e=>{
+      const want=e.target.checked;
+      try{ const d=await gfApi("ritual_toggle",{ritual_id:id, year:CYCLE.year, done:want, done_by:gfWho()});
+        CYCLE.checks=CYCLE.checks.filter(c=>c.ritual_id!==id); if(d.done && d.check) CYCLE.checks.push(d.check);
+        renderRituals(); gfToast(want?"Ritual abgehakt":"Haken entfernt"); }
+      catch(err){ gfToast("Fehler: "+err.message); e.target.checked=!want; }
+    };
+    const del=el.querySelector('[data-act="rdel"]'); if(del) del.onclick=async ev=>{ ev.preventDefault(); const r=CYCLE.rituals.find(x=>x.id===id); if(!confirm(`Ritual „${r.title}" für alle Jahre entfernen?`)) return; try{ await gfApi("ritual_delete",{id}); CYCLE.rituals=CYCLE.rituals.filter(x=>x.id!==id); renderRituals(); gfToast("Entfernt"); }catch(err){ gfToast("Fehler: "+err.message); } };
+  });
+  $("#ritAdd").style.display=EDIT?"flex":"none";
+}
+$("#ritNewBtn").onclick=async()=>{ const t=$("#ritNew").value.trim(); if(!t) return; try{ const d=await gfApi("ritual_save",{phase_key:RIT_PHASE, title:t, sort_order:(CYCLE.rituals.filter(r=>r.phase_key===RIT_PHASE).length+1)*10}); CYCLE.rituals.push(d.ritual); $("#ritNew").value=""; renderRituals(); gfToast("Ritual angelegt"); }catch(e){ gfToast("Fehler: "+e.message); } };
+$("#ritNew").addEventListener("keydown",e=>{ if(e.key==="Enter") $("#ritNewBtn").click(); });
+
+/* ---- Meilensteine ---- */
+async function loadMilestones(){
+  try{ const d=await gfApi("milestones_list",{all:MS_ALL}); MS=d.milestones||[]; renderMilestones(); if(CYCLE) renderCycle(); }
+  catch(e){ $("#msGrid").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+}
+function msCard(m){
+  if(OPEN_MS && OPEN_MS.id===m.id) return msForm(m);
+  const s=strandOf(m.strand); const dt=m.date_from?daysTo(m.date_from):null;
+  const when = dt===null ? "" : dt<0 ? `vor ${-dt} Tagen` : dt===0 ? "heute" : `in ${dt} Tagen`;
+  const title = m.link_url ? `<a href="${gfEsc(m.link_url)}" target="_blank" rel="noopener">${gfEsc(m.title)} ↗</a>` : gfEsc(m.title);
+  return `<article class="ms st-${m.status}" data-id="${m.id}">
+    <div class="ms-top"><span class="pill strand">${gfEsc(s.short)}</span><span class="pill st st-${m.status}">${MS_STATUS[m.status]||m.status}</span>${EDIT?`<button class="icon-btn edit" data-act="edit" title="Bearbeiten">✎</button>`:""}</div>
+    <div class="ms-date">${gfEsc(fmtRange(m))}${when?` <em>· ${when}</em>`:""}</div>
+    <div class="ms-title">${title}</div>
+    ${m.description?`<div class="ms-desc">${gfClamp(m.description,"m"+m.id)}</div>`:""}
+    <div class="ms-foot"><span>${m.owner?gfEsc(m.owner):""}</span><span class="site-meta">${m.updated_by?`von ${gfEsc(m.updated_by)} · `:""}${new Date(m.updated_at).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"2-digit"})}</span></div>
+  </article>`;
+}
+function msForm(m){
+  const strands=(CYCLE?.strands||[]).map(s=>[s.key,s.short||s.label]);
+  return `<form class="ms editcard" data-id="${m.id||""}">
+    <div class="fgrid">
+      <div class="fld ffull"><label>Titel</label><input name="title" value="${gfEsc(m.title||"")}" required /></div>
+      <div class="fld ffull"><label>Strang</label>${gfChips("strand",strands,m.strand||strands[0]?.[0]||"",{label:"Strang",cls:"compact"})}</div>
+      <div class="fld ffull"><label>Status</label>${gfChips("status",Object.entries(MS_STATUS),m.status||"geplant",{label:"Status",cls:"compact"})}</div>
+      <div class="fld"><label>Datum von</label><input name="date_from" type="date" value="${m.date_from||""}" /></div>
+      <div class="fld"><label>Datum bis (optional)</label><input name="date_to" type="date" value="${m.date_to||""}" /></div>
+      <div class="fld"><label>Zeitraum als Text (wenn kein Datum)</label><input name="zeitraum" value="${gfEsc(m.zeitraum||"")}" placeholder="z. B. Q1 2027" /></div>
+      <div class="fld"><label>Verantwortung</label><input name="owner" value="${gfEsc(m.owner||"")}" placeholder="z. B. Lea" /></div>
+      <div class="fld ffull"><label>Beschreibung</label><textarea name="description" rows="2">${gfEsc(m.description||"")}</textarea></div>
+      <div class="fld ffull"><label>Link (optional)</label><input name="link_url" type="url" value="${gfEsc(m.link_url||"")}" placeholder="https://…" /></div>
+      <div class="fld"><label>Reihenfolge</label>${gfStepper("sort_order",m.sort_order??100,{min:0,max:999,step:10,label:"Reihenfolge"})}</div>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" type="submit">Speichern</button>
+      <button class="btn btn-ghost" type="button" data-act="cancel">Abbrechen</button>
+      ${m.id?`<button class="btn btn-ghost del" type="button" data-act="delete">Löschen</button>`:""}
+    </div>
+  </form>`;
+}
+function renderMilestones(){
+  $("#editMode").textContent = EDIT ? "✓ Fertig" : "✎ Bearbeiten"; $("#editMode").classList.toggle("on-edit",EDIT);
+  $("#msAll").classList.toggle("on-edit",MS_ALL); $("#msAll").textContent = MS_ALL ? "nur offene" : "alle";
+  const list=[...MS].sort((a,b)=>(a.date_from||"9999")<(b.date_from||"9999")?-1:1);
+  const upcoming = MS_ALL ? list : list;
+  let html = upcoming.map(msCard).join("");
+  if(OPEN_MS && !OPEN_MS.id) html = msForm(OPEN_MS) + html;
+  $("#msGrid").innerHTML = html || `<div class="empty pic" style="--hero-img:url(/assets/img/ankunft.webp)"><div><h3>Noch keine Meilensteine</h3><p>Über „＋ Meilenstein" den ersten anlegen: Titel, Termin oder Zeitraum, Strang, Verantwortung.</p></div></div>`;
+  gfStagger($("#msGrid"),"article.ms");
+  $("#msHint").textContent = `${MS.length} ${MS_ALL?"insgesamt":"offen"} · nach Datum`;
+  bindMs();
+}
+function bindMs(){
+  document.querySelectorAll("article.ms[data-id]").forEach(el=>{
+    const m=MS.find(x=>x.id===el.dataset.id);
+    el.querySelectorAll("[data-act]").forEach(b=>b.onclick=ev=>{ ev.preventDefault(); if(b.dataset.act==="edit"){ OPEN_MS={...m}; renderMilestones(); } });
+  });
+  document.querySelectorAll("form.ms.editcard").forEach(f=>{
+    f.onsubmit=async ev=>{ ev.preventDefault(); const fd=new FormData(f); const p={updated_by:gfWho()}; for(const [k,v] of fd.entries()) p[k]=v; if(f.dataset.id) p.id=f.dataset.id;
+      try{ await gfApi("milestone_save",p); gfToast("Gespeichert"); OPEN_MS=null; await loadMilestones(); }catch(e){ gfToast("Fehler: "+e.message); } };
+    f.querySelector('[data-act="cancel"]').onclick=()=>{ OPEN_MS=null; renderMilestones(); };
+    const del=f.querySelector('[data-act="delete"]'); if(del) del.onclick=async()=>{ const m=MS.find(x=>x.id===f.dataset.id); if(!confirm(`„${m.title}" löschen?`)) return; try{ await gfApi("milestone_delete",{id:m.id}); gfToast("Gelöscht"); OPEN_MS=null; await loadMilestones(); }catch(e){ gfToast("Fehler: "+e.message); } };
+  });
+}
+$("#editMode").onclick=()=>{ EDIT=!EDIT; if(!EDIT) OPEN_MS=null; renderMilestones(); renderRituals(); };
+$("#msAll").onclick=async()=>{ MS_ALL=!MS_ALL; await loadMilestones(); };
+$("#addMs").onclick=()=>{ EDIT=true; OPEN_MS={id:null,title:"",strand:"gf",status:"geplant",date_from:"",date_to:"",zeitraum:"",owner:"",description:"",link_url:"",sort_order:100}; renderMilestones(); renderRituals(); setTimeout(()=>{ const f=$("form.ms.editcard"); if(f){ f.scrollIntoView({behavior:"smooth",block:"center"}); f.querySelector('[name="title"]').focus(); } },50); };
+
+/* ---- Themen & Kennzahlen ---- */
+function topicCard(t){
+  const who=t.owner||t.delegate_to||"";
+  return `<a class="tcard" href="board.html?topic=${t.id}">
+    <div class="tc-top"><span class="pill p-${t.priority}">${t.priority}</span>${t.kind==="recurring"?`<span class="pill kindtag">wiederkehrend</span>`:""}<span class="pill s-${t.status}">${ST[t.status]||t.status}</span></div>
+    <div class="tc-title">${gfEsc(t.title)}</div>
+    ${t.short_description?`<div class="tc-sub">${gfClamp(t.short_description,"t"+t.id+"s",160)}</div>`:""}
+    ${t.next_action?`<div class="tc-next"><b>Nächster Schritt:</b> ${gfClamp(t.next_action,"t"+t.id+"n",160)}</div>`:""}
+    <div class="tc-foot">${who?`<span>${gfEsc(who)}</span>`:"<span></span>"}${t.next_suggested?`<span>${new Date(t.next_suggested).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}</span>`:""}</div>
+  </a>`;
+}
+async function loadTopics(){
+  try{
+    const d=await gfApi("list");
+    const all=(d.topics||[]); const open=all.filter(t=>t.status!=="erledigt");
+    const zb=open.filter(t=>t.board_lane==="zu_besprechen" && t.kind!=="recurring").length;
+    const neu7=all.filter(t=>Date.now()-new Date(t.created_at)<7*86400000).length;
+    const top=open.filter(t=>t.priority==="hoch").sort((a,b)=>(a.kind==="recurring")-(b.kind==="recurring") || (a.status==="in_klaerung"?-1:1)-(b.status==="in_klaerung"?-1:1));
+    const inKl=open.filter(t=>t.status==="in_klaerung").length;
+    const rec=open.filter(t=>t.kind==="recurring").length;
+    const nextMs=MS.filter(m=>m.date_from && daysTo(m.date_from)>=0).sort((a,b)=>a.date_from<b.date_from?-1:1)[0];
+    $("#dash").innerHTML=`
+      <div class="stat accent"><div class="k">Priorität hoch</div><div class="v">${top.length}</div><div class="cap">offen oder in Klärung</div></div>
+      <div class="stat"><div class="k">Offene Themen</div><div class="v">${open.length}</div><div class="cap">${rec} wiederkehrend · ${inKl} in Klärung</div></div>
+      <div class="stat"><div class="k">Nächster Meilenstein</div><div class="v">${nextMs?daysTo(nextMs.date_from):"–"}</div><div class="cap">${nextMs?`Tage · ${gfEsc(nextMs.title)}`:"keiner mit Datum"}</div></div>
+      <a class="stat link" href="board.html"><div class="k">Zu besprechen</div><div class="v">${zb}</div><div class="cap">im Board ${neu7?`· ${neu7} neu diese Woche`:""}</div></a>`;
+    $("#dash").querySelectorAll(".v").forEach(v=>gfCountUp(v, v.textContent));
+    $("#topGrid").innerHTML= top.length ? top.slice(0,8).map(topicCard).join("") : `<div class="empty soft">Keine Themen mit Priorität hoch offen.</div>`;
+    gfStagger($("#topGrid"),".tcard");
+  }catch(e){ $("#topGrid").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+}
+
+/* ---- Habitat (V17): Kopfbild nach Stufe, vier Karten unter dem Kopf ---- */
+const STAMPS=["zelt","feuer","amsel","wasser","baum","stern"];
+const LEVEL_ORDER=["lichtung","lagerplatz","dorf","festival","habitat"];
+function renderHabitat(st){
+  const G=window.GF_GAME; if(!G||!st) return;
+  const img=document.querySelector("#hero .hero-pic img"); const want=G.icon(st.level?.image||"habitat-1-lichtung"); if(img && img.getAttribute("src")!==want){ img.src=want; img.alt=`Habitat-Stufe ${st.level?.label||""}`; }
+  const lvl=st.level||{}, nx=st.next; const base=lvl.threshold||0; const pct=nx?Math.min(100,Math.round((st.total-base)/((nx.threshold-base)||1)*100)):100;
+  const rankImg=st.rank?G.icon("rang-"+st.rank):null; const rankLbl={bronze:"Bronze",silber:"Silber",gold:"Gold"}[st.rank]||"noch kein Rang";
+  const toRank=st.weekPts>=600?"":st.weekPts>=350?`${600-st.weekPts} bis Gold`:st.weekPts>=150?`${350-st.weekPts} bis Silber`:`${150-st.weekPts} bis Bronze`;
+  const badges=(st.badges||[]); const shown=badges.slice(0,6);
+  $("#habitat").innerHTML=`
+    <div class="hab">
+      <div class="k"><img src="${G.icon("punkte-taler")}" alt="">Habitat ${st.year}</div>
+      <div class="v">${st.total}<small>Taler · Stufe ${gfEsc(lvl.label||"")}</small></div>
+      <div class="bar"><i style="--p:${pct}%"></i></div>
+      <div class="steps">${LEVEL_ORDER.map(k=>`<span class="${k===lvl.key?"on":""}">${k.charAt(0).toUpperCase()+k.slice(1)}</span>`).join("")}</div>
+      <div class="cap">${nx?`Noch ${nx.threshold-st.total} Taler bis ${gfEsc(nx.label)}.`:"Das Habitat steht. Alles weitere ist Zugabe."} Gemeinsamer Topf von Alex und Lea, ohne Verfall.</div>
+    </div>
+    <div class="hab">
+      <div class="k">${gfAvatarTag(st.who,"av-k")}Heute · ${gfEsc(st.who)}</div>
+      <div class="v"><img src="${G.streakIcon(st.streak)}" alt="">${st.streak}<small>${st.streak===1?"Tag":"Tage"} in Folge</small></div>
+      <div class="goal ${st.goal?.done?"done":""}"><img src="${G.icon("punkte-tagesziel")}" alt=""><span>${gfEsc(st.goal?.label||"Tagesziel")}</span><b>${st.goal?.done?"erfüllt":"+10"}</b></div>
+      <div class="cap">${st.todayPts} Taler heute${st.streak>=3?` · nächster Serienbonus bei ${st.streak<7?7:st.streak<14?14:st.streak<30?30:Math.ceil((st.streak+1)/30)*30} Tagen`:st.streak?` · ab 3 Tagen gibt es Serienbonus`:" · einchecken zählt beim ersten Öffnen"}</div>
+    </div>
+    <div class="hab">
+      <div class="k"><img src="${rankImg||G.icon("kpi-punkte")}" alt="">Woche ${gfEsc(st.week.split("-W")[1])}</div>
+      <div class="v">${rankImg?`<img src="${rankImg}" alt="">`:""}${st.weekPts}<small>Taler · ${rankLbl}</small></div>
+      <div class="goal ${st.weekGoal?.done?"done":""}"><img src="${G.icon("punkte-wochenziel")}" alt=""><span>${gfEsc(st.weekGoal?.label||"Wochenziel")}</span><b>${st.weekGoal?.done?"erfüllt":"+40"}</b></div>
+      <div class="cap">${toRank?toRank+" · ":""}Lagerfeuer-Serie: ${st.fire} ${st.fire===1?"Woche":"Wochen"} mit Besprechung</div>
+    </div>
+    <a class="hab" href="entscheidungen.html#abzeichen" style="color:inherit">
+      <div class="k"><img src="${G.icon("abzeichen-merle")}" alt="">Abzeichen</div>
+      <div class="v">${badges.length}<small>von ${G.badges.length} dieses Jahr</small></div>
+      <div class="badges">${shown.map(b=>`<img src="${G.icon("abzeichen-"+b.key)}" alt="${gfEsc(b.label)}" title="${gfEsc(b.label)}${b.who&&b.who!=="Team"?" · "+gfEsc(b.who):""}">`).join("")}${badges.length>6?`<span class="more">+${badges.length-6}</span>`:""}${!badges.length?`<span class="more">Das erste kommt mit der ersten Entscheidung.</span>`:""}</div>
+    </a>`;
+  gfStagger($("#habitat"),".hab");
+}
+document.addEventListener("gf-game",e=>renderHabitat(e.detail));
+
+/* ---- Schnellzugriff ---- */
+async function loadQuick(){
+  try{
+    const d=await gfApi("sites_list");
+    const sites=(d.sites||[]).filter(s=>s.status==="aktiv" && s.category==="steuerung" && !/gfweekly\.netlify\.app|hohes-haus\.netlify\.app/.test(s.url)).slice(0,6);
+    $("#quick").innerHTML=sites.map(s=>`<a class="qcard" href="${gfEsc(s.url)}" target="_blank" rel="noopener"><div class="qn">${gfEsc(s.name)}</div><div class="qp">${gfEsc(s.purpose||"")}</div><div class="qh">${gfEsc((()=>{try{return new URL(s.url).host}catch(e){return s.url}})())} ↗</div></a>`).join("") || `<div class="empty soft">Noch keine Seiten im Bereich Steuerung &amp; Planung.</div>`;
+  }catch(e){ $("#quick").innerHTML=""; }
+}
+
+/* ---- Start ---- */
+gfGate(async()=>{
+  $("#app").style.display="block"; gfMountTopbar("jahr");
+  const wd=NOW.toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long"});
+  let lv0=null; try{ lv0=localStorage.getItem("gf_level"); }catch(e){}
+  const heroImg = lv0 && window.GF_GAME ? GF_GAME.icon("habitat-"+(["lichtung","lagerplatz","dorf","festival","habitat"].indexOf(lv0)+1)+"-"+lv0) : "ankunft";
+  gfMountHero(heroImg, `${gfAvatarTag(gfWho(),"hero-av")}Guten Tag, ${gfEsc(gfWho())}`, `${GF_APP_MOTTO}<span class="hero-date">${wd} · ${GF_APP_SUB}</span>`, {aside:`<a class="btn btn-sm" href="capture.html">Thema erfassen</a><a class="btn btn-sm" href="board.html">Board öffnen</a>`});
+  document.addEventListener("gf-who",e=>gfHeroText(`${gfAvatarTag(e.detail,"hero-av")}Guten Tag, ${gfEsc(e.detail)}`,null));
+  try{
+    const [cyc, ms]=await Promise.all([gfApi("cycle_get",{year:NOW.getFullYear()}), gfApi("milestones_list",{all:false})]);
+    CYCLE=cyc; MS=ms.milestones||[];
+    renderCycle(); renderRituals(); renderMilestones();
+    const ph=phaseOf(NOW); const hd=document.querySelector("#hero .hero-date"); if(hd) hd.textContent=`${wd} · Phase ${ph.label} · ${GF_APP_SUB}`;
+  }catch(e){ $("#cycle").innerHTML=`<div class="empty">Zyklus konnte nicht geladen werden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+  await Promise.all([loadTopics(), loadQuick(), gfLoadBand($("#band"),{link:"neuigkeiten.html"}), gfLoadTeam($("#team")), gfLoadPlatforms($("#platforms"),{days:7})]);
+  document.addEventListener("gf-who",()=>gfLoadBand($("#band"),{link:"neuigkeiten.html"}));
+});
+</script>
+</body>
+</html>
