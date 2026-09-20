@@ -43,13 +43,15 @@ function inboxRow(t: any){
 }
 const SITE_FIELDS = ['name','url','category','purpose','notes','login_user','login_password','login_note','status','preview'];
 const SITE_STATUSES = ['aktiv','entwurf','archiv'];
-/* v27 (20.09.2026): Plattformen: platform_digest {days}, platform_feed {platform, since, limit} lesen die Views hh_feed_habitate/hh_feed_partner/hh_partner_stand/hh_habitate_offen (nur SELECT, nie Schreiben in vvp_*); NEWS_SOURCES um 'plattform'.
+/* v28 (20.09.2026): Pförtner: gate_set, gate_set_many, gate_list (Themen und Kandidaten mit gate/gate_frist/gate_note; Vorschlag des Laufs gate_by=lauf).
+   v27 (20.09.2026): Plattformen: platform_digest {days}, platform_feed {platform, since, limit} lesen die Views hh_feed_habitate/hh_feed_partner/hh_partner_stand/hh_habitate_offen (nur SELECT, nie Schreiben in vvp_*); NEWS_SOURCES um 'plattform'.
    v22 (14.09.2026): Habitat-Punkte, siehe Modul unten (checkin, score_get, score_event, score_events, score_rules; Vergabe in add/capture/update/decision_add/ritual_toggle/session_end/milestone_save).
    v21 (14.09.2026): Neuigkeiten (gfweekly_news): Ticker, Sichtungskorb (Kandidaten), Themenlage je Strang.
    Befüllt vom täglichen Cowork-Auftrag (news_add_many, Dedup über source_ref), gelesen von site/neuigkeiten.html. */
 const NEWS_KINDS = ['ticker','kandidat','lage'];
 const NEWS_SOURCES = ['notiz','asana','kalender','mail','protokoll','entscheidung','manuell','plattform']; // v27: plattform (Wilde Habitate, Wild Wild Partner)
 const NEWS_STATUS = ['neu','gesehen','uebernommen','verworfen'];
+const GATES = ['gf','alex','lea','team','plattform','warten']; // v28 Pförtner
 const NEWS_FIELDS = ['who','source','strand','title','body','quote','source_title','source_url','source_ref','relevance','topic_id','status','run_id'];
 function newsRow(n: any){
   const title=(n.title??'').toString().trim(); if(!title) return null;
@@ -323,7 +325,7 @@ Deno.serve(async (req: Request) => {
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:27, secretConfigured: !!PASSWORD, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
+    if (action === 'ping') return json({ ok:true, version:28, secretConfigured: !!PASSWORD, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -734,6 +736,40 @@ Deno.serve(async (req: Request) => {
       const minSince = new Date(Date.now()-90*86400000); const s0 = (isNaN(since.getTime()) || since<minSince ? minSince : since).toISOString();
       const { data, error } = await admin.from(view).select('*').gte('happened_at', s0).order('happened_at',{ascending:false}).limit(limit);
       if(error) throw error; return json({ platform:t.platform, since:s0, items:data });
+    }
+    /* ----- Pförtner (v28, 20.09.2026): jeder Eintrag (Thema oder Kandidat) trägt gate (gf|alex|lea|team|plattform|warten),
+       gate_frist, gate_note, gate_by (lauf = Vorschlag, sonst Person), gate_at. Migration 20260920_hh_gate. -----*/
+    if (action === 'gate_set') {
+      const table = t.kind==='thema' ? 'gfweekly_topics' : t.kind==='kandidat' ? 'gfweekly_news' : null;
+      if(!table || !t.id) return json({ error:'kind (thema|kandidat) und id fehlen' },400);
+      if(!GATES.includes(t.gate)) return json({ error:'gate: '+GATES.join('|') },400);
+      const patch: Record<string,unknown> = { gate:t.gate, gate_by:(t.by ?? WHO).toString().slice(0,60), gate_at:new Date().toISOString() };
+      if(t.frist!==undefined) patch.gate_frist = t.frist ? t.frist : null;
+      if(t.note!==undefined) patch.gate_note = (t.note??'').toString().slice(0,300);
+      const { data, error } = await admin.from(table).update(patch).eq('id',t.id).select().single(); if(error) throw error;
+      return json({ item:data });
+    }
+    if (action === 'gate_set_many') {
+      const items = Array.isArray(t.items) ? t.items.slice(0,500) : []; let n=0;
+      for(const it of items){ const table = it.kind==='thema' ? 'gfweekly_topics' : it.kind==='kandidat' ? 'gfweekly_news' : null; if(!table||!it.id||!GATES.includes(it.gate)) continue;
+        const patch: Record<string,unknown> = { gate:it.gate, gate_by:(t.by ?? WHO).toString().slice(0,60), gate_at:new Date().toISOString() };
+        if(it.frist!==undefined) patch.gate_frist = it.frist||null; if(it.note!==undefined) patch.gate_note=(it.note??'').toString().slice(0,300);
+        const { error } = await admin.from(table).update(patch).eq('id',it.id); if(error) throw error; n++; }
+      return json({ ok:true, updated:n });
+    }
+    if (action === 'gate_list') {
+      const gates = Array.isArray(t.gates) ? t.gates.filter((g: string)=>GATES.includes(g)) : (GATES.includes(t.gate) ? [t.gate] : null);
+      const unconfirmed = !!t.unconfirmed; const limit = Math.min(parseInt(t.limit)||300, 1000);
+      let q1 = admin.from('gfweekly_topics').select('id,title,short_description,context,priority,board_lane,owner,next_action,recommendation,decision,next_suggested,created_at,updated_at,relevance,gate,gate_frist,gate_by,gate_at,gate_note').eq('archived',false).in('board_lane',['zu_besprechen','in_klaerung']).limit(limit);
+      let q2 = admin.from('gfweekly_news').select('id,title,body,quote,relevance,strand,who,source,source_title,source_url,happened_at,created_at,topic_id,gate,gate_frist,gate_by,gate_at,gate_note').eq('kind','kandidat').eq('status','neu').limit(limit);
+      if(gates){ q1 = q1.in('gate',gates); q2 = q2.in('gate',gates); }
+      if(unconfirmed){ q1 = q1.eq('gate_by','lauf'); q2 = q2.eq('gate_by','lauf'); }
+      const [a,b] = await Promise.all([q1,q2]); if(a.error) throw a.error; if(b.error) throw b.error;
+      const themen = (a.data||[]).map((x: any)=>({ kind:'thema', ...x }));
+      const kandidaten = (b.data||[]).map((x: any)=>({ kind:'kandidat', ...x }));
+      const all = [...themen, ...kandidaten].sort((x: any,y: any)=> (x.gate_frist||'9999').localeCompare(y.gate_frist||'9999') || (x.created_at||'').localeCompare(y.created_at||''));
+      const counts: Record<string,number> = {}; for(const x of all) counts[x.gate||'offen']=(counts[x.gate||'offen']||0)+1;
+      return json({ items: all, counts, themen: themen.length, kandidaten: kandidaten.length });
     }
     /* Kandidat übernehmen: neues Thema in „Zu besprechen“ oder Hinweis an ein bestehendes Thema hängen. */
     if (action === 'news_accept') {
