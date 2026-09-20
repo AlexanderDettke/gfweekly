@@ -45,7 +45,7 @@
     <label class="chk"><input type="checkbox" id="showDone" /> erledigte zeigen</label>
     <button class="btn btn-sm btn-brand" id="newTopic">＋ Thema</button>
     <button class="btn btn-sm btn-ghost" id="tidyAll" title="Themen, deren Text noch Marker wie „Titel:“, „Vorschlag:“ oder „Quelle:“ enthält">Aufräumen <span class="nbadge" id="tidyCount" hidden></span></button>
-    <button class="btn btn-sm btn-primary" id="meetBtn" title="Themen der Reihe nach durchgehen, Ergebnisse festhalten, am Ende Protokoll">Besprechung starten</button>
+    <a class="btn btn-sm btn-primary" id="meetBtn" href="besprechung.html" title="Agenda der GF auf der Seite Besprechung">Besprechung</a>
   </div>
 
   <section class="meet" id="meet" hidden></section>
@@ -439,13 +439,13 @@ async function endMeet(){
   MEET=null; saveMeet(); renderMeet(); render();
   gfTextModal("Protokoll der Besprechung", text, { subject:`GF-Besprechung ${gfFmtShort(ended)} · Protokoll`, intro:"Gespeichert unter Themen › Entscheidungen. Hier kopieren oder per Mail verschicken.", extra:`<a class="btn btn-ghost" href="entscheidungen.html">Entscheidungslog</a>` });
 }
-$("#meetBtn").onclick=()=>{ if(MEET){ $("#meet").scrollIntoView({behavior:"smooth",block:"start"}); return; } startMeet(); };
+/* V22d: Besprechungsmodus lebt auf besprechung.html; #meetBtn ist dort ein Link. Bestehende laufende Sitzung (gf_meeting) wird weiter gerendert. */
 
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("themen"); gfMountSubnav(VIEW);
-  gfMountHero(VIEW==="board"?"lagerfeuer":"karten", VIEW==="board"?"Board":"Kacheln", "lädt …", {compact:true, aside:`<a class="btn btn-sm" href="capture.html">Thema erfassen</a><a class="btn btn-sm" href="checkin.html">Check-in vorbereiten</a>`});
+  gfMountHero(VIEW==="board"?"lagerfeuer":"karten", VIEW==="board"?"Board":"Kacheln", "lädt …", {compact:true, aside:`<a class="btn btn-sm" href="capture.html">Thema erfassen</a><a class="btn btn-sm" href="besprechung.html">Zur Besprechung</a>`});
   $("#view").innerHTML=`<div class="board">${LANES.map(()=>`<section class="lane">${gfSkeleton(2,"")}</section>`).join("")}</div>`;
-  try{ const [d,p]=await Promise.all([gfApi("list"), gfLoadPeople()]); TOPICS=d.topics||[]; PEOPLE=p||[]; render(); renderMeet(); const tid=params.get("topic"); if(tid) openPanel(tid); if(params.get("meeting")==="1" && !MEET) startMeet(); }
+  try{ const [d,p]=await Promise.all([gfApi("list"), gfLoadPeople()]); TOPICS=d.topics||[]; PEOPLE=p||[]; render(); renderMeet(); const tid=params.get("topic"); if(tid) openPanel(tid); if(params.get("meeting")==="1" && !MEET) location.href="besprechung.html"; }
   catch(e){ $("#view").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
 });
 </script>

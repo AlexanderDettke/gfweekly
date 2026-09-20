@@ -107,7 +107,7 @@ function gfGate(onReady){
 }
 
 /* ---- Seitenleiste (V18): links, einklappbar zur Symbolleiste, am Handy als Schublade hinter einer schmalen Kopfzeile.
-   Gruppen: Heute (Start, Neuigkeiten, Check-in) · Arbeiten (Themen mit Board/Kacheln/Liste/Entscheidungen, Eingabe) · Verwalten (Wichtige Seiten, Bearbeiten).
+   Gruppen: Heute (Für dich, Neuigkeiten, Besprechung) · Arbeiten (Themen mit Board/Kacheln/Liste/Entscheidungen, Eingabe) · Verwalten (Wichtige Seiten, Bearbeiten).
    Unten: Habitat-Taler (game.js hängt sich an .tb-ctl), Dunkel/Hell, Person. Zustand offen/schmal in localStorage gf_nav. ---- */
 const GF_APP_NAME="Das Hohe Haus";
 const GF_APP_SUB="Geschäftsführung der Wilden Habitate";
@@ -128,7 +128,7 @@ const GF_ICONS={
   x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg>'
 };
 const GF_NAV=[
-  ["Heute",[["start","index.html","Für dich","home",null,"Deine Entscheidungen, seit gestern, nächste Fristen"],["neuigkeiten","neuigkeiten.html","Neuigkeiten","bell","newsBadge","Ticker, Sichtungskorb, Themenlage"],["checkin","checkin.html","Check-in","check",null,"Vorbereitung auf das Weekly"]]],
+  ["Heute",[["start","index.html","Für dich","home",null,"Deine Entscheidungen, seit gestern, nächste Fristen"],["neuigkeiten","neuigkeiten.html","Neuigkeiten","bell","newsBadge","Ticker, Sichtungskorb, Themenlage"],["besprechung","besprechung.html","Besprechung","check",null,"Agenda der GF, abarbeiten, Protokoll"]]],
   ["Arbeiten",[["themen","board.html","Themen","board","themenBadge","Board, Kacheln, Liste, Entscheidungen"],["jahr","jahr.html","Jahr","cal",null,"Zyklus, Meilensteine, Rituale, Team, Plattformen, Habitat"],["capture","capture.html","Eingabe","pen",null,"Thema erfassen"]]],
   ["Verwalten",[["seiten","seiten.html","Wichtige Seiten","grid",null,"Arbeitsseiten mit Zugang"],["edit","bearbeiten.html","Bearbeiten","sliders",null,"Themen, Personen, Links pflegen"],["aufraeumen","aufraeumen.html","Aufräumen","check",null,"Jedem Eintrag einen Ausgang geben"]]]
 ];
