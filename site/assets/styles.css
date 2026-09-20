@@ -1327,3 +1327,4 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 .bs-done{margin-top:6px}
 .bs-go{align-self:center}
 @media(max-width:600px){ .bs-row{grid-template-columns:28px minmax(0,1fr)} .bs-go{grid-column:2} .bs-dl{grid-template-columns:1fr} .bs-dl dt{margin-top:4px} }
+.fd-prop{border:var(--rahmen) dashed var(--border);border-radius:var(--radius-m);margin-top:4px}
