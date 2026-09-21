@@ -4,7 +4,7 @@ Ziel: die vier Pakete aus `docs/PAKETE-V23-V24.md` umsetzen. Alex ist bis morgen
 deshalb arbeite ich die Pakete ohne Zwischenstopp durch, treffe risikoarme Entscheidungen selbst
 und sammle alles Offene in `FRAGEN_FUER_MORGEN.md`. Gepusht wird nicht, das macht Alex.
 
-Stand: 21.09.2026
+Stand: 22.09.2026, nach Deploy (v30) und Live-Abnahme. Offen ist nur noch der Push.
 
 ## Paket 1 · V23 Farbpatch — fertig
 
@@ -19,7 +19,7 @@ Prüfungen (`./pruefung/abnahme.sh`, alle grün):
 
 Drei Codex-Runden (`f0394c5`, `0c1a463`, `bd9de47`), alle bestätigten Befunde behoben.
 
-## Paket 2 · V24a Fundament — gebaut und geprüft, Deploy steht aus
+## Paket 2 · V24a Fundament — fertig, deployt und live abgenommen
 
 - Migration `supabase/migrations/20260921_hh_vertretung.sql` ist **angewendet**:
   `gfweekly_absences`, `gfweekly_deputies` (4 Seed-Zeilen), `gfweekly_handover`, `gfweekly_handover_log`,
@@ -58,7 +58,7 @@ Prüfungen:
   Ampelklick, Vertretungsbrief, Wache, Anlegen mit fünf Eingaben, Rückkehr, Rückübergabe, Startseite, Besprechung).
 - Zwei Befunde aus den Bildern behoben: `.ub-doss` überschrieb `hidden`, und niemand steht mehr als eigene Vertretung.
 
-## Paket 4 · V24c Asana, Kalender, Mail — gebaut, Live-Abnahme steht aus
+## Paket 4 · V24c Asana, Kalender, Mail — fertig, Abnahme 4c gelaufen
 
 Commit `39886dc`. Migration `20260921_hh_asana.sql` angewendet (`asana_gid`, `asana_project_gid`, `asana_synced_at`).
 `asana_export` und `asana_sync` in der Edge Function, Rücksync im Tick, Archivierung bei Rückkehr,
@@ -76,9 +76,20 @@ Die dritte Runde ist die letzte (Regel: höchstens drei); ihre verbliebenen Punk
 und zwar zu Recht: ohne Deploy fehlen die Nachweise aus Paket 2 und 4, und drei seiner Punkte habe ich
 bewusst nicht mehr angefasst, weil sie größere Umbauten sind.
 
+## Nacharbeit V24d und Live-Abnahme (22.09.2026)
+
+Grundlage `ANTWORTEN_ZU_FRAGEN.md`. Gebaut: `hh_handover_set` als eine Transaktion (7.1), Asana-Kennungen
+über die E-Mail (7.3), Lückenfilter im Board (7.4), Zähler für abgeschnittene Quellen (7.2).
+Edge Function v30, Migrationen `20260922_hh_handover_set.sql` und `20260922_hh_handover_set_namen.sql` angewendet.
+
+Live abgenommen: Paket 2 (zwei Testabwesenheiten, `absence_tick` zweimal, Testdaten restlos zurückgebaut),
+Vault-Secret und Cron-Lauf, Paket 4c (Projekt angelegt, Aufgabe erledigt, Rücksync, archiviert),
+Adresse von „by Nature“ korrigiert, Vorschaubild mit echten Daten neu aufgenommen. Einzelheiten im Technikstand
+unter „Live-Abnahme 22.09.2026“.
+
 ## Nächste Schritte
 
-1. Edge Function v29 deployen (Anleitung in `FRAGEN_FUER_MORGEN.md`, Punkt 1).
-2. Vault-Secret `gfweekly_password` anlegen, damit der Tick läuft (Punkt 2).
-3. Live-Abnahme Paket 2: zwei Testabwesenheiten, `absence_tick` zweimal, Ausdruck prüfen, Testdaten löschen.
-4. `ASANA_TOKEN` anlegen, Abnahme 4c fahren, Abschnitt H in den täglichen Auftrag eintragen.
+1. **Alex: `git push`.** Bis dahin sind die drei neuen Seiten nicht live.
+2. Alex: archiviertes Asana-Testprojekt `1218725644227780` von Hand löschen.
+3. Alex: Abschnitt H (Text im Technikstand) in den täglichen Auftrag eintragen.
+4. Danach Live-Check am Handy: Vertretung, Übergabe, Für dich.

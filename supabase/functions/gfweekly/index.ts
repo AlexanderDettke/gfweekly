@@ -1640,11 +1640,9 @@ Deno.serve(async (req: Request) => {
       /* v30 (Befund 7.3): Wer noch keine Asana-Kennung hat, bekommt sie einmalig über die E-Mail.
          Die Liste aus Asana wird einmal je Export geholt, die Treffer wandern nach gfweekly_people.
          Wer dort kein Konto hat, erscheint in der Antwort und seine Aufgaben gehen an die Vertretung. */
-      /* Jessica bleibt bis zur Entscheidung von Hand ausgenommen: im Arbeitsbereich stehen zwei Konten,
-         und welches gilt, ist eine Entscheidung, keine Ableitung (ANTWORTEN_ZU_FRAGEN.md, Punkt 4). */
-      const ASANA_OFFEN = ['jessica'];
-      const offeneZuordnung = (p: any) => ASANA_OFFEN.some(x => norm(p.name).includes(x) || norm(p.email).startsWith(x));
-      const fehlen = (leute || []).filter((p: any) => !p.asana_gid && p.email && !offeneZuordnung(p));
+      /* Zugeordnet wird über die E-Mail, und die ist je Person eindeutig. Zugewiesen bekommt ohnehin nur,
+         wer in der Vertretungslinie steht, und das sind Alex und Lea. */
+      const fehlen = (leute || []).filter((p: any) => !p.asana_gid && p.email);
       let nutzerFehler = '';
       if (fehlen.length) {
         try {

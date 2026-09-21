@@ -249,9 +249,8 @@ aus `ASANA_TEAM` oder aus der Nutzlast; ohne Token lässt sich kein Projekt lese
 Die Vollmacht im Aufgabentext folgt derselben Bereichsregel wie die Vertretung (Strang, dann `gf`, dann `*`).
 Fehlt zu einer Person die `asana_gid`, bleibt die Aufgabe ohne Zuweisung, und die Antwort nennt die Namen.
 
-**Offen bis zur Freigabe:** `ASANA_TOKEN` fehlt, deshalb ist die Abnahme aus 4c (Testprojekt anlegen, eine Aufgabe
-in Asana erledigen, Rücksync prüfen, Projekt löschen) noch nicht gelaufen. Ebenso steht der Eintrag von Abschnitt H
-in den täglichen Auftrag aus; der Text oben ist dafür fertig.
+**Nachgetragen am 22.09.2026:** `ASANA_TOKEN` steht als Secret, die Abnahme 4c ist gelaufen (siehe unten).
+Offen bleibt der Eintrag von Abschnitt H in den täglichen Auftrag; der Text oben ist dafür fertig.
 
 
 ## Nachtrag 21.09.2026 · was die zweite Review an V24 geändert hat
@@ -328,10 +327,11 @@ Abwesenheiten stehen bis zum nächsten Bau auf dem Vorgabewert `false`.
 
 **7.3 Asana-Kennungen über die E-Mail.** `asana_export` liest `GET /users?workspace=…` über **alle** Seiten
 (`next_page`, höchstens zwanzig), ordnet fehlende Kennungen über die E-Mail zu und schreibt sie nach
-`gfweekly_people.asana_gid`. Fünf Startwerte stehen als Seed in der Migration (Alex, Lea, Amelie, Antonia, Helge).
-**Jessica ist von der automatischen Auflösung ausgenommen**, bis die Entscheidung zwischen den beiden Konten
-gefallen ist; sonst würde der erste Export sie stillschweigend festlegen. Wer kein Asana-Konto hat, erscheint in
-der Antwort unter `ohne_zuweisung`, und die Aufgabe geht **an Alex** statt ins Leere. Ein Fehler beim Lesen der
+`gfweekly_people.asana_gid`. Fünf Startwerte stehen als Seed in der Migration (Alex, Lea, Amelie, Antonia, Helge). Die Zuordnung läuft über die
+E-Mail und ist damit je Person eindeutig; zugewiesen bekommt ohnehin nur, wer in der Vertretungslinie steht, und das
+sind Alex und Lea. Wer kein Asana-Konto hat, erscheint in der Antwort unter `ohne_zuweisung`, und die Aufgabe geht
+**an Alex** statt ins Leere. Die Vertretungslinie führt „Alex“, die Personenliste „Alexander Dettke“: für diese
+beiden Namen greift dieselbe Normalisierung wie im Rest des Hauses, bei allen anderen zählt der genaue Name. Ein Fehler beim Lesen der
 Nutzerliste steht als `nutzerliste` in der Antwort und im Protokoll, statt still zu verschwinden.
 
 **7.4 Lückenfilter im Board.** `board.html?owner=<Name>&luecke=1` filtert nach **derselben Regel wie
@@ -356,5 +356,36 @@ Leerstring gilt nicht mehr als frühere Vertretung. Dazu: die abgeschnittenen Qu
 mehr (zwei gleichzeitige Bauten überschrieben sich), misslungene Zeilen einer Sammelübernahme stehen mit Titel in
 der Antwort und erscheinen in der Oberfläche, und der Fehler des abschließenden Updates wird gemeldet.
 
-**Offen bleibt** (aus derselben Review, nicht Teil dieser Runde): echte Pagination statt Obergrenzen, und der
-Nachweis, dass Tick, Cron, Vault und Asana live tun, was sie sollen. Das ist die Live-Abnahme nach dem Deploy.
+**Offen bleibt** (aus derselben Review, nicht Teil dieser Runde): echte Pagination statt Obergrenzen. Der
+Nachweis, dass Tick, Cron, Vault und Asana live tun, was sie sollen, steht im nächsten Abschnitt.
+
+
+## Live-Abnahme 22.09.2026 · Edge Function v30, Stand e984f50
+
+Der Deploy lief aus der Supabase-CLI aus `supabase/functions/gfweekly/index.ts`; der Live-Stand wurde vorher gegen
+die Repo-Datei geprüft und danach über die Prüfsumme der Quelle bestätigt. `action: ping` meldet `version: 30`.
+
+**Paket 2 live.** Zwei Testabwesenheiten (`test = true`) angelegt, Korb gebaut, Matrix gerechnet, `absence_tick`
+zweimal hintereinander gelaufen: der zweite Lauf ändert nichts, was der erste schon getan hat. Bestätigt wurden nur
+Kandidaten- und Partnerzeilen; die zwei echten Themen, die der Lauf berührt hat, stehen wieder exakt auf ihrem
+Ausgangswert. Danach sind die Testdaten restlos gelöscht.
+
+**Vault und Cron.** `gfweekly_password` liegt im Vault, `public.hh_absence_tick()` liest es und ruft die Edge
+Function auf. Beim ersten Versuch stand dort ein falsches Passwort, der Aufruf kam mit 401 zurück; nach
+`vault.update_secret` antwortet er mit 200. Der Cron-Job `hh_absence_tick` läuft täglich um 04:40 UTC. Wird das
+Passwort der Edge Function geändert, müssen **beide** Stellen nachgezogen werden: das Supabase-Secret
+`GFWEEKLY_PASSWORD` und das Vault-Secret `gfweekly_password`.
+
+**Paket 4c live.** Mit einer Testabwesenheit für Lea: `asana_export` legte das Projekt an, eine Aufgabe wurde in
+Asana erledigt, `asana_sync` holte sie zurück, danach wurde das Projekt archiviert und die Testabwesenheit
+gelöscht. Zwei Befunde daraus sind behoben: `gidVon('Alex')` fand „Alexander Dettke“ nur über den Notnagel, jetzt
+greift dieselbe Normalisierung wie sonst im Haus; und der von Asana automatisch angelegte „Unbenannte Abschnitt“
+wird nach dem Aufbau entfernt, damit das Projekt nur die fünf gewollten Abschnitte zeigt.
+
+**Vertretungslinie.** Sie führt genau vier aktive Zeilen: `Alex|gf|Lea`, `Alex|*|Lea`, `Lea|gf|Alex`, `Lea|*|Alex`.
+Weitere Personen stehen nicht darin; die frühere Sonderbehandlung für ein drittes Konto ist aus der Edge Function
+entfernt.
+
+**Vorschaubild.** `site/assets/previews/gfweekly.webp` zeigt seit dem 22.09.2026 die Startseite mit echten Daten,
+aufgenommen im Prüfbrowser mit dem Passwort aus der Umgebung. Das Passwort steht in keiner Datei und in keinem
+Commit; die Check-in-Karte war über `localStorage` unterdrückt.

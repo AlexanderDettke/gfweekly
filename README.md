@@ -112,5 +112,11 @@ Edge Function: `asana_export {absence_id}` legt das Projekt „Vertretung <Name>
 Oberfläche: „Nach Asana“ als Primärknopf im Kopf der Übergabe, sobald bestätigte Zeilen vorliegen; Kachel „Asana offen“ auf der Rückkehr.
 Der Textbaustein für Abschnitt H des täglichen Auftrags (Abwesenheiten aus dem Kalender erkennen, Termine im Fenster, Vertretungsbrief, Wochenbrief, Rückkehr, Tick, Neues an Abwesende) steht in `docs/TECHNIKSTAND.md`.
 
+## V24d (22.09.2026): Übergabe als ein Vorgang, Asana über die E-Mail, Lückenfilter
+Migrationen `supabase/migrations/20260922_hh_handover_set.sql` und `20260922_hh_handover_set_namen.sql`: `hh_handover_set(id, by, patch)` bestätigt eine Korbzeile, zieht das Thema nach und schreibt das Protokoll in einer Transaktion, alles oder nichts; `hh_person_gate(name)` trifft den Ausgang nach derselben Regel wie die Edge Function (enthält lea, enthält alex, sonst Team), damit „Alexander Dettke“ bei Alex landet und nicht beim Team. Dazu die Spalten `korb_truncated` und `korb_abgeschnitten` an den Abwesenheiten.
+Edge Function v30: `handover_set` und `handover_set_many` rufen nur noch die Datenbankfunktion. `asana_export` löst fehlende Asana-Kennungen einmalig über die E-Mail auf (`GET /users` über alle Seiten) und schreibt sie nach `gfweekly_people.asana_gid`; wer kein Konto hat, steht in der Antwort unter `ohne_zuweisung` und seine Aufgaben gehen an Alex.
+Oberfläche: `board.html?owner=<Name>&luecke=1` filtert nach derselben Regel wie die Kachel Übernahmefähigkeit (zuständig und ohne Stand oder ohne nächsten Schritt), mit Chip „Lücken“ in der Board-Leiste und Link aus der Kachel. Ist der Korb an einer Obergrenze gelaufen, sagt die Übergabeseite es.
+Live abgenommen am 22.09.2026: Paket 2 (zwei Testabwesenheiten, `absence_tick` zweimal, Testdaten restlos zurückgebaut), Paket 4c (Asana-Projekt angelegt, Aufgabe erledigt, Rücksync, Projekt archiviert), Vault-Secret `gfweekly_password` und der tägliche Cron-Lauf.
+
 ## Backend
 Tabellen `gfweekly_topics`, `gfweekly_inbox`, `gfweekly_people`, `gfweekly_links`, `gfweekly_protocol_requests`, `gfweekly_assets`, `gfweekly_sites`, `gfweekly_site_categories`, `gfweekly_sessions`, `gfweekly_decisions`, `gfweekly_news`, `gfweekly_score_rules`, `gfweekly_score_levels`, `gfweekly_score_events`, `gfweekly_checkins`, `gfweekly_badges`, dazu die Meta-Planungs-Tabellen aus V10.
