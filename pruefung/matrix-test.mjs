@@ -13,7 +13,7 @@ pruefe('4 Tage mittel',absStufe({ von:'2026-10-05', bis:'2026-10-08' }), 'mittel
 pruefe('14 Tage mittel',absStufe({ von:'2026-10-05', bis:'2026-10-18' }), 'mittel');
 pruefe('15 Tage lang', absStufe({ von:'2026-10-05', bis:'2026-10-19' }), 'lang');
 pruefe('ohne bis kurz',absStufe({ von:'2026-10-05' }), 'kurz');
-pruefe('Schätzung zählt', absStufe({ von:'2026-10-05', bis_geschaetzt:'2026-10-25' }), 'lang');
+pruefe('Schätzung ändert die Stufe nicht', absStufe({ von:'2026-10-05', bis_geschaetzt:'2026-10-25' }), 'kurz');
 
 console.log('\n== Geldbeträge ==');
 pruefe('5.000 €', geldMax('vertrag über 5.000 € im jahr'), 5000);
@@ -49,6 +49,21 @@ pruefe('Vollmacht → U3, Cluster A', [f5.z,f5.f,f5.u,f5.g,f5.cluster], [2,3,3,1
 
 const f6 = score({ kind:'kandidat', title:'Presseanfrage', body:'kurz', relevance:'hoch', frist:'2026-10-10', gate:'lea', who:'Lea' }, lea);
 pruefe('Presse → F3 (Stichwort), Cluster E, rot', [f6.f,f6.cluster,f6.ampel], [3,'E','rot']);
+
+console.log('\n== Kandidaten werden an ihrem Text gemessen ==');
+const kurz1 = score({ kind:'kandidat', title:'Kurze Notiz', body:'zu wenig', gate:'lea', who:'Lea' }, lea);
+pruefe('kurzer Kandidat ist eine Lücke', [kurz1.u, kurz1.luecke], [2, true]);
+const lang1 = score({ kind:'kandidat', title:'Ausführlicher Kandidat',
+  body:'Die Lokalzeitung fragt nach der Fläche der Zeltwiese, nach der Zahl der Gäste und nach dem Lärmschutz. Antwort bis Freitag erbeten.',
+  gate:'lea', who:'Lea, Merle' }, lea);
+pruefe('ausführlicher Kandidat ist keine Lücke', [lang1.u, lang1.luecke], [0, false]);
+
+console.log('\n== Dieselbe Eingabe, dasselbe Ergebnis ==');
+const r1 = score({ kind:'thema', title:'Probe', short_description:'a', next_action:'b', frist:'2026-10-10', gate:'lea', who:'Lea' }, lea, '2026-09-21');
+const r2 = score({ kind:'thema', title:'Probe', short_description:'a', next_action:'b', frist:'2026-10-10', gate:'lea', who:'Lea' }, lea, '2026-09-21');
+pruefe('score ist eine reine Funktion', JSON.stringify(r1) === JSON.stringify(r2), true);
+const spaeter = score({ kind:'thema', title:'Probe', short_description:'a', next_action:'b', frist:'2026-10-10', gate:'lea', who:'Lea' }, lea, '2026-10-11');
+pruefe('mit späterem Stichtag wird die Frist überfällig', spaeter.z, 3);
 
 console.log('\n== Stichworte nur am Wortanfang ==');
 const w1 = score({ kind:'kandidat', title:'Werbebudget für Minikampagnen zu Lineup-Ankündigungen', body:'Anfrage aus dem Marketing, 800 € pro Kampagne', gate:'lea', who:'Lea' }, lea);

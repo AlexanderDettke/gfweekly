@@ -63,7 +63,8 @@ for (const thema of THEMES) {
       let nutzlast = {}; try { nutzlast = JSON.parse(req.postData() || '{}').payload || {}; } catch (e) {}
       const roh = ANTWORT[action] || FALLBACK;
       const body = typeof roh === 'function' ? roh(nutzlast) : roh;
-      await route.fulfill({ status:200, contentType:'application/json', body:JSON.stringify(body) });
+      const status = body && body.__status ? body.__status : 200;
+      await route.fulfill({ status, contentType:'application/json', body:JSON.stringify(body) });
     });
     for (const [seite, kern] of SEITEN) {
       const page = await ctx.newPage();

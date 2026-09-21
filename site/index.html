@@ -149,17 +149,22 @@ function renderVt(){
   const ich=gfWho();
   const zurueck=ABS.find(a=>a.person===ich && a.status==="rueckkehr");
   if(zurueck){
-    const z=ABSZ[zurueck.id]||{}; const amp=z.ampel||{};
+    const z=ABSZ[zurueck.id]||{}; const st=z.status||{};
     $("#fdVtH").textContent="Seit du weg warst";
     $("#fdVtN").textContent="";
     $("#fdVtLink").href="rueckkehr.html?id="+zurueck.id; $("#fdVtLink").textContent="Rückkehr →";
+    /* Bearbeitet ist, was bestätigt oder erledigt wurde, nicht was eine Farbe hat.
+       Wartet auf dich sind rote und ruhende Zeilen, die weder erledigt noch entfallen sind. */
+    const meine=(VT.find(v=>v.absence.id===zurueck.id)||{items:[]}).items;
+    const wartet=meine.filter(x=>(x.ampel==="rot"||x.ampel==="ruht") && x.status!=="erledigt" && x.status!=="entfallen").length;
     list.innerHTML=`<div class="fd-zahlen">
       <div><b>${z.gesamt||0}</b><span>Einträge im Korb</span></div>
-      <div><b>${(amp.gruen||0)+(amp.gelb||0)}</b><span>in Vertretung bearbeitet</span></div>
-      <div><b>${(amp.rot||0)+(amp.ruht||0)}</b><span>wartet auf dich</span></div></div>`;
+      <div><b>${(st.bestaetigt||0)+(st.erledigt||0)}</b><span>in Vertretung bearbeitet</span></div>
+      <div><b>${meine.length?wartet:(z.ampel?(z.ampel.rot||0)+(z.ampel.ruht||0):0)}</b><span>wartet auf dich</span></div></div>`;
     sec.hidden=false; return;
   }
-  const meine=VT.map(v=>({ absence:v.absence, items:v.items.filter(x=>x.vertretung===ich && x.status!=="erledigt" && x.frist && dayDiff(x.frist)<=7) }))
+  const meine=VT.filter(v=>v.absence.person!==ich)
+                .map(v=>({ absence:v.absence, items:v.items.filter(x=>x.vertretung===ich && x.status!=="erledigt" && x.status!=="entfallen" && x.frist && dayDiff(x.frist)<=7) }))
                 .filter(v=>v.items.length);
   if(meine.length){
     const alle=meine.flatMap(v=>v.items.map(x=>({...x, person:v.absence.person, aid:v.absence.id})));
@@ -200,7 +205,7 @@ async function load(){
   VT=[];
   const meine=ABS.filter(a=>a.status==="aktiv"||a.status==="geplant"||a.status==="rueckkehr");
   for(const a of meine){
-    if(a.person===gfWho()) continue;
+    if(a.person===gfWho() && a.status!=="rueckkehr") continue;
     try{ const l=await gfApi("handover_list",{absence_id:a.id}); VT.push({absence:a, items:l.items||[]}); }catch(e){}
   }
   renderAll();

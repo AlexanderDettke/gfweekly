@@ -62,7 +62,9 @@ function gfStepperSync(st){
 }
 document.addEventListener("click",e=>{
   const chip=e.target.closest(".fchips .chip");
-  if(chip){ const wrap=chip.closest(".fchips"), input=wrap.querySelector("input[type=hidden]"); if(input.value!==chip.dataset.v) gfChipsSet(input, chip.dataset.v, true); return; }
+  if(chip){ const wrap=chip.closest(".fchips"), input=wrap.querySelector("input[type=hidden]");
+    if(!input) return;   // eigene Filterreihen ohne verstecktes Feld regeln ihren Klick selbst
+    if(input.value!==chip.dataset.v) gfChipsSet(input, chip.dataset.v, true); return; }
   const sb=e.target.closest(".stepper button[data-d]");
   if(sb){ const st=sb.closest(".stepper"), inp=st.querySelector("input"), step=Number(st.dataset.step)||1, min=Number(st.dataset.min), max=Number(st.dataset.max);
     const cur=inp.value===""?(Number(sb.dataset.d)>0?min-step:min+step):Number(inp.value); let v=cur+Number(sb.dataset.d)*step; v=Math.min(max,Math.max(min,v)); inp.value=v; gfStepperSync(st);
@@ -318,7 +320,8 @@ function gfTextModal(title, text, opts={}){
 }
 function gfFmtDay(d){ return new Date(d).toLocaleDateString("de-DE",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"}); }
 /* Datum plus n Tage, als ISO-Tag. Wird beim Anlegen einer Abwesenheit für die Schätzung gebraucht. */
-function gfAddDays(d, n){ const x=new Date((d||new Date().toISOString().slice(0,10))+"T00:00:00"); x.setDate(x.getDate()+n); return x.toISOString().slice(0,10); }
+/* Durchgehend in UTC gerechnet: mit lokaler Mitternacht und toISOString verlöre Berlin einen Tag. */
+function gfAddDays(d, n){ const x=new Date((d||new Date().toISOString().slice(0,10))+"T00:00:00Z"); x.setUTCDate(x.getUTCDate()+n); return x.toISOString().slice(0,10); }
 function gfFmtShort(d){ return d?new Date(d.length===10?d+"T00:00:00":d).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}):""; }
 function gfFmtTime(d){ return new Date(d).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}); }
 

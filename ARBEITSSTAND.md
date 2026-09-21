@@ -45,13 +45,29 @@ Prüfungen ohne Deploy:
   und F = 1 verlangt jetzt einen echten Teamnamen im who-Feld statt irgendeiner Person.
 - Syntax- und Typprüfung der Edge Function über die TypeScript-API: ohne Befund.
 
-## Paket 3 · V24b Bereich Vertretung — in Arbeit
+## Paket 3 · V24b Bereich Vertretung — fertig
 
-## Paket 4 · V24c Asana, Kalender, Mail — offen
+Commit `2494a61`. Navigationsgruppe „Vertretung“ mit `vertretung.html`, `uebergabe.html`, `rueckkehr.html`,
+Block auf der Startseite, Marke in der Besprechung, neue Bausteine `gfAmpel`, `gfQuadrant`, `gfFrist`,
+Stilblock V24b, Assets `?v=24`.
+
+Prüfungen:
+- `pruefung/schirme.mjs`: 16 Seiten × 1440/390 × dunkel/hell = 64 Aufnahmen, null Meldungen.
+- `pruefung/bedienung.mjs`: 35 Bedienproben, alle grün (filtern, „Alle Vorschläge übernehmen“, Dossier,
+  Ampelklick, Vertretungsbrief, Wache, Anlegen mit fünf Eingaben, Rückkehr, Rückübergabe, Startseite, Besprechung).
+- Zwei Befunde aus den Bildern behoben: `.ub-doss` überschrieb `hidden`, und niemand steht mehr als eigene Vertretung.
+
+## Paket 4 · V24c Asana, Kalender, Mail — gebaut, Live-Abnahme steht aus
+
+Commit `39886dc`. Migration `20260921_hh_asana.sql` angewendet (`asana_gid`, `asana_project_gid`, `asana_synced_at`).
+`asana_export` und `asana_sync` in der Edge Function, Rücksync im Tick, Archivierung bei Rückkehr,
+„Nach Asana“ im Kopf der Übergabe, Kachel „Asana offen“ auf der Rückkehr, Abschnitt H (H1 bis H7) im Technikstand.
+Ohne `ASANA_TOKEN` tut der Export nichts und sagt warum. Die Abnahme aus 4c (Testprojekt, Rücksync, löschen)
+braucht das Token.
 
 ## Nächste Schritte
 
-1. Paket 3 bauen und mit `pruefung/schirme.mjs` prüfen (Testdaten statt Live-Backend).
-2. Paket 4 bauen, soweit es ohne `ASANA_TOKEN` geht, und den Textbaustein für Abschnitt H ablegen.
-3. Nach Alex' Rückkehr: Edge Function v29 deployen, Vault-Secret anlegen, Live-Test mit den zwei
-   Testabwesenheiten, danach Testdaten löschen.
+1. Edge Function v29 deployen (Anleitung in `FRAGEN_FUER_MORGEN.md`, Punkt 1).
+2. Vault-Secret `gfweekly_password` anlegen, damit der Tick läuft (Punkt 2).
+3. Live-Abnahme Paket 2: zwei Testabwesenheiten, `absence_tick` zweimal, Ausdruck prüfen, Testdaten löschen.
+4. `ASANA_TOKEN` anlegen, Abnahme 4c fahren, Abschnitt H in den täglichen Auftrag eintragen.

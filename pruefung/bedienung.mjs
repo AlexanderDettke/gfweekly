@@ -43,14 +43,24 @@ await ctx.route('**/functions/v1/**', async (route) => {
   try { const j = JSON.parse(req.postData() || '{}'); action = j.action || ''; nutzlast = j.payload || {}; } catch (e) {}
   gesendet.push({ action, nutzlast });
   const roh = ANTWORT[action] || FALLBACK;
-  await route.fulfill({ status:200, contentType:'application/json', body:JSON.stringify(typeof roh === 'function' ? roh(nutzlast) : roh) });
+  const body = typeof roh === 'function' ? roh(nutzlast) : roh;
+  await route.fulfill({ status: body && body.__status ? body.__status : 200, contentType:'application/json', body:JSON.stringify(body) });
 });
 const letzte = (action) => [...gesendet].reverse().find(x => x.action === action);
-const seite = async (url) => { const p = await ctx.newPage(); p.on('dialog', d => d.accept());
-  await p.goto(BASE + url, { waitUntil:'load' }); await p.waitForTimeout(700); return p; };
+/* Jede Probe beginnt mit leerem Verlauf, sonst bestätigt ein alter Aufruf einen neuen Fall. */
+const frisch = () => { gesendet.length = 0; meldungen.length = 0; };
+const meldungen = [];
+const seite = async (url) => {
+  const p = await ctx.newPage();
+  p.on('dialog', d => d.accept());
+  p.on('console', m => { if (m.type() === 'error') meldungen.push(m.text()); });
+  p.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
+  await p.goto(BASE + url, { waitUntil:'load' }); await p.waitForTimeout(700); return p;
+};
 
 console.log('== Übergabe, lange geplante Abwesenheit ==');
 {
+  frisch();
   const p = await seite('/uebergabe.html?id=abs-1');
   pruefe('Kopf nennt die Person', (await p.locator('#kopf h2').innerText()).includes('Lea'));
   pruefe('vier Quadranten stehen da', await p.locator('.ub-quad').count() === 4);
@@ -87,6 +97,7 @@ console.log('== Übergabe, lange geplante Abwesenheit ==');
 
 console.log('\n== Übergabe als Wache, kurze und ungeplante Abwesenheit ==');
 {
+  frisch();
   const p = await seite('/uebergabe.html?id=abs-2');
   pruefe('Hinweiszeile der Wache steht da', (await p.locator('.ub-wache').innerText()).includes('Am Tag 4'));
   const zeilen = p.locator('.ub-row');
@@ -99,6 +110,7 @@ console.log('\n== Übergabe als Wache, kurze und ungeplante Abwesenheit ==');
 
 console.log('\n== Abwesenheit anlegen ==');
 {
+  frisch();
   const p = await seite('/vertretung.html');
   pruefe('drei Abwesenheiten in der Liste', await p.locator('.vt-card[data-id]').count() === 3);
   pruefe('Übernahmefähigkeit je Person', await p.locator('.vt-stat').count() === 2);
@@ -123,6 +135,7 @@ console.log('\n== Abwesenheit anlegen ==');
 
 console.log('\n== Rückkehr ==');
 {
+  frisch();
   const p = await seite('/rueckkehr.html?id=abs-3');
   pruefe('Begrüßung mit Namen', (await p.locator('#kopf h2').innerText()).includes('Willkommen zurück'));
   pruefe('vier Kacheln, die vierte zählt Asana', await p.locator('#kpis .kk').count() === 4
@@ -132,10 +145,10 @@ console.log('\n== Rückkehr ==');
   const wartet = await p.locator('#warList .rk-row').count();
   pruefe('was auf dich wartet, steht getrennt', wartet === 2, `${wartet} Zeilen`);
   await p.locator('#warList [data-act="back"]').first().click(); await p.waitForTimeout(500);
-  const zurueck = letzte('handover_set'), thema = letzte('update');
-  pruefe('Übernehmen gibt die Zeile zurück', !!zurueck && zurueck.nutzlast.vertretung === '');
-  pruefe('und setzt den Ausgang wieder auf die Person', !!thema && thema.nutzlast.gate === 'alex',
-         thema ? JSON.stringify(thema.nutzlast).slice(0,60) : 'kein update');
+  const zurueck = letzte('handover_zurueck');
+  pruefe('Übernehmen ruft handover_zurueck, eine Aktion für Zeile und Thema', !!zurueck && !!zurueck.nutzlast.id);
+  pruefe('die Zeile verschwindet aus „wartet auf dich“', await p.locator('#warList .rk-row').count() === 1);
+  pruefe('kein update mit Feldern, die das Backend gar nicht kennt', !letzte('update'));
   await p.locator('#endBtn').click(); await p.waitForTimeout(500);
   pruefe('Rückübergabe bestätigen beendet die Abwesenheit', !!letzte('absence_end'));
   await p.close();
@@ -143,12 +156,16 @@ console.log('\n== Rückkehr ==');
 
 console.log('\n== Asana ohne Token ==');
 {
+  frisch();
   const p = await seite('/uebergabe.html?id=abs-3');
   const knopf = p.locator('#asanaBtn');
   pruefe('Nach Asana erscheint, weil es bestätigte Zeilen gibt', await knopf.count() === 1);
-  await knopf.click(); await p.waitForTimeout(400);
+  await knopf.click(); await p.waitForTimeout(500);
   const ex = letzte('asana_export');
   pruefe('Klick schickt asana_export', !!ex && ex.nutzlast.absence_id === 'abs-3');
+  pruefe('ohne Token sagt die Seite das und legt nichts an',
+    (await p.locator('#toast').innerText()).includes('noch nicht eingerichtet'));
+  pruefe('der Knopf ist danach wieder bedienbar', !(await knopf.isDisabled()));
   await p.close();
   const q = await seite('/uebergabe.html?id=abs-2');
   pruefe('ohne bestätigte Zeilen kein Asana-Knopf', await q.locator('#asanaBtn').count() === 0);
@@ -157,18 +174,24 @@ console.log('\n== Asana ohne Token ==');
 
 console.log('\n== Für dich und Besprechung ==');
 {
+  frisch();
   const p = await seite('/index.html');
   const vt = p.locator('#fdVt');
   pruefe('Vertretungsblock steht auf der Startseite', await vt.isVisible());
   pruefe('für die zurückkehrende Person mit drei Zahlen',
     (await vt.innerText()).includes('Seit du weg warst') && await vt.locator('.fd-zahlen div').count() === 3);
   await p.close();
+  frisch();
   const b = await seite('/besprechung.html');
+  await b.waitForTimeout(600);
   pruefe('Besprechung lädt die Vertretungsmarken', !!letzte('handover_list'));
+  const marke = await b.locator('.bs-q .zst').filter({ hasText:'Vertretung für' }).count();
+  pruefe('rote Korbzeilen tragen die Marke in der Agenda', marke >= 1, `${marke} Marken`);
   await b.close();
 }
 
 await browser.close();
 server.close();
+if (meldungen.length) { console.log('\nKonsolenmeldungen im letzten Fall:'); for (const m of meldungen) console.log('   ' + m.slice(0,200)); fehler += meldungen.length; }
 console.log(fehler ? `\n${fehler} Abweichungen` : '\nAlle Bedienproben in Ordnung');
 process.exit(fehler ? 1 : 0);

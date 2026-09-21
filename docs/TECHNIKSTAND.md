@@ -106,11 +106,19 @@ Cluster in dieser Reihenfolge: A vor Abreise, E zu der anderen GF, C übergeben 
 Ampel: A vorher (bei art sofort rot), B grün, C gelb, E rot, D ruht. Bei Stufe kurz ruht alles außer Notfall (F = 3).
 Jede Zeile bekommt einen Begründungssatz, der die Achsen nennt. `luecke = U ≥ 2`.
 
-Drei Festlegungen, die die Paketdatei offenließ:
-- Ohne `bis` und ohne Schätzung rechnet das Fenster mit 14 Tagen, damit Z eine Kante hat.
+Festlegungen, die die Paketdatei offenließ:
+- Ohne `bis` und ohne Schätzung rechnet das **Fenster** mit 14 Tagen, damit Z eine Kante hat. Die **Stufe** richtet
+  sich dagegen allein nach `bis`: ohne festes Ende ist sie kurz, und der Tick stuft bei `art = sofort` hoch.
 - F = 1 „Teamname im who-Feld“ meint einen Namen, der weder Alex noch Lea ist.
 - Stichworte treffen nur am Wortanfang: „Ankündigungen“ ist keine „Kündigung“, „Datenbank“ keine „Bank“.
   (`\b` hilft bei Umlauten nicht, deshalb die ausdrückliche Grenze `(?<![a-zäöüß])`.)
+- U bewertet Kandidaten an ihrem Text (unter 80 Zeichen ist eine Lücke), weil sie weder Stand noch nächsten
+  Schritt als Feld haben. Sonst wäre jeder Kandidat eine Lücke.
+- `score(item, absence, heute)` nimmt den Stichtag als Argument und ist damit eine reine Funktion.
+- Gesammelt wird genau das Fenster `von` bis `bis`; überfällige Fristen zählen mit, weil sie liegen bleiben.
+  Die vierzehn Tage danach gehören zur Bewertung (Z = 1), nicht zur Sammelmenge.
+- `gfweekly_topics` hat keine Strang-Spalte. Themen tragen deshalb keinen Strang, und die bereichsgenaue
+  Vertretung greift bei ihnen über `gf` und `*`. Partnerzeilen tragen `wwp`.
 
 **Aktionen v29.** `absence_set` (berechnet stufe und status, baut den Korb sofort), `absence_list`, `absence_end`,
 `deputies_set`, `deputies_list`, `handover_build`, `handover_list` (Zeilen plus Zähler je Quadrant, Cluster, Ampel,
@@ -124,12 +132,15 @@ das Passwort aus dem Vault-Secret `gfweekly_password`; fehlt das Secret, tut die
 Protokoll. Cron-Job `hh_absence_tick`, täglich 04:40 UTC. Fallback bleibt Abschnitt H6 des täglichen Auftrags.
 
 **Prüfung ohne Deploy.** `pruefung/matrix-probe.mjs` holt die reinen Funktionen aus der Edge Function und stellt sie
-node zur Verfügung; `pruefung/matrix-test.mjs` rechnet 26 Proben dagegen (Stufe, Geldbeträge, alle vier Achsen,
-Cluster, Ampel, Wache, Regeltext, Vertretungslinie, Wortgrenzen). `pruefung/korb-probe.mjs` rechnet die Matrix über
-echte Zeilen: die Sammelabfrage (dieselben Filter wie `handoverItems`) läuft über den Supabase-MCP, ihr JSON geht in
-das Skript. Trockenlauf Lea 05.10. bis 25.10.: 87 Zeilen (21 Themen, 59 Kandidaten, 7 Partner), Quadranten
-planen 44, warten 36, delegieren 4, sofort 3; Cluster E 39, D 36, A 7, B 5; Lücken 70 von 87.
+node zur Verfügung; `pruefung/matrix-test.mjs` rechnet dagegen (Stufe, Geldbeträge, alle vier Achsen, Cluster, Ampel,
+Wache, Regeltext, Vertretungslinie, Wortgrenzen, Kandidatenzweig, Reinheit der Funktion). `pruefung/korb-probe.mjs`
+rechnet die Matrix über echte Zeilen: die Sammelabfrage steht als `pruefung/korb-abfrage.sql` im Repo, ihr Ergebnis
+läuft über den Supabase-MCP und geht als JSON in das Skript. Das Ergebnis enthält Betriebsdaten und bleibt draußen.
+Trockenlauf Lea 05.10. bis 25.10.: 87 Zeilen (21 Themen, 59 Kandidaten, 7 Partner), Quadranten planen 44, warten 36,
+delegieren 4, sofort 3; Cluster E 39, D 36, A 7, B 5; Lücken 13 von 87, Übernahmefähigkeit 85 Prozent.
 Aufruf: `TS_BASIS=file://<ordner mit typescript>/x.mjs node pruefung/matrix-test.mjs`.
+Was der Weg nicht belegt: geschriebene Datenbankzeilen, den Bestätigungsschutz im Wettlauf, den Cron-Lauf,
+die Idempotenz des Ticks und alles an Asana. Das braucht den Deploy.
 
 ## V24b (21.09.2026) · Bereich Vertretung in der Plattform
 
@@ -220,12 +231,58 @@ Textbaustein zum Eintragen in den Auftrag (trig_01A6gnSNUDbvF4bhW3wzhGL2). Er er
 > **H5 Rückkehr.** Am Tag nach `bis`: Kalenderblock „Rückkehr: Vormittag frei“ von 9 bis 12 Uhr im Kalender der
 > Person, dazu ein Gmail-Entwurf mit dem Rückkehr-Briefing aus `absences.note_rueckkehr`.
 >
-> **H6 Tick.** Rufe `absence_tick` auf, falls der Cron-Job `hh_absence_tick` nicht läuft (erkennbar daran, dass
-> `absence_list` Abwesenheiten mit veraltetem Status zeigt). Der Aufruf ist idempotent.
+> **H6 Tick.** Rufe `absence_tick` immer auf. Der Aufruf ist idempotent, und er ersetzt den Cron-Job, solange das
+> Vault-Secret fehlt. Steht in der Antwort ein Schritt „Korb: 0 neu, 0 ergänzt“ für eine aktive Abwesenheit mit
+> Einträgen, melde das im Ticker: dann sammelt der Lauf nichts mehr.
+>
+> **H8 Asana ohne Token.** Fehlt `ASANA_TOKEN`, antwortet `asana_export` mit einem Fehler. Lege dann die Aufgaben
+> selbst an: ein Projekt „Vertretung <Name> · <von> bis <bis>“ im Arbeitsbereich 57435200923138 mit den Abschnitten
+> Sofort, Grün, Gelb, Rot bei der GF, Ruht bis Rückkehr; je bestätigter Korbzeile mit Ampel ungleich `vorher` eine
+> Aufgabe „[Vertretung] <Titel>“ mit Stand, nächstem Schritt, Ampelregel, Notfalldefinition, Vollmacht, Frist und
+> dem Link ins Haus; Fälligkeit = Frist, zugewiesen an die Vertretung, Alex und Lea als Folgende. Trage die
+> Aufgaben-Kennung danach nicht von Hand nach; der spätere Export mit Token legt eigene Aufgaben an, und die
+> doppelten löschst du dann in Asana.
 >
 > **H7 Neues an Abwesende.** Entsteht im Lauf ein Kandidat mit `who` = abwesende Person, setze `gate` auf die
 > Vertretung (`gate_note` „in Vertretung für <Name>“) und schreibe einen Protokolleintrag der Art `weitergabe`.
 
+**Bewusste Abweichungen in V24c:** Das Asana-Team wird nicht aus bestehenden GF-Projekten ermittelt, sondern kommt
+aus `ASANA_TEAM` oder aus der Nutzlast; ohne Token lässt sich kein Projekt lesen, aus dem es abzuleiten wäre.
+Die Vollmacht im Aufgabentext folgt derselben Bereichsregel wie die Vertretung (Strang, dann `gf`, dann `*`).
+Fehlt zu einer Person die `asana_gid`, bleibt die Aufgabe ohne Zuweisung, und die Antwort nennt die Namen.
+
 **Offen bis zur Freigabe:** `ASANA_TOKEN` fehlt, deshalb ist die Abnahme aus 4c (Testprojekt anlegen, eine Aufgabe
 in Asana erledigen, Rücksync prüfen, Projekt löschen) noch nicht gelaufen. Ebenso steht der Eintrag von Abschnitt H
 in den täglichen Auftrag aus; der Text oben ist dafür fertig.
+
+
+## Nachtrag 21.09.2026 · was die zweite Review an V24 geändert hat
+
+Die unabhängige Prüfung (Codex, Stand 39886dc) hat 27 Punkte gemeldet. Behoben wurden unter anderem:
+
+- **Rücknahme bei der Rückkehr** lief über `update` mit Feldern, die `TOPIC_FIELDS` gar nicht kennt, und verpuffte.
+  Jetzt gibt es die Aktion `handover_zurueck`: sie setzt die Korbzeile auf erledigt, leert die Vertretung und gibt
+  dem Thema den Ausgang der zurückgekehrten Person, alles in einem Zug und mit Fehlermeldung, wenn etwas scheitert.
+- **Geleerte Vertretung** wurde durch den alten Wert ersetzt (`patch.vertretung ?? alt.vertretung`). Jetzt zählt der
+  gespeicherte Stand, und bei `ruht` wird `owner_backup` geleert.
+- **Die drei Rückkehrtage** wurden aus `updated_at` gerechnet und konnten sofort ablaufen. Dafür gibt es jetzt
+  `gfweekly_absences.rueckkehr_at`.
+- **Archivierung in Asana** greift jetzt beim Wechsel auf `rueckkehr` und bei `absence_end`.
+- **`gfAddDays`** verlor in Berlin einen Tag (lokale Mitternacht, UTC-Ausgabe); es rechnet jetzt durchgehend in UTC.
+- **Asana-Zuordnung** lief über `whoNorm`, das alle außer Alex und Lea zu „Team“ macht; jetzt über den Namen selbst,
+  fehlende Kennungen werden gemeldet statt still zugewiesen.
+- **Ein Asana-Fehler** beim Auffrischen legte ein zweites Projekt an; nur noch 403 und 404 gelten als „Projekt weg“.
+- **Der Rücksync** schob den Zeitstempel auch nach Fehlern weiter und verlor damit Kommentare; jetzt nur nach einem
+  sauberen Lauf und nur bis zum Laufbeginn.
+- **Ein erneuter Export** öffnete in Asana erledigte Aufgaben wieder, weil er `completed:false` mitschickte.
+- **`handoverBuild`** schützt bestätigte Zeilen jetzt über die Bedingung `status = vorschlag` in der Anweisung selbst
+  und zählt Fehler, statt sie zu schlucken.
+- **Der gemeinsame Chip-Handler** in `core.js` las ungeprüft ein verstecktes Feld und warf bei den Filterreihen der
+  Übergabe einen Konsolenfehler.
+- **Die Vertretungslinie** legte bei einem Bereichswechsel eine zweite Zeile an; `deputies_set` ändert jetzt über die id.
+- **Die Startseite** zählte Vorschläge als „in Vertretung bearbeitet“.
+
+Bewusst nicht geändert: die Quadrantenkacheln der Übergabe bleiben eigene Knöpfe (sie tragen Zähler, Symbol, Wort
+und einen gedrückten Zustand, was `gfKachel` nicht kann), und die Teamliste der Vertretung kommt aus
+`gfweekly_people` statt zusätzlich aus der TPA-Analyse. „Nach Asana“ ist die zweite Aktion im Kopf, nicht die erste:
+eine Ansicht hat genau eine Hauptaktion, und das ist „Alle Vorschläge übernehmen“.

@@ -68,19 +68,19 @@ export const korbZeile = (o) => ({ id:o.id, absence_id:o.absence_id, kind:o.kind
 
 export const KORB = {
   'abs-1': [
-    korbZeile({ id:'h1', absence_id:'abs-1', title:'Vertrag mit dem Landkreis verlängern', frist:tag(3), z:3,f:3,u:2,g:3,
+    korbZeile({ id:'h1', absence_id:'abs-1', ref_id:'t1', title:'Vertrag mit dem Landkreis verlängern', frist:tag(3), z:3,f:3,u:2,g:3,
       quadrant:'sofort', cluster:'A', ampel:'vorher', luecke:true, begruendung:'Vor Abreise, weil die Frist vor der Abreise liegt; Sache der GF; Stand und nächster Schritt fehlen (Z3 F3 U2 G3).' }),
-    korbZeile({ id:'h2', absence_id:'abs-1', title:'Shuttle für das Festival ausschreiben', frist:tag(18), z:2,f:2,u:1,g:2,
+    korbZeile({ id:'h2', absence_id:'abs-1', ref_id:'t2', title:'Shuttle für das Festival ausschreiben', frist:tag(18), z:2,f:2,u:1,g:2,
       quadrant:'sofort', cluster:'C', ampel:'gelb', vertretung:'Alex', regel_note:'Lange Abwesenheit: ab Tag 15 entscheidet die Vertretung gelbe Punkte ohne Einspruchsfrist.',
       stand:'Drei Anbieter haben geantwortet.', schritt:'Angebote vergleichen',
       begruendung:'Übergeben mit Rückfrage, weil die Frist in die Abwesenheit fällt; Partnerstrang (Z2 F2 U1 G2).' }),
     korbZeile({ id:'h3', absence_id:'abs-1', kind:'partner', title:'Partner A', strand:'wwp', frist:tag(20), z:2,f:2,u:0,g:2,
       quadrant:'sofort', cluster:'C', ampel:'gelb', vertretung:'Alex', stand:'Gespräch lief gut.', schritt:'Angebot schicken',
       begruendung:'Übergeben mit Rückfrage, weil die Frist in die Abwesenheit fällt; Partnergespräch in der Phase negotiation (Z2 F2 U0 G2).' }),
-    korbZeile({ id:'h4', absence_id:'abs-1', title:'Wochenbrief an das Team', frist:tag(3), z:2,f:1,u:0,g:1,
+    korbZeile({ id:'h4', absence_id:'abs-1', ref_id:'t3', title:'Wochenbrief an das Team', frist:tag(3), z:2,f:1,u:0,g:1,
       quadrant:'delegieren', cluster:'B', ampel:'gruen', vertretung:'Alex', stand:'Format steht.', schritt:'Vorlage schreiben',
       begruendung:'Übergeben mit Vollmacht, weil die Frist in die Abwesenheit fällt; das Team hängt daran (Z2 F1 U0 G1).' }),
-    korbZeile({ id:'h5', absence_id:'abs-1', kind:'kandidat', title:'Pressefrage zur Zeltwiese', frist:tag(16), z:2,f:3,u:2,g:1,
+    korbZeile({ id:'h5', absence_id:'abs-1', kind:'kandidat', ref_id:'n3', title:'Pressefrage zur Zeltwiese', frist:tag(16), z:2,f:3,u:2,g:1,
       quadrant:'sofort', cluster:'E', ampel:'rot', luecke:true,
       begruendung:'Zur anderen GF, weil die Frist in die Abwesenheit fällt; Sache der GF (Stichwort Presse); Stand fehlt (Z2 F3 U2 G1).' }),
     korbZeile({ id:'h6', absence_id:'abs-1', kind:'meilenstein', title:'Vorverkauf startet', frist:tag(40), z:1,f:2,u:1,g:0,
@@ -161,6 +161,14 @@ export const ANTWORT = {
     const abs=[A1,A2,A3].find(a=>a.id===p.absence_id)||A1;
     return { items:rows, absence:abs, ...zaehleKorb(rows) }; },
   handover_log: (p) => ({ log: PROTOKOLL[p.absence_id]||[] }),
+  /* Rücknahme bei der Rückkehr: die Antwort zeigt, was das Backend gespeichert hat. */
+  handover_zurueck: (p) => {
+    const zeile = Object.values(KORB).flat().find(r => r.id === p.id);
+    return { item: { ...(zeile||{}), status:'erledigt', vertretung:null },
+             thema: zeile && zeile.kind === 'thema' ? { id:zeile.ref_id, gate:'alex', owner_backup:null } : null };
+  },
+  /* Asana ohne Token: genau die Antwort, die v29 ohne Secret gibt. */
+  asana_export: () => ({ __status:400, error:'ASANA_TOKEN fehlt', hinweis:'Secret in Supabase anlegen, dann erneut versuchen.' }),
   deputies_list: { deputies:[
     { id:'d1', person:'Lea', bereich:'gf', vertretung:'Alex', vollmacht:'Ausgaben bis 2.000 € aus freigegebenen Budgets, keine neuen Verpflichtungen', sort:10, active:true },
     { id:'d2', person:'Lea', bereich:'*', vertretung:'Alex', vollmacht:null, sort:90, active:true },

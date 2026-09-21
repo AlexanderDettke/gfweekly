@@ -84,7 +84,7 @@ function renderKopf(){
       <div class="ub-meta">${gfEsc(a.bis?`${fmtD(a.von)} bis ${fmtD(a.bis)}`:`ab ${fmtD(a.von)}, Ende offen`)} · ${gfEsc(lage)} · ${gfEsc({kurz:"kurze",mittel:"mittlere",lang:"lange"}[a.stufe]||a.stufe)} Abwesenheit · ${a.art==="sofort"?"ungeplant":"planbar"} · ${gfEsc(kontakt)}${a.kanal?" · "+gfEsc(a.kanal):""}</div>
     </div>
     <div class="ub-akt">
-      ${bestaetigt?`<button class="btn btn-sm btn-primary" id="asanaBtn">Nach Asana</button>`:""}
+      ${bestaetigt?`<button class="btn btn-sm btn-brand" id="asanaBtn">Nach Asana</button>`:""}
       <button class="btn btn-sm btn-brand" id="briefBtn">Vertretungsbrief</button>
       <a class="btn btn-sm btn-brand" href="vertretung.html">Abwesenheiten</a>
     </div>`;
@@ -123,7 +123,7 @@ function sichtbar(){
     && (!FILTER.ampel||x.ampel===FILTER.ampel)
     && (!FILTER.nurVorschlag||x.status==="vorschlag")
     && (!FILTER.nurLuecken||x.luecke)
-    && (!istWache()||!x.frist||x.frist<=gfAddDays(ABSENCE.bis||ABSENCE.bis_geschaetzt||ABSENCE.von,3)));
+    && (!istWache()||(!!x.frist&&x.frist<=gfAddDays(ABSENCE.bis||ABSENCE.bis_geschaetzt||ABSENCE.von,3))));
 }
 function zeile(x){
   const sperre=gesperrt(x);
@@ -198,7 +198,7 @@ async function setzen(id, patch){
 async function zaehlerNeu(){
   const d=await gfApi("handover_list",{ absence_id:ABSENCE.id });
   ITEMS=d.items||[]; ZAEHL={ quadrant:d.quadrant, cluster:d.cluster, ampel:d.ampel, status:d.status, luecken:d.luecken, gesamt:d.gesamt, uebernahmefaehigkeit:d.uebernahmefaehigkeit };
-  renderQuads(); renderBar();
+  renderKopf(); renderQuads(); renderBar();
 }
 async function alleUebernehmen(){
   const list=sichtbar().filter(x=>x.status==="vorschlag");

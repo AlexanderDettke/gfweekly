@@ -62,6 +62,13 @@
 const $=s=>document.querySelector(s);
 let ABSENCE=null, ITEMS=[], LOG=[];
 
+/* „Gesehen" ist eine Lesebestätigung für dich selbst, kein Eingriff: sie steht im Browser, nicht in den Daten. */
+function gesehen(id){ try{ return localStorage.getItem("gf_rk_gesehen_"+id)==="1"; }catch(e){ return false; } }
+$("#entList")?.addEventListener("click",e=>{
+  const b=e.target.closest('[data-act="gesehen"]'); if(!b) return;
+  const row=b.closest(".rk-row"); try{ localStorage.setItem("gf_rk_gesehen_"+row.dataset.log,"1"); }catch(err){}
+  row.classList.add("is-gesehen"); b.textContent="gesehen";
+});
 function fmtT(at){ return new Date(at).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}); }
 function renderKopf(){
   const a=ABSENCE;
@@ -86,9 +93,10 @@ function renderKpis(){
 function renderEnt(){
   const list=LOG.filter(l=>l.art==="entscheidung"||l.art==="weitergabe"||l.art==="erledigt");
   $("#entN").textContent=list.length?list.length:"";
-  $("#entList").innerHTML=list.length?list.map(l=>`<article class="rk-row" data-log="${l.id}">
+  $("#entList").innerHTML=list.length?list.map(l=>`<article class="rk-row${gesehen(l.id)?" is-gesehen":""}" data-log="${l.id}">
       <span class="t">${gfEsc(l.text||"")}</span>
       ${gfZustand(l.art==="erledigt"?"ok":l.art==="weitergabe"?"info":"action", l.art==="erledigt"?"erledigt":l.art==="weitergabe"?"weitergegeben":"entschieden")}
+      <button class="btn btn-sm btn-brand" data-act="gesehen">${gesehen(l.id)?"gesehen":"Gesehen"}</button>
       <span class="m">in Vertretung für dich, ${gfEsc(l.who||"unbekannt")}, ${gfEsc(fmtT(l.at))}</span>
     </article>`).join("")
     : `<div class="empty soft">In deiner Abwesenheit wurde nichts entschieden.</div>`;
@@ -108,11 +116,9 @@ $("#warList").addEventListener("click",async e=>{
   const b=e.target.closest('[data-act="back"]'); if(!b) return;
   const row=b.closest(".rk-row"), id=row.dataset.id, x=ITEMS.find(i=>i.id===id); if(!x) return;
   try{
-    await gfApi("handover_set",{ id, vertretung:"", status:"erledigt", by:gfWho() });
-    if(x.kind==="thema"){
-      await gfApi("update",{ id:x.ref_id, gate: ABSENCE.person==="Lea"?"lea":"alex", gate_by:gfWho(), owner_backup:null });
-    }
-    x.status="erledigt"; renderWartet(); renderKpis(); gfToast("Wieder bei dir");
+    const d=await gfApi("handover_zurueck",{ id, by:gfWho() });
+    Object.assign(x, d.item||{}); x.status="erledigt";
+    renderWartet(); renderKpis(); gfToast(d.thema?"Wieder bei dir":"Zurückgenommen");
   }catch(err){ gfToast("Fehler: "+(err.message||"speichern")); }
 });
 $("#endBtn").onclick=async()=>{

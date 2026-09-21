@@ -1447,3 +1447,5 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 .fd-vt .fd-zahlen{display:flex;gap:16px;flex-wrap:wrap}
 .fd-vt .fd-zahlen b{font-size:var(--stufe-4);font-variant-numeric:tabular-nums;display:block}
 .fd-vt .fd-zahlen span{font-size:var(--stufe-1);color:var(--muted)}
+.rk-row.is-gesehen{opacity:1;border-color:var(--disabled)}
+.rk-row.is-gesehen .t{color:var(--text-2)}

@@ -146,7 +146,7 @@ function renderStat(){
       <div class="vt-head">${gfAvatarTag(p,"av")}<h3>${p}</h3><span class="vt-when">${wert==null?"keine Themen":wert+" Prozent"}</span></div>
       <div class="bar"><i style="width:${wert||0}%"></i></div>
       <div class="fd-muted">${s.themen||0} Themen, davon ${s.ohne_stand||0} ohne Stand und ${s.ohne_schritt||0} ohne nächsten Schritt.</div>
-      ${(s.ohne_stand||s.ohne_schritt)?`<a class="linkish" href="board.html?view=liste&person=${encodeURIComponent(p)}">Lückenhafte Themen ansehen</a>`:""}
+      ${(s.ohne_stand||s.ohne_schritt)?`<a class="linkish" href="cockpit.html">Themen in der Liste ansehen</a>`:""}
     </div>`;
   }).join("");
 }
@@ -212,8 +212,10 @@ document.addEventListener("click",async e=>{
 });
 async function depSave(d){
   if(!d.bereich || !d.vertretung) return;
-  try{ await gfApi("deputies_set",{ person:d.person, bereich:d.bereich, vertretung:d.vertretung, vollmacht:d.vollmacht||"" }); d.neu=false; gfToast("Gespeichert"); }
-  catch(e){ gfToast("Fehler: "+e.message); }
+  const p={ person:d.person, bereich:d.bereich, vertretung:d.vertretung, vollmacht:d.vollmacht||"" };
+  if(!d.neu) p.id=d.id;
+  try{ const r=await gfApi("deputies_set",p); if(d.neu && r.deputy){ d.id=r.deputy.id; d.neu=false; } gfToast("Gespeichert"); }
+  catch(e){ gfToast(e.message && e.message.includes("schon eine Zeile") ? "Für diesen Bereich gibt es schon eine Zeile." : "Fehler: "+e.message); }
 }
 let tippTimer;
 $("#depWrap").addEventListener("change",e=>{
