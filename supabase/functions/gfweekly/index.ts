@@ -1667,7 +1667,11 @@ Deno.serve(async (req: Request) => {
 
       const gidVon = (name: string) => {
         if (!name) return null;
-        const p = (leute || []).find((q: any) => norm(q.name) === norm(name));
+        let p = (leute || []).find((q: any) => norm(q.name) === norm(name));
+        /* Die Vertretungslinie führt „Alex“ und „Lea“, die Personenliste „Alexander Dettke“ und „Lea Luce“.
+           Für diese beiden ist whoNorm eindeutig; für alle anderen bleibt der genaue Name stehen, damit nicht
+           Merle und Tim zur selben Person werden. */
+        if (!p) { const w = whoNorm(name); if (w === 'Alex' || w === 'Lea') p = (leute || []).find((q: any) => whoNorm(q.name) === w); }
         if (!p?.asana_gid) { if (name && !ohneGid.includes(name)) ohneGid.push(name); return null; }
         return p.asana_gid;
       };
@@ -1719,6 +1723,15 @@ Deno.serve(async (req: Request) => {
       const abschnitt: Record<string,string> = {};
       for (const a of (vorhanden || [])) abschnitt[a.name] = a.gid;
       for (const n of ASANA_ABSCHNITTE) if (!abschnitt[n]) abschnitt[n] = (await asana(`/projects/${projekt}/sections`, 'POST', { name:n })).gid;
+      /* Asana legt jedem neuen Projekt einen leeren Abschnitt ohne Namen bei. Der wandert weg, sobald die
+         eigenen Abschnitte stehen; ist er nicht leer, bleibt er unangetastet. */
+      for (const a of (vorhanden || [])) {
+        if (!/^(unbenannter abschnitt|untitled section)$/i.test((a.name || '').trim())) continue;
+        try {
+          const drin = await asana(`/sections/${a.gid}/tasks?limit=1`);
+          if (!(drin || []).length) { await asana(`/sections/${a.gid}`, 'DELETE'); delete abschnitt[a.name]; }
+        } catch (_e) { /* bleibt stehen, stört nur die Optik */ }
+      }
 
       /* Wer kein Asana-Konto hat, dessen Aufgaben gehen an Alex; die Namen stehen in der Antwort.
          So bleibt keine Aufgabe herrenlos (ANTWORTEN_ZU_FRAGEN.md, Punkt 7.3). */
