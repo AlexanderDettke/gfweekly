@@ -70,6 +70,25 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("input",e=>{ const st=e.target.closest&&e.target.closest(".stepper"); if(st&&e.target.tagName==="INPUT"){ e.target.value=e.target.value.replace(/[^\d-]/g,""); gfStepperSync(st); } });
 const GF_ZST={ pos:"✓", ok:"✓", warn:"⚠", crit:"✕", info:"●", action:"●", offen:"○", up:"↑", down:"↓", flat:"→", neutral:"○" };
+/* V24b · Vertretung: Ampel und Quadrant tragen nie die Farbe allein, sondern immer Symbol plus Wort.
+   gfAmpel(key) liefert Symbol, Wort und den Ton für .zst; gfQuadrant(key) dasselbe für die vier Körbe. */
+const GF_AMPEL={ vorher:{ i:"●", w:"vor Abreise", tone:"action" }, gruen:{ i:"○", w:"grün, mit Vollmacht", tone:"pos" },
+  gelb:{ i:"▲", w:"gelb, mit Rückfrage", tone:"warn" }, rot:{ i:"✕", w:"rot, zur GF", tone:"crit" },
+  ruht:{ i:"▬", w:"ruht bis zur Rückkehr", tone:"" } };
+const GF_QUADRANT={ sofort:{ i:"✕", w:"Sofort", tone:"crit", hint:"wichtig und dringend" }, planen:{ i:"●", w:"Planen", tone:"action", hint:"wichtig, nicht dringend" },
+  delegieren:{ i:"▲", w:"Delegieren", tone:"warn", hint:"dringend, nicht wichtig" }, warten:{ i:"○", w:"Warten", tone:"", hint:"weder noch" } };
+const GF_CLUSTER={ A:"vor Abreise", B:"übergeben mit Vollmacht", C:"übergeben mit Rückfrage", D:"ruht bis zur Rückkehr", E:"zur anderen GF" };
+function gfAmpel(key, opts={}){ const a=GF_AMPEL[key]; if(!a) return gfZustand("offen","ohne Ampel",opts);
+  return `<span class="zst${a.tone?" "+a.tone:""}"${opts.title?` title="${gfEsc(opts.title)}"`:""}><i aria-hidden="true">${a.i}</i>${a.w}</span>`; }
+function gfQuadrant(key, opts={}){ const q=GF_QUADRANT[key]; if(!q) return "";
+  return `<span class="zst${q.tone?" "+q.tone:""}" title="${gfEsc(opts.title||q.hint)}"><i aria-hidden="true">${q.i}</i>${q.w}</span>`; }
+/* Frist als Datum plus Wort: „24.09. · diese Woche“, „überfällig“, „ohne Frist“. */
+function gfFrist(d){ if(!d) return gfZustand("offen","ohne Frist");
+  const heute=new Date(); heute.setHours(0,0,0,0); const t=new Date(d+"T00:00:00"); const tage=Math.round((t-heute)/86400000);
+  const datum=t.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"});
+  const wort=tage<0?"überfällig":tage===0?"heute":tage===1?"morgen":tage<=7?"diese Woche":tage<=21?"in "+tage+" Tagen":"später";
+  const kind=tage<0?"crit":tage<=7?"warn":"offen";
+  return gfZustand(kind, datum+" · "+wort); }
 function gfZustand(kind, wort, opts={}){ const tone=({ok:"pos",offen:"",neutral:"",up:"pos",down:"crit",flat:""})[kind]??kind; return `<span class="zst${tone?" "+tone:""}"${opts.title?` title="${gfEsc(opts.title)}"`:""}><i aria-hidden="true">${GF_ZST[kind]||"●"}</i>${gfEsc(wort)}</span>`; }
 const GF_KK_ICON={
   ereignis:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h13"/><circle cx="18" cy="12" r="2"/></svg>',
@@ -125,11 +144,15 @@ const GF_ICONS={
   cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
   menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
   chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg>',
-  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg>'
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg>',
+  schild:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 5 6v6c0 4 3 7.2 7 8.5 4-1.3 7-4.5 7-8.5V6l-7-2.5Z"/><path d="m9 12 2 2 4-4"/></svg>',
+  tausch:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>',
+  tuer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v17"/><path d="M4 21h16"/><circle cx="13" cy="12" r="1" fill="currentColor"/></svg>'
 };
 const GF_NAV=[
   ["Heute",[["start","index.html","Für dich","home",null,"Deine Entscheidungen, seit gestern, nächste Fristen"],["neuigkeiten","neuigkeiten.html","Neuigkeiten","bell","newsBadge","Ticker, Sichtungskorb, Themenlage"],["besprechung","besprechung.html","Besprechung","check",null,"Agenda der GF, abarbeiten, Protokoll"]]],
   ["Arbeiten",[["themen","board.html","Themen","board","themenBadge","Board, Kacheln, Liste, Entscheidungen"],["jahr","jahr.html","Jahr","cal",null,"Zyklus, Meilensteine, Rituale, Team, Plattformen, Habitat"],["capture","capture.html","Eingabe","pen",null,"Thema erfassen"]]],
+  ["Vertretung",[["vertretung","vertretung.html","Abwesenheiten","schild",null,"Wer ist wann weg, wer vertritt, mit welcher Vollmacht"],["uebergabe","uebergabe.html","Übergabe","tausch","uebergabeBadge","Der Korb einer Abwesenheit: was vorher, was an die Vertretung, was ruht"],["rueckkehr","rueckkehr.html","Rückkehr","tuer",null,"Was in deiner Abwesenheit entschieden wurde und was auf dich wartet"]]],
   ["Verwalten",[["seiten","seiten.html","Wichtige Seiten","grid",null,"Arbeitsseiten mit Zugang"],["edit","bearbeiten.html","Bearbeiten","sliders",null,"Themen, Personen, Links pflegen"],["aufraeumen","aufraeumen.html","Aufräumen","check",null,"Jedem Eintrag einen Ausgang geben"]]]
 ];
 const GF_SUBNAV=[["board","board.html?view=board","Board","Spalten nach Ablauf, Prio, Zeitraum oder Person, verschiebbar"],["kacheln","board.html?view=kacheln","Kacheln","Gruppen als Kachelraster"],["liste","cockpit.html","Liste","Ausführliche Liste mit Details und Protokoll"],["entscheidungen","entscheidungen.html","Entscheidungen","Entscheidungslog, Protokolle der Besprechungen, Wochenmail"]];
@@ -294,6 +317,8 @@ function gfTextModal(title, text, opts={}){
   return m;
 }
 function gfFmtDay(d){ return new Date(d).toLocaleDateString("de-DE",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"}); }
+/* Datum plus n Tage, als ISO-Tag. Wird beim Anlegen einer Abwesenheit für die Schätzung gebraucht. */
+function gfAddDays(d, n){ const x=new Date((d||new Date().toISOString().slice(0,10))+"T00:00:00"); x.setDate(x.getDate()+n); return x.toISOString().slice(0,10); }
 function gfFmtShort(d){ return d?new Date(d.length===10?d+"T00:00:00":d).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}):""; }
 function gfFmtTime(d){ return new Date(d).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}); }
 

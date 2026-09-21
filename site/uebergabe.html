@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#171d18" />
+<title>Das Hohe Haus · Übergabe</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=24" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=24" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=24" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=24" />
+<link rel="stylesheet" href="/assets/styles.css?v=24" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Das Hohe Haus</h1>
+    <div class="sub">Übergabe · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+  <div id="hero"></div>
+
+  <div class="ub-kopf" id="kopf"></div>
+  <div id="wache"></div>
+  <div class="ub-quads" id="quads"></div>
+  <div class="ub-bar" id="bar"></div>
+  <div class="ub-list" id="list"><div class="loading">lädt …</div></div>
+
+  <section class="ub-prot" aria-label="Protokoll">
+    <details class="nw-sec" id="protSec">
+      <summary><h2>Protokoll</h2><span class="hint" id="protN"></span><span class="chev" aria-hidden="true"></span></summary>
+      <div style="padding:10px 14px">
+        <div id="protList"></div>
+        <div class="zeile"><input class="txt" id="protText" placeholder="Notiz zum Protokoll, zum Beispiel was du wem gesagt hast"><button class="btn btn-sm btn-brand" id="protAdd">Notieren</button></div>
+      </div>
+    </details>
+  </section>
+</div>
+
+<div class="modal-back" id="modal"></div>
+<div class="toast" id="toast"></div>
+<script src="/assets/core.js?v=24"></script>
+<script src="/assets/game.js?v=24"></script>
+<script src="/assets/eggs.js?v=24" defer></script>
+<script>
+/* V24b · Übergabe: der Korb einer Abwesenheit auf einen Blick. Oben die vier Quadranten als Filter,
+   darunter jede Zeile mit Quadrant, Frist, den vier Achsen der Matrix (mit Begründung im Titel),
+   Cluster, Ampel und Vertretung. Ein Chip-Klick speichert sofort. „Alle Vorschläge übernehmen“ bestätigt
+   die aktuelle Ansicht in einem Zug. Bei kurzer und ungeplanter Abwesenheit ist die Seite eine Wache:
+   nur Fristen, Ampeln gesperrt, nichts wird umgehängt. */
+const $=s=>document.querySelector(s);
+const KIND_LBL={ thema:"Thema", kandidat:"Kandidat", meilenstein:"Meilenstein", ritual:"Ritual", termin:"Termin", asana:"Asana", partner:"Partner" };
+let ABSENCE=null, ITEMS=[], ZAEHL={}, FILTER={ quadrant:"", cluster:"", ampel:"", nurVorschlag:true, nurLuecken:false }, LOG=[], PERSONEN=[];
+
+function istWache(){ return ABSENCE && ABSENCE.art==="sofort" && ABSENCE.stufe==="kurz"; }
+function gesperrt(x){ return istWache() && x.f!==3; }
+function fmtD(d){ return d?new Date(d+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"2-digit"}):""; }
+
+function renderKopf(){
+  const a=ABSENCE; if(!a) return;
+  const heute=new Date().toISOString().slice(0,10);
+  const tage=Math.round((new Date(a.von+"T00:00:00")-new Date(heute+"T00:00:00"))/86400000);
+  const ende=a.bis||a.bis_geschaetzt;
+  const gesamt=ende?Math.round((new Date(ende+"T00:00:00")-new Date(a.von+"T00:00:00"))/86400000)+1:null;
+  const tagN=Math.round((new Date(heute+"T00:00:00")-new Date(a.von+"T00:00:00"))/86400000)+1;
+  const lage = tage>0 ? `noch ${tage} ${tage===1?"Tag":"Tage"} bis zur Abreise`
+             : gesamt ? `Tag ${Math.max(1,tagN)} von ${gesamt}` : `Tag ${Math.max(1,tagN)}`;
+  const kontakt={ keiner:"kein Kontakt", wochenbrief:"Wochenbrief", gespraech:"Gespräch" }[a.kontakt]||a.kontakt;
+  $("#kopf").innerHTML=`
+    ${gfAvatarTag(a.person,"av")}
+    <div><h2>Übergabe für ${gfEsc(a.person)}</h2>
+      <div class="ub-meta">${gfEsc(a.bis?`${fmtD(a.von)} bis ${fmtD(a.bis)}`:`ab ${fmtD(a.von)}, Ende offen`)} · ${gfEsc(lage)} · ${gfEsc({kurz:"kurze",mittel:"mittlere",lang:"lange"}[a.stufe]||a.stufe)} Abwesenheit · ${a.art==="sofort"?"ungeplant":"planbar"} · ${gfEsc(kontakt)}${a.kanal?" · "+gfEsc(a.kanal):""}</div>
+    </div>
+    <div class="ub-akt">
+      <button class="btn btn-sm btn-brand" id="briefBtn">Vertretungsbrief</button>
+      <a class="btn btn-sm btn-brand" href="vertretung.html">Abwesenheiten</a>
+    </div>`;
+  $("#briefBtn").onclick=briefModal;
+  $("#wache").innerHTML = istWache()
+    ? `<div class="ub-wache">${gfZustand("warn","Wache")} Kurze Abwesenheit: nichts wird umgehängt. Am Tag 4 baut das Haus die Übergabe.</div>` : "";
+}
+function renderQuads(){
+  const q=ZAEHL.quadrant||{};
+  $("#quads").innerHTML=["sofort","planen","delegieren","warten"].map(k=>{
+    const n=q[k]||0; const def=GF_QUADRANT[k];
+    return `<button type="button" class="ub-quad ${FILTER.quadrant===k?"on":""} ${k==="sofort"&&n?"crit":""}" data-q="${k}" aria-pressed="${FILTER.quadrant===k}" title="${gfEsc(def.hint)}">
+      <span class="v">${n}</span><span class="l">${def.i} ${def.w}</span><span class="l">${gfEsc(def.hint)}</span></button>`;
+  }).join("");
+}
+function renderBar(){
+  const cl=ZAEHL.cluster||{}, am=ZAEHL.ampel||{};
+  const clChips=["A","B","C","D","E"].map(k=>`<button type="button" class="chip${FILTER.cluster===k?" on":""}" data-cluster="${k}" aria-pressed="${FILTER.cluster===k}" title="${gfEsc(GF_CLUSTER[k])}">${k} ${gfEsc(GF_CLUSTER[k])}${cl[k]?` (${cl[k]})`:""}</button>`).join("");
+  const amChips=Object.keys(GF_AMPEL).map(k=>`<button type="button" class="chip${FILTER.ampel===k?" on":""}" data-ampel="${k}" aria-pressed="${FILTER.ampel===k}">${GF_AMPEL[k].i} ${GF_AMPEL[k].w}${am[k]?` (${am[k]})`:""}</button>`).join("");
+  $("#bar").innerHTML=`
+    <div class="fchips compact" role="group" aria-label="Cluster">${clChips}</div>
+    <div class="fchips compact" role="group" aria-label="Ampel">${amChips}</div>
+    <label class="chk"><input type="checkbox" id="nurV" ${FILTER.nurVorschlag?"checked":""}> nur Vorschläge</label>
+    <label class="chk"><input type="checkbox" id="nurL" ${FILTER.nurLuecken?"checked":""}> nur Lücken</label>
+    <span class="line"></span>
+    <span class="fd-muted">${ZAEHL.uebernahmefaehigkeit!=null?`Übernahmefähigkeit ${ZAEHL.uebernahmefaehigkeit} Prozent`:""}</span>
+    <button class="btn btn-sm btn-primary" id="allBtn" ${istWache()?'disabled title="In der Wache wird nichts umgehängt"':""}>Alle Vorschläge übernehmen</button>`;
+  $("#nurV").onchange=e=>{ FILTER.nurVorschlag=e.target.checked; renderList(); };
+  $("#nurL").onchange=e=>{ FILTER.nurLuecken=e.target.checked; renderList(); };
+  $("#allBtn").onclick=alleUebernehmen;
+}
+function sichtbar(){
+  return ITEMS.filter(x=>(!FILTER.quadrant||x.quadrant===FILTER.quadrant)
+    && (!FILTER.cluster||x.cluster===FILTER.cluster)
+    && (!FILTER.ampel||x.ampel===FILTER.ampel)
+    && (!FILTER.nurVorschlag||x.status==="vorschlag")
+    && (!FILTER.nurLuecken||x.luecke)
+    && (!istWache()||!x.frist||x.frist<=gfAddDays(ABSENCE.bis||ABSENCE.bis_geschaetzt||ABSENCE.von,3)));
+}
+function zeile(x){
+  const sperre=gesperrt(x);
+  const ampChips=Object.keys(GF_AMPEL).map(k=>`<button type="button" class="chip${x.ampel===k?" on":""}" data-set="ampel" data-v="${k}" aria-pressed="${x.ampel===k}" ${sperre?"disabled":""} title="${gfEsc(GF_AMPEL[k].w)}">${GF_AMPEL[k].i} ${GF_AMPEL[k].w}</button>`).join("");
+  const clChips=["A","B","C","D","E"].map(k=>`<button type="button" class="chip${x.cluster===k?" on":""}" data-set="cluster" data-v="${k}" aria-pressed="${x.cluster===k}" ${sperre?"disabled":""} title="${gfEsc(GF_CLUSTER[k])}">${k}</button>`).join("");
+  const vertChips=PERSONEN.map(p=>`<button type="button" class="chip${x.vertretung===p?" on":""}" data-set="vertretung" data-v="${gfEsc(p)}" aria-pressed="${x.vertretung===p}" ${sperre?"disabled":""}>${gfEsc(p)}</button>`).join("");
+  return `<article class="ub-row ${x.luecke?"is-luecke":""}" data-id="${x.id}">
+    <div class="ub-r1">
+      ${gfQuadrant(x.quadrant)}
+      <span class="t">${gfEsc(x.title||"")}</span>
+      <span class="k">${gfEsc(KIND_LBL[x.kind]||x.kind)}${x.strand?" · "+gfEsc(x.strand):""}</span>
+      ${gfFrist(x.frist)}
+      ${x.luecke?gfZustand("warn","Stand fehlt"):""}
+      ${x.status!=="vorschlag"?gfZustand("ok",x.status==="bestaetigt"?"bestätigt":x.status):gfZustand("offen","Vorschlag")}
+      <span class="ub-achsen" title="${gfEsc(x.begruendung||"")}"><span title="Zeitdruck">Z${x.z}</span><span title="Folgen bei Stillstand">F${x.f}</span><span title="Übertragbarkeit">U${x.u}</span><span title="Entscheidungsgewicht">G${x.g}</span></span>
+      <button class="icon-btn" data-act="auf" aria-label="Dossier zeigen"><span class="chev" aria-hidden="true"></span></button>
+    </div>
+    <div class="ub-r2">
+      <div class="fchips compact" role="group" aria-label="Cluster">${clChips}</div>
+      <div class="fchips compact" role="group" aria-label="Ampel">${ampChips}</div>
+    </div>
+    <div class="ub-r3">
+      <span class="fd-muted">Vertretung</span>
+      <div class="fchips compact" role="group" aria-label="Vertretung">${vertChips}</div>
+      <label>Frist <input type="date" data-set="frist" value="${x.frist||""}" ${sperre?"disabled":""}></label>
+      <input class="txt" data-set="regel_note" value="${gfEsc(x.regel_note||"")}" placeholder="Regel oder Notiz für die Vertretung">
+    </div>
+    <div class="ub-doss" hidden></div>
+  </article>`;
+}
+function renderList(){
+  const list=sichtbar();
+  $("#list").innerHTML = list.length ? list.map(zeile).join("")
+    : `<div class="empty soft">${FILTER.nurVorschlag?"Keine offenen Vorschläge in dieser Ansicht. Der Haken „nur Vorschläge“ zeigt auch das Bestätigte.":"Nichts in dieser Ansicht."}</div>`;
+  gfStagger($("#list"),".ub-row");
+}
+function dossierHtml(x){
+  const d=x.dossier||{};
+  const zeilen=[];
+  const add=(k,v)=>{ if(v) zeilen.push(`<dt>${k}</dt><dd>${gfEsc(v)}</dd>`); };
+  add("Stand", d.stand); add("Nächster Schritt", d.naechster_schritt); add("Kontext", d.kontext);
+  add("Entscheidung", d.entscheidung); add("Verantwortung", d.verantwortung); add("Beteiligte", d.beteiligte);
+  add("Text", d.text); add("Zitat", d.zitat); add("Quelle", d.quelle);
+  add("Partner", d.partner); add("Phase", d.phase); add("Wartet auf", d.wartet_auf); add("Signal", d.signal);
+  add("Beschreibung", d.beschreibung); add("Zeitraum", d.zeitraum); add("Wer", d.wer); add("Hinweis", d.hinweis);
+  const news=(d.news||[]).map(n=>`<li>${gfEsc(gfFmtShort(n.happened_at))}: ${gfEsc(n.title||"")}${n.source_url?` <a href="${gfEsc(n.source_url)}" target="_blank" rel="noopener">Quelle ↗</a>`:""}</li>`).join("");
+  const besch=(d.beschluesse||[]).map(b=>`<li>${gfEsc(gfFmtShort(b.decided_at))}: ${gfEsc(b.decision||"")}${b.next_action?` · nächster Schritt: ${gfEsc(b.next_action)}`:""}</li>`).join("");
+  const fragen=(d.fragen||[]).length?`<p>${gfZustand("warn","Niemand hat den Stand notiert")} Wer Bescheid weiß: ${gfEsc((d.fragen||[]).join(", "))}</p>`:"";
+  return `${zeilen.length?`<dl>${zeilen.join("")}</dl>`:""}
+    ${news?`<div><b>Letzte Neuigkeiten</b><ul>${news}</ul></div>`:""}
+    ${besch?`<div><b>Beschlüsse</b><ul>${besch}</ul></div>`:""}
+    ${d.wache?`<p>${gfZustand("warn","Wache")} Diese Frist läuft in den nächsten drei Tagen ab.</p>`:""}
+    ${fragen}
+    ${!zeilen.length&&!news&&!besch?`<p class="fd-muted">Das Haus weiß zu diesem Vorgang nichts außer dem Titel.</p>`:""}
+    <div class="akt">
+      <button class="btn btn-sm btn-brand" data-act="doss">Dossier neu</button>
+      ${x.kind==="thema"?`<a class="btn btn-sm btn-brand" href="board.html?topic=${gfEsc(x.ref_id)}">Stand ergänzen</a>`:""}
+      ${x.kind==="kandidat"?`<a class="btn btn-sm btn-brand" href="neuigkeiten.html">Im Sichtungskorb ansehen</a>`:""}
+    </div>`;
+}
+async function setzen(id, patch){
+  try{
+    const d=await gfApi("handover_set", Object.assign({ id, by:gfWho() }, patch));
+    const i=ITEMS.findIndex(x=>x.id===id); if(i>=0 && d.item) ITEMS[i]=d.item;
+    await zaehlerNeu();
+    const el=$(`.ub-row[data-id="${id}"]`);
+    if(FILTER.nurVorschlag && el){ el.style.opacity=".35"; setTimeout(()=>{ renderList(); },400); }
+    else if(el) el.outerHTML=zeile(ITEMS[i]);
+    gfToast("Gespeichert");
+  }catch(e){ gfToast("Fehler: "+(e.message||"speichern")); }
+}
+async function zaehlerNeu(){
+  const d=await gfApi("handover_list",{ absence_id:ABSENCE.id });
+  ITEMS=d.items||[]; ZAEHL={ quadrant:d.quadrant, cluster:d.cluster, ampel:d.ampel, status:d.status, luecken:d.luecken, gesamt:d.gesamt, uebernahmefaehigkeit:d.uebernahmefaehigkeit };
+  renderQuads(); renderBar();
+}
+async function alleUebernehmen(){
+  const list=sichtbar().filter(x=>x.status==="vorschlag");
+  if(!list.length) return gfToast("Nichts zu übernehmen");
+  if(!confirm(`${list.length} Vorschläge so übernehmen, wie das Haus sie gesetzt hat?`)) return;
+  try{
+    const d=await gfApi("handover_set_many",{ by:gfWho(), items:list.map(x=>({ id:x.id })) });
+    gfToast(`${d.updated} übernommen`); await zaehlerNeu(); renderList(); await protLaden();
+  }catch(e){ gfToast("Fehler: "+e.message); }
+}
+$("#list").addEventListener("click",async e=>{
+  const row=e.target.closest(".ub-row"); if(!row) return;
+  const id=row.dataset.id, x=ITEMS.find(i=>i.id===id); if(!x) return;
+  const auf=e.target.closest('[data-act="auf"]');
+  if(auf){ const d=row.querySelector(".ub-doss"); const zu=d.hidden; d.innerHTML=dossierHtml(x); d.hidden=!zu; row.classList.toggle("open",zu); return; }
+  const doss=e.target.closest('[data-act="doss"]');
+  if(doss){ try{ const d=await gfApi("handover_dossier",{id}); Object.assign(x,d.item); row.querySelector(".ub-doss").innerHTML=dossierHtml(x); gfToast("Dossier neu gebaut"); }
+    catch(err){ gfToast("Fehler: "+err.message); } return; }
+  const chip=e.target.closest(".chip[data-set]");
+  if(chip && !chip.disabled){ e.stopImmediatePropagation(); const f=chip.dataset.set;
+    setzen(id, { [f]: x[f]===chip.dataset.v && f==="vertretung" ? "" : chip.dataset.v }); return; }
+},true);
+$("#list").addEventListener("change",e=>{
+  const row=e.target.closest(".ub-row"); if(!row) return;
+  const f=e.target.dataset.set; if(!f) return;
+  setzen(row.dataset.id, { [f]: e.target.value||null });
+});
+$("#quads").addEventListener("click",e=>{
+  const b=e.target.closest(".ub-quad"); if(!b) return;
+  FILTER.quadrant = FILTER.quadrant===b.dataset.q ? "" : b.dataset.q; renderQuads(); renderList();
+});
+$("#bar").addEventListener("click",e=>{
+  const c=e.target.closest(".chip"); if(!c) return;
+  if(c.dataset.cluster){ FILTER.cluster = FILTER.cluster===c.dataset.cluster ? "" : c.dataset.cluster; }
+  if(c.dataset.ampel){ FILTER.ampel = FILTER.ampel===c.dataset.ampel ? "" : c.dataset.ampel; }
+  renderBar(); renderList();
+});
+
+/* Vertretungsbrief: Zeitraum, Kontaktregel, Notfall, Vertretungen je Bereich mit Vollmacht, die Listen nach Ampel. */
+async function briefModal(){
+  const dep=await gfApi("deputies_list",{ person:ABSENCE.person }).catch(()=>({deputies:[]}));
+  const zeilen=(dep.deputies||[]).filter(d=>d.active!==false).map(d=>`- ${d.bereich==="*"?"alles Übrige":d.bereich==="gf"?"GF gemeinsam":d.bereich}: ${d.vertretung}${d.vollmacht?` (${d.vollmacht})`:""}`).join("\n");
+  const nachAmpel=k=>ITEMS.filter(x=>x.ampel===k).map(x=>`- ${x.title}${x.frist?` (Frist ${fmtD(x.frist)})`:""}${x.vertretung?` → ${x.vertretung}`:""}`).join("\n");
+  const kontakt={ keiner:"Ich bin nicht erreichbar.", wochenbrief:"Ich lese einmal in der Woche einen Wochenbrief. Antworten sind freiwillig.", gespraech:`Wir sprechen ${ABSENCE.gespraech_zeit||"nach Absprache"}.` }[ABSENCE.kontakt];
+  const text=[
+    `Vertretung für ${ABSENCE.person}`,
+    ABSENCE.bis?`Zeitraum: ${fmtD(ABSENCE.von)} bis ${fmtD(ABSENCE.bis)}`:`Zeitraum: ab ${fmtD(ABSENCE.von)}, Ende offen`,
+    ``,
+    `Kontakt: ${kontakt}${ABSENCE.kanal?` Notfall: ${ABSENCE.kanal}.`:""}`,
+    `Notfall heißt: Geld ab 5.000 €, Recht, Personal, Presse, Behörde, Sicherheit.`,
+    ``,
+    `Vertretung je Bereich:`, zeilen||"- noch nicht festgelegt", ``,
+    `Zur anderen GF (rot):`, nachAmpel("rot")||"- nichts", ``,
+    `Mit Rückfrage (gelb):`, nachAmpel("gelb")||"- nichts", ``,
+    `Mit Vollmacht (grün):`, nachAmpel("gruen")||"- nichts", ``,
+    `Ruht bis zur Rückkehr:`, nachAmpel("ruht")||"- nichts",
+  ].join("\n");
+  gfTextModal("Vertretungsbrief", text, { intro:"Zum Kopieren. Verschickt wird nichts von allein." });
+}
+
+/* Protokoll */
+async function protLaden(){
+  try{ const d=await gfApi("handover_log",{ absence_id:ABSENCE.id }); LOG=d.log||[]; }catch(e){ LOG=[]; }
+  $("#protN").textContent=LOG.length?`${LOG.length} Einträge`:"noch nichts";
+  $("#protList").innerHTML=LOG.length?LOG.map(l=>`<div class="lg"><span class="at">${gfEsc(new Date(l.at).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}))}</span><span>${gfEsc(l.text||"")} <span class="fd-muted">${gfEsc(l.who||"")} in Vertretung für ${gfEsc(ABSENCE.person)}</span></span></div>`).join("")
+    : `<div class="fd-muted">Noch nichts protokolliert.</div>`;
+}
+$("#protAdd").onclick=async()=>{
+  const t=$("#protText").value.trim(); if(!t) return;
+  try{ await gfApi("handover_log_add",{ absence_id:ABSENCE.id, art:"notiz", text:t, who:gfWho() }); $("#protText").value=""; await protLaden(); gfToast("Notiert"); }
+  catch(e){ gfToast("Fehler: "+e.message); }
+};
+
+async function load(){
+  const id=new URLSearchParams(location.search).get("id");
+  let absence=null;
+  if(id){ const l=await gfApi("handover_list",{ absence_id:id }); absence=l.absence; ITEMS=l.items||[];
+    ZAEHL={ quadrant:l.quadrant, cluster:l.cluster, ampel:l.ampel, status:l.status, luecken:l.luecken, gesamt:l.gesamt, uebernahmefaehigkeit:l.uebernahmefaehigkeit }; }
+  else {
+    const a=await gfApi("absence_list",{ include_test:true });
+    absence=(a.absences||[]).find(x=>x.status==="aktiv") || (a.absences||[]).find(x=>x.status==="geplant") || (a.absences||[])[0] || null;
+    if(absence){ const l=await gfApi("handover_list",{ absence_id:absence.id }); ITEMS=l.items||[];
+      ZAEHL={ quadrant:l.quadrant, cluster:l.cluster, ampel:l.ampel, status:l.status, luecken:l.luecken, gesamt:l.gesamt, uebernahmefaehigkeit:l.uebernahmefaehigkeit }; }
+  }
+  ABSENCE=absence;
+  if(!ABSENCE){
+    $("#kopf").innerHTML=`<div><h2>Keine Abwesenheit</h2><div class="ub-meta">Es ist niemand als abwesend gemeldet.</div></div><div class="ub-akt"><a class="btn btn-sm btn-primary" href="vertretung.html">Abwesenheit anlegen</a></div>`;
+    $("#quads").innerHTML=""; $("#bar").innerHTML=""; $("#list").innerHTML=""; $("#protSec").hidden=true; return;
+  }
+  PERSONEN=gfAssignable().map(p=>p.name).filter(n=>n && n!==ABSENCE.person);
+  renderKopf(); renderQuads(); renderBar(); renderList(); await protLaden();
+}
+gfGate(async()=>{
+  $("#app").style.display="block"; gfMountTopbar("uebergabe");
+  gfMountHero("kiste","Übergabe","Was vor der Abreise erledigt sein muss, was die Vertretung mit Vollmacht entscheidet, was mit Rückfrage geht, was zur anderen GF gehört und was ruht.",{compact:true});
+  await gfLoadPeople();
+  await load();
+});
+</script>
+</body>
+</html>

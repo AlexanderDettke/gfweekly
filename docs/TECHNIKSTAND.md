@@ -130,3 +130,40 @@ echte Zeilen: die Sammelabfrage (dieselben Filter wie `handoverItems`) läuft ü
 das Skript. Trockenlauf Lea 05.10. bis 25.10.: 87 Zeilen (21 Themen, 59 Kandidaten, 7 Partner), Quadranten
 planen 44, warten 36, delegieren 4, sofort 3; Cluster E 39, D 36, A 7, B 5; Lücken 70 von 87.
 Aufruf: `TS_BASIS=file://<ordner mit typescript>/x.mjs node pruefung/matrix-test.mjs`.
+
+## V24b (21.09.2026) · Bereich Vertretung in der Plattform
+
+Drei Seiten, eine Navigationsgruppe, alle Bausteine aus V21 und V24b (`gfChips`, `gfStepper`, `gfKachel`,
+`gfZustand`, `gfAmpel`, `gfQuadrant`, `gfFrist`). Kopfbilder: Abwesenheiten = tor-menschen, Übergabe = kiste-regen,
+Rückkehr = ankunft. Stile im Block „V24b“ in `styles.css`.
+
+**Ampel und Quadrant tragen nie die Farbe allein.** `GF_AMPEL` in `core.js` legt Symbol und Wort fest:
+● vor Abreise · ○ grün, mit Vollmacht · ▲ gelb, mit Rückfrage · ✕ rot, zur GF · ▬ ruht bis zur Rückkehr.
+`GF_QUADRANT` ebenso: ✕ Sofort, ● Planen, ▲ Delegieren, ○ Warten. `gfFrist` schreibt das Datum plus ein Wort
+(„24.09. · diese Woche“, „überfällig“, „ohne Frist“).
+
+**vertretung.html** Ein Primärknopf, ein Modal mit genau fünf Eingaben. „unklar“ schaltet das Enddatum auf eine
+Schätzung in Tagen (Stepper) um; „Gespräch“ blendet das Zeitfeld ein. Speichern ruft `absence_set` und geht sofort
+zur Übergabe. Die Vertretungslinie speichert je Feld (Chips sofort, Vollmacht nach 1,5 Sekunden Tippruhe).
+Niemand steht als eigene Vertretung zur Wahl.
+
+**uebergabe.html** Ohne `?id=` die nächste aktive, sonst die nächste geplante Abwesenheit. „Alle Vorschläge
+übernehmen“ wirkt genau auf die aktuelle Ansicht (Filter plus „nur Vorschläge“). Der Vertretungsbrief ist ein
+Textfenster zum Kopieren, verschickt wird nichts. Wache: `art = sofort` und `stufe = kurz`; dann sind alle Chips
+gesperrt außer bei F = 3, es werden nur Fristen bis drei Tage nach dem geschätzten Ende gezeigt, und
+„Alle Vorschläge übernehmen“ ist aus.
+
+**rueckkehr.html** Zeigt das Briefing aus `absences.note_rueckkehr`, die Protokolleinträge mit dem Vermerk
+„in Vertretung für dich“ (nur ansehen) und die Zeilen mit Ampel rot oder ruht. „Übernehmen“ setzt die Korbzeile auf
+erledigt, leert die Vertretung und gibt dem Thema den Ausgang der zurückgekehrten Person zurück.
+
+**Startseite** Ein Block, drei Fälle, in dieser Reihenfolge: Ich komme zurück (drei Zahlen, Weg zur Rückkehr);
+ich vertrete jemanden (bis zu fünf Zeilen mit Frist in sieben Tagen, sortiert nach Quadrant dann Frist);
+jemand ist in den nächsten vierzehn Tagen weg (eine Zeile mit Zählern). Testabwesenheiten erscheinen dort nicht.
+
+**Prüfung.** `pruefung/testdaten.mjs` hält die Antworten der Edge Function für beide Prüfläufe: drei Abwesenheiten
+(Lea geplant und lang, Alex sofort und kurz mit `test = true`, Alex in Rückkehr), elf Korbzeilen über alle Quadranten,
+Cluster und Ampeln, dazu Protokoll und Vertretungslinie. `pruefung/schirme.mjs` fährt 16 Seiten ab,
+`pruefung/bedienung.mjs` klickt 32 Bedienproben durch: filtern, „Alle Vorschläge übernehmen“, Dossier, Ampelklick,
+Vertretungsbrief, Wache, Anlegen mit allen fünf Eingaben, Rückkehr samt Rückübergabe, Startseitenblock und die
+Marke in der Besprechung.

@@ -10,11 +10,11 @@
 <meta property="og:title" content="Das Hohe Haus · Geschäftsführung der Wilden Habitate" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung, Wilde Möhre." />
 <meta property="og:image" content="assets/og-image.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=23" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=23" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=23" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=23" />
-<link rel="stylesheet" href="/assets/styles.css?v=23" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=24" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=24" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=24" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=24" />
+<link rel="stylesheet" href="/assets/styles.css?v=24" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -41,6 +41,12 @@
     <div class="fd-list" id="fdEntL"><div class="loading">lädt …</div></div>
   </section>
 
+  <!-- V24b · Vertretung: nur sichtbar, wenn es etwas zu sehen gibt. -->
+  <section class="fd fd-vt" id="fdVt" aria-label="Vertretung" hidden>
+    <div class="fd-h"><h2 id="fdVtH">Vertretung</h2><span class="fd-n" id="fdVtN"></span><span class="line"></span><a class="btn btn-sm btn-brand" id="fdVtLink" href="uebergabe.html">Übergabe →</a></div>
+    <div class="fd-list" id="fdVtL"></div>
+  </section>
+
   <section class="fd" id="fdNeu" aria-label="Seit gestern">
     <div class="fd-h"><h2>Seit gestern</h2><span class="fd-n" id="fdNeuN"></span><span class="line"></span><a class="btn btn-sm btn-ghost" href="neuigkeiten.html">Neuigkeiten →</a></div>
     <div class="fd-brief" id="fdBrief"></div>
@@ -54,9 +60,9 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=23"></script>
-<script src="/assets/game.js?v=23"></script>
-<script src="/assets/eggs.js?v=23" defer></script>
+<script src="/assets/core.js?v=24"></script>
+<script src="/assets/game.js?v=24"></script>
+<script src="/assets/eggs.js?v=24" defer></script>
 <script>
 /* V22c · Für dich. Für den Blick zwischendurch, am Handy, in unter einer Minute.
    Block 1: Einträge mit gate = gf oder = eigene Person (gate_list), sortiert nach Frist, dann Alter, höchstens fünf.
@@ -64,7 +70,7 @@
    Block 3: die drei nächsten Daten aus Fristen, Zieldaten der Partner, Meilensteinen und Kalender-Tickern. */
 const $=s=>document.querySelector(s);
 const NOW=new Date(); const TODAY=NOW.toLocaleDateString("sv-SE");
-let GL=null, LAGE=[], CAL=[], DIG=null, MS=[], STRANDS=[];
+let GL=null, LAGE=[], CAL=[], DIG=null, MS=[], STRANDS=[], ABS=[], ABSZ={}, VT=[];
 function meWho(){ return gfWho()==="Lea"?"lea":"alex"; }
 function dayDiff(d){ const a=new Date(TODAY+"T00:00:00"), b=new Date((d||"").slice(0,10)+"T00:00:00"); return Math.round((b-a)/86400000); }
 function fmtD(d){ return d?new Date(d.slice(0,10)+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}):""; }
@@ -134,17 +140,69 @@ function renderFr(){
     : `<p class="fd-empty">Keine Daten in Sicht.</p>`;
 }
 
-function renderAll(){ renderEnt(); renderNeu(); renderFr(); }
+/* V24b · drei Fälle in einem Block:
+   1. Ich vertrete jemanden: was in den nächsten sieben Tagen bei mir liegt.
+   2. Ich komme zurück: drei Zahlen und der Weg zur Rückkehrseite.
+   3. Jemand ist bald weg: eine Zeile mit Zählern und dem Weg zur Übergabe. */
+function renderVt(){
+  const sec=$("#fdVt"), list=$("#fdVtL"); if(!sec) return;
+  const ich=gfWho();
+  const zurueck=ABS.find(a=>a.person===ich && a.status==="rueckkehr");
+  if(zurueck){
+    const z=ABSZ[zurueck.id]||{}; const amp=z.ampel||{};
+    $("#fdVtH").textContent="Seit du weg warst";
+    $("#fdVtN").textContent="";
+    $("#fdVtLink").href="rueckkehr.html?id="+zurueck.id; $("#fdVtLink").textContent="Rückkehr →";
+    list.innerHTML=`<div class="fd-zahlen">
+      <div><b>${z.gesamt||0}</b><span>Einträge im Korb</span></div>
+      <div><b>${(amp.gruen||0)+(amp.gelb||0)}</b><span>in Vertretung bearbeitet</span></div>
+      <div><b>${(amp.rot||0)+(amp.ruht||0)}</b><span>wartet auf dich</span></div></div>`;
+    sec.hidden=false; return;
+  }
+  const meine=VT.map(v=>({ absence:v.absence, items:v.items.filter(x=>x.vertretung===ich && x.status!=="erledigt" && x.frist && dayDiff(x.frist)<=7) }))
+                .filter(v=>v.items.length);
+  if(meine.length){
+    const alle=meine.flatMap(v=>v.items.map(x=>({...x, person:v.absence.person, aid:v.absence.id})));
+    const rang={sofort:0,planen:1,delegieren:2,warten:3};
+    alle.sort((a,b)=>(rang[a.quadrant]??9)-(rang[b.quadrant]??9)||(a.frist||"9999").localeCompare(b.frist||"9999"));
+    const namen=[...new Set(alle.map(x=>x.person))].join(" und ");
+    $("#fdVtH").textContent="In Vertretung für "+namen;
+    $("#fdVtN").textContent=alle.length;
+    $("#fdVtLink").href="uebergabe.html?id="+alle[0].aid; $("#fdVtLink").textContent="Übergabe →";
+    list.innerHTML=alle.slice(0,5).map(x=>`<div class="fd-row">${gfQuadrant(x.quadrant)}<span class="t">${gfEsc(x.title||"")}</span>${gfAmpel(x.ampel)}${gfFrist(x.frist)}</div>`).join("")
+      + (alle.length>5?`<a class="fd-more" href="uebergabe.html?id=${alle[0].aid}">und ${alle.length-5} weitere →</a>`:"");
+    sec.hidden=false; return;
+  }
+  const bald=ABS.filter(a=>a.status!=="beendet" && a.person!==ich && dayDiff(a.von)<=14).sort((a,b)=>a.von.localeCompare(b.von))[0];
+  if(bald){
+    const z=ABSZ[bald.id]||{}; const q=z.quadrant||{};
+    $("#fdVtH").textContent="Abwesenheit";
+    $("#fdVtN").textContent="";
+    $("#fdVtLink").href="uebergabe.html?id="+bald.id; $("#fdVtLink").textContent="Übergabe →";
+    list.innerHTML=`<div class="fd-row"><span class="t">${gfEsc(bald.person)} ab ${fmtD(bald.von)} abwesend</span>${gfZustand(q.sofort?"warn":"offen", (q.sofort||0)+" sofort")}${gfZustand(z.luecken?"warn":"ok", (z.luecken||0)+" ohne Stand")}</div>`;
+    sec.hidden=false; return;
+  }
+  sec.hidden=true;
+}
+function renderAll(){ renderEnt(); renderVt(); renderNeu(); renderFr(); }
 async function load(){
-  const [gl, lg, cal, dig, ms, cyc]=await Promise.all([
+  const [gl, lg, cal, dig, ms, cyc, abs]=await Promise.all([
     gfApi("gate_list",{limit:1000}),
     gfApi("news_list",{kinds:["lage"],limit:60}).catch(()=>({items:[]})),
     gfApi("news_list",{kinds:["ticker"],since:new Date(Date.now()-86400000).toISOString(),limit:120}).catch(()=>({items:[]})),
     gfApi("platform_digest",{days:7}).catch(()=>null),
     gfApi("milestones_list",{all:false}).catch(()=>({milestones:[]})),
     gfApi("cycle_get",{year:NOW.getFullYear()}).catch(()=>({strands:[]})),
+    gfApi("absence_list",{}).catch(()=>({absences:[],zaehler:{}})),
   ]);
   GL=gl; LAGE=lg.items||[]; CAL=(cal.items||[]).filter(x=>x.source==="kalender"); DIG=dig; MS=ms.milestones||[]; STRANDS=cyc.strands||[];
+  ABS=abs.absences||[]; ABSZ=abs.zaehler||{};
+  VT=[];
+  const meine=ABS.filter(a=>a.status==="aktiv"||a.status==="geplant"||a.status==="rueckkehr");
+  for(const a of meine){
+    if(a.person===gfWho()) continue;
+    try{ const l=await gfApi("handover_list",{absence_id:a.id}); VT.push({absence:a, items:l.items||[]}); }catch(e){}
+  }
   renderAll();
 }
 gfGate(async()=>{

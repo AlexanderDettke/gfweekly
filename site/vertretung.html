@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#171d18" />
+<title>Das Hohe Haus · Abwesenheiten</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=24" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=24" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=24" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=24" />
+<link rel="stylesheet" href="/assets/styles.css?v=24" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Das Hohe Haus</h1>
+    <div class="sub">Abwesenheiten · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+  <div id="hero"></div>
+
+  <div class="vt-top">
+    <button class="btn btn-primary" id="neuBtn">Abwesenheit anlegen</button>
+    <span class="line"></span>
+  </div>
+
+  <div class="vt-grid">
+    <div>
+      <section class="vt-sec" aria-label="Abwesenheiten">
+        <div class="sec-h"><h2>Abwesenheiten</h2><span class="fd-n" id="absN"></span></div>
+        <div class="vt-list" id="absList"><div class="loading">lädt …</div></div>
+      </section>
+
+      <section class="vt-sec" aria-label="Vertretungslinie">
+        <div class="sec-h"><h2>Vertretungslinie</h2><span class="fd-muted">Wer vertritt in welchem Bereich, mit welcher Vollmacht</span></div>
+        <div id="depWrap"></div>
+      </section>
+    </div>
+
+    <aside>
+      <section class="vt-sec" aria-label="Übernahmefähigkeit">
+        <div class="sec-h"><h2>Übernahmefähigkeit</h2></div>
+        <div class="vt-list" id="statList"></div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<div class="modal-back" id="modal"></div>
+<div class="toast" id="toast"></div>
+<script src="/assets/core.js?v=24"></script>
+<script src="/assets/game.js?v=24"></script>
+<script src="/assets/eggs.js?v=24" defer></script>
+<script>
+/* V24b · Abwesenheiten: anlegen, ansehen, beenden; darunter die Vertretungslinie und je Person die
+   Übernahmefähigkeit. Das Anlegen fragt genau fünf Dinge: wer, ab wann, bis wann, planbar oder sofort,
+   welcher Kontakt. Gespeichert wird über absence_set, danach geht es sofort weiter zur Übergabe. */
+const $=s=>document.querySelector(s);
+const STATUS_LBL={ aktiv:"aktiv", geplant:"geplant", rueckkehr:"Rückkehr", beendet:"beendet" };
+const STUFE_LBL={ kurz:"kurze Abwesenheit", mittel:"mittlere Abwesenheit", lang:"lange Abwesenheit" };
+let ABS=[], ZAEHLER={}, DEPS=[], STRANDS=[], STAT={};
+
+function fmtD(d){ return d?new Date(d+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"2-digit"}):""; }
+function zeitraum(a){ return a.bis ? `${fmtD(a.von)} bis ${fmtD(a.bis)}` : a.bis_geschaetzt ? `ab ${fmtD(a.von)}, voraussichtlich bis ${fmtD(a.bis_geschaetzt)}` : `ab ${fmtD(a.von)}, Ende offen`; }
+
+function absKarte(a){
+  const z=ZAEHLER[a.id]||{};
+  const q=z.quadrant||{}, amp=z.ampel||{};
+  const zahlen=[
+    `<span><b>${z.gesamt||0}</b> Einträge</span>`,
+    `<span><b>${q.sofort||0}</b> sofort</span>`,
+    `<span><b>${(amp.gruen||0)+(amp.gelb||0)}</b> an die Vertretung</span>`,
+    `<span><b>${amp.ruht||0}</b> ruht</span>`,
+    z.luecken?`<span><b>${z.luecken}</b> ohne Stand</span>`:"",
+  ].filter(Boolean).join("");
+  return `<article class="vt-card ${a.status==="aktiv"?"is-aktiv":""}" data-id="${a.id}">
+    <div class="vt-head">
+      ${gfAvatarTag(a.person,"av")}
+      <h3>${gfEsc(a.person)}</h3>
+      <span class="vt-when">${gfEsc(zeitraum(a))}</span>
+      ${gfZustand(a.status==="aktiv"?"action":a.status==="rueckkehr"?"warn":"offen", STATUS_LBL[a.status]||a.status)}
+      ${gfZustand("offen", STUFE_LBL[a.stufe]||a.stufe||"")}
+      ${a.art==="sofort"?gfZustand("crit","ungeplant"):""}
+      ${a.test?gfZustand("info","Testdaten"):""}
+    </div>
+    <div class="vt-zahlen">${zahlen}</div>
+    ${a.kanal?`<div class="fd-muted">Erreichbar: ${gfEsc(a.kanal)}</div>`:""}
+    <div class="vt-akt">
+      <a class="btn btn-sm btn-brand" href="uebergabe.html?id=${a.id}">Übergabe öffnen</a>
+      ${a.status==="rueckkehr"?`<a class="btn btn-sm btn-brand" href="rueckkehr.html?id=${a.id}">Rückkehr</a>`:""}
+      ${a.status!=="beendet"?`<button class="btn btn-sm btn-brand" data-act="end">Beenden</button>`:""}
+    </div>
+  </article>`;
+}
+function renderAbs(){
+  const offen=ABS.filter(a=>a.status!=="beendet"), zu=ABS.filter(a=>a.status==="beendet");
+  $("#absN").textContent=offen.length?`${offen.length} offen`:"";
+  const el=$("#absList");
+  if(!ABS.length){ el.innerHTML=`<div class="empty soft">Niemand ist abwesend gemeldet. Der Knopf oben legt eine Abwesenheit an, der Korb baut sich danach von selbst.</div>`; return; }
+  el.innerHTML = offen.map(absKarte).join("")
+    + (zu.length?`<details class="nw-sec"><summary><h2>Beendet</h2><span class="hint">${zu.length}</span></summary><div class="vt-list" style="padding:10px 0">${zu.map(absKarte).join("")}</div></details>`:"");
+}
+
+function depZeile(d, personen, bereiche){
+  const vert=gfChips("v_"+d.id, personen, d.vertretung||"", {attr:`data-f="vertretung" data-id="${d.id}"`, label:"Vertretung", cls:"compact"});
+  const ber=gfChips("b_"+d.id, bereiche, d.bereich||"", {attr:`data-f="bereich" data-id="${d.id}"`, label:"Bereich", cls:"compact"});
+  return `<tr data-id="${d.id}">
+    <td>${ber}</td>
+    <td>${vert}</td>
+    <td><input class="txt" data-f="vollmacht" data-id="${d.id}" value="${gfEsc(d.vollmacht||"")}" placeholder="Vollmacht, zum Beispiel Ausgaben bis 2.000 € aus freigegebenen Budgets"></td>
+    <td>${d.neu?"":`<button class="icon-btn" data-act="depdel" data-id="${d.id}" title="Zeile abschalten">✕</button>`}</td>
+  </tr>`;
+}
+function renderDeps(){
+  const alle=gfAssignable().map(p=>p.name).filter(Boolean);
+  const bereiche=[["gf","GF gemeinsam"],["*","alles Übrige"]].concat(STRANDS.map(s=>[s.key, s.short||s.label]));
+  $("#depWrap").innerHTML=["Alex","Lea"].map(p=>{
+    const meine=DEPS.filter(d=>d.person===p);
+    const personen=alle.filter(n=>n!==p);
+    return `<div class="vt-card">
+      <div class="vt-head">${gfAvatarTag(p,"av")}<h3>${p} wird vertreten von</h3></div>
+      <table class="vt-line"><thead><tr><th>Bereich</th><th>Vertretung</th><th>Vollmacht</th><th></th></tr></thead>
+      <tbody>${meine.map(d=>depZeile(d, personen, bereiche)).join("")}</tbody></table>
+      <div><button class="btn btn-sm btn-brand" data-act="depadd" data-person="${p}">+ Zeile</button></div>
+    </div>`;
+  }).join("");
+}
+function renderStat(){
+  $("#statList").innerHTML=["Alex","Lea"].map(p=>{
+    const s=STAT[p]||{};
+    const wert=s.uebernahmefaehigkeit;
+    const ton=wert!=null&&wert<50?"warn":"";
+    return `<div class="vt-card vt-stat ${ton}">
+      <div class="vt-head">${gfAvatarTag(p,"av")}<h3>${p}</h3><span class="vt-when">${wert==null?"keine Themen":wert+" Prozent"}</span></div>
+      <div class="bar"><i style="width:${wert||0}%"></i></div>
+      <div class="fd-muted">${s.themen||0} Themen, davon ${s.ohne_stand||0} ohne Stand und ${s.ohne_schritt||0} ohne nächsten Schritt.</div>
+      ${(s.ohne_stand||s.ohne_schritt)?`<a class="linkish" href="board.html?view=liste&person=${encodeURIComponent(p)}">Lückenhafte Themen ansehen</a>`:""}
+    </div>`;
+  }).join("");
+}
+
+/* Anlegen: genau fünf Eingaben. „unklar“ schaltet das Enddatum auf eine Schätzung in Tagen um. */
+function neuModal(){
+  const heute=new Date().toISOString().slice(0,10);
+  const m=document.getElementById("modal");
+  m.innerHTML=`<div class="modal vt-modal" role="dialog" aria-modal="true" aria-label="Abwesenheit anlegen">
+    <div class="modal-h"><h3>Abwesenheit anlegen</h3><button class="icon-btn" data-x aria-label="Schließen">✕</button></div>
+    <div style="padding:14px 18px;overflow:auto">
+      <div class="fld"><label>Wer ist weg</label>${gfChips("person",["Alex","Lea"],gfWho(),{label:"Person"})}</div>
+      <div class="fld"><label>Ab wann</label><input class="txt" type="date" name="von" value="${heute}"></div>
+      <div class="fld"><label>Bis wann</label>
+        <div class="ub-r3"><input class="txt" type="date" name="bis" style="max-width:200px">
+        ${gfChips("offen",[["","Datum steht fest"],["1","unklar"]],"",{label:"Enddatum"})}</div>
+        <div id="schaetzWrap" hidden style="margin-top:6px">${gfStepper("tage",7,{min:1,max:120,label:"Geschätzte Tage"})} <span class="fd-muted">Tage geschätzt</span></div>
+      </div>
+      <div class="fld"><label>Planbar oder sofort</label>${gfChips("art",[["geplant","planbar"],["sofort","sofort"]],"geplant",{label:"Art"})}</div>
+      <div class="fld"><label>Kontakt in der Zeit</label>
+        ${gfChips("kontakt",[["keiner","keiner"],["wochenbrief","Wochenbrief"],["gespraech","Gespräch"]],"keiner",{label:"Kontakt"})}
+        <div id="zeitWrap" hidden style="margin-top:6px"><input class="txt" name="gespraech_zeit" placeholder="Zeit des Gesprächs, zum Beispiel dienstags 9 Uhr"></div>
+        <input class="txt" name="kanal" style="margin-top:6px" placeholder="nur Notfall über …">
+      </div>
+    </div>
+    <div class="modal-f"><button class="btn btn-primary" data-save>Anlegen und Übergabe öffnen</button><button class="btn btn-brand" data-x style="margin-left:auto">Abbrechen</button></div>
+  </div>`;
+  m.classList.add("open");
+  const q=s=>m.querySelector(s);
+  m.addEventListener("change",e=>{
+    if(e.target.name==="offen"){ const unklar=e.target.value==="1"; q("#schaetzWrap").hidden=!unklar; q("[name=bis]").disabled=unklar; }
+    if(e.target.name==="kontakt"){ q("#zeitWrap").hidden=e.target.value!=="gespraech"; }
+  });
+  m.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>m.classList.remove("open"));
+  q("[data-save]").onclick=async()=>{
+    const unklar=q("[name=offen]").value==="1";
+    const von=q("[name=von]").value||heute;
+    const p={ person:q("[name=person]").value||gfWho(), von,
+      bis: unklar?null:(q("[name=bis]").value||null),
+      bis_geschaetzt: unklar?gfAddDays(von, Math.max(1,parseInt(q("[name=tage]").value)||7)-1):null,
+      art:q("[name=art]").value||"geplant", kontakt:q("[name=kontakt]").value||"keiner",
+      gespraech_zeit:q("[name=gespraech_zeit]")?q("[name=gespraech_zeit]").value:"", kanal:q("[name=kanal]").value };
+    try{
+      const d=await gfApi("absence_set",p);
+      m.classList.remove("open");
+      location.href="uebergabe.html?id="+d.absence.id;
+    }catch(e){ gfToast("Fehler: "+(e.message||"speichern")); }
+  };
+}
+
+$("#neuBtn").onclick=neuModal;
+document.addEventListener("click",async e=>{
+  const end=e.target.closest('[data-act="end"]');
+  if(end){ const id=end.closest(".vt-card").dataset.id;
+    if(!confirm("Abwesenheit beenden? Die Themen gehen zurück an die Person.")) return;
+    try{ await gfApi("absence_end",{id}); gfToast("Beendet"); await load(); }catch(err){ gfToast("Fehler: "+err.message); } return; }
+  const add=e.target.closest('[data-act="depadd"]');
+  if(add){ DEPS.push({ id:"neu-"+Date.now(), person:add.dataset.person, bereich:"", vertretung:"", vollmacht:"", neu:true }); renderDeps(); return; }
+  const del=e.target.closest('[data-act="depdel"]');
+  if(del){ const d=DEPS.find(x=>x.id===del.dataset.id); if(!d) return;
+    try{ await gfApi("deputies_set",{ person:d.person, bereich:d.bereich, vertretung:d.vertretung, active:false }); gfToast("Zeile abgeschaltet"); await load(); }
+    catch(err){ gfToast("Fehler: "+err.message); } return; }
+});
+async function depSave(d){
+  if(!d.bereich || !d.vertretung) return;
+  try{ await gfApi("deputies_set",{ person:d.person, bereich:d.bereich, vertretung:d.vertretung, vollmacht:d.vollmacht||"" }); d.neu=false; gfToast("Gespeichert"); }
+  catch(e){ gfToast("Fehler: "+e.message); }
+}
+let tippTimer;
+$("#depWrap").addEventListener("change",e=>{
+  const f=e.target.dataset.f||e.target.closest("[data-f]")?.dataset.f; if(!f) return;
+  const id=e.target.dataset.id||e.target.closest("[data-f]")?.dataset.id;
+  const d=DEPS.find(x=>x.id===id); if(!d) return;
+  d[f]=e.target.value; depSave(d);
+});
+$("#depWrap").addEventListener("input",e=>{
+  if(e.target.dataset.f!=="vollmacht") return;
+  const d=DEPS.find(x=>x.id===e.target.dataset.id); if(!d) return;
+  d.vollmacht=e.target.value; clearTimeout(tippTimer); tippTimer=setTimeout(()=>depSave(d),1500);
+});
+
+async function load(){
+  const [a,d,c,s]=await Promise.all([
+    gfApi("absence_list",{include_test:true}),
+    gfApi("deputies_list"),
+    gfApi("cycle_get").catch(()=>({strands:[]})),
+    gfApi("uebernahme_stat",{}).catch(()=>({stat:{}})),
+  ]);
+  ABS=a.absences||[]; ZAEHLER=a.zaehler||{}; DEPS=(d.deputies||[]).filter(x=>x.active!==false); STRANDS=c.strands||[]; STAT=s.stat||{};
+  renderAbs(); renderDeps(); renderStat();
+}
+gfGate(async()=>{
+  $("#app").style.display="block"; gfMountTopbar("vertretung");
+  gfMountHero("tor","Abwesenheiten","Wer ist wann weg, wer vertritt in welchem Bereich, und wie gut ist die Übergabe vorbereitet. Eine neue Abwesenheit braucht fünf Angaben, den Rest baut das Haus.",{compact:true});
+  await gfLoadPeople();
+  await load();
+});
+</script>
+</body>
+</html>

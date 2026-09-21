@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#171d18" />
+<title>Das Hohe Haus · Rückkehr</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=24" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=24" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=24" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=24" />
+<link rel="stylesheet" href="/assets/styles.css?v=24" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Das Hohe Haus</h1>
+    <div class="sub">Rückkehr · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+  <div id="hero"></div>
+
+  <div class="rk-kopf" id="kopf"></div>
+  <div class="rk-hinweis">Der erste Vormittag gehört dir. Keine Termine, erst lesen, dann entscheiden.</div>
+  <div class="kk-row" id="kpis"></div>
+
+  <section class="rk-sec" aria-label="In Vertretung entschieden">
+    <div class="sec-h"><h2>In Vertretung entschieden</h2><span class="fd-n" id="entN"></span></div>
+    <div class="rk-list" id="entList"></div>
+  </section>
+
+  <section class="rk-sec" aria-label="Wartet auf dich">
+    <div class="sec-h"><h2>Wartet auf dich</h2><span class="fd-n" id="warN"></span></div>
+    <div class="rk-list" id="warList"></div>
+  </section>
+
+  <section class="rk-sec" aria-label="Abschluss">
+    <button class="btn btn-primary" id="endBtn">Rückübergabe bestätigen</button>
+  </section>
+</div>
+
+<div class="modal-back" id="modal"></div>
+<div class="toast" id="toast"></div>
+<script src="/assets/core.js?v=24"></script>
+<script src="/assets/game.js?v=24"></script>
+<script src="/assets/eggs.js?v=24" defer></script>
+<script>
+/* V24b · Rückkehr: was in deiner Abwesenheit entschieden wurde (nur ansehen, nichts davon wird rückgängig
+   gemacht), was weitergegeben wurde und was auf dich wartet. „Übernehmen“ holt ein Thema zurück:
+   der Ausgang geht wieder an dich, die Vertretung wird gelöscht. Am Ende die Rückübergabe. */
+const $=s=>document.querySelector(s);
+let ABSENCE=null, ITEMS=[], LOG=[];
+
+function fmtT(at){ return new Date(at).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}); }
+function renderKopf(){
+  const a=ABSENCE;
+  $("#kopf").innerHTML=`<h2>Willkommen zurück, ${gfEsc(a.person)}</h2>
+    <div class="fd-muted">${gfEsc(a.bis?`Weg vom ${new Date(a.von+"T00:00:00").toLocaleDateString("de-DE")} bis ${new Date(a.bis+"T00:00:00").toLocaleDateString("de-DE")}`:`Weg seit ${new Date(a.von+"T00:00:00").toLocaleDateString("de-DE")}`)}</div>
+    ${a.note_rueckkehr?`<div class="ub-doss" style="margin-top:10px"><b>Briefing</b><div style="white-space:pre-wrap">${gfEsc(a.note_rueckkehr)}</div></div>`:""}`;
+}
+function renderKpis(){
+  const ent=LOG.filter(l=>l.art==="entscheidung").length;
+  const weiter=LOG.filter(l=>l.art==="weitergabe").length;
+  const wartet=ITEMS.filter(x=>x.ampel==="ruht"||x.ampel==="rot").filter(x=>x.status!=="erledigt").length;
+  $("#kpis").innerHTML=[
+    gfKachel({icon:"entscheidung",value:ent,label:"in Vertretung entschieden"}),
+    gfKachel({icon:"partner",value:weiter,label:"weitergegeben"}),
+    gfKachel({icon:"frist",value:wartet,label:"wartet auf dich",tone:wartet?"warn":"pos"}),
+  ].join("");
+}
+function renderEnt(){
+  const list=LOG.filter(l=>l.art==="entscheidung"||l.art==="weitergabe"||l.art==="erledigt");
+  $("#entN").textContent=list.length?list.length:"";
+  $("#entList").innerHTML=list.length?list.map(l=>`<article class="rk-row" data-log="${l.id}">
+      <span class="t">${gfEsc(l.text||"")}</span>
+      ${gfZustand(l.art==="erledigt"?"ok":l.art==="weitergabe"?"info":"action", l.art==="erledigt"?"erledigt":l.art==="weitergabe"?"weitergegeben":"entschieden")}
+      <span class="m">in Vertretung für dich, ${gfEsc(l.who||"unbekannt")}, ${gfEsc(fmtT(l.at))}</span>
+    </article>`).join("")
+    : `<div class="empty soft">In deiner Abwesenheit wurde nichts entschieden.</div>`;
+}
+function renderWartet(){
+  const list=ITEMS.filter(x=>(x.ampel==="ruht"||x.ampel==="rot") && x.status!=="erledigt");
+  $("#warN").textContent=list.length?list.length:"";
+  $("#warList").innerHTML=list.length?list.map(x=>`<article class="rk-row" data-id="${x.id}">
+      <span class="t">${gfEsc(x.title||"")}</span>
+      ${gfAmpel(x.ampel)} ${gfFrist(x.frist)}
+      <button class="btn btn-sm btn-brand" data-act="back">Übernehmen</button>
+      <span class="m">${gfEsc(x.begruendung||"")}</span>
+    </article>`).join("")
+    : `<div class="empty soft">Nichts wartet. Der Korb ist leer.</div>`;
+}
+$("#warList").addEventListener("click",async e=>{
+  const b=e.target.closest('[data-act="back"]'); if(!b) return;
+  const row=b.closest(".rk-row"), id=row.dataset.id, x=ITEMS.find(i=>i.id===id); if(!x) return;
+  try{
+    await gfApi("handover_set",{ id, vertretung:"", status:"erledigt", by:gfWho() });
+    if(x.kind==="thema"){
+      await gfApi("update",{ id:x.ref_id, gate: ABSENCE.person==="Lea"?"lea":"alex", gate_by:gfWho(), owner_backup:null });
+    }
+    x.status="erledigt"; renderWartet(); renderKpis(); gfToast("Wieder bei dir");
+  }catch(err){ gfToast("Fehler: "+(err.message||"speichern")); }
+});
+$("#endBtn").onclick=async()=>{
+  if(!confirm("Rückübergabe bestätigen? Die Abwesenheit wird beendet und die Vertretungen werden gelöscht.")) return;
+  try{ await gfApi("absence_end",{ id:ABSENCE.id }); gfToast("Willkommen zurück"); location.href="index.html"; }
+  catch(e){ gfToast("Fehler: "+e.message); }
+};
+
+async function load(){
+  const id=new URLSearchParams(location.search).get("id");
+  const a=await gfApi("absence_list",{ include_test:true });
+  const alle=a.absences||[];
+  ABSENCE = id ? alle.find(x=>x.id===id) : (alle.find(x=>x.status==="rueckkehr" && whoGleich(x.person)) || alle.find(x=>x.status==="rueckkehr") || alle.find(x=>whoGleich(x.person)) || alle[0]);
+  if(!ABSENCE){
+    $("#kopf").innerHTML=`<h2>Keine Rückkehr offen</h2><div class="fd-muted">Es ist keine Abwesenheit hinterlegt, aus der jemand zurückkommt.</div>`;
+    $("#kpis").innerHTML=""; $("#endBtn").hidden=true; return;
+  }
+  const [l, p]=await Promise.all([ gfApi("handover_list",{ absence_id:ABSENCE.id }), gfApi("handover_log",{ absence_id:ABSENCE.id }).catch(()=>({log:[]})) ]);
+  ITEMS=l.items||[]; LOG=p.log||[];
+  renderKopf(); renderKpis(); renderEnt(); renderWartet();
+}
+function whoGleich(p){ return (p||"").toLowerCase()===gfWho().toLowerCase(); }
+gfGate(async()=>{
+  $("#app").style.display="block"; gfMountTopbar("rueckkehr");
+  gfMountHero("ankunft","Rückkehr","Was in deiner Abwesenheit entschieden wurde, was weitergegeben wurde und was auf dich wartet.",{compact:true});
+  await load();
+});
+</script>
+</body>
+</html>
