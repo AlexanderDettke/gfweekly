@@ -79,7 +79,7 @@ function renderKopf(){
 function renderKpis(){
   const ent=LOG.filter(l=>l.art==="entscheidung").length;
   const weiter=LOG.filter(l=>l.art==="weitergabe").length;
-  const wartet=ITEMS.filter(x=>x.ampel==="ruht"||x.ampel==="rot").filter(x=>x.status!=="erledigt").length;
+  const wartet=ITEMS.filter(x=>(x.ampel==="ruht"||x.ampel==="rot") && x.status!=="erledigt" && x.status!=="entfallen").length;
   const mitAsana=ITEMS.filter(x=>x.asana_gid);
   const asanaOffen=mitAsana.filter(x=>x.status!=="erledigt").length, asanaFertig=mitAsana.filter(x=>x.status==="erledigt").length;
   $("#kpis").innerHTML=[
@@ -102,7 +102,7 @@ function renderEnt(){
     : `<div class="empty soft">In deiner Abwesenheit wurde nichts entschieden.</div>`;
 }
 function renderWartet(){
-  const list=ITEMS.filter(x=>(x.ampel==="ruht"||x.ampel==="rot") && x.status!=="erledigt");
+  const list=ITEMS.filter(x=>(x.ampel==="ruht"||x.ampel==="rot") && x.status!=="erledigt" && x.status!=="entfallen");
   $("#warN").textContent=list.length?list.length:"";
   $("#warList").innerHTML=list.length?list.map(x=>`<article class="rk-row" data-id="${x.id}">
       <span class="t">${gfEsc(x.title||"")}</span>

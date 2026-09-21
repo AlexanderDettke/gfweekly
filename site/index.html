@@ -178,7 +178,8 @@ function renderVt(){
       + (alle.length>5?`<a class="fd-more" href="uebergabe.html?id=${alle[0].aid}">und ${alle.length-5} weitere →</a>`:"");
     sec.hidden=false; return;
   }
-  const bald=ABS.filter(a=>a.status!=="beendet" && a.person!==ich && dayDiff(a.von)<=14).sort((a,b)=>a.von.localeCompare(b.von))[0];
+  const bald=ABS.filter(a=>a.status!=="beendet" && a.person!==ich && dayDiff(a.von)>=0 && dayDiff(a.von)<=14)
+                .sort((a,b)=>a.von.localeCompare(b.von))[0];
   if(bald){
     const z=ABSZ[bald.id]||{}; const q=z.quadrant||{};
     $("#fdVtH").textContent="Abwesenheit";

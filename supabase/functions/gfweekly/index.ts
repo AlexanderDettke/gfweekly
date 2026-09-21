@@ -375,6 +375,9 @@ function trefferWort(text: string, worte: string[]){ return worte.find(w => wort
 function score(item: any, absence: any, heute: string = heuteBerlin()){
   const von = absence.von as string, ende = absEnde(absence);
   const stufe = absence.stufe || absStufe(absence);
+  /* F liest genau die Felder, die die Vorgabe nennt. U darf weiter suchen: dort geht es darum, ob der Vorgang
+     an eine Person gebunden ist, und das steht oft im nächsten Schritt oder in den Notizen. */
+  const textF = [item.title, item.short_description, item.context, item.body].filter(Boolean).join(' \n ').toLowerCase();
   const text = [item.title, item.short_description, item.context, item.body, item.next_action, item.decision, item.notes, item.signal]
     .filter(Boolean).join(' \n ').toLowerCase();
   const frist = item.frist || null;
@@ -389,9 +392,9 @@ function score(item: any, absence: any, heute: string = heuteBerlin()){
   else { z = 0; gruende.push(`Frist ${frist} liegt weit hinter der Rückkehr`); }
 
   // F Folgen bei Stillstand
-  const geld = geldMax(text);
-  const gfWort = trefferWort(text, GF_WORTE);
-  const betriebWort = trefferWort(text, BETRIEB_WORTE);
+  const geld = geldMax(textF);
+  const gfWort = trefferWort(textF, GF_WORTE);
+  const betriebWort = trefferWort(textF, BETRIEB_WORTE);
   let f = 0;
   if (geld >= 5000) { f = 3; gruende.push(`Geld ab 5.000 € im Spiel (${Math.round(geld).toLocaleString('de-DE')} €)`); }
   else if (gfWort) { f = 3; gruende.push(`Sache der GF (Stichwort ${gfWort})`); }
@@ -547,15 +550,17 @@ async function handoverItems(absence: any){
       context:x.description, zeitraum:x.zeitraum, owner:x.owner, who:x.owner, status:x.status, priority:null, gate:null });
   }
 
-  const { data: phasen } = await admin.from('gfweekly_cycle_phases').select('key,label,months,lead');
+  const { data: phasen, error: e6 } = await admin.from('gfweekly_cycle_phases').select('key,label,months,lead');
+  if (e6) throw new Error('Phasen konnten nicht gelesen werden: '+e6.message);
   const monate = new Set<number>();
   for (let d = von; d <= ende; d = addDays(d, 1)) monate.add(parseInt(d.slice(5,7)));
   const fuehrt = (lead: unknown) => (lead ?? '').toString().split(/[,;/]| und /i).map(x => x.trim()).filter(Boolean)
     .some(n => whoNorm(n) === person && (person === 'Alex' || person === 'Lea'));
   const meinePhasen = (phasen || []).filter((p: any) => fuehrt(p.lead) && (p.months || []).some((m: number) => monate.has(m)));
   if (meinePhasen.length) {
-    const { data: rituale } = await admin.from('gfweekly_rituals').select('id,phase_key,title,hint,active')
-      .in('phase_key', meinePhasen.map((p: any) => p.key)).eq('active', true).limit(100);
+    const { data: rituale, error: e7 } = await admin.from('gfweekly_rituals').select('id,phase_key,title,hint,active')
+      .in('phase_key', meinePhasen.map((p: any) => p.key)).eq('active', true).limit(500);
+    if (e7) throw new Error('Rituale konnten nicht gelesen werden: '+e7.message);
     for (const x of (rituale || [])) {
       items.push({ kind:'ritual', ref_id:x.id, title:x.title, strand:null, frist:null, context:x.hint,
         phase:(meinePhasen.find((p: any)=>p.key===x.phase_key)||{}).label, owner:absence.person, who:absence.person, gate:null });
@@ -597,10 +602,13 @@ async function handoverItems(absence: any){
 /* Baut den Korb neu: bewertet jede Zeile, legt neue an, ergänzt bestehende. Bestätigte Zeilen bleiben unangetastet,
    nur frist, dossier und luecke wandern nach. */
 async function handoverBuild(absence: any){
-  const [{ data: deputies }, { data: alt }] = await Promise.all([
+  const [dep, vor] = await Promise.all([
     admin.from('gfweekly_deputies').select('*').eq('active', true),
     admin.from('gfweekly_handover').select('*').eq('absence_id', absence.id),
   ]);
+  if (dep.error) throw new Error('Vertretungslinie konnte nicht gelesen werden: '+dep.error.message);
+  if (vor.error) throw new Error('Der bisherige Korb konnte nicht gelesen werden: '+vor.error.message);
+  const deputies = dep.data, alt = vor.data;
   const vorhanden = new Map<string, any>((alt || []).map((r: any) => [r.kind+'|'+r.ref_id, r]));
   const items = await handoverItems(absence);
   const heute = heuteBerlin();
@@ -646,7 +654,9 @@ function handoverZaehler(rows: any[]){
 }
 
 async function handoverLog(absence_id: string, art: string, text: string, who: string, handover_id?: string|null){
-  await admin.from('gfweekly_handover_log').insert({ absence_id, handover_id: handover_id || null, art, who: who || null, text: (text||'').slice(0,2000) });
+  const { error } = await admin.from('gfweekly_handover_log')
+    .insert({ absence_id, handover_id: handover_id || null, art, who: who || null, text: (text||'').slice(0,2000) });
+  return !error;
 }
 
 /* ===== v29 · V24c (21.09.2026) · Asana: die bestätigte Übergabe als Projekt, der Rücksync als Protokoll.
@@ -717,7 +727,8 @@ async function asanaSync(absence: any){
   const { data: rows, error: le } = await admin.from('gfweekly_handover').select('*').eq('absence_id', absence.id).not('asana_gid','is',null);
   if (le) return { erledigt:0, kommentare:0, fehler:1 };
   /* Schon übernommene Kommentare stehen mit ihrer Asana-Kennung im Protokoll und kommen nicht zweimal. */
-  const { data: schon } = await admin.from('gfweekly_handover_log').select('text').eq('absence_id', absence.id).eq('art','asana');
+  const { data: schon, error: se } = await admin.from('gfweekly_handover_log').select('text').eq('absence_id', absence.id).eq('art','asana');
+  if (se) return { erledigt:0, kommentare:0, fehler:1 };   // ohne die bekannten Kennungen würde doppelt protokolliert
   const bekannt = new Set((schon || []).map((l: any) => (String(l.text).match(/\[asana:(\d+)\]/) || [])[1]).filter(Boolean));
   let erledigt = 0, kommentare = 0, fehler = 0;
   for (const row of (rows || [])) {
@@ -726,7 +737,8 @@ async function asanaSync(absence: any){
     if (aufgabe?.completed && row.status !== 'erledigt') {
       const { error } = await admin.from('gfweekly_handover').update({ status:'erledigt', updated_at:new Date().toISOString() }).eq('id', row.id);
       if (error) { fehler++; }
-      else { await handoverLog(absence.id, 'erledigt', `${row.title}: in Asana erledigt.`, 'asana', row.id); erledigt++; }
+      else if (await handoverLog(absence.id, 'erledigt', `${row.title}: in Asana erledigt.`, 'asana', row.id)) erledigt++;
+      else fehler++;
     }
     let stories: any[] = [];
     try { stories = await asana(`/tasks/${row.asana_gid}/stories?opt_fields=gid,text,created_at,type,created_by.name`) || []; } catch (_e) { fehler++; continue; }
@@ -734,8 +746,9 @@ async function asanaSync(absence: any){
       if (s.type !== 'comment' || !s.created_at) continue;
       if (s.created_at <= seit || s.created_at > laufBeginn) continue;   // genau das Fenster dieses Laufs
       if (s.gid && bekannt.has(String(s.gid))) continue;                 // schon übernommen
-      await handoverLog(absence.id, 'asana',
+      const notiert = await handoverLog(absence.id, 'asana',
         `[asana:${s.gid || '0'}] ${row.title}: ${(s.created_by?.name || 'Asana')} schreibt „${(s.text||'').slice(0,400)}“.`, 'asana', row.id);
+      if (!notiert) { fehler++; continue; }   // nicht gezählt und nicht vergessen: das Fenster bleibt stehen
       if (s.gid) bekannt.add(String(s.gid));
       kommentare++;
     }
@@ -1315,7 +1328,12 @@ Deno.serve(async (req: Request) => {
         .update({ status:'beendet', updated_at:new Date().toISOString() }).eq('id', t.id).select().single();
       if (error) throw error;
       const { data: rows } = await admin.from('gfweekly_handover').select('id,ref_id,kind').eq('absence_id', t.id).eq('kind','thema');
-      for (const r of (rows || [])) await admin.from('gfweekly_topics').update({ owner_backup:null }).eq('id', r.ref_id);
+      const nichtGeleert: string[] = [];
+      for (const r of (rows || [])) {
+        const { error } = await admin.from('gfweekly_topics').update({ owner_backup:null }).eq('id', r.ref_id);
+        if (error) nichtGeleert.push(r.ref_id);
+      }
+      if (nichtGeleert.length) return json({ error:`Die Abwesenheit ist beendet, aber ${nichtGeleert.length} Themen tragen noch eine Vertretung.`, themen:nichtGeleert },500);
       await handoverLog(t.id, 'notiz', `Rückübergabe bestätigt, ${(rows||[]).length} Themen wieder bei ${absence.person}.`, WHO);
       const archiviert = await asanaArchivieren(absence);
       return json({ absence, asana_archiviert: archiviert });
@@ -1380,7 +1398,10 @@ Deno.serve(async (req: Request) => {
         if (it.cluster !== undefined && HO_CLUSTER.includes(it.cluster)) patch.cluster = it.cluster;
         if (it.ampel !== undefined && HO_AMPEL.includes(it.ampel)) patch.ampel = it.ampel;
         if (it.vertretung !== undefined) patch.vertretung = (it.vertretung ?? '').toString().slice(0,120) || null;
-        if (it.ampel === 'ruht') patch.vertretung = null;   // was ruht, wird nicht vertreten
+        /* Was am Ende ruht oder vor der Abreise erledigt sein soll, hat keine Vertretung. Das gilt für die
+           Ampel, die nach dieser Änderung gilt, nicht nur für die mitgeschickte. */
+        const ampelDanach = (patch.ampel ?? alt.ampel) as string;
+        if (ampelDanach === 'ruht' || ampelDanach === 'vorher') patch.vertretung = null;
         if (it.frist !== undefined) patch.frist = it.frist || null;
         if (it.regel_note !== undefined) patch.regel_note = (it.regel_note ?? '').toString().slice(0,500) || null;
         patch.status = (it.status !== undefined && HO_STATUS.includes(it.status)) ? it.status : 'bestaetigt';
@@ -1404,9 +1425,9 @@ Deno.serve(async (req: Request) => {
             themenPatch.gate = g || 'team';
             themenPatch.gate_by = by; themenPatch.gate_at = new Date().toISOString();
             themenPatch.gate_note = `in Vertretung für ${absence.person}`;
-          } else {
-            /* Keine Vertretung mehr: der Ausgang gehört wieder der abwesenden Person, sonst bliebe das Thema
-               bei jemandem hängen, der es nicht mehr hat. */
+          } else if (alt.vertretung && !vertretung) {
+            /* Eine bestehende Vertretung wurde ausdrücklich entfernt: der Ausgang gehört wieder der abwesenden
+               Person. Eine Zeile, die nie eine Vertretung hatte (etwa „vor Abreise“), behält ihren Ausgang. */
             themenPatch.owner_backup = null;
             themenPatch.gate = absGate(absence.person) || 'gf';
             themenPatch.gate_by = by; themenPatch.gate_at = new Date().toISOString();
@@ -1429,7 +1450,8 @@ Deno.serve(async (req: Request) => {
       const by = (t.by ?? WHO).toString().slice(0,60);
       const { data: row } = await admin.from('gfweekly_handover').select('*').eq('id', t.id).single();
       if (!row) return json({ error:'Zeile fehlt' },404);
-      const { data: absence } = await admin.from('gfweekly_absences').select('*').eq('id', row.absence_id).single();
+      const { data: absence, error: ae } = await admin.from('gfweekly_absences').select('*').eq('id', row.absence_id).single();
+      if (ae || !absence) return json({ error:'Abwesenheit konnte nicht gelesen werden, deshalb wurde nichts geändert.' },500);
       /* Reihenfolge mit Absicht: erst der Vorgang, dann die Korbzeile. Scheitert der erste Schritt, bleibt die
          Zeile sichtbar, und niemand hält etwas für erledigt, das noch falsch zugeordnet ist. */
       let thema = null;
@@ -1495,7 +1517,8 @@ Deno.serve(async (req: Request) => {
     }
     if (action === 'absence_tick') {
       const heute = heuteBerlin();
-      const { data: laufende } = await admin.from('gfweekly_absences').select('*').in('status', ['geplant','aktiv','rueckkehr']);
+      const { data: laufende, error: le } = await admin.from('gfweekly_absences').select('*').in('status', ['geplant','aktiv','rueckkehr']);
+      if (le) return json({ error:'Abwesenheiten konnten nicht gelesen werden: '+le.message },500);
       const bericht: any[] = [];
       for (const a of (laufende || [])) {
         const schritte: string[] = [];

@@ -40,9 +40,10 @@ Prüfungen ohne Deploy:
   Wache bei kurzer Abwesenheit, Regeltext bei langer, Vertretungslinie, Wortgrenzen. Alle grün.
 - `pruefung/korb-probe.mjs`: Trockenlauf gegen die echten Daten (Lea, 05.10. bis 25.10.):
   87 Zeilen, davon 21 Themen, 59 Kandidaten, 7 Partner; Quadranten planen 44, warten 36, delegieren 4, sofort 3;
-  Cluster E 39, D 36, A 7, B 5; Lücken 70 von 87, Übernahmefähigkeit 20 Prozent.
-  Zwei Befunde daraus behoben: Stichworte treffen nur noch am Wortanfang („Ankündigungen“ war eine „Kündigung“),
-  und F = 1 verlangt jetzt einen echten Teamnamen im who-Feld statt irgendeiner Person.
+  Cluster E 39, D 36, A 7, B 5; Lücken 13 von 87, Übernahmefähigkeit 85 Prozent (Stand nach der Nacharbeit;
+  vor der Korrektur des Kandidatenzweigs waren es 70 Lücken, weil Kandidaten mangels Feldern immer als Lücke galten).
+  Befunde daraus behoben: Stichworte treffen nur noch am Wortanfang („Ankündigungen“ war eine „Kündigung“),
+  F = 1 verlangt einen echten Teamnamen im who-Feld, und Kandidaten werden an ihrem Text gemessen.
 - Syntax- und Typprüfung der Edge Function über die TypeScript-API: ohne Befund.
 
 ## Paket 3 · V24b Bereich Vertretung — fertig
@@ -64,6 +65,16 @@ Commit `39886dc`. Migration `20260921_hh_asana.sql` angewendet (`asana_gid`, `as
 „Nach Asana“ im Kopf der Übergabe, Kachel „Asana offen“ auf der Rückkehr, Abschnitt H (H1 bis H7) im Technikstand.
 Ohne `ASANA_TOKEN` tut der Export nichts und sagt warum. Die Abnahme aus 4c (Testprojekt, Rücksync, löschen)
 braucht das Token.
+
+## Unabhängige Review
+
+Drei Runden mit Codex (read-only) über die Pakete 2 bis 4: `39886dc`, `6a2d26e`, `fff4b17`.
+Die Runden haben zusammen rund 50 Punkte gemeldet, darunter neun echte Fehler in meinem Code und zwei
+Regressionen aus meiner eigenen Nacharbeit. Behoben und in `docs/TECHNIKSTAND.md` einzeln festgehalten.
+Die dritte Runde ist die letzte (Regel: höchstens drei); ihre verbliebenen Punkte stehen in
+`FRAGEN_FUER_MORGEN.md` unter „Aus der Review offen“. Der Reviewer bleibt bei „nicht abnahmefähig“,
+und zwar zu Recht: ohne Deploy fehlen die Nachweise aus Paket 2 und 4, und drei seiner Punkte habe ich
+bewusst nicht mehr angefasst, weil sie größere Umbauten sind.
 
 ## Nächste Schritte
 

@@ -83,7 +83,28 @@ plausibel und die Änderung ist klein.
 **Empfehlung:** Wenn die neue Adresse stimmt, sag einmal kurz Bescheid, dann mache ich es in einem Zug
 (eine Zeile, `gfweekly_sites`, nur die Spalte `url`). Oder du klickst es in „Wichtige Seiten“ selbst.
 
-## 7. Entscheidungen, die ich vorläufig selbst getroffen habe
+## 7. Aus der Review offen, bewusst nicht mehr angefasst
+
+Drei Runden Codex über die Pakete 2 bis 4. Alles Kleine ist behoben (Einzelheiten in `docs/TECHNIKSTAND.md`).
+Vier Punkte habe ich liegen lassen, weil sie größere Eingriffe sind und die Nacharbeit heute Nacht schon zwei
+eigene Regressionen erzeugt hat. Ich empfehle, sie nach dem Deploy und der Live-Abnahme anzugehen:
+
+1. **`handover_set` ist nicht atomar.** Erst wird die Korbzeile bestätigt, dann das Thema nachgezogen. Scheitert
+   der zweite Schritt, steht eine bestätigte Zeile ohne Wirkung da (die Antwort sagt es, aber der Zustand bleibt).
+   Sauber wäre eine Datenbankfunktion, die beides in einer Transaktion macht. Etwa eine Stunde Arbeit, plus Test.
+2. **Der Korb lädt mit Obergrenzen** (2000 Zeilen je Quelle) und filtert teilweise erst danach. Bei den heutigen
+   Beständen (87 Themen) reicht das weit; sauber wäre Pagination. Ich würde warten, bis es eng wird.
+3. **Asana-Kennungen der Personen** müssen von Hand in `gfweekly_people.asana_gid` stehen. Eine Auflösung über die
+   E-Mail (Asana kennt `users/<email>`) wäre der bessere Weg und spart dir Tipparbeit. Kommt zusammen mit dem Token.
+4. **Der Weg „lückenhafte Themen“** führt über `board.html?person=<Name>` zu einer Volltextsuche, nicht zu einem
+   echten Zuständigkeits- und Lückenfilter. Ein eigener Filter im Board wäre die saubere Lösung.
+
+Dazu die ehrliche Einordnung des Reviewers, die ich teile: Die Prüfungen ohne Deploy belegen Matrix, Aufbau,
+Gestaltung und Bedienwege. Sie belegen **nicht**, dass die Datenbank am Ende das enthält, was sie soll, dass der
+Cron-Lauf greift, dass der Tick zweimal hintereinander dasselbe tut und dass Asana funktioniert. Genau das ist die
+Live-Abnahme nach dem Deploy.
+
+## 8. Entscheidungen, die ich vorläufig selbst getroffen habe
 
 Alle reversibel, alle in `docs/TECHNIKSTAND.md` begründet:
 

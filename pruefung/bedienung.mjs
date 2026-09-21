@@ -36,6 +36,7 @@ await ctx.addInitScript(() => {
 });
 /* Jede Anfrage an die Edge Function landet in gesendet, damit die Proben sie nachsehen können. */
 const gesendet = [];
+let erwarteterFehler = false;   // nur dort gesetzt, wo eine Fehlerantwort zur Probe gehört
 await ctx.route('**/functions/v1/**', async (route) => {
   const req = route.request();
   if (req.url().includes('/tpa')) return route.fulfill({ status:200, contentType:'application/json', body:JSON.stringify(TPA) });
@@ -57,7 +58,7 @@ const seite = async (url) => {
     if (m.type() !== 'error') return;
     /* Eine abgefangene Fehlerantwort ist gewollt (Asana ohne Token). Der Browser meldet sie trotzdem;
        das ist keine Meldung der Seite und zählt hier nicht. */
-    if (/Failed to load resource: the server responded with a status of 4\d\d/.test(m.text())) return;
+    if (erwarteterFehler && /Failed to load resource: the server responded with a status of 400/.test(m.text())) return;
     meldungen.push(m.text());
   });
   p.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
@@ -166,7 +167,9 @@ console.log('\n== Asana ohne Token ==');
   const p = await seite('/uebergabe.html?id=abs-3');
   const knopf = p.locator('#asanaBtn');
   pruefe('Nach Asana erscheint, weil es bestätigte Zeilen gibt', await knopf.count() === 1);
+  erwarteterFehler = true;
   await knopf.click(); await p.waitForTimeout(500);
+  erwarteterFehler = false;
   const ex = letzte('asana_export');
   pruefe('Klick schickt asana_export', !!ex && ex.nutzlast.absence_id === 'abs-3');
   pruefe('ohne Token sagt die Seite das und legt nichts an',

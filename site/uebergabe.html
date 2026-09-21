@@ -295,7 +295,9 @@ async function load(){
     ZAEHL={ quadrant:l.quadrant, cluster:l.cluster, ampel:l.ampel, status:l.status, luecken:l.luecken, gesamt:l.gesamt, uebernahmefaehigkeit:l.uebernahmefaehigkeit }; }
   else {
     const a=await gfApi("absence_list",{ include_test:true });
-    absence=(a.absences||[]).find(x=>x.status==="aktiv") || (a.absences||[]).find(x=>x.status==="geplant") || (a.absences||[])[0] || null;
+    const alle=a.absences||[];
+    const naechste=(k)=>alle.filter(x=>x.status===k).sort((x,y)=>(x.von||"").localeCompare(y.von||""))[0];
+    absence=naechste("aktiv") || naechste("geplant") || naechste("rueckkehr") || alle[0] || null;
     if(absence){ const l=await gfApi("handover_list",{ absence_id:absence.id }); ITEMS=l.items||[];
       ZAEHL={ quadrant:l.quadrant, cluster:l.cluster, ampel:l.ampel, status:l.status, luecken:l.luecken, gesamt:l.gesamt, uebernahmefaehigkeit:l.uebernahmefaehigkeit }; }
   }
