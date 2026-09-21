@@ -167,3 +167,65 @@ Cluster und Ampeln, dazu Protokoll und Vertretungslinie. `pruefung/schirme.mjs` 
 `pruefung/bedienung.mjs` klickt 32 Bedienproben durch: filtern, „Alle Vorschläge übernehmen“, Dossier, Ampelklick,
 Vertretungsbrief, Wache, Anlegen mit allen fünf Eingaben, Rückkehr samt Rückübergabe, Startseitenblock und die
 Marke in der Besprechung.
+
+## V24c (21.09.2026) · Asana, Kalender, Mail
+
+Migration `supabase/migrations/20260921_hh_asana.sql` (angewendet): `gfweekly_people.asana_gid`,
+`gfweekly_absences.asana_project_gid` und `.asana_synced_at`.
+
+**Asana aus der Edge Function.** Secrets: `ASANA_TOKEN` (Personal Access Token), `ASANA_WORKSPACE`
+(Standard 57435200923138), `ASANA_TEAM` (nur nötig, wenn der Arbeitsbereich ein Team verlangt).
+Ohne Token tut `asana_export` nichts und antwortet mit `{ error: 'ASANA_TOKEN fehlt' }` samt Hinweis;
+es entstehen nie halbe Projekte.
+
+- `asana_export {absence_id}` legt das Projekt „Vertretung <Name> · <von> bis <bis>“ an oder frischt das
+  bestehende auf (`asana_project_gid`), dazu die Abschnitte Sofort, Grün, Gelb, Rot bei der GF, Ruht bis Rückkehr.
+  Exportiert werden Korbzeilen mit `status = bestaetigt` und Ampel ungleich `vorher`. Je Zeile eine Aufgabe
+  „[Vertretung] <Titel>“ mit Stand, nächstem Schritt, der Ampelregel als Satz, der Notfalldefinition, der Vollmacht
+  der Vertretung, der Frist und dem Link ins Haus; `due_on` = Frist, `assignee` aus `gfweekly_people.asana_gid`,
+  Folgende sind Alex und Lea. `asana_gid` und `asana_section` stehen danach an der Korbzeile, ein zweiter Export
+  aktualisiert statt zu verdoppeln.
+- `asana_sync {absence_id}` liest `completed` und die neuen Kommentare seit `asana_synced_at`, setzt erledigte
+  Zeilen auf `erledigt` und schreibt Kommentare als Protokolleinträge der Art `asana`. Der tägliche Tick ruft das
+  für jede Abwesenheit mit Projekt selbst auf; bei Rückkehr wandert das Projekt ins Archiv.
+- Oberfläche: „Nach Asana“ steht als Primärknopf im Kopf der Übergabe, sobald es bestätigte Zeilen gibt;
+  die Rückkehr zeigt die Kachel „Asana offen“ mit der Zahl der erledigten Aufgaben.
+
+### Abschnitt H für den täglichen Auftrag „GF Weekly · Neuigkeiten täglich“
+
+Textbaustein zum Eintragen in den Auftrag (trig_01A6gnSNUDbvF4bhW3wzhGL2). Er ergänzt die Abschnitte A bis G.
+
+> **H · Vertretung**
+>
+> **H1 Abwesenheiten erkennen.** Sieh in den Kalendern alex@ und lea@ die nächsten 60 Tage nach ganztägigen
+> Terminen durch, deren Titel „Abwesend“, „Urlaub“ oder „Krank“ enthält. Übernimm keinen Grund, nur den Zeitraum.
+> Gibt es in `absence_list` keine Abwesenheit derselben Person mit überlappendem Zeitraum, lege sie mit
+> `absence_set` an: `art` ist `geplant`, bei Beginn heute oder gestern `sofort`; `kontakt` ist `keiner`;
+> `note` ist „aus Kalender“. Schreibe einen Ticker: „<Name> abwesend <von> bis <bis>, Übergabe angelegt“.
+>
+> **H2 Termine im Fenster.** Für jede Abwesenheit mit Status geplant oder aktiv: alle Termine der Person im
+> Zeitraum, die weitere Teilnehmende haben, als Korbzeilen `kind = termin`, `ref_id = cal:<eventId>`,
+> Frist = Beginn. Ins Dossier kommen die Vornamen der Teilnehmenden und die Beschreibung ohne Zugangsdaten.
+> Ampel bei Stufe kurz `ruht`, sonst `gelb` mit `regel_note` „vertreten, absagen oder verschieben“.
+>
+> **H3 Vertretungsbrief.** Am Tag `von` (bei `art = sofort` sofort) einen Gmail-Entwurf an die Vertretungen und
+> die andere GF anlegen (`create_draft`, nicht senden) mit dem Brieftext aus der Übergabeseite: Zeitraum,
+> Kontaktregel, Notfalldefinition, Vertretungen je Bereich mit Vollmacht, die Listen rot, gelb, grün mit Frist.
+> Ticker: „Vertretungsbrief für <Name> liegt als Entwurf bereit“.
+>
+> **H4 Wochenbrief.** Freitags, wenn `kontakt = wochenbrief`: Gmail-Entwurf an die abwesende Person mit dem
+> Protokoll der Woche (Entscheidungen in Vertretung, Weitergaben, offene rote Punkte) und dem Satz
+> „Lesen genügt, Antworten sind freiwillig und lösen nichts aus.“
+>
+> **H5 Rückkehr.** Am Tag nach `bis`: Kalenderblock „Rückkehr: Vormittag frei“ von 9 bis 12 Uhr im Kalender der
+> Person, dazu ein Gmail-Entwurf mit dem Rückkehr-Briefing aus `absences.note_rueckkehr`.
+>
+> **H6 Tick.** Rufe `absence_tick` auf, falls der Cron-Job `hh_absence_tick` nicht läuft (erkennbar daran, dass
+> `absence_list` Abwesenheiten mit veraltetem Status zeigt). Der Aufruf ist idempotent.
+>
+> **H7 Neues an Abwesende.** Entsteht im Lauf ein Kandidat mit `who` = abwesende Person, setze `gate` auf die
+> Vertretung (`gate_note` „in Vertretung für <Name>“) und schreibe einen Protokolleintrag der Art `weitergabe`.
+
+**Offen bis zur Freigabe:** `ASANA_TOKEN` fehlt, deshalb ist die Abnahme aus 4c (Testprojekt anlegen, eine Aufgabe
+in Asana erledigen, Rücksync prüfen, Projekt löschen) noch nicht gelaufen. Ebenso steht der Eintrag von Abschnitt H
+in den täglichen Auftrag aus; der Text oben ist dafür fertig.

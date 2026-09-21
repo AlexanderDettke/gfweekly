@@ -77,16 +77,19 @@ function renderKopf(){
   const lage = tage>0 ? `noch ${tage} ${tage===1?"Tag":"Tage"} bis zur Abreise`
              : gesamt ? `Tag ${Math.max(1,tagN)} von ${gesamt}` : `Tag ${Math.max(1,tagN)}`;
   const kontakt={ keiner:"kein Kontakt", wochenbrief:"Wochenbrief", gespraech:"Gespräch" }[a.kontakt]||a.kontakt;
+  const bestaetigt=ITEMS.some(x=>x.status==="bestaetigt" && x.ampel!=="vorher");
   $("#kopf").innerHTML=`
     ${gfAvatarTag(a.person,"av")}
     <div><h2>Übergabe für ${gfEsc(a.person)}</h2>
       <div class="ub-meta">${gfEsc(a.bis?`${fmtD(a.von)} bis ${fmtD(a.bis)}`:`ab ${fmtD(a.von)}, Ende offen`)} · ${gfEsc(lage)} · ${gfEsc({kurz:"kurze",mittel:"mittlere",lang:"lange"}[a.stufe]||a.stufe)} Abwesenheit · ${a.art==="sofort"?"ungeplant":"planbar"} · ${gfEsc(kontakt)}${a.kanal?" · "+gfEsc(a.kanal):""}</div>
     </div>
     <div class="ub-akt">
+      ${bestaetigt?`<button class="btn btn-sm btn-primary" id="asanaBtn">Nach Asana</button>`:""}
       <button class="btn btn-sm btn-brand" id="briefBtn">Vertretungsbrief</button>
       <a class="btn btn-sm btn-brand" href="vertretung.html">Abwesenheiten</a>
     </div>`;
   $("#briefBtn").onclick=briefModal;
+  const ab=$("#asanaBtn"); if(ab) ab.onclick=nachAsana;
   $("#wache").innerHTML = istWache()
     ? `<div class="ub-wache">${gfZustand("warn","Wache")} Kurze Abwesenheit: nichts wird umgehängt. Am Tag 4 baut das Haus die Übergabe.</div>` : "";
 }
@@ -254,6 +257,21 @@ async function briefModal(){
     `Ruht bis zur Rückkehr:`, nachAmpel("ruht")||"- nichts",
   ].join("\n");
   gfTextModal("Vertretungsbrief", text, { intro:"Zum Kopieren. Verschickt wird nichts von allein." });
+}
+
+/* V24c · Nach Asana: legt aus den bestätigten Zeilen ein Projekt an oder frischt es auf.
+   Ohne Token in der Edge Function sagt die Antwort das, und es passiert nichts. */
+async function nachAsana(){
+  const n=ITEMS.filter(x=>x.status==="bestaetigt" && x.ampel!=="vorher").length;
+  if(!confirm(`${n} bestätigte Punkte als Aufgaben nach Asana schreiben?`)) return;
+  const b=$("#asanaBtn"); if(b){ b.disabled=true; b.textContent="läuft …"; }
+  try{
+    const d=await gfApi("asana_export",{ absence_id:ABSENCE.id, by:gfWho() });
+    gfToast(`Asana: ${d.neu} neu, ${d.aktualisiert} aktualisiert`);
+    if(d.url) window.open(d.url,"_blank","noopener");
+    await protLaden();
+  }catch(e){ gfToast(e.message && e.message.includes("ASANA_TOKEN") ? "Asana ist noch nicht eingerichtet, das Token fehlt." : "Fehler: "+(e.message||"Asana")); }
+  finally{ if(b){ b.disabled=false; b.textContent="Nach Asana"; } }
 }
 
 /* Protokoll */

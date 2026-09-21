@@ -73,10 +73,14 @@ function renderKpis(){
   const ent=LOG.filter(l=>l.art==="entscheidung").length;
   const weiter=LOG.filter(l=>l.art==="weitergabe").length;
   const wartet=ITEMS.filter(x=>x.ampel==="ruht"||x.ampel==="rot").filter(x=>x.status!=="erledigt").length;
+  const mitAsana=ITEMS.filter(x=>x.asana_gid);
+  const asanaOffen=mitAsana.filter(x=>x.status!=="erledigt").length, asanaFertig=mitAsana.filter(x=>x.status==="erledigt").length;
   $("#kpis").innerHTML=[
     gfKachel({icon:"entscheidung",value:ent,label:"in Vertretung entschieden"}),
     gfKachel({icon:"partner",value:weiter,label:"weitergegeben"}),
     gfKachel({icon:"frist",value:wartet,label:"wartet auf dich",tone:wartet?"warn":"pos"}),
+    mitAsana.length?gfKachel({icon:"release",value:asanaOffen,unit:`${asanaFertig} erledigt`,label:"Asana offen",
+      title:"Aufgaben, die in Asana aus dieser Vertretung entstanden sind"}):"",
   ].join("");
 }
 function renderEnt(){

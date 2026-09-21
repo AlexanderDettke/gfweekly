@@ -616,6 +616,97 @@ async function handoverLog(absence_id: string, art: string, text: string, who: s
   await admin.from('gfweekly_handover_log').insert({ absence_id, handover_id: handover_id || null, art, who: who || null, text: (text||'').slice(0,2000) });
 }
 
+/* ===== v29 · V24c (21.09.2026) · Asana: die bestätigte Übergabe als Projekt, der Rücksync als Protokoll.
+   Das Token steht im Secret ASANA_TOKEN (Personal Access Token), der Arbeitsbereich in ASANA_WORKSPACE
+   (Standard 57435200923138), das Team in ASANA_TEAM. Ohne Token passiert nichts, und die Antwort sagt warum:
+   halbe Projekte sind schlimmer als gar keine. Fallback ohne Token ist Abschnitt H des täglichen Auftrags. ===== */
+const ASANA_TOKEN = Deno.env.get('ASANA_TOKEN') ?? '';
+const ASANA_WORKSPACE = Deno.env.get('ASANA_WORKSPACE') ?? '57435200923138';
+const ASANA_TEAM = Deno.env.get('ASANA_TEAM') ?? '';
+const ASANA_ABSCHNITTE = ['Sofort', 'Grün', 'Gelb', 'Rot bei der GF', 'Ruht bis Rückkehr'];
+const HH_BASIS = 'https://hohes-haus.netlify.app';
+
+async function asana(pfad: string, methode = 'GET', koerper?: unknown){
+  const res = await fetch('https://app.asana.com/api/1.0' + pfad, {
+    method: methode,
+    headers: { 'Authorization': 'Bearer ' + ASANA_TOKEN, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: koerper === undefined ? undefined : JSON.stringify({ data: koerper }),
+  });
+  const text = await res.text();
+  let d: any = {}; try { d = JSON.parse(text); } catch (_e) { d = { raw: text }; }
+  if (!res.ok) throw new Error(`Asana ${methode} ${pfad}: ${res.status} ${(d?.errors?.[0]?.message) || text.slice(0,200)}`);
+  return d.data;
+}
+/* Welcher Abschnitt für welche Zeile: der Quadrant sticht, danach die Ampel. */
+function asanaAbschnitt(row: any){
+  if (row.quadrant === 'sofort') return 'Sofort';
+  if (row.ampel === 'gruen') return 'Grün';
+  if (row.ampel === 'gelb') return 'Gelb';
+  if (row.ampel === 'rot') return 'Rot bei der GF';
+  return 'Ruht bis Rückkehr';
+}
+function asanaLink(row: any){
+  if (row.kind === 'thema') return `${HH_BASIS}/board.html?topic=${row.ref_id}`;
+  if (row.kind === 'kandidat') return `${HH_BASIS}/neuigkeiten.html`;
+  return `${HH_BASIS}/uebergabe.html?id=${row.absence_id}`;
+}
+/* Der Aufgabentext: Stand, nächster Schritt, Ampelregel als Satz, Notfalldefinition, Vollmacht, Frist, Link. */
+function asanaNotiz(row: any, absence: any, vollmacht: string){
+  const d = row.dossier || {};
+  const ampelSatz: Record<string,string> = {
+    gruen: 'Grün: du entscheidest im Rahmen der Vollmacht, ohne Rückfrage.',
+    gelb: 'Gelb: du entscheidest nach kurzer Rückfrage. Kommt keine Antwort, gilt dein Vorschlag.',
+    rot: `Rot: das gehört der GF gemeinsam, nicht der Vertretung. Warte auf ${absence.person} oder hole die andere GF dazu.`,
+    vorher: 'Vor Abreise: das soll erledigt sein, bevor die Abwesenheit beginnt.',
+    ruht: 'Ruht: nichts tun, das wartet bis zur Rückkehr.',
+  };
+  return [
+    `In Vertretung für ${absence.person}, ${absence.von}${absence.bis ? ' bis ' + absence.bis : ' bis auf Weiteres'}.`,
+    '',
+    `Stand: ${d.stand || d.kontext || 'nicht notiert'}`,
+    `Nächster Schritt: ${d.naechster_schritt || 'nicht notiert'}`,
+    '',
+    ampelSatz[row.ampel] || 'Ohne Ampel: bitte in der Übergabe nachsehen.',
+    'Notfall heißt: Geld ab 5.000 €, Recht, Personal, Presse, Behörde, Sicherheit. Notfälle gehen immer an die GF.',
+    vollmacht ? `Vollmacht: ${vollmacht}` : 'Vollmacht: nicht festgelegt.',
+    row.frist ? `Frist: ${row.frist}` : 'Frist: keine.',
+    '',
+    `Im Hohen Haus: ${asanaLink(row)}`,
+    row.begruendung ? `\nWarum diese Einordnung: ${row.begruendung}` : '',
+  ].join('\n');
+}
+
+/* Rücksync: erledigte Aufgaben und neue Kommentare zurück ins Haus. Läuft im Tick mit, wenn ein Token da ist. */
+async function asanaSync(absence: any){
+  if (!ASANA_TOKEN || !absence.asana_project_gid) return { erledigt:0, kommentare:0 };
+  const seit = absence.asana_synced_at || absence.created_at || new Date(Date.now()-7*86400000).toISOString();
+  const { data: rows } = await admin.from('gfweekly_handover').select('*').eq('absence_id', absence.id).not('asana_gid','is',null);
+  let erledigt = 0, kommentare = 0;
+  for (const row of (rows || [])) {
+    let aufgabe: any = null;
+    try { aufgabe = await asana(`/tasks/${row.asana_gid}?opt_fields=completed,completed_at,name`); } catch (_e) { continue; }
+    if (aufgabe?.completed && row.status !== 'erledigt') {
+      await admin.from('gfweekly_handover').update({ status:'erledigt', updated_at:new Date().toISOString() }).eq('id', row.id);
+      await handoverLog(absence.id, 'erledigt', `${row.title}: in Asana erledigt.`, 'asana', row.id);
+      erledigt++;
+    }
+    let stories: any[] = [];
+    try { stories = await asana(`/tasks/${row.asana_gid}/stories?opt_fields=text,created_at,type,created_by.name`) || []; } catch (_e) { stories = []; }
+    for (const s of stories) {
+      if (s.type !== 'comment' || !s.created_at || s.created_at <= seit) continue;
+      await handoverLog(absence.id, 'asana', `${row.title}: ${(s.created_by?.name || 'Asana')} schreibt „${(s.text||'').slice(0,400)}“.`, 'asana', row.id);
+      kommentare++;
+    }
+  }
+  await admin.from('gfweekly_absences').update({ asana_synced_at:new Date().toISOString() }).eq('id', absence.id);
+  return { erledigt, kommentare };
+}
+/* Bei der Rückkehr wandert das Projekt ins Archiv. */
+async function asanaArchivieren(absence: any){
+  if (!ASANA_TOKEN || !absence.asana_project_gid) return false;
+  try { await asana(`/projects/${absence.asana_project_gid}`, 'PUT', { archived:true }); return true; } catch (_e) { return false; }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method === 'GET') { try { await ensurePageInStorage(); } catch(_e){} return new Response(null,{ status:302, headers:{ 'Location':PUBLIC_PAGE, 'Cache-Control':'no-store' } }); }
@@ -628,7 +719,7 @@ Deno.serve(async (req: Request) => {
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:29, secretConfigured: !!PASSWORD, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
+    if (action === 'ping') return json({ ok:true, version:29, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -1182,7 +1273,8 @@ Deno.serve(async (req: Request) => {
       const { data: rows } = await admin.from('gfweekly_handover').select('id,ref_id,kind').eq('absence_id', t.id).eq('kind','thema');
       for (const r of (rows || [])) await admin.from('gfweekly_topics').update({ owner_backup:null }).eq('id', r.ref_id);
       await handoverLog(t.id, 'notiz', `Rückübergabe bestätigt, ${(rows||[]).length} Themen wieder bei ${absence.person}.`, WHO);
-      return json({ absence });
+      const archiviert = await asanaArchivieren(absence);
+      return json({ absence, asana_archiviert: archiviert });
     }
     if (action === 'deputies_list') {
       let q = admin.from('gfweekly_deputies').select('*').order('person').order('sort');
@@ -1374,9 +1466,89 @@ Deno.serve(async (req: Request) => {
           await admin.from('gfweekly_handover').update({ dossier:d }).eq('id', r.id);
         }
         if ((bald || []).length) { schritte.push(`${(bald || []).length} auf der Wache`); }
+
+        // V24c: erledigte Aufgaben und neue Kommentare aus Asana zurückholen
+        if (ASANA_TOKEN && absence.asana_project_gid) {
+          try { const a = await asanaSync(absence);
+            if (a.erledigt || a.kommentare) schritte.push(`Asana: ${a.erledigt} erledigt, ${a.kommentare} Kommentare`); }
+          catch (e) { schritte.push('Asana: ' + String((e as Error).message).slice(0,120)); }
+        }
+        if (absence.status === 'beendet') await asanaArchivieren(absence);
         bericht.push({ id:absence.id, person:absence.person, status:absence.status, stufe:absence.stufe, schritte });
       }
       return json({ ok:true, heute, absences:bericht.length, bericht });
+    }
+
+    /* ----- Asana (v29, V24c): Export der bestätigten Übergabe und Rücksync. Ohne ASANA_TOKEN passiert nichts. ----- */
+    if (action === 'asana_export') {
+      if (!ASANA_TOKEN) return json({ error:'ASANA_TOKEN fehlt', hinweis:'Secret in Supabase anlegen, dann erneut versuchen. Bis dahin exportiert der tägliche Auftrag (Abschnitt H).' }, 400);
+      if (!t.absence_id) return json({ error:'absence_id fehlt' },400);
+      const { data: absence } = await admin.from('gfweekly_absences').select('*').eq('id', t.absence_id).single();
+      if (!absence) return json({ error:'Abwesenheit fehlt' },404);
+      const { data: rows } = await admin.from('gfweekly_handover').select('*').eq('absence_id', absence.id)
+        .eq('status','bestaetigt').neq('ampel','vorher');
+      if (!rows || !rows.length) return json({ error:'nichts zu exportieren', hinweis:'Es gibt keine bestätigten Zeilen außerhalb von „vor Abreise“.' },400);
+      const [{ data: leute }, { data: deputies }] = await Promise.all([
+        admin.from('gfweekly_people').select('name,email,asana_gid'),
+        admin.from('gfweekly_deputies').select('*').eq('person', absence.person).eq('active', true),
+      ]);
+      const gidVon = (name: string) => (leute || []).find((p: any) => whoNorm(p.name) === whoNorm(name) || p.name === name)?.asana_gid || null;
+      const vollmachtVon = (name: string) => (deputies || []).find((d: any) => d.vertretung === name)?.vollmacht || '';
+
+      /* Projekt anlegen oder das bestehende weiterverwenden. Das Team kommt aus ASANA_TEAM oder aus der Nutzlast. */
+      const name = `Vertretung ${absence.person} · ${absence.von} bis ${absence.bis || 'offen'}`;
+      let projekt = absence.asana_project_gid;
+      if (projekt) { try { await asana(`/projects/${projekt}`, 'PUT', { name, archived:false }); } catch (_e) { projekt = null; } }
+      if (!projekt) {
+        const team = (t.team ?? ASANA_TEAM ?? '').toString();
+        const daten: Record<string, unknown> = { name, workspace: ASANA_WORKSPACE,
+          notes:`Übergabekorb aus dem Hohen Haus. Eine Aufgabe je Punkt, Abschnitte nach Dringlichkeit und Ampel.\n${HH_BASIS}/uebergabe.html?id=${absence.id}` };
+        if (team) daten.team = team;
+        try { projekt = (await asana('/projects', 'POST', daten)).gid; }
+        catch (e) { return json({ error:String((e as Error).message), hinweis:'Braucht der Arbeitsbereich ein Team, ASANA_TEAM setzen oder team in der Nutzlast mitgeben.' },400); }
+        await admin.from('gfweekly_absences').update({ asana_project_gid: projekt }).eq('id', absence.id);
+      }
+      /* Abschnitte: vorhandene weiterverwenden, fehlende anlegen. */
+      const vorhanden = await asana(`/projects/${projekt}/sections?opt_fields=name`);
+      const abschnitt: Record<string,string> = {};
+      for (const a of (vorhanden || [])) abschnitt[a.name] = a.gid;
+      for (const n of ASANA_ABSCHNITTE) if (!abschnitt[n]) abschnitt[n] = (await asana(`/projects/${projekt}/sections`, 'POST', { name:n })).gid;
+
+      const folgen = [gidVon('Alex'), gidVon('Lea')].filter(Boolean) as string[];
+      let neu = 0, aktualisiert = 0;
+      for (const row of rows) {
+        const sek = asanaAbschnitt(row);
+        const daten: Record<string, unknown> = {
+          name: `[Vertretung] ${row.title || 'ohne Titel'}`,
+          notes: asanaNotiz(row, absence, vollmachtVon(row.vertretung || '')),
+          due_on: row.frist || null,
+          completed: row.status === 'erledigt',
+        };
+        const zu = row.vertretung ? gidVon(row.vertretung) : null;
+        if (zu) daten.assignee = zu;
+        if (row.asana_gid) {
+          await asana(`/tasks/${row.asana_gid}`, 'PUT', daten);
+          if (row.asana_section !== abschnitt[sek]) await asana(`/sections/${abschnitt[sek]}/addTask`, 'POST', { task: row.asana_gid });
+          await admin.from('gfweekly_handover').update({ asana_section: abschnitt[sek] }).eq('id', row.id);
+          aktualisiert++;
+        } else {
+          const aufgabe = await asana('/tasks', 'POST', Object.assign({}, daten, {
+            workspace: ASANA_WORKSPACE, memberships:[{ project: projekt, section: abschnitt[sek] }],
+            followers: folgen }));
+          await admin.from('gfweekly_handover').update({ asana_gid: aufgabe.gid, asana_section: abschnitt[sek] }).eq('id', row.id);
+          neu++;
+        }
+      }
+      await handoverLog(absence.id, 'asana', `Nach Asana exportiert: ${neu} neue und ${aktualisiert} aktualisierte Aufgaben.`, (t.by ?? WHO).toString());
+      return json({ ok:true, projekt, neu, aktualisiert, url:`https://app.asana.com/0/${projekt}` });
+    }
+    if (action === 'asana_sync') {
+      if (!ASANA_TOKEN) return json({ error:'ASANA_TOKEN fehlt' },400);
+      if (!t.absence_id) return json({ error:'absence_id fehlt' },400);
+      const { data: absence } = await admin.from('gfweekly_absences').select('*').eq('id', t.absence_id).single();
+      if (!absence) return json({ error:'Abwesenheit fehlt' },404);
+      const bericht = await asanaSync(absence);
+      return json({ ok:true, ...bericht });
     }
 
     return json({ error:'unknown action' }, 400);

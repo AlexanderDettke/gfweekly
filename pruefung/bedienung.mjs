@@ -125,7 +125,8 @@ console.log('\n== Rückkehr ==');
 {
   const p = await seite('/rueckkehr.html?id=abs-3');
   pruefe('Begrüßung mit Namen', (await p.locator('#kopf h2').innerText()).includes('Willkommen zurück'));
-  pruefe('drei Kacheln', await p.locator('#kpis .kk').count() === 3);
+  pruefe('vier Kacheln, die vierte zählt Asana', await p.locator('#kpis .kk').count() === 4
+    && (await p.locator('#kpis .kk').last().innerText()).includes('Asana'));
   pruefe('Entscheidungen tragen den Vermerk in Vertretung',
     (await p.locator('#entList .rk-row').first().innerText()).includes('in Vertretung für dich'));
   const wartet = await p.locator('#warList .rk-row').count();
@@ -138,6 +139,20 @@ console.log('\n== Rückkehr ==');
   await p.locator('#endBtn').click(); await p.waitForTimeout(500);
   pruefe('Rückübergabe bestätigen beendet die Abwesenheit', !!letzte('absence_end'));
   await p.close();
+}
+
+console.log('\n== Asana ohne Token ==');
+{
+  const p = await seite('/uebergabe.html?id=abs-3');
+  const knopf = p.locator('#asanaBtn');
+  pruefe('Nach Asana erscheint, weil es bestätigte Zeilen gibt', await knopf.count() === 1);
+  await knopf.click(); await p.waitForTimeout(400);
+  const ex = letzte('asana_export');
+  pruefe('Klick schickt asana_export', !!ex && ex.nutzlast.absence_id === 'abs-3');
+  await p.close();
+  const q = await seite('/uebergabe.html?id=abs-2');
+  pruefe('ohne bestätigte Zeilen kein Asana-Knopf', await q.locator('#asanaBtn').count() === 0);
+  await q.close();
 }
 
 console.log('\n== Für dich und Besprechung ==');

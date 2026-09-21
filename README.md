@@ -106,5 +106,11 @@ Startseite: neuer Block zwischen „Deine Entscheidung“ und „Seit gestern“
 Neue Bausteine in `core.js`: `gfAmpel`, `gfQuadrant`, `gfFrist`, `gfAddDays`, dazu die Icons schild, tausch, tuer. Stile im Block „V24b“ (`.vt-`, `.ub-`, `.rk-`). Assets `?v=24`.
 Geprüft mit `pruefung/schirme.mjs` (16 Seiten je 1440 und 390 in Dunkel und Hell, null Meldungen) und `pruefung/bedienung.mjs` (32 Bedienproben: filtern, übernehmen, Dossier, Ampel, Wache, Anlegen mit fünf Eingaben, Rückkehr).
 
+## V24c (21.09.2026): Asana, Kalender, Mail
+Migration `supabase/migrations/20260921_hh_asana.sql`: `asana_gid` an den Personen, `asana_project_gid` und `asana_synced_at` an den Abwesenheiten.
+Edge Function: `asana_export {absence_id}` legt das Projekt „Vertretung <Name> · <von> bis <bis>“ mit den Abschnitten Sofort, Grün, Gelb, Rot bei der GF und Ruht bis Rückkehr an und schreibt je bestätigter Korbzeile eine Aufgabe „[Vertretung] <Titel>“ mit Stand, nächstem Schritt, Ampelregel, Notfalldefinition, Vollmacht, Frist und Link ins Haus; ein erneuter Export aktualisiert. `asana_sync {absence_id}` holt erledigte Aufgaben und neue Kommentare zurück und läuft im täglichen Tick mit, bei Rückkehr wird das Projekt archiviert. Ohne das Secret `ASANA_TOKEN` passiert nichts und die Antwort sagt warum.
+Oberfläche: „Nach Asana“ als Primärknopf im Kopf der Übergabe, sobald bestätigte Zeilen vorliegen; Kachel „Asana offen“ auf der Rückkehr.
+Der Textbaustein für Abschnitt H des täglichen Auftrags (Abwesenheiten aus dem Kalender erkennen, Termine im Fenster, Vertretungsbrief, Wochenbrief, Rückkehr, Tick, Neues an Abwesende) steht in `docs/TECHNIKSTAND.md`.
+
 ## Backend
 Tabellen `gfweekly_topics`, `gfweekly_inbox`, `gfweekly_people`, `gfweekly_links`, `gfweekly_protocol_requests`, `gfweekly_assets`, `gfweekly_sites`, `gfweekly_site_categories`, `gfweekly_sessions`, `gfweekly_decisions`, `gfweekly_news`, `gfweekly_score_rules`, `gfweekly_score_levels`, `gfweekly_score_events`, `gfweekly_checkins`, `gfweekly_badges`, dazu die Meta-Planungs-Tabellen aus V10.

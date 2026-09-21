@@ -54,7 +54,7 @@ export const A1 = { id:'abs-1', person:'Lea', von:tag(14), bis:tag(34), bis_gesc
 export const A2 = { id:'abs-2', person:'Alex', von:heute, bis:null, bis_geschaetzt:tag(2), art:'sofort', kontakt:'keiner',
   kanal:null, gespraech_zeit:null, vertretung_standard:'Lea', stufe:'kurz', status:'aktiv', test:true,
   note:'aus dem Kalender', note_rueckkehr:null, created_by:'Lea', created_at:zeit(0), updated_at:zeit(0) };
-export const A3 = { id:'abs-3', person:'Alex', von:tag(-20), bis:tag(-1), bis_geschaetzt:null, art:'geplant', kontakt:'wochenbrief',
+export const A3 = { id:'abs-3', person:'Alex', asana_project_gid:'1200000000000000', asana_synced_at:null, von:tag(-20), bis:tag(-1), bis_geschaetzt:null, art:'geplant', kontakt:'wochenbrief',
   kanal:null, gespraech_zeit:null, vertretung_standard:'Lea', stufe:'lang', status:'rueckkehr', test:false, note:null,
   note_rueckkehr:'Seit '+tag(-20)+' bis '+tag(-1)+':\n2 Entscheidungen in Vertretung\n1 Weitergabe\n1 erledigter Punkt\n2 Punkte warten auf dich',
   created_by:'Alex', created_at:zeit(-21), updated_at:zeit(-1) };
@@ -64,7 +64,7 @@ export const korbZeile = (o) => ({ id:o.id, absence_id:o.absence_id, kind:o.kind
   dringend:o.z>=2, wichtig:(o.f+o.g)>=3, quadrant:o.quadrant, cluster:o.cluster, ampel:o.ampel,
   vertretung:o.vertretung||null, regel_note:o.regel_note||null, begruendung:o.begruendung,
   dossier:o.dossier||{ stand:o.stand||null, naechster_schritt:o.schritt||null }, luecke:!!o.luecke,
-  status:o.status||'vorschlag', by:'lauf', asana_gid:null, asana_section:null, created_at:zeit(-1), updated_at:zeit(-1) });
+  status:o.status||'vorschlag', by:'lauf', asana_gid:o.asana_gid||null, asana_section:null, created_at:zeit(-1), updated_at:zeit(-1) });
 
 export const KORB = {
   'abs-1': [
@@ -101,7 +101,7 @@ export const KORB = {
   ],
   'abs-3': [
     korbZeile({ id:'h10', absence_id:'abs-3', title:'Bankvollmacht erneuern', frist:tag(-2), z:3,f:3,u:3,g:1,
-      quadrant:'sofort', cluster:'A', ampel:'rot', luecke:true, status:'bestaetigt',
+      quadrant:'sofort', cluster:'A', ampel:'rot', luecke:true, status:'bestaetigt', asana_gid:'1200000000000001',
       begruendung:'Zur anderen GF, weil die Frist überfällig ist; gebunden an die Person (Vollmacht) (Z3 F3 U3 G1).' }),
     korbZeile({ id:'h11', absence_id:'abs-3', kind:'meilenstein', title:'Aufbau beginnt', frist:tag(30), z:0,f:2,u:1,g:0,
       quadrant:'warten', cluster:'D', ampel:'ruht', status:'bestaetigt',
