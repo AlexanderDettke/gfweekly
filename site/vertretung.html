@@ -150,7 +150,7 @@ function renderStat(){
       <div class="vt-head">${gfAvatarTag(p,"av")}<h3>${p}</h3><span class="vt-when">${wert==null?"keine Themen":wert+" Prozent"}</span></div>
       <div class="bar"><i style="width:${wert||0}%"></i></div>
       <div class="fd-muted">${s.themen||0} Themen, davon ${s.ohne_stand||0} ohne Stand und ${s.ohne_schritt||0} ohne nächsten Schritt.</div>
-      ${(s.ohne_stand||s.ohne_schritt)?`<a class="linkish" href="board.html?person=${encodeURIComponent(p)}">Themen von ${gfEsc(p)} im Board ansehen</a>`:""}
+      ${(s.ohne_stand||s.ohne_schritt)?`<a class="linkish" href="board.html?owner=${encodeURIComponent(p)}&luecke=1">${s.ohne_stand||0} ohne Stand und ${s.ohne_schritt||0} ohne nächsten Schritt ansehen</a>`:""}
     </div>`;
   }).join("");
 }

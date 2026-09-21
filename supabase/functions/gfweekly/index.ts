@@ -508,15 +508,21 @@ async function dossierFuer(item: any, absence: any){
 }
 
 /* Sammelt alles, was im Fenster der Abwesenheit liegt, und vereinheitlicht es zu Korbzeilen. */
+const HO_GRENZE = 2000;
+/* Befund 7.2: die Obergrenzen bleiben, aber der Korb sagt, wenn eine Quelle an ihre Grenze gestoßen ist.
+   Solange truncated false ist, ist der Korb vollständig. */
+let hoAbgeschnitten: string[] = [];
 async function handoverItems(absence: any){
+  hoAbgeschnitten = [];
   const person = whoNorm(absence.person), gate = absGate(absence.person);
   const von = absence.von as string, ende = absEnde(absence), heute = heuteBerlin();
   const items: any[] = [];
 
   const { data: themen, error: e1 } = await admin.from('gfweekly_topics')
     .select('id,title,short_description,context,decision,notes,next_action,owner,involved,priority,relevance,board_lane,gate,gate_frist,archived')
-    .eq('archived', false).limit(2000);
+    .eq('archived', false).limit(HO_GRENZE);
   if (e1) throw new Error('Themen konnten nicht gelesen werden: '+e1.message);
+  if ((themen || []).length >= HO_GRENZE) hoAbgeschnitten.push('Themen');
   for (const x of (themen || [])) {
     const frist = x.gate_frist || null;
     /* Fenster der Abwesenheit. Überfälliges zählt mit, denn es bleibt liegen, solange niemand da ist. */
@@ -531,8 +537,9 @@ async function handoverItems(absence: any){
 
   const { data: kandidaten, error: e2 } = await admin.from('gfweekly_news')
     .select('id,title,body,quote,relevance,strand,who,source,source_title,source_url,happened_at,gate,gate_frist')
-    .eq('kind','kandidat').eq('status','neu').eq('gate', gate).limit(2000);
+    .eq('kind','kandidat').eq('status','neu').eq('gate', gate).limit(HO_GRENZE);
   if (e2) throw new Error('Kandidaten konnten nicht gelesen werden: '+e2.message);
+  if ((kandidaten || []).length >= HO_GRENZE) hoAbgeschnitten.push('Kandidaten');
   for (const x of (kandidaten || [])) {
     items.push({ kind:'kandidat', ref_id:x.id, title:x.title, strand:x.strand, frist:x.gate_frist || null,
       body:x.body, quote:x.quote, relevance:x.relevance, who:x.who, source:x.source, source_title:x.source_title,
@@ -541,8 +548,9 @@ async function handoverItems(absence: any){
 
   const { data: meilen, error: e3 } = await admin.from('gfweekly_milestones')
     .select('id,title,description,date_from,date_to,zeitraum,strand,owner,status,archived')
-    .eq('archived', false).not('status','in','("erreicht","abgesagt")').limit(1000);
+    .eq('archived', false).not('status','in','("erreicht","abgesagt")').limit(HO_GRENZE);
   if (e3) throw new Error('Meilensteine konnten nicht gelesen werden: '+e3.message);
+  if ((meilen || []).length >= HO_GRENZE) hoAbgeschnitten.push('Meilensteine');
   for (const x of (meilen || [])) {
     const frist = x.date_from || null;
     if (!frist || frist < von || frist > ende) continue;
@@ -568,8 +576,9 @@ async function handoverItems(absence: any){
   }
 
   const { data: partner, error: e4 } = await admin.from('hh_partner_stand')
-    .select('partner_id,name,lane,stage,owner,next_action,target_on,waiting_for,signal,overdue').limit(1000);
+    .select('partner_id,name,lane,stage,owner,next_action,target_on,waiting_for,signal,overdue').limit(HO_GRENZE);
   if (e4) throw new Error('Partnerstand konnte nicht gelesen werden: '+e4.message);
+  if ((partner || []).length >= HO_GRENZE) hoAbgeschnitten.push('Partner');
   for (const x of (partner || [])) {
     const mein = whoNorm(x.owner) === person || (x.owner || '').toLowerCase() === 'together';
     if (!mein) continue;
@@ -584,8 +593,9 @@ async function handoverItems(absence: any){
      Termine am Rand ab oder nehmen fremde mit. */
   const { data: termine, error: e5 } = await admin.from('gfweekly_news')
     .select('id,title,body,who,happened_at,source_url,source_title,strand,source_ref')
-    .eq('source','kalender').gte('happened_at', addDays(von,-1)+'T00:00:00Z').lte('happened_at', addDays(ende,1)+'T23:59:59Z').limit(2000);
+    .eq('source','kalender').gte('happened_at', addDays(von,-1)+'T00:00:00Z').lte('happened_at', addDays(ende,1)+'T23:59:59Z').limit(HO_GRENZE);
   if (e5) throw new Error('Termine konnten nicht gelesen werden: '+e5.message);
+  if ((termine || []).length >= HO_GRENZE) hoAbgeschnitten.push('Termine');
   for (const x of (termine || [])) {
     const tag = new Date(x.happened_at).toLocaleDateString('sv-SE', { timeZone:'Europe/Berlin' });
     if (tag < von || tag > ende) continue;
@@ -641,7 +651,14 @@ async function handoverBuild(absence: any){
       if (error) fehler++; else neu++;
     }
   }
-  return { neu, ergaenzt, fehler, gesamt: items.length };
+  /* Der Zustand steht an der Abwesenheit, damit die Übergabeseite den Hinweis auch dann zeigt,
+     wenn sie nur liest und nicht selbst baut. */
+  await admin.from('gfweekly_absences').update({
+    korb_truncated: hoAbgeschnitten.length > 0,
+    korb_abgeschnitten: hoAbgeschnitten.length ? hoAbgeschnitten.join(', ') : null,
+  }).eq('id', absence.id);
+  return { neu, ergaenzt, fehler, gesamt: items.length,
+           truncated: hoAbgeschnitten.length > 0, abgeschnitten: [...hoAbgeschnitten] };
 }
 
 /* Zähler und Übernahmefähigkeit für die Übergabeseite. */
@@ -776,7 +793,7 @@ Deno.serve(async (req: Request) => {
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:29, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
+    if (action === 'ping') return json({ ok:true, version:30, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -1386,63 +1403,30 @@ Deno.serve(async (req: Request) => {
       return json({ items:data, absence, ...handoverZaehler(alle || []) });
     }
     if (action === 'handover_set' || action === 'handover_set_many') {
+      /* v30 (Befund 7.1): Korbzeile, Vorgang und Protokoll wandern in einem Zug über die Datenbankfunktion
+         hh_handover_set. Entweder alles oder nichts; eine bestätigte Zeile ohne Wirkung kann es nicht mehr geben. */
       const liste = action === 'handover_set' ? [t] : (Array.isArray(t.items) ? t.items.slice(0,500) : []);
       const by = (t.by ?? WHO).toString().slice(0,60);
-      const ergebnis: any[] = []; let n = 0;
+      const ergebnis: any[] = []; const misslungen: any[] = []; let n = 0;
       for (const it of liste) {
         if (!it.id) continue;
-        const { data: alt } = await admin.from('gfweekly_handover').select('*').eq('id', it.id).single();
-        if (!alt) continue;
-        const { data: absence } = await admin.from('gfweekly_absences').select('*').eq('id', alt.absence_id).single();
-        const patch: Record<string, unknown> = { by, updated_at:new Date().toISOString() };
+        const patch: Record<string, unknown> = {};
         if (it.cluster !== undefined && HO_CLUSTER.includes(it.cluster)) patch.cluster = it.cluster;
         if (it.ampel !== undefined && HO_AMPEL.includes(it.ampel)) patch.ampel = it.ampel;
-        if (it.vertretung !== undefined) patch.vertretung = (it.vertretung ?? '').toString().slice(0,120) || null;
-        /* Was am Ende ruht oder vor der Abreise erledigt sein soll, hat keine Vertretung. Das gilt für die
-           Ampel, die nach dieser Änderung gilt, nicht nur für die mitgeschickte. */
-        const ampelDanach = (patch.ampel ?? alt.ampel) as string;
-        if (ampelDanach === 'ruht' || ampelDanach === 'vorher') patch.vertretung = null;
-        if (it.frist !== undefined) patch.frist = it.frist || null;
-        if (it.regel_note !== undefined) patch.regel_note = (it.regel_note ?? '').toString().slice(0,500) || null;
-        patch.status = (it.status !== undefined && HO_STATUS.includes(it.status)) ? it.status : 'bestaetigt';
-        const { data: neu, error } = await admin.from('gfweekly_handover').update(patch).eq('id', it.id).select().single();
-        if (error) throw error;
-        n++; ergebnis.push(neu);
-
-        const ampel = (neu.ampel ?? alt.ampel) as string;
-        const vertretung = neu.vertretung as string | null;   // aus der gespeicherten Zeile, nicht aus dem alten Stand
-        if (neu.kind === 'thema' && absence) {
-          const themenPatch: Record<string, unknown> = { handover_id: neu.id, updated_at:new Date().toISOString() };
-          if (ampel === 'ruht') {
-            themenPatch.gate = 'warten';
-            themenPatch.gate_frist = addDays(absEnde(absence), 1);
-            themenPatch.gate_by = by; themenPatch.gate_at = new Date().toISOString();
-            themenPatch.gate_note = `ruht bis zur Rückkehr von ${absence.person}`;
-            themenPatch.owner_backup = null;                  // was ruht, hat keine Vertretung
-          } else if (vertretung) {
-            const g = absGate(vertretung);
-            themenPatch.owner_backup = vertretung;
-            themenPatch.gate = g || 'team';
-            themenPatch.gate_by = by; themenPatch.gate_at = new Date().toISOString();
-            themenPatch.gate_note = `in Vertretung für ${absence.person}`;
-          } else if (alt.vertretung && !vertretung) {
-            /* Eine bestehende Vertretung wurde ausdrücklich entfernt: der Ausgang gehört wieder der abwesenden
-               Person. Eine Zeile, die nie eine Vertretung hatte (etwa „vor Abreise“), behält ihren Ausgang. */
-            themenPatch.owner_backup = null;
-            themenPatch.gate = absGate(absence.person) || 'gf';
-            themenPatch.gate_by = by; themenPatch.gate_at = new Date().toISOString();
-            themenPatch.gate_note = `wieder bei ${absence.person}`;
-          }
-          const { error: tf } = await admin.from('gfweekly_topics').update(themenPatch).eq('id', neu.ref_id);
-          if (tf) return json({ error:'Thema konnte nicht nachgezogen werden: '+tf.message },500);
+        if (it.vertretung !== undefined) patch.vertretung = (it.vertretung ?? '').toString().slice(0,120);
+        if (it.frist !== undefined) patch.frist = it.frist || '';
+        if (it.regel_note !== undefined) patch.regel_note = (it.regel_note ?? '').toString().slice(0,500);
+        if (it.status !== undefined && HO_STATUS.includes(it.status)) patch.status = it.status;
+        const { data, error } = await admin.rpc('hh_handover_set', { p_id: it.id, p_by: by, p_patch: patch });
+        if (error) {
+          if (action === 'handover_set') return json({ error:'Übergabe nicht gespeichert: '+error.message },500);
+          misslungen.push({ id: it.id, grund: error.message });
+          continue;
         }
-        if (absence) {
-          const wort = ampel === 'ruht' ? 'ruht bis zur Rückkehr' : vertretung ? `geht an ${vertretung}` : 'bestätigt';
-          await handoverLog(absence.id, patch.status === 'erledigt' ? 'erledigt' : vertretung ? 'weitergabe' : 'notiz',
-            `${neu.title}: ${wort} (Ampel ${ampel || 'offen'}).`, by, neu.id);
-        }
+        n++; ergebnis.push({ ...(data?.item ?? {}), vorgang: data?.vorgang ?? null });
       }
-      return action === 'handover_set' ? json({ item: ergebnis[0] || null }) : json({ ok:true, updated:n });
+      if (action === 'handover_set') return json({ item: ergebnis[0] || null, vorgang: ergebnis[0]?.vorgang ?? null });
+      return json({ ok: misslungen.length === 0, updated:n, misslungen });
     }
     if (action === 'handover_zurueck') {
       /* Rückkehr: die Zeile ist erledigt, die Vertretung fällt weg, und das Thema gehört wieder der Person. */
@@ -1618,12 +1602,31 @@ Deno.serve(async (req: Request) => {
         .eq('status','bestaetigt').neq('ampel','vorher');
       if (!rows || !rows.length) return json({ error:'nichts zu exportieren', hinweis:'Es gibt keine bestätigten Zeilen außerhalb von „vor Abreise“.' },400);
       const [{ data: leute }, { data: deputies }] = await Promise.all([
-        admin.from('gfweekly_people').select('name,email,asana_gid'),
+        admin.from('gfweekly_people').select('id,name,email,asana_gid'),
         admin.from('gfweekly_deputies').select('*').eq('person', absence.person).eq('active', true),
       ]);
       /* Zuordnung über den Namen selbst, nicht über whoNorm: das macht aus Merle und Tim sonst dieselbe Person. */
       const norm = (x: unknown) => (x ?? '').toString().trim().toLowerCase();
       const ohneGid: string[] = [];
+
+      /* v30 (Befund 7.3): Wer noch keine Asana-Kennung hat, bekommt sie einmalig über die E-Mail.
+         Die Liste aus Asana wird einmal je Export geholt, die Treffer wandern nach gfweekly_people.
+         Wer dort kein Konto hat, erscheint in der Antwort und seine Aufgaben gehen an die Vertretung. */
+      const fehlen = (leute || []).filter((p: any) => !p.asana_gid && p.email);
+      if (fehlen.length) {
+        try {
+          const nutzer = await asana(`/users?workspace=${ASANA_WORKSPACE}&opt_fields=email,name&limit=100`);
+          const nachMail = new Map<string,string>();
+          for (const u of (nutzer || [])) if (u?.email) nachMail.set(norm(u.email), u.gid);
+          for (const p of fehlen) {
+            const gid = nachMail.get(norm(p.email));
+            if (!gid) continue;
+            const { error } = await admin.from('gfweekly_people').update({ asana_gid: gid }).eq('id', p.id);
+            if (!error) p.asana_gid = gid;
+          }
+        } catch (_e) { /* ohne Nutzerliste bleibt es bei den vorhandenen Kennungen */ }
+      }
+
       const gidVon = (name: string) => {
         if (!name) return null;
         const p = (leute || []).find((q: any) => norm(q.name) === norm(name));

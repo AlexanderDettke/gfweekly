@@ -41,6 +41,8 @@
       <button class="seg" data-g="zeitraum">Zeitraum</button>
       <button class="seg" data-g="person">Person</button>
     </div>
+    <label class="chk" id="owWrap" hidden><input type="checkbox" id="owOn" checked> <span id="owName">Person</span></label>
+    <label class="chk"><input type="checkbox" id="lueckeOn" /> nur Lücken</label>
     <label class="chk"><input type="checkbox" id="showRec" /> wiederkehrende zeigen</label>
     <label class="chk"><input type="checkbox" id="showDone" /> erledigte zeigen</label>
     <button class="btn btn-sm btn-brand" id="newTopic">＋ Thema</button>
@@ -80,10 +82,18 @@ const params=new URLSearchParams(location.search);
 let VIEW=params.get("view")==="kacheln"?"kacheln":"board";
 let GROUP=localStorage.getItem("gf_board_group")||"ablauf";
 let SHOW_REC=localStorage.getItem("gf_board_rec")==="1", SHOW_DONE=localStorage.getItem("gf_board_done")==="1";
-/* V24b: ?q= sucht vor, ?person= gruppiert nach Person und sucht nach ihr. So führt der Weg aus der
-   Übergabe („lückenhafte Themen“) wirklich zu den Themen dieser Person. */
-let Q=(params.get("q")||params.get("person")||"").trim().toLowerCase(), DRAG=null, UNDO=null, UNDO_T=null;
-if(params.get("person")) GROUP="person";
+/* V24d (Befund 7.4): ?owner=<Name> filtert wirklich auf die Verantwortung, ?luecke=1 zeigt nur Themen ohne
+   Stand oder ohne nächsten Schritt. ?q= sucht weiterhin im Text vor. So führt der Weg aus der Übergabe
+   („lückenhafte Themen“) zu genau den Themen, die die Kachel zählt. */
+let Q=(params.get("q")||"").trim().toLowerCase(), DRAG=null, UNDO=null, UNDO_T=null;
+let OWNER=(params.get("owner")||"").trim(), OWNER_ON=!!params.get("owner");
+let LUECKE=params.get("luecke")==="1";
+function istLuecke(t){ return !(t.short_description||"").trim() || !(t.next_action||"").trim(); }
+function gehoert(t, name){
+  const n=name.toLowerCase(); const o=(t.owner||"").toLowerCase();
+  const tor=(t.gate||"").toLowerCase(), meins=n.includes("lea")?"lea":n.includes("alex")?"alex":"";
+  return o.includes(n) || (!!meins && tor===meins) || (t.owner_backup||"").toLowerCase().includes(n);
+}
 
 /* ---- Datum-Helfer ---- */
 const NOW=new Date(); const today=new Date(NOW.getFullYear(),NOW.getMonth(),NOW.getDate());
@@ -103,7 +113,10 @@ function columns(list){
   return names.map(n=>({key:n,label:n==="niemand"?"Niemand zugeordnet":n,color:"var(--accent)",items:list.filter(t=>personKey(t)===n).sort(byLane)}));
 }
 function byLane(a,b){ const o={zu_besprechen:0,in_klaerung:1,entschieden:2,erledigt:3}; return (o[a.board_lane]-o[b.board_lane])||(a.lane_order-b.lane_order); }
-function visible(){ return TOPICS.filter(t=>!t.archived && (SHOW_REC||t.kind!=="recurring") && (SHOW_DONE||GROUP==="ablauf"||t.status!=="erledigt") && (!Q||[t.title,t.short_description,t.context,t.owner,t.next_action,t.decision].join(" ").toLowerCase().includes(Q))); }
+function visible(){ return TOPICS.filter(t=>!t.archived && (SHOW_REC||t.kind!=="recurring") && (SHOW_DONE||GROUP==="ablauf"||t.status!=="erledigt")
+  && (!Q||[t.title,t.short_description,t.context,t.owner,t.next_action,t.decision].join(" ").toLowerCase().includes(Q))
+  && (!OWNER_ON||!OWNER||gehoert(t,OWNER))
+  && (!LUECKE||istLuecke(t))); }
 
 /* ---- Karte ---- */
 function card(t){
@@ -318,6 +331,10 @@ $("#showRec").onchange=e=>{ SHOW_REC=e.target.checked; localStorage.setItem("gf_
 $("#showDone").onchange=e=>{ SHOW_DONE=e.target.checked; localStorage.setItem("gf_board_done",SHOW_DONE?"1":"0"); render(); };
 $("#q").oninput=e=>{ Q=e.target.value.trim().toLowerCase(); render(); };
 if(Q) $("#q").value=Q;
+if(OWNER){ $("#owWrap").hidden=false; $("#owName").textContent="nur "+OWNER; $("#owOn").checked=true; }
+$("#owOn").onchange=e=>{ OWNER_ON=e.target.checked; render(); };
+$("#lueckeOn").checked=LUECKE;
+$("#lueckeOn").onchange=e=>{ LUECKE=e.target.checked; render(); };
 $("#newTopic").onclick=async()=>{ const title=prompt("Neues Thema (Titel):"); if(!title) return; try{ const d=await gfApi("add",{title,priority:"mittel",created_by:gfWho(),board_lane:"zu_besprechen"}); TOPICS.push(d.topic); render(); openPanel(d.topic.id); }catch(e){ gfToast("Fehler: "+e.message); } };
 
 /* ---- Verschieben per Menü (Touch, Tastatur) ---- */

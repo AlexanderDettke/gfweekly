@@ -9,6 +9,9 @@ export const THEMEN = [
   { id:'t1', title:'Vertrag mit dem Landkreis verlängern', context:'Der Vertrag läuft zum Jahresende aus.', short_description:'Verlängerung bis 2029 klären', priority:'hoch', status:'offen', kind:'einmalig', board_lane:'zu_besprechen', lane_order:1, owner:'Alex', next_action:'Termin mit dem Amt', relevance:'kritisch', gate:'gf', gate_frist:tag(5), gate_by:'lauf', created_by:'Alex', created_at:zeit(-20), updated_at:zeit(-2), archived:false, involved:'Lea', notes:'' },
   { id:'t2', title:'Shuttle für das Festival ausschreiben', context:'Drei Anbieter haben geantwortet.', short_description:'Anbieter wählen', priority:'mittel', status:'in_klaerung', kind:'einmalig', board_lane:'in_klaerung', lane_order:1, owner:'Lea', next_action:'Angebote vergleichen', relevance:'hoch', gate:'Lea', gate_frist:tag(12), gate_by:'Alex', created_by:'Lea', created_at:zeit(-14), updated_at:zeit(-1), archived:false },
   { id:'t3', title:'Wochenbrief an das Team', context:'Format steht.', short_description:'Jeden Freitag', priority:'niedrig', status:'offen', kind:'recurring', frequency:'woechentlich', board_lane:'zu_besprechen', lane_order:2, owner:'Alex', next_action:'Vorlage schreiben', relevance:'mittel', gate:'team', created_by:'Alex', created_at:zeit(-40), updated_at:zeit(-3), archived:false },
+  { id:'t5', title:'Zeltwiese: Fläche und Lärmschutz klären', context:'Kam aus der Pressefrage.', short_description:'', priority:'hoch',
+    status:'offen', kind:'einmalig', board_lane:'zu_besprechen', lane_order:3, owner:'Lea', next_action:'', relevance:'hoch',
+    gate:'lea', gate_frist:tag(9), gate_by:'lauf', created_by:'Lea', created_at:zeit(-4), updated_at:zeit(-1), archived:false },
   { id:'t4', title:'Gastro-Partner für 2027 bestätigen', context:'Zusage mündlich da.', priority:'hoch', status:'erledigt', kind:'einmalig', board_lane:'entschieden', lane_order:1, owner:'Lea', decision:'Wir machen mit dem bisherigen Partner weiter.', next_action:'Vertrag schicken', relevance:'hoch', created_by:'Lea', created_at:zeit(-60), updated_at:zeit(-5), archived:false },
 ];
 export const NEWS = [
@@ -51,7 +54,8 @@ export const TPA = { months:[mon(2),mon(1),mon(0)],
 export const A1 = { id:'abs-1', person:'Lea', von:tag(14), bis:tag(34), bis_geschaetzt:null, art:'geplant', kontakt:'wochenbrief',
   kanal:'Signal, nur Notfall', gespraech_zeit:null, vertretung_standard:'Alex', stufe:'lang', status:'geplant', test:false,
   note:null, note_rueckkehr:null, created_by:'Alex', created_at:zeit(-1), updated_at:zeit(-1) };
-export const A2 = { id:'abs-2', person:'Alex', von:heute, bis:null, bis_geschaetzt:tag(2), art:'sofort', kontakt:'keiner',
+export const A2 = { id:'abs-2', person:'Alex', korb_truncated:true, korb_abgeschnitten:'Kandidaten',
+  von:heute, bis:null, bis_geschaetzt:tag(2), art:'sofort', kontakt:'keiner',
   kanal:null, gespraech_zeit:null, vertretung_standard:'Lea', stufe:'kurz', status:'aktiv', test:true,
   note:'aus dem Kalender', note_rueckkehr:null, created_by:'Lea', created_at:zeit(0), updated_at:zeit(0) };
 export const A3 = { id:'abs-3', person:'Alex', asana_project_gid:'1200000000000000', asana_synced_at:null, von:tag(-20), bis:tag(-1), bis_geschaetzt:null, art:'geplant', kontakt:'wochenbrief',
@@ -66,7 +70,7 @@ export const korbZeile = (o) => ({ id:o.id, absence_id:o.absence_id, kind:o.kind
   dossier:o.dossier||{ stand:o.stand||null, naechster_schritt:o.schritt||null }, luecke:!!o.luecke,
   status:o.status||'vorschlag', by:'lauf', asana_gid:o.asana_gid||null, asana_section:null, created_at:zeit(-1), updated_at:zeit(-1) });
 
-export const KORB = {
+export const KORB_SAAT = {
   'abs-1': [
     korbZeile({ id:'h1', absence_id:'abs-1', ref_id:'t1', title:'Vertrag mit dem Landkreis verlängern', frist:tag(3), z:3,f:3,u:2,g:3,
       quadrant:'sofort', cluster:'A', ampel:'vorher', luecke:true, begruendung:'Vor Abreise, weil die Frist vor der Abreise liegt; Sache der GF; Stand und nächster Schritt fehlen (Z3 F3 U2 G3).' }),
@@ -108,6 +112,16 @@ export const KORB = {
       begruendung:'Ruht bis zur Rückkehr, weil die Frist weit hinter der Rückkehr liegt (Z0 F2 U1 G0).' }),
   ],
 };
+/* Die Testdaten merken sich, was geschrieben wurde. Sonst käme eine bestätigte Zeile beim nächsten Lesen
+   wieder als Vorschlag zurück, und die Probe „die Zeile verlässt die Ansicht“ wäre wertlos.
+   zuruecksetzen() stellt den Saatstand wieder her; die Bedienprüfung ruft das vor jedem Fall. */
+export let KORB = JSON.parse(JSON.stringify(KORB_SAAT));
+export let NEUE = [];
+export function zuruecksetzen(){ KORB = JSON.parse(JSON.stringify(KORB_SAAT)); NEUE = []; }
+const zeileVon = (id) => Object.values(KORB).flat().find(r => r.id === id);
+const vorgangVon = (z) => z && z.kind === 'thema'
+  ? { id:z.ref_id, gate: z.vertretung ? 'alex' : 'lea', owner_backup: z.vertretung || null } : null;
+
 export const zaehleKorb = (rows) => {
   const z = (feld) => rows.reduce((a,r)=>{ const k=r[feld]||'offen'; a[k]=(a[k]||0)+1; return a; },{});
   const ohne = rows.filter(r=>!r.luecke).length;
@@ -155,17 +169,44 @@ export const ANTWORT = {
   news_list: { items: NEWS },
   gate_list: { items:[ { kind:'thema', ...THEMEN[0] }, { kind:'kandidat', ...NEWS[2] }, { kind:'thema', ...THEMEN[1] } ],
     counts:{ gf:2, Lea:1 }, themen:2, kandidaten:1 },
-  absence_list: (p) => { const alle=[A1,A2,A3].filter(a=>p.include_test||!a.test);
+  absence_list: (p) => { const alle=[...NEUE, A1, A2, A3].filter(a=>p.include_test||!a.test);
     return { absences:alle, zaehler:Object.fromEntries(alle.map(a=>[a.id, zaehleKorb(KORB[a.id]||[])])) }; },
+  /* Anlegen liefert die neue Abwesenheit zurück, damit die Seite dorthin weiterleiten kann. */
+  absence_set: (p) => {
+    const neu = { ...A1, ...p, id:'abs-neu', test:!!p.test, status:'aktiv',
+      stufe: p.bis ? 'lang' : 'kurz', korb_truncated:false, korb_abgeschnitten:null };
+    NEUE.push(neu); KORB['abs-neu'] = [];
+    return { absence:neu, bau:{ neu:0, ergaenzt:0, fehler:0, gesamt:0, truncated:false }, zaehler:zaehleKorb([]) };
+  },
   handover_list: (p) => { const rows=KORB[p.absence_id]||KORB['abs-1'];
     const abs=[A1,A2,A3].find(a=>a.id===p.absence_id)||A1;
     return { items:rows, absence:abs, ...zaehleKorb(rows) }; },
   handover_log: (p) => ({ log: PROTOKOLL[p.absence_id]||[] }),
+  /* v30: handover_set läuft über die Datenbankfunktion und antwortet mit Zeile und Vorgang.
+     Hier wird wirklich geschrieben, damit die nächste Leseabfrage den neuen Stand zeigt. */
+  handover_set: (p) => {
+    const z = zeileVon(p.id);
+    if (!z) return { __status:404, error:'Korbzeile gibt es nicht' };
+    if (p.cluster) z.cluster = p.cluster;
+    if (p.ampel) z.ampel = p.ampel;
+    if (p.vertretung !== undefined) z.vertretung = p.vertretung || null;
+    if (p.frist !== undefined) z.frist = p.frist || null;
+    if (p.regel_note !== undefined) z.regel_note = p.regel_note || null;
+    if (z.ampel === 'ruht' || z.ampel === 'vorher') z.vertretung = null;
+    z.status = p.status || 'bestaetigt'; z.by = p.by || 'Alex';
+    return { item:{ ...z }, vorgang: vorgangVon(z) };
+  },
+  handover_set_many: (p) => {
+    let n = 0;
+    for (const it of (p.items || [])) { const z = zeileVon(it.id); if (!z) continue; z.status = 'bestaetigt'; z.by = p.by || 'Alex'; n++; }
+    return { ok:true, updated:n, misslungen:[] };
+  },
   /* Rücknahme bei der Rückkehr: die Antwort zeigt, was das Backend gespeichert hat. */
   handover_zurueck: (p) => {
-    const zeile = Object.values(KORB).flat().find(r => r.id === p.id);
-    return { item: { ...(zeile||{}), status:'erledigt', vertretung:null },
-             thema: zeile && zeile.kind === 'thema' ? { id:zeile.ref_id, gate:'alex', owner_backup:null } : null };
+    const z = zeileVon(p.id);
+    if (!z) return { __status:404, error:'Korbzeile gibt es nicht' };
+    z.status = 'erledigt'; z.vertretung = null;
+    return { item:{ ...z }, thema: z.kind === 'thema' ? { id:z.ref_id, gate:'alex', owner_backup:null } : null };
   },
   /* Asana ohne Token: genau die Antwort, die v29 ohne Secret gibt. */
   asana_export: () => ({ __status:400, error:'ASANA_TOKEN fehlt', hinweis:'Secret in Supabase anlegen, dann erneut versuchen.' }),
@@ -197,7 +238,7 @@ export const FALLBACK = { ok:true, items:[], topics:[], gains:[] };
 export const SCHREIBEND = new Set(['add','update','delete','capture','capture_many','checkin','score_event','decision_add','decision_update','decision_delete',
   'session_start','session_end','session_delete','ritual_toggle','ritual_save','ritual_delete','milestone_save','milestone_delete','news_update','news_accept','news_delete',
   'people_save','people_delete','link_add','link_delete','sites_save','sites_delete','category_save','gate_set','gate_set_many','inbox_promote','inbox_reject','tidy_suggest',
-  'absence_set','absence_end','absence_tick','deputies_set','handover_build','handover_set','handover_set_many','handover_dossier','handover_log_add']);
+  'absence_end','absence_tick','deputies_set','handover_build','handover_dossier','handover_log_add']);
 
 /* Je Seite: Kerninhalt, der nach dem Laden gefuellt sein muss (Text laenger als 20 Zeichen).
    Ohne diese Probe wuerde eine leer gebliebene Seite als bestanden durchgehen, weil gfGate das Tor schon vorher versteckt. */

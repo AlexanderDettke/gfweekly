@@ -90,8 +90,10 @@ function renderKopf(){
     </div>`;
   $("#briefBtn").onclick=briefModal;
   const ab=$("#asanaBtn"); if(ab) ab.onclick=nachAsana;
-  $("#wache").innerHTML = istWache()
-    ? `<div class="ub-wache">${gfZustand("warn","Wache")} Kurze Abwesenheit: nichts wird umgehängt. Am Tag 4 baut das Haus die Übergabe.</div>` : "";
+  const hinweise=[];
+  if(istWache()) hinweise.push(`${gfZustand("warn","Wache")} Kurze Abwesenheit: nichts wird umgehängt. Am Tag 4 baut das Haus die Übergabe.`);
+  if(a.korb_truncated) hinweise.push(`${gfZustand("warn","Unvollständig")} Beim letzten Bau lagen ${gfEsc(a.korb_abgeschnitten||"eine Quelle")} an der Obergrenze. Der Korb kann Zeilen vermissen.`);
+  $("#wache").innerHTML = hinweise.map(h=>`<div class="ub-wache">${h}</div>`).join("");
 }
 function renderQuads(){
   const q=ZAEHL.quadrant||{};

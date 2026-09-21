@@ -6,7 +6,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODUL || 'playwright');
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ANTWORT, FALLBACK, SCHREIBEND, TPA } from './testdaten.mjs';
+import { ANTWORT, FALLBACK, SCHREIBEND, TPA, zuruecksetzen } from './testdaten.mjs';
 
 const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'site');
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8',
@@ -49,7 +49,8 @@ await ctx.route('**/functions/v1/**', async (route) => {
 });
 const letzte = (action) => [...gesendet].reverse().find(x => x.action === action);
 /* Jede Probe beginnt mit leerem Verlauf, sonst bestätigt ein alter Aufruf einen neuen Fall. */
-const frisch = () => { gesendet.length = 0; };   // Konsolenmeldungen bleiben stehen, sie werden am Ende bewertet
+const frisch = () => { gesendet.length = 0; zuruecksetzen(); };   // frischer Aufrufverlauf und frische Daten je Fall
+// Konsolenmeldungen bleiben stehen, sie werden am Ende bewertet
 const meldungen = [];
 const seite = async (url) => {
   const p = await ctx.newPage();
@@ -90,10 +91,14 @@ console.log('== Übergabe, lange geplante Abwesenheit ==');
   pruefe('Dossier zeigt den Knopf für ein neues Dossier', await doss.locator('[data-act="doss"]').count() === 1);
 
   const zeile = p.locator('.ub-row').first();
-  await zeile.locator('.chip[data-set="ampel"][data-v="gruen"]').click(); await p.waitForTimeout(500);
+  const vorher = await p.locator('.ub-row').count();
+  await zeile.locator('.chip[data-set="ampel"][data-v="gruen"]').click(); await p.waitForTimeout(600);
   const set = letzte('handover_set');
   pruefe('Ampel-Klick schickt handover_set mit Ampel grün', !!set && set.nutzlast.ampel === 'gruen',
          set ? JSON.stringify(set.nutzlast).slice(0,80) : 'nichts gesendet');
+  const nachher = await p.locator('.ub-row').count();
+  pruefe('und die bestätigte Zeile verlässt die Ansicht „nur Vorschläge“', nachher === vorher - 1,
+    `vorher ${vorher}, nachher ${nachher}`);
   pruefe('Vertretungsbrief lässt sich öffnen', await p.locator('#briefBtn').count() === 1);
   await p.locator('#briefBtn').click(); await p.waitForTimeout(400);
   const brief = await p.locator('.modal-text').inputValue().catch(() => '');
@@ -106,7 +111,7 @@ console.log('\n== Übergabe als Wache, kurze und ungeplante Abwesenheit ==');
 {
   frisch();
   const p = await seite('/uebergabe.html?id=abs-2');
-  pruefe('Hinweiszeile der Wache steht da', (await p.locator('.ub-wache').innerText()).includes('Am Tag 4'));
+  pruefe('Hinweiszeile der Wache steht da', (await p.locator('.ub-wache').allInnerTexts()).join(' ').includes('Am Tag 4'));
   const zeilen = p.locator('.ub-row');
   const notfall = zeilen.nth(0), alltag = zeilen.nth(1);
   pruefe('Notfall bleibt bedienbar', !(await notfall.locator('.chip[data-set="ampel"]').first().isDisabled()));
@@ -133,6 +138,8 @@ console.log('\n== Abwesenheit anlegen ==');
   await m.locator('[name=kanal]').fill('Signal, nur Notfall');
   await m.locator('[data-save]').click(); await p.waitForTimeout(600);
   const neu = letzte('absence_set');
+  await p.waitForTimeout(400);
+  pruefe('und leitet zur Übergabe der neuen Abwesenheit weiter', p.url().includes('uebergabe.html?id=abs-neu'), p.url());
   pruefe('Anlegen schickt absence_set mit allen fünf Angaben',
     !!neu && neu.nutzlast.person === 'Lea' && neu.nutzlast.art === 'sofort' && neu.nutzlast.kontakt === 'gespraech'
       && !!neu.nutzlast.bis_geschaetzt && neu.nutzlast.bis === null && neu.nutzlast.kanal === 'Signal, nur Notfall',
@@ -179,6 +186,36 @@ console.log('\n== Asana ohne Token ==');
   const q = await seite('/uebergabe.html?id=abs-2');
   pruefe('ohne bestätigte Zeilen kein Asana-Knopf', await q.locator('#asanaBtn').count() === 0);
   await q.close();
+}
+
+console.log('\n== Lückenfilter im Board (Befund 7.4) ==');
+{
+  frisch();
+  const p = await seite('/board.html?owner=Lea&luecke=1');
+  const titel = (await p.locator('.bcard').allInnerTexts()).join(' | ');
+  const karten = await p.locator('.bcard').count();
+  /* Lea hat zwei Themen ohne Stand: die Zeltwiese (auch ohne nächsten Schritt) und den Gastro-Partner
+     (Entscheidung und Schritt stehen da, der Stand fehlt). Beide gehören in den Lückenfilter, sonst keins. */
+  pruefe('genau Leas beide Lücken stehen da',
+    karten === 2 && titel.includes('Zeltwiese') && titel.includes('Gastro-Partner'), `${karten} Karten: ${titel.slice(0,90)}`);
+  pruefe('der Personenschalter ist sichtbar und trägt den Namen',
+    (await p.locator('#owWrap').innerText()).includes('Lea'));
+  await p.locator('#lueckeOn').uncheck(); await p.waitForTimeout(200);
+  const ohneLuecke = await p.locator('.bcard').count();
+  pruefe('ohne Lückenhaken zeigt er alle Themen von Lea', ohneLuecke > 1, `${ohneLuecke} Karten`);
+  await p.locator('#owOn').uncheck(); await p.waitForTimeout(200);
+  pruefe('ohne Personenhaken zeigt er alles', await p.locator('.bcard').count() >= ohneLuecke);
+  await p.close();
+}
+
+console.log('\n== Hinweis auf einen unvollständigen Korb (Befund 7.2) ==');
+{
+  frisch();
+  const p = await seite('/uebergabe.html?id=abs-2');
+  const hinweise = await p.locator('.ub-wache').allInnerTexts();
+  pruefe('die Wache steht da', hinweise.some(h => h.includes('Am Tag 4')));
+  pruefe('und der Hinweis auf die Obergrenze', hinweise.some(h => h.includes('Kandidaten') && h.includes('Obergrenze')));
+  await p.close();
 }
 
 console.log('\n== Für dich und Besprechung ==');
