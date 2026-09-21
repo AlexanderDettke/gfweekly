@@ -43,7 +43,7 @@ function gfCopy(text){ try{ navigator.clipboard.writeText(text); gfToast("In die
    gfKachel({icon,value,label,unit,tone,trend,href,title}): KPI-Kachel, Icon oben, Zahl unten (tabular), Beschriftung darunter. */
 function gfChips(name, options, cur, opts={}){
   const attr=opts.attr||`name="${name}"`, v0=(cur??"")+"";
-  const chips=options.map(o=>{ const [v,l]=Array.isArray(o)?o:[o,(o===""?"—":o)]; const on=v0===(v+""); return `<button type="button" class="chip${on?" on":""}${v==="__new"?" neu":""}" data-v="${gfEsc(v)}" aria-pressed="${on}">${gfEsc(l)}</button>`; }).join("");
+  const chips=options.map(o=>{ const [v,l]=Array.isArray(o)?o:[o,(o===""?"keine":o)]; const on=v0===(v+""); return `<button type="button" class="chip${on?" on":""}${v==="__new"?" neu":""}" data-v="${gfEsc(v)}" aria-pressed="${on}">${gfEsc(l)}</button>`; }).join("");
   return `<div class="fchips${opts.cls?" "+opts.cls:""}" role="group"${opts.label?` aria-label="${gfEsc(opts.label)}"`:""}><input type="hidden" ${attr} value="${gfEsc(v0)}">${chips}</div>`;
 }
 function gfChipsSet(input, value, fire=false){
@@ -84,7 +84,7 @@ function gfFmtInt(n){ return (Number(n)||0).toLocaleString("de-DE"); }
 function gfKachel(o){
   const tag=o.href?"a":"div", href=o.href?` href="${gfEsc(o.href)}"${/^https?:/.test(o.href)?' target="_blank" rel="noopener"':""}`:"";
   const trend=o.trend?`<span class="kk-trend ${o.trend}" aria-label="${o.trend==="up"?"steigt":o.trend==="down"?"fällt":"gleich"}">${GF_ZST[o.trend]}</span>`:"";
-  return `<${tag} class="kk${o.tone?" "+o.tone:""}${o.href?" link":""}"${href}${o.title?` title="${gfEsc(o.title)}"`:""}><span class="kk-i" aria-hidden="true">${GF_KK_ICON[o.icon]||GF_KK_ICON.zahl}</span><span class="kk-v"><span class="ht-num">${typeof o.value==="number"?gfFmtInt(o.value):gfEsc(o.value??"–")}</span>${o.unit?`<small>${gfEsc(o.unit)}</small>`:""}${trend}</span><span class="kk-l">${gfEsc(o.label)}</span></${tag}>`;
+  return `<${tag} class="kk${o.tone?" "+o.tone:""}${o.href?" link":""}"${href}${o.title?` title="${gfEsc(o.title)}"`:""}><span class="kk-i" aria-hidden="true">${GF_KK_ICON[o.icon]||GF_KK_ICON.zahl}</span><span class="kk-v"><span class="ht-num">${typeof o.value==="number"?gfFmtInt(o.value):gfEsc(o.value??"keine")}</span>${o.unit?`<small>${gfEsc(o.unit)}</small>`:""}${trend}</span><span class="kk-l">${gfEsc(o.label)}</span></${tag}>`;
 }
 
 /* ---- Theme (dark Standard / light), persistiert in localStorage ---- */
@@ -264,11 +264,11 @@ function gfDelegationMsg(t){
 /* Asana-fertiger Text (Option B). Echte API-Anbindung: siehe README + netlify/functions/asana.js */
 function gfAsanaText(t){
   return `Titel: ${t.title}\n`+
-         `Zuständig: ${t.delegate_to||t.owner||"—"}\n`+
+         `Zuständig: ${t.delegate_to||t.owner||"offen"}\n`+
          `Fällig: ${gfTomorrow()} (morgen)\n`+
-         `Kontext: ${t.short_description||(t.context||"").split("\n")[0]||"—"}\n`+
-         `Empfehlung: ${t.recommendation||"—"}\n`+
-         `Nächster Schritt: ${t.next_action||"—"}\n`+
+         `Kontext: ${t.short_description||(t.context||"").split("\n")[0]||"offen"}\n`+
+         `Empfehlung: ${t.recommendation||"offen"}\n`+
+         `Nächster Schritt: ${t.next_action||"offen"}\n`+
          `Quelle: Das Hohe Haus`;
 }
 
@@ -283,7 +283,7 @@ function gfTextModal(title, text, opts={}){
     <div class="modal-h"><h3>${gfEsc(title)}</h3><button class="icon-btn" data-x title="Schließen">✕</button></div>
     ${opts.pic?`<figure class="modal-pic"><img src="${GF_IMG[opts.pic]||opts.pic}" alt="${gfEsc(GF_IMG_ALT[opts.pic]||"")}"></figure>`:""}${opts.intro?`<p class="modal-intro">${opts.intro}</p>`:""}
     <textarea class="modal-text" readonly>${gfEsc(text)}</textarea>
-    <div class="modal-f"><button class="btn btn-primary" data-copy>Kopieren</button><a class="btn btn-ghost" href="${mailto}">Per Mail senden</a>${opts.extra||""}<button class="btn btn-ghost" data-x style="margin-left:auto">Schließen</button></div>
+    <div class="modal-f"><button class="btn btn-primary" data-copy>Kopieren</button><a class="btn btn-brand" href="${mailto}">Per Mail senden</a>${opts.extra||""}<button class="btn btn-brand" data-x style="margin-left:auto">Schließen</button></div>
   </div>`;
   m.classList.add("open");
   m.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>m.classList.remove("open"));
@@ -300,11 +300,11 @@ function gfFmtTime(d){ return new Date(d).toLocaleTimeString("de-DE",{hour:"2-di
 /* Protokolltext aus einem Besprechungs-Log: Einträge {title, outcome, decision, next_action, owner, until} */
 function gfProtocolText(meta, log, openTopics){
   const L=[]; const dur=meta.ended&&meta.started?Math.round((new Date(meta.ended)-new Date(meta.started))/60000):null;
-  L.push(`GF-Besprechung Wilde Möhre · ${gfFmtDay(meta.started||Date.now())}${meta.started?` · ${gfFmtTime(meta.started)}${meta.ended?"–"+gfFmtTime(meta.ended):""}`:""}${dur!=null?` (${dur} min)`:""}`);
+  L.push(`GF-Besprechung Wilde Möhre · ${gfFmtDay(meta.started||Date.now())}${meta.started?` · ${gfFmtTime(meta.started)}${meta.ended?" bis "+gfFmtTime(meta.ended):""}`:""}${dur!=null?` (${dur} min)`:""}`);
   if(meta.participants) L.push(`Teilnehmende: ${meta.participants}`);
   L.push("");
   const grp=(key,label,fmt)=>{ const items=log.filter(e=>e.outcome===key); if(!items.length) return; L.push(label); items.forEach((e,i)=>L.push(fmt(e,i+1))); L.push(""); };
-  grp("entschieden","Entscheidungen",(e,i)=>`${i}. ${e.title}: ${e.decision||"–"}${e.next_action?`
+  grp("entschieden","Entscheidungen",(e,i)=>`${i}. ${e.title}: ${e.decision||"offen"}${e.next_action?`
    Nächster Schritt: ${e.next_action}`:""}${e.owner?` (Verantwortung: ${e.owner})`:""}`);
   grp("in_klaerung","In Klärung",(e)=>`- ${e.title}${e.next_action?`: ${e.next_action}`:""}${e.owner?` (${e.owner})`:""}`);
   grp("erledigt","Erledigt",(e)=>`- ${e.title}`);
@@ -430,7 +430,7 @@ function gfNewsModal(x, opts={}){
       ${x.quote?`<blockquote>„${gfEsc(x.quote)}“</blockquote>`:""}
       <div class="tk-links">${x.source_url?`<a href="${gfEsc(x.source_url)}" target="_blank" rel="noopener">${gfEsc(x.source_title||"Quelle öffnen")} ↗</a>`:(x.source_title?`<span class="nw-srct">${gfEsc(x.source_title)}</span>`:"")}${topic?`<a href="board.html?topic=${topic.id}">Thema: ${gfEsc(topic.title.slice(0,60))}</a>`:""}${opts.links||""}</div>
     </div>
-    <div class="modal-f">${opts.actions||""}<button class="btn btn-ghost" data-x style="margin-left:auto">Schließen</button></div>
+    <div class="modal-f">${opts.actions||""}<button class="btn btn-brand" data-x style="margin-left:auto">Schließen</button></div>
   </div>`;
   m.classList.add("open");
   m.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>m.classList.remove("open"));
@@ -500,7 +500,7 @@ function gfTeamTrend(p){
   return null;
 }
 function gfTeamTrendHTML(t){
-  if(!t || t.cur==null) return `<span class="tm-none" title="Noch keine Einschätzung">–</span>`;
+  if(!t || t.cur==null) return `<span class="tm-none" title="Noch keine Einschätzung">keine</span>`;
   const d=(t.base!=null)?t.cur-t.base:null;
   const arrow=d==null?"":(Math.abs(d)<2?`<span class="tm-flat">·</span>`:(d>0?`<span class="tm-up">▲${d}</span>`:`<span class="tm-down">▼${Math.abs(d)}</span>`));
   const title=d==null?`Gesamtwert ${t.cur} (Stand ${gfTeamShortDate(t.curOn)})`:`${t.base} (${gfTeamShortDate(t.baseOn)}) → ${t.cur} (${gfTeamShortDate(t.curOn)})${t.draft?", Stand aus unbestätigtem Entwurf":""}`;

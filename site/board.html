@@ -4,14 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
-<meta name="theme-color" content="#17171a" />
+<meta name="theme-color" content="#171d18" />
 <title>Das Hohe Haus · Themen · Board</title>
 <meta name="description" content="Themen der Geschäftsleitung als Board, Kacheln oder Liste. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=22" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=22" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=22" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=22" />
-<link rel="stylesheet" href="/assets/styles.css?v=22" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=23" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=23" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=23" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=23" />
+<link rel="stylesheet" href="/assets/styles.css?v=23" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -44,7 +44,7 @@
     <label class="chk"><input type="checkbox" id="showRec" /> wiederkehrende zeigen</label>
     <label class="chk"><input type="checkbox" id="showDone" /> erledigte zeigen</label>
     <button class="btn btn-sm btn-brand" id="newTopic">＋ Thema</button>
-    <button class="btn btn-sm btn-ghost" id="tidyAll" title="Themen, deren Text noch Marker wie „Titel:“, „Vorschlag:“ oder „Quelle:“ enthält">Aufräumen <span class="nbadge" id="tidyCount" hidden></span></button>
+    <button class="btn btn-sm btn-brand" id="tidyAll" title="Themen, deren Text noch Marker wie „Titel:“, „Vorschlag:“ oder „Quelle:“ enthält">Aufräumen <span class="nbadge" id="tidyCount" hidden></span></button>
     <a class="btn btn-sm btn-primary" id="meetBtn" href="besprechung.html" title="Agenda der GF auf der Seite Besprechung">Besprechung</a>
   </div>
 
@@ -64,9 +64,9 @@
 <div class="toast" id="toast"></div>
 <div class="modal-back" id="tidyModal"></div>
 
-<script src="/assets/core.js?v=22"></script>
-<script src="/assets/game.js?v=22"></script>
-<script src="/assets/eggs.js?v=22" defer></script>
+<script src="/assets/core.js?v=23"></script>
+<script src="/assets/game.js?v=23"></script>
+<script src="/assets/eggs.js?v=23" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const LANES=[["zu_besprechen","Zu besprechen","var(--accent)"],["in_klaerung","In Klärung","var(--warn)"],["entschieden","Entschieden · nächster Schritt","var(--info)"],["erledigt","Erledigt","var(--pos)"]];
@@ -196,7 +196,7 @@ function markDirty(){ P_DIRTY=true; setPStatus("Ungespeichert …","dirty"); cle
 function refreshPanelMeta(t){
   $("#pTitle").textContent=t.title;
   $("#pBody").querySelectorAll("[data-lane]").forEach(b=>b.classList.toggle("on",b.dataset.lane===t.board_lane));
-  const m=$("#pMeta"); if(m) m.innerHTML=`angelegt ${new Date(t.created_at).toLocaleDateString("de-DE")} von ${gfEsc(t.created_by||"–")} · zuletzt geändert ${new Date(t.updated_at).toLocaleDateString("de-DE")}${t.last_discussed?` · zuletzt besprochen ${gfEsc(gfFmtShort(t.last_discussed))}`:""}`;
+  const m=$("#pMeta"); if(m) m.innerHTML=`angelegt ${new Date(t.created_at).toLocaleDateString("de-DE")} von ${gfEsc(t.created_by||"unbekannt")} · zuletzt geändert ${new Date(t.updated_at).toLocaleDateString("de-DE")}${t.last_discussed?` · zuletzt besprochen ${gfEsc(gfFmtShort(t.last_discussed))}`:""}`;
 }
 /* Speichert alle geänderten Felder (plus optionale Zusatzfelder). Getippter Text bleibt im Panel stehen. */
 async function savePanel(opts={}){
@@ -239,9 +239,9 @@ function openPanel(id){
     <div class="site-meta" id="pMeta"></div>`;
   $("#pFoot").innerHTML=`<div class="pstatus" id="pStatus"></div>
     <button class="btn btn-primary" id="pSave">Speichern &amp; schließen</button>
-    <button class="btn btn-ghost" id="pTidy" title="Kontext in Titel, Entscheidung, Nächster Schritt und Notizen aufteilen">Bereinigen</button>
-    <button class="btn btn-ghost" id="pDiscussed" title="Setzt „zuletzt besprochen“ auf heute">heute besprochen</button>
-    <button class="btn btn-ghost del" id="pDelete" style="margin-left:auto;color:var(--crit)">Löschen</button>`;
+    <button class="btn btn-brand" id="pTidy" title="Kontext in Titel, Entscheidung, Nächster Schritt und Notizen aufteilen">Bereinigen</button>
+    <button class="btn btn-brand" id="pDiscussed" title="Setzt „zuletzt besprochen“ auf heute">heute besprochen</button>
+    <button class="btn btn-brand del" id="pDelete" style="margin-left:auto;color:var(--crit-text)">Löschen</button>`;
   refreshPanelMeta(t);
   const body=$("#pBody");
   body.oninput=e=>{ if(e.target.matches("[name]")) markDirty(); };
@@ -279,7 +279,7 @@ async function openTidy(id, preset){
         <div class="tidy-old"><label>bisher</label><div class="tidy-txt">${(t[f]||"").trim()?gfEsc(t[f]):"<i>leer</i>"}</div></div>
         <div class="tidy-new"><label>neu</label><textarea data-f="${f}" rows="${f==="context"?7:(f==="title"||f==="owner"||f==="short_description"?2:3)}">${gfEsc(ch[f])}</textarea></div>
       </div>`).join("")||`<div class="tidy-none">Nichts aufzuteilen.</div>`}</div>
-    <div class="modal-f"><button class="btn btn-primary" data-apply ${fields.length?"":'disabled title="Nichts zu übernehmen: kein Feld hat sich geändert"'}>Übernehmen</button><button class="btn btn-ghost" data-ai title="Claude teilt den Text in die Felder auf">KI-Vorschlag</button><span class="tidy-note" data-note></span><button class="btn btn-ghost" data-x style="margin-left:auto">Abbrechen</button></div>
+    <div class="modal-f"><button class="btn btn-primary" data-apply ${fields.length?"":'disabled title="Nichts zu übernehmen: kein Feld hat sich geändert"'}>Übernehmen</button><button class="btn btn-brand" data-ai title="Claude teilt den Text in die Felder auf">KI-Vorschlag</button><span class="tidy-note" data-note></span><button class="btn btn-brand" data-x style="margin-left:auto">Abbrechen</button></div>
   </div>`;
   m.classList.add("open");
   const close=()=>m.classList.remove("open");
@@ -366,7 +366,7 @@ function renderMeet(){
   const head=`<div class="meet-h">
       <div class="meet-timer" id="meetTimer">00:00</div>
       <div class="meet-meta"><b>Besprechung</b> · ${gfEsc(MEET.participants)} · ${MEET.log.length} von ${MEET.queue.length} behandelt · ${nDec} Entscheidung${nDec===1?"":"en"}</div>
-      <div class="meet-actions"><button class="btn btn-sm btn-ghost" id="meetPrev" title="Vorheriges Thema">◀</button><button class="btn btn-sm btn-ghost" id="meetNext" title="Nächstes offenes Thema">▶</button><button class="btn btn-sm btn-primary" id="meetEnd">Beenden · Protokoll</button></div>
+      <div class="meet-actions"><button class="btn btn-sm btn-brand" id="meetPrev" title="Vorheriges Thema">◀</button><button class="btn btn-sm btn-brand" id="meetNext" title="Nächstes offenes Thema">▶</button><button class="btn btn-sm btn-primary" id="meetEnd">Beenden · Protokoll</button></div>
     </div>`;
   let body="";
   if(!cur || !pending.length){

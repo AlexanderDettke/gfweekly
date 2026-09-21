@@ -4,13 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
-<meta name="theme-color" content="#17171a" />
+<meta name="theme-color" content="#171d18" />
 <title>Das Hohe Haus · Besprechung</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=22" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=22" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=22" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=22" />
-<link rel="stylesheet" href="/assets/styles.css?v=22" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=23" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=23" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=23" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=23" />
+<link rel="stylesheet" href="/assets/styles.css?v=23" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -36,7 +36,7 @@
   <section class="meet" id="meet" hidden></section>
 
   <section class="fd" id="bsAg" aria-label="Agenda">
-    <div class="fd-h"><h2>Agenda</h2><span class="fd-n" id="bsAgN"></span><span class="line"></span><a class="btn btn-sm btn-ghost" href="aufraeumen.html">Aufräumen</a><button class="btn btn-sm btn-primary" id="meetBtn">Besprechung starten</button></div>
+    <div class="fd-h"><h2>Agenda</h2><span class="fd-n" id="bsAgN"></span><span class="line"></span><a class="btn btn-sm btn-brand" href="aufraeumen.html">Aufräumen</a><button class="btn btn-sm btn-primary" id="meetBtn">Besprechung starten</button></div>
     <div class="bs-list" id="bsAgL"><div class="loading">lädt …</div></div>
   </section>
 
@@ -47,9 +47,9 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=22"></script>
-<script src="/assets/game.js?v=22"></script>
-<script src="/assets/eggs.js?v=22" defer></script>
+<script src="/assets/core.js?v=23"></script>
+<script src="/assets/game.js?v=23"></script>
+<script src="/assets/eggs.js?v=23" defer></script>
 <script>
 /* V22d · Besprechung. Agenda = alle Einträge mit gate = gf (Themen und Kandidaten), sortiert nach Frist, dann Priorität.
    Je Punkt vier Zeilen: Frage, Stand, Vorschlag, Frist; fehlt eine, steht dort das Wort „fehlt“.
@@ -139,7 +139,7 @@ function renderMeet(){
   const head=`<div class="meet-h">
       <div class="meet-timer" id="meetTimer">00:00</div>
       <div class="meet-meta"><b>Besprechung</b> · ${gfEsc(MEET.participants)} · ${MEET.log.length} von ${agenda().length} behandelt · ${nDec} Entscheidung${nDec===1?"":"en"}</div>
-      <div class="meet-actions"><button class="btn btn-sm btn-ghost" id="meetNext" title="Nächster offener Punkt">▶</button><button class="btn btn-sm btn-primary" id="meetEnd">Beenden · Protokoll</button></div>
+      <div class="meet-actions"><button class="btn btn-sm btn-brand" id="meetNext" title="Nächster offener Punkt">▶</button><button class="btn btn-sm btn-primary" id="meetEnd">Beenden · Protokoll</button></div>
     </div>`;
   let body="";
   if(!cur){

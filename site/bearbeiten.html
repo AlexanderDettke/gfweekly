@@ -4,13 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
-<meta name="theme-color" content="#17171a" />
+<meta name="theme-color" content="#171d18" />
 <title>Das Hohe Haus · Bearbeiten</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=22" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=22" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=22" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=22" />
-<link rel="stylesheet" href="/assets/styles.css?v=22" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=23" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=23" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=23" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=23" />
+<link rel="stylesheet" href="/assets/styles.css?v=23" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -55,7 +55,7 @@
   </div>
 
   <div id="peopleView" style="display:none">
-    <p style="color:var(--muted);font-size:13.5px;margin:4px 2px 14px">Editierbares Team-Verzeichnis. Vorbefüllt mit vorhandenen Adressen &amp; den vorgeschlagenen Personen – <b>bitte ergänzen/korrigieren</b>. Es werden keine Adressen erfunden.</p>
+    <p style="color:var(--muted);font-size:13.5px;margin:4px 2px 14px">Editierbares Team-Verzeichnis. Vorbefüllt mit vorhandenen Adressen &amp; den vorgeschlagenen Personen, <b>bitte ergänzen/korrigieren</b>. Es werden keine Adressen erfunden.</p>
     <div id="peopleList"></div>
     <div class="add" style="margin-top:14px"><div class="row">
       <input class="title" id="npName" placeholder="Name" style="min-width:140px" />
@@ -69,9 +69,9 @@
 <datalist id="peopleDL"></datalist>
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=22"></script>
-<script src="/assets/game.js?v=22"></script>
-<script src="/assets/eggs.js?v=22" defer></script>
+<script src="/assets/core.js?v=23"></script>
+<script src="/assets/game.js?v=23"></script>
+<script src="/assets/eggs.js?v=23" defer></script>
 <script>
 let topics=[], people=[], linksByItem={}, openIds=new Set();
 const $=s=>document.querySelector(s);
@@ -91,8 +91,8 @@ function renderDL(){ $("#peopleDL").innerHTML=people.filter(p=>p.assignable!==fa
 document.querySelectorAll("#tabs .seg").forEach(s=>s.onclick=()=>{document.querySelectorAll("#tabs .seg").forEach(x=>x.classList.remove("on"));s.classList.add("on");$("#itemsView").style.display=s.dataset.v==="items"?"block":"none";$("#peopleView").style.display=s.dataset.v==="people"?"block":"none";});
 $("#reload").onclick=async()=>{try{await loadAll();gfToast("Aktualisiert");}catch(e){gfToast("Fehler");}};
 
-function opt(v,cur){ return `<option value="${v}" ${cur===v?"selected":""}>${v||"—"}</option>`; }
-const CHIP_LBL={einmalig:"Einmalig",recurring:"Wiederkehrend",offen:"Offen",in_klaerung:"In Klärung",erledigt:"Erledigt",hoch:"Hoch",mittel:"Mittel",niedrig:"Niedrig",kritisch:"Kritisch",manuell:"Manuell",ki:"KI",pruefen:"Prüfen",bestaetigt:"Bestätigt","":"—"};
+function opt(v,cur){ return `<option value="${v}" ${cur===v?"selected":""}>${v||"keine"}</option>`; }
+const CHIP_LBL={einmalig:"Einmalig",recurring:"Wiederkehrend",offen:"Offen",in_klaerung:"In Klärung",erledigt:"Erledigt",hoch:"Hoch",mittel:"Mittel",niedrig:"Niedrig",kritisch:"Kritisch",manuell:"Manuell",ki:"KI",pruefen:"Prüfen",bestaetigt:"Bestätigt","":"keine"};
 function selField(label,name,cur,opts){ return `<div class="fld"><label>${label}</label>${gfChips(name,opts.map(o=>[o,CHIP_LBL[o]??o]),cur||"",{attr:`data-f="${name}"`,label,cls:"compact"})}</div>`; }
 const PEOPLEFIELDS=["owner","delegate_to","involved","needs_input_from","reviewer","approver"];
 function txtField(label,name,cur,full){ return `<div class="fld ${full?'ffull':''}"><label>${label}</label><input data-f="${name}" value="${gfEsc(cur)}" ${PEOPLEFIELDS.includes(name)?'list="peopleDL"':''}></div>`; }
