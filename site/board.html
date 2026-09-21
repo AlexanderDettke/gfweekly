@@ -80,7 +80,10 @@ const params=new URLSearchParams(location.search);
 let VIEW=params.get("view")==="kacheln"?"kacheln":"board";
 let GROUP=localStorage.getItem("gf_board_group")||"ablauf";
 let SHOW_REC=localStorage.getItem("gf_board_rec")==="1", SHOW_DONE=localStorage.getItem("gf_board_done")==="1";
-let Q="", DRAG=null, UNDO=null, UNDO_T=null;
+/* V24b: ?q= sucht vor, ?person= gruppiert nach Person und sucht nach ihr. So führt der Weg aus der
+   Übergabe („lückenhafte Themen“) wirklich zu den Themen dieser Person. */
+let Q=(params.get("q")||params.get("person")||"").trim().toLowerCase(), DRAG=null, UNDO=null, UNDO_T=null;
+if(params.get("person")) GROUP="person";
 
 /* ---- Datum-Helfer ---- */
 const NOW=new Date(); const today=new Date(NOW.getFullYear(),NOW.getMonth(),NOW.getDate());
@@ -314,6 +317,7 @@ $("#groupSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; GR
 $("#showRec").onchange=e=>{ SHOW_REC=e.target.checked; localStorage.setItem("gf_board_rec",SHOW_REC?"1":"0"); render(); };
 $("#showDone").onchange=e=>{ SHOW_DONE=e.target.checked; localStorage.setItem("gf_board_done",SHOW_DONE?"1":"0"); render(); };
 $("#q").oninput=e=>{ Q=e.target.value.trim().toLowerCase(); render(); };
+if(Q) $("#q").value=Q;
 $("#newTopic").onclick=async()=>{ const title=prompt("Neues Thema (Titel):"); if(!title) return; try{ const d=await gfApi("add",{title,priority:"mittel",created_by:gfWho(),board_lane:"zu_besprechen"}); TOPICS.push(d.topic); render(); openPanel(d.topic.id); }catch(e){ gfToast("Fehler: "+e.message); } };
 
 /* ---- Verschieben per Menü (Touch, Tastatur) ---- */

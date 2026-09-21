@@ -236,8 +236,9 @@ async function loadLast(){
 async function ladeVertretung(){
   try{
     const a=await gfApi("absence_list",{});
-    for(const abs of (a.absences||[]).filter(x=>x.status==="aktiv"||x.status==="geplant")){
+    for(const abs of (a.absences||[]).filter(x=>(x.status==="aktiv"||x.status==="geplant") && x.person!==gfWho())){
       const l=await gfApi("handover_list",{absence_id:abs.id, status:["vorschlag","bestaetigt"]});
+      /* Rot heißt: gehört der GF gemeinsam, liegt also in dieser Runde bei mir. */
       for(const x of (l.items||[])) if(x.ampel==="rot") VERTRETUNG[x.ref_id]=abs.person;
     }
   }catch(e){ VERTRETUNG={}; }

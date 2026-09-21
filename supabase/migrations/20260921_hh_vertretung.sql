@@ -126,6 +126,13 @@ comment on column public.gfweekly_topics.handover_id is
 -- unter dem Namen 'gfweekly_password'. Fehlt das Secret, tut die Funktion nichts und sagt es im Protokoll;
 -- der Job läuft dann als Leerlauf, bis das Secret angelegt ist (Fallback: Abschnitt H des täglichen Auftrags).
 create extension if not exists pg_net;   -- legt Schema net an
+-- pg_cron muss im Projekt aktiv sein (Supabase: Database, Extensions). Ohne die Erweiterung bricht die
+-- Migration hier ab, statt später an cron.schedule mit einer unverständlichen Meldung zu scheitern.
+do $$ begin
+  if not exists (select 1 from pg_extension where extname = 'pg_cron') then
+    raise exception 'pg_cron fehlt: bitte im Supabase-Projekt aktivieren, dann diese Migration erneut laufen lassen.';
+  end if;
+end $$;
 
 create or replace function public.hh_absence_tick()
 returns void
@@ -157,9 +164,3 @@ comment on function public.hh_absence_tick() is
 select cron.unschedule('hh_absence_tick') where exists (select 1 from cron.job where jobname = 'hh_absence_tick');
 select cron.schedule('hh_absence_tick', '40 4 * * *', $$select public.hh_absence_tick();$$);
 
--- Nachtrag 21.09.2026 (aus der Review): der Zeitpunkt der Rückkehr gehört in ein eigenes Feld.
--- Aus updated_at gerechnet konnten die drei Tage bis „beendet“ entfallen, weil updated_at älter sein kann.
-alter table public.gfweekly_absences
-  add column if not exists rueckkehr_at timestamptz;
-comment on column public.gfweekly_absences.rueckkehr_at is
-  'Das Hohe Haus V24a: Zeitpunkt des Wechsels auf status rueckkehr. Drei Tage später endet die Abwesenheit von selbst.';

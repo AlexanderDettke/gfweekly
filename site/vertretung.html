@@ -109,8 +109,12 @@ function renderAbs(){
   $("#absN").textContent=offen.length?`${offen.length} offen`:"";
   const el=$("#absList");
   if(!ABS.length){ el.innerHTML=`<div class="empty soft">Niemand ist abwesend gemeldet. Der Knopf oben legt eine Abwesenheit an, der Korb baut sich danach von selbst.</div>`; return; }
-  el.innerHTML = offen.map(absKarte).join("")
-    + (zu.length?`<details class="nw-sec"><summary><h2>Beendet</h2><span class="hint">${zu.length}</span></summary><div class="vt-list" style="padding:10px 0">${zu.map(absKarte).join("")}</div></details>`:"");
+  const gruppe=(titel,liste,offenAuf)=>liste.length
+    ? `<details class="nw-sec"${offenAuf?" open":""}><summary><h2>${titel}</h2><span class="hint">${liste.length}</span><span class="chev" aria-hidden="true"></span></summary>
+       <div class="vt-list" style="padding:10px 0">${liste.map(absKarte).join("")}</div></details>` : "";
+  const nach=k=>ABS.filter(a=>a.status===k);
+  el.innerHTML = gruppe("Aktiv",nach("aktiv"),true) + gruppe("Geplant",nach("geplant"),true)
+    + gruppe("Rückkehr",nach("rueckkehr"),true) + gruppe("Beendet",nach("beendet"),false);
 }
 
 function depZeile(d, personen, bereiche){
@@ -146,7 +150,7 @@ function renderStat(){
       <div class="vt-head">${gfAvatarTag(p,"av")}<h3>${p}</h3><span class="vt-when">${wert==null?"keine Themen":wert+" Prozent"}</span></div>
       <div class="bar"><i style="width:${wert||0}%"></i></div>
       <div class="fd-muted">${s.themen||0} Themen, davon ${s.ohne_stand||0} ohne Stand und ${s.ohne_schritt||0} ohne nächsten Schritt.</div>
-      ${(s.ohne_stand||s.ohne_schritt)?`<a class="linkish" href="cockpit.html">Themen in der Liste ansehen</a>`:""}
+      ${(s.ohne_stand||s.ohne_schritt)?`<a class="linkish" href="board.html?person=${encodeURIComponent(p)}">Themen von ${gfEsc(p)} im Board ansehen</a>`:""}
     </div>`;
   }).join("");
 }
@@ -207,14 +211,16 @@ document.addEventListener("click",async e=>{
   if(add){ DEPS.push({ id:"neu-"+Date.now(), person:add.dataset.person, bereich:"", vertretung:"", vollmacht:"", neu:true }); renderDeps(); return; }
   const del=e.target.closest('[data-act="depdel"]');
   if(del){ const d=DEPS.find(x=>x.id===del.dataset.id); if(!d) return;
-    try{ await gfApi("deputies_set",{ person:d.person, bereich:d.bereich, vertretung:d.vertretung, active:false }); gfToast("Zeile abgeschaltet"); await load(); }
+    try{ await gfApi("deputies_set",{ id:d.id, person:d.person, bereich:d.bereich, vertretung:d.vertretung, active:false }); gfToast("Zeile abgeschaltet"); await load(); }
     catch(err){ gfToast("Fehler: "+err.message); } return; }
 });
 async function depSave(d){
   if(!d.bereich || !d.vertretung) return;
   const p={ person:d.person, bereich:d.bereich, vertretung:d.vertretung, vollmacht:d.vollmacht||"" };
   if(!d.neu) p.id=d.id;
-  try{ const r=await gfApi("deputies_set",p); if(d.neu && r.deputy){ d.id=r.deputy.id; d.neu=false; } gfToast("Gespeichert"); }
+  try{ const r=await gfApi("deputies_set",p);
+    if(d.neu && r.deputy){ d.id=r.deputy.id; d.neu=false; renderDeps(); }   // die Zeile trägt jetzt ihre echte Kennung
+    gfToast("Gespeichert"); }
   catch(e){ gfToast(e.message && e.message.includes("schon eine Zeile") ? "Für diesen Bereich gibt es schon eine Zeile." : "Fehler: "+e.message); }
 }
 let tippTimer;

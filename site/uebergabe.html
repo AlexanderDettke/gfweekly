@@ -267,7 +267,8 @@ async function nachAsana(){
   const b=$("#asanaBtn"); if(b){ b.disabled=true; b.textContent="läuft …"; }
   try{
     const d=await gfApi("asana_export",{ absence_id:ABSENCE.id, by:gfWho() });
-    gfToast(`Asana: ${d.neu} neu, ${d.aktualisiert} aktualisiert`);
+    gfToast(`Asana: ${d.neu} neu, ${d.aktualisiert} aktualisiert`
+      + ((d.ohne_zuweisung||[]).length ? ` · ohne Zuweisung: ${d.ohne_zuweisung.join(", ")}` : ""));
     if(d.url) window.open(d.url,"_blank","noopener");
     await protLaden();
   }catch(e){ gfToast(e.message && e.message.includes("ASANA_TOKEN") ? "Asana ist noch nicht eingerichtet, das Token fehlt." : "Fehler: "+(e.message||"Asana")); }

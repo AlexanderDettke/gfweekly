@@ -48,12 +48,18 @@ await ctx.route('**/functions/v1/**', async (route) => {
 });
 const letzte = (action) => [...gesendet].reverse().find(x => x.action === action);
 /* Jede Probe beginnt mit leerem Verlauf, sonst bestätigt ein alter Aufruf einen neuen Fall. */
-const frisch = () => { gesendet.length = 0; meldungen.length = 0; };
+const frisch = () => { gesendet.length = 0; };   // Konsolenmeldungen bleiben stehen, sie werden am Ende bewertet
 const meldungen = [];
 const seite = async (url) => {
   const p = await ctx.newPage();
   p.on('dialog', d => d.accept());
-  p.on('console', m => { if (m.type() === 'error') meldungen.push(m.text()); });
+  p.on('console', m => {
+    if (m.type() !== 'error') return;
+    /* Eine abgefangene Fehlerantwort ist gewollt (Asana ohne Token). Der Browser meldet sie trotzdem;
+       das ist keine Meldung der Seite und zählt hier nicht. */
+    if (/Failed to load resource: the server responded with a status of 4\d\d/.test(m.text())) return;
+    meldungen.push(m.text());
+  });
   p.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
   await p.goto(BASE + url, { waitUntil:'load' }); await p.waitForTimeout(700); return p;
 };

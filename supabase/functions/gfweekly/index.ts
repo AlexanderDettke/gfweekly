@@ -510,9 +510,10 @@ async function handoverItems(absence: any){
   const von = absence.von as string, ende = absEnde(absence), heute = heuteBerlin();
   const items: any[] = [];
 
-  const { data: themen } = await admin.from('gfweekly_topics')
+  const { data: themen, error: e1 } = await admin.from('gfweekly_topics')
     .select('id,title,short_description,context,decision,notes,next_action,owner,involved,priority,relevance,board_lane,gate,gate_frist,archived')
-    .eq('archived', false).limit(500);
+    .eq('archived', false).limit(2000);
+  if (e1) throw new Error('Themen konnten nicht gelesen werden: '+e1.message);
   for (const x of (themen || [])) {
     const frist = x.gate_frist || null;
     /* Fenster der Abwesenheit. Überfälliges zählt mit, denn es bleibt liegen, solange niemand da ist. */
@@ -525,18 +526,20 @@ async function handoverItems(absence: any){
       priority:x.priority, relevance:x.relevance, board_lane:x.board_lane, gate:x.gate });
   }
 
-  const { data: kandidaten } = await admin.from('gfweekly_news')
+  const { data: kandidaten, error: e2 } = await admin.from('gfweekly_news')
     .select('id,title,body,quote,relevance,strand,who,source,source_title,source_url,happened_at,gate,gate_frist')
-    .eq('kind','kandidat').eq('status','neu').eq('gate', gate).limit(300);
+    .eq('kind','kandidat').eq('status','neu').eq('gate', gate).limit(2000);
+  if (e2) throw new Error('Kandidaten konnten nicht gelesen werden: '+e2.message);
   for (const x of (kandidaten || [])) {
     items.push({ kind:'kandidat', ref_id:x.id, title:x.title, strand:x.strand, frist:x.gate_frist || null,
       body:x.body, quote:x.quote, relevance:x.relevance, who:x.who, source:x.source, source_title:x.source_title,
       source_url:x.source_url, gate:x.gate });
   }
 
-  const { data: meilen } = await admin.from('gfweekly_milestones')
+  const { data: meilen, error: e3 } = await admin.from('gfweekly_milestones')
     .select('id,title,description,date_from,date_to,zeitraum,strand,owner,status,archived')
-    .eq('archived', false).not('status','in','("erreicht","abgesagt")').limit(200);
+    .eq('archived', false).not('status','in','("erreicht","abgesagt")').limit(1000);
+  if (e3) throw new Error('Meilensteine konnten nicht gelesen werden: '+e3.message);
   for (const x of (meilen || [])) {
     const frist = x.date_from || null;
     if (!frist || frist < von || frist > ende) continue;
@@ -559,8 +562,9 @@ async function handoverItems(absence: any){
     }
   }
 
-  const { data: partner } = await admin.from('hh_partner_stand')
-    .select('partner_id,name,lane,stage,owner,next_action,target_on,waiting_for,signal,overdue').limit(300);
+  const { data: partner, error: e4 } = await admin.from('hh_partner_stand')
+    .select('partner_id,name,lane,stage,owner,next_action,target_on,waiting_for,signal,overdue').limit(1000);
+  if (e4) throw new Error('Partnerstand konnte nicht gelesen werden: '+e4.message);
   for (const x of (partner || [])) {
     const mein = whoNorm(x.owner) === person || (x.owner || '').toLowerCase() === 'together';
     if (!mein) continue;
@@ -571,16 +575,23 @@ async function handoverItems(absence: any){
       next_action:x.next_action, waiting_for:x.waiting_for, signal:x.signal, stage:x.stage, owner:x.owner, who:x.owner, gate:null });
   }
 
-  const { data: termine } = await admin.from('gfweekly_news')
+  /* Einen Tag Rand holen und dann nach dem Berliner Kalendertag filtern: UTC-Grenzen schneiden sonst
+     Termine am Rand ab oder nehmen fremde mit. */
+  const { data: termine, error: e5 } = await admin.from('gfweekly_news')
     .select('id,title,body,who,happened_at,source_url,source_title,strand,source_ref')
-    .eq('source','kalender').gte('happened_at', von+'T00:00:00Z').lte('happened_at', ende+'T23:59:59Z').limit(300);
+    .eq('source','kalender').gte('happened_at', addDays(von,-1)+'T00:00:00Z').lte('happened_at', addDays(ende,1)+'T23:59:59Z').limit(2000);
+  if (e5) throw new Error('Termine konnten nicht gelesen werden: '+e5.message);
   for (const x of (termine || [])) {
+    const tag = new Date(x.happened_at).toLocaleDateString('sv-SE', { timeZone:'Europe/Berlin' });
+    if (tag < von || tag > ende) continue;
     if (whoNorm(x.who) !== person && !(x.who || '').toLowerCase().includes(person.toLowerCase())) continue;
     const kennung = (x.source_ref || '').startsWith('cal:') ? x.source_ref : 'cal:' + x.id;
-    items.push({ kind:'termin', ref_id:kennung, title:x.title, strand:x.strand, frist:(x.happened_at||'').slice(0,10),
+    items.push({ kind:'termin', ref_id:kennung, title:x.title, strand:x.strand, frist:tag,
       body:x.body, who:vornamen(x.who), source_url:x.source_url, gate:null });
   }
-  return items;
+  /* Ein Vorgang, eine Zeile: derselbe Termin kann als mehrere Neuigkeiten vorliegen. */
+  const gesehen = new Set<string>();
+  return items.filter(x => { const k = x.kind+'|'+x.ref_id; if (gesehen.has(k)) return false; gesehen.add(k); return true; });
 }
 
 /* Baut den Korb neu: bewertet jede Zeile, legt neue an, ergänzt bestehende. Bestätigte Zeilen bleiben unangetastet,
@@ -703,21 +714,29 @@ async function asanaSync(absence: any){
   if (!ASANA_TOKEN || !absence.asana_project_gid) return { erledigt:0, kommentare:0, fehler:0 };
   const seit = absence.asana_synced_at || absence.created_at || new Date(Date.now()-7*86400000).toISOString();
   const laufBeginn = new Date().toISOString();
-  const { data: rows } = await admin.from('gfweekly_handover').select('*').eq('absence_id', absence.id).not('asana_gid','is',null);
+  const { data: rows, error: le } = await admin.from('gfweekly_handover').select('*').eq('absence_id', absence.id).not('asana_gid','is',null);
+  if (le) return { erledigt:0, kommentare:0, fehler:1 };
+  /* Schon übernommene Kommentare stehen mit ihrer Asana-Kennung im Protokoll und kommen nicht zweimal. */
+  const { data: schon } = await admin.from('gfweekly_handover_log').select('text').eq('absence_id', absence.id).eq('art','asana');
+  const bekannt = new Set((schon || []).map((l: any) => (String(l.text).match(/\[asana:(\d+)\]/) || [])[1]).filter(Boolean));
   let erledigt = 0, kommentare = 0, fehler = 0;
   for (const row of (rows || [])) {
     let aufgabe: any = null;
     try { aufgabe = await asana(`/tasks/${row.asana_gid}?opt_fields=completed,completed_at,name`); } catch (_e) { fehler++; continue; }
     if (aufgabe?.completed && row.status !== 'erledigt') {
-      await admin.from('gfweekly_handover').update({ status:'erledigt', updated_at:new Date().toISOString() }).eq('id', row.id);
-      await handoverLog(absence.id, 'erledigt', `${row.title}: in Asana erledigt.`, 'asana', row.id);
-      erledigt++;
+      const { error } = await admin.from('gfweekly_handover').update({ status:'erledigt', updated_at:new Date().toISOString() }).eq('id', row.id);
+      if (error) { fehler++; }
+      else { await handoverLog(absence.id, 'erledigt', `${row.title}: in Asana erledigt.`, 'asana', row.id); erledigt++; }
     }
     let stories: any[] = [];
-    try { stories = await asana(`/tasks/${row.asana_gid}/stories?opt_fields=text,created_at,type,created_by.name`) || []; } catch (_e) { fehler++; continue; }
+    try { stories = await asana(`/tasks/${row.asana_gid}/stories?opt_fields=gid,text,created_at,type,created_by.name`) || []; } catch (_e) { fehler++; continue; }
     for (const s of stories) {
-      if (s.type !== 'comment' || !s.created_at || s.created_at <= seit) continue;
-      await handoverLog(absence.id, 'asana', `${row.title}: ${(s.created_by?.name || 'Asana')} schreibt „${(s.text||'').slice(0,400)}“.`, 'asana', row.id);
+      if (s.type !== 'comment' || !s.created_at) continue;
+      if (s.created_at <= seit || s.created_at > laufBeginn) continue;   // genau das Fenster dieses Laufs
+      if (s.gid && bekannt.has(String(s.gid))) continue;                 // schon übernommen
+      await handoverLog(absence.id, 'asana',
+        `[asana:${s.gid || '0'}] ${row.title}: ${(s.created_by?.name || 'Asana')} schreibt „${(s.text||'').slice(0,400)}“.`, 'asana', row.id);
+      if (s.gid) bekannt.add(String(s.gid));
       kommentare++;
     }
   }
@@ -1361,6 +1380,7 @@ Deno.serve(async (req: Request) => {
         if (it.cluster !== undefined && HO_CLUSTER.includes(it.cluster)) patch.cluster = it.cluster;
         if (it.ampel !== undefined && HO_AMPEL.includes(it.ampel)) patch.ampel = it.ampel;
         if (it.vertretung !== undefined) patch.vertretung = (it.vertretung ?? '').toString().slice(0,120) || null;
+        if (it.ampel === 'ruht') patch.vertretung = null;   // was ruht, wird nicht vertreten
         if (it.frist !== undefined) patch.frist = it.frist || null;
         if (it.regel_note !== undefined) patch.regel_note = (it.regel_note ?? '').toString().slice(0,500) || null;
         patch.status = (it.status !== undefined && HO_STATUS.includes(it.status)) ? it.status : 'bestaetigt';
@@ -1384,8 +1404,14 @@ Deno.serve(async (req: Request) => {
             themenPatch.gate = g || 'team';
             themenPatch.gate_by = by; themenPatch.gate_at = new Date().toISOString();
             themenPatch.gate_note = `in Vertretung für ${absence.person}`;
+          } else {
+            /* Keine Vertretung mehr: der Ausgang gehört wieder der abwesenden Person, sonst bliebe das Thema
+               bei jemandem hängen, der es nicht mehr hat. */
+            themenPatch.owner_backup = null;
+            themenPatch.gate = absGate(absence.person) || 'gf';
+            themenPatch.gate_by = by; themenPatch.gate_at = new Date().toISOString();
+            themenPatch.gate_note = `wieder bei ${absence.person}`;
           }
-          else { themenPatch.owner_backup = null; }
           const { error: tf } = await admin.from('gfweekly_topics').update(themenPatch).eq('id', neu.ref_id);
           if (tf) return json({ error:'Thema konnte nicht nachgezogen werden: '+tf.message },500);
         }
@@ -1404,12 +1430,11 @@ Deno.serve(async (req: Request) => {
       const { data: row } = await admin.from('gfweekly_handover').select('*').eq('id', t.id).single();
       if (!row) return json({ error:'Zeile fehlt' },404);
       const { data: absence } = await admin.from('gfweekly_absences').select('*').eq('id', row.absence_id).single();
-      const { data: neu, error } = await admin.from('gfweekly_handover')
-        .update({ status:'erledigt', vertretung:null, by, updated_at:new Date().toISOString() }).eq('id', t.id).select().single();
-      if (error) throw error;
+      /* Reihenfolge mit Absicht: erst der Vorgang, dann die Korbzeile. Scheitert der erste Schritt, bleibt die
+         Zeile sichtbar, und niemand hält etwas für erledigt, das noch falsch zugeordnet ist. */
       let thema = null;
+      const g = absGate(absence?.person || '') || 'gf';
       if (row.kind === 'thema' && absence) {
-        const g = absGate(absence.person) || 'gf';
         const { data: tp, error: tf } = await admin.from('gfweekly_topics')
           .update({ owner_backup:null, gate:g, gate_by:by, gate_at:new Date().toISOString(),
                     gate_note:`zurück bei ${absence.person} nach der Vertretung`, updated_at:new Date().toISOString() })
@@ -1417,6 +1442,16 @@ Deno.serve(async (req: Request) => {
         if (tf) return json({ error:'Thema konnte nicht zurückgegeben werden: '+tf.message },500);
         thema = tp;
       }
+      if (row.kind === 'kandidat' && absence) {
+        const { data: kd, error: kf } = await admin.from('gfweekly_news')
+          .update({ gate:g, gate_by:by, gate_at:new Date().toISOString(), gate_note:`zurück bei ${absence.person} nach der Vertretung` })
+          .eq('id', row.ref_id).select('id,gate').single();
+        if (kf) return json({ error:'Kandidat konnte nicht zurückgegeben werden: '+kf.message },500);
+        thema = kd;
+      }
+      const { data: neu, error } = await admin.from('gfweekly_handover')
+        .update({ status:'erledigt', vertretung:null, by, updated_at:new Date().toISOString() }).eq('id', t.id).select().single();
+      if (error) throw error;
       if (absence) await handoverLog(absence.id, 'notiz', `${row.title}: wieder bei ${absence.person}.`, by, row.id);
       return json({ item:neu, thema });
     }
@@ -1480,8 +1515,10 @@ Deno.serve(async (req: Request) => {
         }
 
         if (absence.status !== 'rueckkehr') {
-          const bau = await handoverBuild(absence);
-          schritte.push(`Korb: ${bau.neu} neu, ${bau.ergaenzt} ergänzt`);
+          try {
+            const bau = await handoverBuild(absence);
+            schritte.push(`Korb: ${bau.neu} neu, ${bau.ergaenzt} ergänzt` + (bau.fehler ? `, ${bau.fehler} Fehler` : ''));
+          } catch (e) { schritte.push('Korb konnte nicht gebaut werden: ' + String((e as Error).message).slice(0,160)); }
         }
 
         // Statuswechsel
@@ -1539,7 +1576,7 @@ Deno.serve(async (req: Request) => {
         // V24c: erledigte Aufgaben und neue Kommentare aus Asana zurückholen
         if (ASANA_TOKEN && absence.asana_project_gid) {
           try { const a = await asanaSync(absence);
-            if (a.erledigt || a.kommentare) schritte.push(`Asana: ${a.erledigt} erledigt, ${a.kommentare} Kommentare`); }
+            if (a.erledigt || a.kommentare || a.fehler) schritte.push(`Asana: ${a.erledigt} erledigt, ${a.kommentare} Kommentare` + (a.fehler ? `, ${a.fehler} Fehler` : '')); }
           catch (e) { schritte.push('Asana: ' + String((e as Error).message).slice(0,120)); }
         }
         if (absence.status === 'beendet') await asanaArchivieren(absence);
@@ -1572,11 +1609,14 @@ Deno.serve(async (req: Request) => {
       };
       /* Vollmacht nach derselben Bereichsregel wie die Vertretung: erst Strang, dann gf, dann Stern. */
       const vollmachtVon = (row: any) => {
-        const meine = (deputies || []).filter((d: any) => norm(d.vertretung) === norm(row.vertretung || ''));
-        return (row.strand && meine.find((d: any) => d.bereich === row.strand)?.vollmacht)
-          || (row.g === 3 && meine.find((d: any) => d.bereich === 'gf')?.vollmacht)
-          || meine.find((d: any) => d.bereich === '*')?.vollmacht
-          || meine[0]?.vollmacht || '';
+        if (!row.vertretung) return '';
+        const meine = (deputies || []).filter((d: any) => norm(d.vertretung) === norm(row.vertretung));
+        /* Erst die zuständige Regel bestimmen, dann ihre Vollmacht lesen. Eine Regel ohne Vollmacht bedeutet
+           „keine Vollmacht“ und darf nicht durch die Vollmacht eines anderen Bereichs ersetzt werden. */
+        const regel = (row.strand && meine.find((d: any) => d.bereich === row.strand))
+          || (row.g === 3 && meine.find((d: any) => d.bereich === 'gf'))
+          || meine.find((d: any) => d.bereich === '*') || null;
+        return regel ? (regel.vollmacht || '') : '';
       };
 
       /* Projekt anlegen oder das bestehende weiterverwenden. Das Team kommt aus ASANA_TEAM oder aus der Nutzlast. */
@@ -1588,18 +1628,27 @@ Deno.serve(async (req: Request) => {
           const m = String((e as Error).message);
           /* Nur ein wirklich verschwundenes Projekt wird ersetzt. Bei allen anderen Fehlern brechen wir ab,
              sonst entsteht aus einer Störung ein zweites Projekt. */
-          if (/: 40[34] /.test(m)) projekt = null;
+          if (/: 404 /.test(m)) projekt = null;
           else return json({ error:m, hinweis:'Das bestehende Projekt ließ sich nicht erreichen. Nichts geändert, bitte später erneut versuchen.' },502);
         }
       }
       if (!projekt) {
-        const team = (t.team ?? ASANA_TEAM ?? '').toString();
+        /* Team: erst die Nutzlast, dann das Secret, sonst aus einem bestehenden Projekt des Arbeitsbereichs. */
+        let team = (t.team ?? ASANA_TEAM ?? '').toString();
+        if (!team) {
+          try {
+            const liste = await asana(`/projects?workspace=${ASANA_WORKSPACE}&limit=20&opt_fields=team,name,archived`);
+            team = (liste || []).find((p: any) => p?.team?.gid && !p.archived)?.team?.gid || '';
+          } catch (_e) { team = ''; }
+        }
         const daten: Record<string, unknown> = { name, workspace: ASANA_WORKSPACE,
           notes:`Übergabekorb aus dem Hohen Haus. Eine Aufgabe je Punkt, Abschnitte nach Dringlichkeit und Ampel.\n${HH_BASIS}/uebergabe.html?id=${absence.id}` };
         if (team) daten.team = team;
         try { projekt = (await asana('/projects', 'POST', daten)).gid; }
         catch (e) { return json({ error:String((e as Error).message), hinweis:'Braucht der Arbeitsbereich ein Team, ASANA_TEAM setzen oder team in der Nutzlast mitgeben.' },400); }
-        await admin.from('gfweekly_absences').update({ asana_project_gid: projekt }).eq('id', absence.id);
+        const { error: pf } = await admin.from('gfweekly_absences').update({ asana_project_gid: projekt }).eq('id', absence.id);
+        if (pf) return json({ error:'Das Projekt steht in Asana, ließ sich aber nicht merken: '+pf.message,
+          projekt, hinweis:'Bitte die Kennung von Hand in gfweekly_absences.asana_project_gid eintragen, sonst legt der nächste Export ein zweites Projekt an.' },500);
       }
       /* Abschnitte: vorhandene weiterverwenden, fehlende anlegen. */
       const vorhanden = await asana(`/projects/${projekt}/sections?opt_fields=name`);
@@ -1617,17 +1666,19 @@ Deno.serve(async (req: Request) => {
           due_on: row.frist || null,
         };
         const zu = row.vertretung ? gidVon(row.vertretung) : null;
-        if (zu) daten.assignee = zu;
         if (row.asana_gid) {
-          await asana(`/tasks/${row.asana_gid}`, 'PUT', daten);
+          /* Beim Auffrischen wird die Zuweisung ausdrücklich gesetzt oder gelöscht, sonst bliebe sie
+             bei der Person hängen, die vorher vertreten hat. */
+          await asana(`/tasks/${row.asana_gid}`, 'PUT', Object.assign({}, daten, { assignee: zu }));
           if (row.asana_section !== abschnitt[sek]) await asana(`/sections/${abschnitt[sek]}/addTask`, 'POST', { task: row.asana_gid });
           await admin.from('gfweekly_handover').update({ asana_section: abschnitt[sek] }).eq('id', row.id);
           aktualisiert++;
         } else {
-          const aufgabe = await asana('/tasks', 'POST', Object.assign({}, daten, {
+          const aufgabe = await asana('/tasks', 'POST', Object.assign({}, daten, zu ? { assignee: zu } : {}, {
             workspace: ASANA_WORKSPACE, memberships:[{ project: projekt, section: abschnitt[sek] }],
             followers: folgen }));
-          await admin.from('gfweekly_handover').update({ asana_gid: aufgabe.gid, asana_section: abschnitt[sek] }).eq('id', row.id);
+          const { error: af } = await admin.from('gfweekly_handover').update({ asana_gid: aufgabe.gid, asana_section: abschnitt[sek] }).eq('id', row.id);
+          if (af) return json({ error:'Aufgabe steht in Asana, ließ sich aber nicht merken: '+af.message, projekt, aufgabe:aufgabe.gid },500);
           neu++;
         }
       }

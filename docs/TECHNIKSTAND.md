@@ -235,13 +235,11 @@ Textbaustein zum Eintragen in den Auftrag (trig_01A6gnSNUDbvF4bhW3wzhGL2). Er er
 > Vault-Secret fehlt. Steht in der Antwort ein Schritt „Korb: 0 neu, 0 ergänzt“ für eine aktive Abwesenheit mit
 > Einträgen, melde das im Ticker: dann sammelt der Lauf nichts mehr.
 >
-> **H8 Asana ohne Token.** Fehlt `ASANA_TOKEN`, antwortet `asana_export` mit einem Fehler. Lege dann die Aufgaben
-> selbst an: ein Projekt „Vertretung <Name> · <von> bis <bis>“ im Arbeitsbereich 57435200923138 mit den Abschnitten
-> Sofort, Grün, Gelb, Rot bei der GF, Ruht bis Rückkehr; je bestätigter Korbzeile mit Ampel ungleich `vorher` eine
-> Aufgabe „[Vertretung] <Titel>“ mit Stand, nächstem Schritt, Ampelregel, Notfalldefinition, Vollmacht, Frist und
-> dem Link ins Haus; Fälligkeit = Frist, zugewiesen an die Vertretung, Alex und Lea als Folgende. Trage die
-> Aufgaben-Kennung danach nicht von Hand nach; der spätere Export mit Token legt eigene Aufgaben an, und die
-> doppelten löschst du dann in Asana.
+> **H8 Asana ohne Token.** Fehlt `ASANA_TOKEN`, antwortet `asana_export` mit einem Fehler. Lege dann **keine**
+> Aufgaben von Hand an: das Haus könnte sie später weder auffrischen noch zurücksynchronisieren, und der Export mit
+> Token würde sie verdoppeln. Schicke stattdessen den Vertretungsbrief aus H3 und setze einen Ticker
+> „Asana-Export wartet auf das Token“. Sobald das Secret steht, macht ein einziger Aufruf von `asana_export` die
+> ganze Arbeit.
 >
 > **H7 Neues an Abwesende.** Entsteht im Lauf ein Kandidat mit `who` = abwesende Person, setze `gate` auf die
 > Vertretung (`gate_note` „in Vertretung für <Name>“) und schreibe einen Protokolleintrag der Art `weitergabe`.
@@ -282,7 +280,30 @@ Die unabhängige Prüfung (Codex, Stand 39886dc) hat 27 Punkte gemeldet. Behoben
 - **Die Vertretungslinie** legte bei einem Bereichswechsel eine zweite Zeile an; `deputies_set` ändert jetzt über die id.
 - **Die Startseite** zählte Vorschläge als „in Vertretung bearbeitet“.
 
-Bewusst nicht geändert: die Quadrantenkacheln der Übergabe bleiben eigene Knöpfe (sie tragen Zähler, Symbol, Wort
-und einen gedrückten Zustand, was `gfKachel` nicht kann), und die Teamliste der Vertretung kommt aus
-`gfweekly_people` statt zusätzlich aus der TPA-Analyse. „Nach Asana“ ist die zweite Aktion im Kopf, nicht die erste:
-eine Ansicht hat genau eine Hauptaktion, und das ist „Alle Vorschläge übernehmen“.
+Aus der zweiten Runde kamen dazu: Abschalten einer Vertretungszeile schickt jetzt ihre id (sonst antwortete das
+Backend mit 409), eine neu gespeicherte Zeile wird neu gezeichnet und behält damit ihre Kennung, die Vollmacht folgt
+erst der zuständigen Bereichsregel und nimmt dann deren Wert (eine leere Vollmacht bleibt leer), der Rücksync prüft
+seine Datenbankfehler, begrenzt das Fenster nach oben auf den Laufbeginn und merkt sich jeden Kommentar mit seiner
+Asana-Kennung, nur noch 404 gilt als verschwundenes Projekt, eine entfernte Vertretung wird in Asana ausdrücklich
+gelöscht, gespeicherte Kennungen werden auf Fehler geprüft, `ruht` räumt auch die Vertretung der Korbzeile ab, eine
+geleerte Vertretung gibt den Ausgang an die abwesende Person zurück, `handover_zurueck` ändert erst den Vorgang und
+dann die Korbzeile (scheitert das erste, bleibt nichts fälschlich erledigt) und behandelt auch Kandidaten, die
+Sammelabfragen brechen bei Lesefehlern ab und entdoppeln nach Vorgang, Kalendergrenzen liegen auf Berliner
+Kalendertagen, der Tick nennt Fehler im Bericht, das Asana-Team wird aus einem bestehenden Projekt des
+Arbeitsbereichs ermittelt, wenn `ASANA_TEAM` fehlt, und der Weg „lückenhafte Themen“ führt über `board.html?person=`
+zu einer Ansicht, die wirklich filtert.
+
+Bewusst nicht geändert, mit Begründung:
+- Die **Quadrantenkacheln** der Übergabe bleiben eigene Knöpfe: sie tragen Zähler, Symbol, Wort und einen gedrückten
+  Zustand, was `gfKachel` nicht kann. Dasselbe gilt für die **Chip-Reihen** für Cluster, Ampel und Vertretung:
+  `gfChips` führt genau einen Wert in einem versteckten Feld, hier braucht es je Zeile mehrere Reihen mit
+  Sperrzustand und sofortigem Speichern. Sie sehen aus wie `gfChips` (dieselben Klassen) und verhalten sich gleich.
+- Die **Teamliste** der Vertretung kommt aus `gfweekly_people` statt zusätzlich aus der TPA-Analyse: dieselben
+  Menschen, eine Quelle weniger.
+- **„Nach Asana“ ist die zweite Aktion** im Kopf, nicht die erste. Eine Ansicht hat genau eine Hauptaktion, und das
+  ist „Alle Vorschläge übernehmen“. Die Paketdatei nennt beide Primary, das widerspricht sich.
+- **`score` behält `heuteBerlin()` als Standardwert.** Mit übergebenem Stichtag ist die Funktion rein; der Standard
+  ist die Bequemlichkeit für den Aufruf aus dem Lauf.
+- **Keine Datenbanktransaktion** für `handover_zurueck`: supabase-js kann keine Transaktion über mehrere Tabellen.
+  Stattdessen die sichere Reihenfolge (erst der Vorgang, dann die Korbzeile) und eine Fehlermeldung, die sagt,
+  was nicht ging.
