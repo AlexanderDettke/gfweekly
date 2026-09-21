@@ -313,6 +313,309 @@ async function scoreState(who: string, day: string){
   return { year, week, day, who:w, total, weekPts, todayPts, level:{ key:level?.key, label:level?.label, threshold:level?.threshold, image:level?.image }, next: next?{ key:next.key,label:next.label,threshold:next.threshold }:null, rank, streak, fire, goal:{ key:gk, label:gl, kind:gkind, done:goalDone }, weekGoal:{ label:'Eine Besprechung abschließen und zwei Entscheidungen festhalten', done:weekGoalDone }, badges:(bd||[]).map((b: any)=>({ key:b.key, who:b.who, earned_at:b.earned_at, label:(BADGES.find(x=>x[0]===b.key)||[])[1]||b.key })), perKind, checkedInToday: w!=='Team' && streak>0 };
 }
 
+/* ===== v29 · V24a (21.09.2026) · Vertretung: Abwesenheit, Vertretungslinie, Übergabekorb, Matrix, Tick.
+   Der Korb baut sich selbst (handoverBuild), bewertet sich selbst (score) und hält sich täglich aktuell (absence_tick).
+   score ist eine reine Funktion: gleiche Eingabe, gleiches Ergebnis, keine KI, jede Zeile bekommt einen Begründungssatz.
+   Migration: supabase/migrations/20260921_hh_vertretung.sql ===== */
+const ABS_ART = ['geplant','sofort'];
+const ABS_KONTAKT = ['keiner','wochenbrief','gespraech'];
+const ABS_STATUS = ['geplant','aktiv','rueckkehr','beendet'];
+const HO_KIND = ['thema','kandidat','meilenstein','ritual','termin','asana','partner'];
+const HO_AMPEL = ['gruen','gelb','rot','vorher','ruht'];
+const HO_CLUSTER = ['A','B','C','D','E'];
+const HO_STATUS = ['vorschlag','bestaetigt','erledigt','entfallen'];
+/* Pförtner-Schlüsselwörter der gf-Klasse: was die GF gemeinsam entscheidet (Notfalldefinition: Geld ab 5.000 €,
+   Recht, Personal, Presse, Behörde, Sicherheit). */
+const GF_WORTE = ['vertrag','bank','darlehen','kredit','bürgschaft','buergschaft','grundschuld','kündigung','kuendigung',
+  'einstellung','gehalt','gesellschafter','aufsichtsrat','generalversammlung','rechtsstreit','anwalt','klage','notar',
+  'kaufoption','kaufvertrag','liquidität','liquiditaet','insolvenz','investor','beteiligung','austritt','satzung','presse','behörde','behoerde'];
+const BETRIEB_WORTE = ['newsletter','social','programm','ticket','booking','gastro','aufbau','helfer','sponsoring'];
+const SCHWER_WORTE = ['unterschrift','vollmacht','notar','bank','konto','zugangsdaten'];
+const CLUSTER_TEXT: Record<string,string> = {
+  A:'vor Abreise', B:'übergeben mit Vollmacht', C:'übergeben mit Rückfrage', D:'ruht bis Rückkehr', E:'zu der anderen GF',
+};
+
+function tageBis(a: string, b: string){ return Math.round((Date.parse(b+'T00:00:00Z') - Date.parse(a+'T00:00:00Z'))/86400000); }
+/* Fenster der Abwesenheit. Ohne bis und ohne Schätzung wird mit 14 Tagen gerechnet, damit die Matrix eine Kante hat;
+   der Tick rechnet jeden Tag neu, sobald ein Enddatum eingetragen ist. */
+function absEnde(a: any): string { return (a?.bis || a?.bis_geschaetzt || addDays(a?.von, 13)); }
+function absStufe(a: any): string {
+  const ende = a?.bis || a?.bis_geschaetzt; if(!ende) return 'kurz';
+  const d = tageBis(a.von, ende) + 1; return d <= 3 ? 'kurz' : d <= 14 ? 'mittel' : 'lang';
+}
+function absGate(person: string){ const w = whoNorm(person); return w === 'Lea' ? 'lea' : w === 'Alex' ? 'alex' : ''; }
+function heuteBerlin(){ return new Date().toLocaleDateString('sv-SE', { timeZone:'Europe/Berlin' }); }
+
+/* Größter Geldbetrag im Text, in Euro. Erkennt „5.000 €“, „€ 5000“, „2.500,50 EUR“. */
+function geldMax(text: string): number {
+  let max = 0;
+  const re = /(?:(?:€|eur|euro)\s*([0-9][0-9.\s]{0,12}(?:,[0-9]{1,2})?)|([0-9][0-9.\s]{0,12}(?:,[0-9]{1,2})?)\s*(?:€|eur\b|euro\b))/gi;
+  for (const m of text.matchAll(re)) {
+    const roh = (m[1] ?? m[2] ?? '').replace(/\s/g,'').replace(/\./g,'').replace(',', '.');
+    const n = parseFloat(roh); if (!isNaN(n) && n > max) max = n;
+  }
+  return max;
+}
+/* Stichwortsuche am Wortanfang: „Ankündigungen“ darf nicht als „Kündigung“ zählen, „Kündigungsfrist“ schon.
+   \b hilft bei Umlauten nicht, deshalb die ausdrückliche Grenze vor dem Wort. */
+const WORT_RE = new Map<string, RegExp>();
+function wortRe(w: string){ let re = WORT_RE.get(w); if (!re) { re = new RegExp('(?<![a-zäöüß])' + w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'i'); WORT_RE.set(w, re); } return re; }
+function hatWort(text: string, worte: string[]){ return worte.some(w => wortRe(w).test(text)); }
+/* Erste Person im who-Feld, die weder Alex noch Lea ist: ein Teamname im Sinne der Matrix (F = 1). */
+function teamName(who: unknown){ return (who ?? '').toString().split(/[,;]| und /i).map(x => x.trim())
+  .find(n => n && whoNorm(n) === 'Team') || ''; }
+function trefferWort(text: string, worte: string[]){ return worte.find(w => wortRe(w).test(text)) || ''; }
+
+/* Die Bewertungsmatrix. item ist eine vereinheitlichte Korbzeile (siehe handoverItems), absence die Abwesenheit.
+   Vier Achsen 0 bis 3: Z Zeitdruck, F Folgen bei Stillstand, U Übertragbarkeit (hoch = schwer), G Entscheidungsgewicht. */
+function score(item: any, absence: any){
+  const heute = heuteBerlin();
+  const von = absence.von as string, ende = absEnde(absence);
+  const stufe = absence.stufe || absStufe(absence);
+  const text = [item.title, item.short_description, item.context, item.body, item.next_action, item.decision, item.notes, item.signal]
+    .filter(Boolean).join(' \n ').toLowerCase();
+  const frist = item.frist || null;
+  const gruende: string[] = [];
+
+  // Z Zeitdruck
+  let z = 0;
+  if (!frist) { z = 0; gruende.push('ohne Frist'); }
+  else if (frist < von || frist < heute) { z = 3; gruende.push(`Frist ${frist} liegt vor der Abreise oder ist überfällig`); }
+  else if (frist <= ende) { z = 2; gruende.push(`Frist ${frist} fällt in die Abwesenheit`); }
+  else if (frist <= addDays(ende, 14)) { z = 1; gruende.push(`Frist ${frist} kommt kurz nach der Rückkehr`); }
+  else { z = 0; gruende.push(`Frist ${frist} liegt weit hinter der Rückkehr`); }
+
+  // F Folgen bei Stillstand
+  const geld = geldMax(text);
+  const gfWort = trefferWort(text, GF_WORTE);
+  const betriebWort = trefferWort(text, BETRIEB_WORTE);
+  let f = 0;
+  if (geld >= 5000) { f = 3; gruende.push(`Geld ab 5.000 € im Spiel (${Math.round(geld).toLocaleString('de-DE')} €)`); }
+  else if (gfWort) { f = 3; gruende.push(`Sache der GF (Stichwort ${gfWort})`); }
+  else if (item.relevance === 'kritisch') { f = 3; gruende.push('Relevanz kritisch'); }
+  else if (item.strand === 'wwp' || item.kind === 'partner') { f = 2; gruende.push('Partnerstrang'); }
+  else if (item.relevance === 'hoch' || item.priority === 'hoch') { f = 2; gruende.push('hohe Priorität'); }
+  else if (geld > 0) { f = 2; gruende.push(`Geld unter 5.000 € im Spiel (${Math.round(geld).toLocaleString('de-DE')} €)`); }
+  else if (betriebWort) { f = 1; gruende.push(`Betrieb (Stichwort ${betriebWort})`); }
+  else if (teamName(item.who)) { f = 1; gruende.push(`das Team hängt daran (${teamName(item.who)})`); }
+  else { f = 0; gruende.push('ohne erkennbare Folgen bei Stillstand'); }
+
+  // U Übertragbarkeit, hoch heißt schwer zu übergeben
+  const schwerWort = trefferWort(text, SCHWER_WORTE);
+  const standDa = !!(item.short_description || '').toString().trim();
+  const schrittDa = !!(item.next_action || '').toString().trim();
+  const kurzerText = item.kind === 'kandidat' && (item.body || '').toString().trim().length < 80;
+  const nurPerson = !!(item.who && whoNorm(item.who) === whoNorm(absence.person) && !/,|;| und /i.test(item.who));
+  let u = 0;
+  if (schwerWort) { u = 3; gruende.push(`gebunden an die Person (${schwerWort})`); }
+  else if ((!standDa && !schrittDa) || kurzerText) { u = 2; gruende.push('Stand und nächster Schritt fehlen'); }
+  else if (!standDa || !schrittDa || nurPerson) { u = 1; gruende.push(!standDa ? 'Stand fehlt' : !schrittDa ? 'nächster Schritt fehlt' : 'nur die abwesende Person kennt den Vorgang'); }
+  else { u = 0; gruende.push('Stand und nächster Schritt stehen da'); }
+
+  // G Entscheidungsgewicht
+  const meinGate = absGate(absence.person);
+  const stage = (item.stage || '').toString();
+  let g = 0;
+  if (item.gate === 'gf') { g = 3; gruende.push('liegt bei der GF gemeinsam'); }
+  else if (item.board_lane === 'zu_besprechen' && item.priority === 'hoch') { g = 3; gruende.push('steht mit hoher Priorität zur Besprechung'); }
+  else if (item.gate === meinGate && item.priority === 'hoch') { g = 2; gruende.push('Entscheidung der abwesenden Person, hohe Priorität'); }
+  else if (item.kind === 'partner' && /^(negotiation|offer)/.test(stage)) { g = 2; gruende.push(`Partnergespräch in der Phase ${stage}`); }
+  else if (item.gate === meinGate) { g = 1; gruende.push('Entscheidung der abwesenden Person'); }
+  else { g = 0; gruende.push(item.gate ? `Ausgang ${item.gate}` : 'ohne Ausgang beim Pförtner'); }
+
+  const dringend = z >= 2;
+  const wichtig = (f + g) >= 3;
+  const quadrant = dringend && wichtig ? 'sofort' : wichtig ? 'planen' : dringend ? 'delegieren' : 'warten';
+
+  let cluster = 'B';
+  if (z === 3 || (u === 3 && z >= 2)) cluster = 'A';
+  else if (g === 3 || f === 3) cluster = 'E';
+  else if (z >= 2 && (g === 2 || f === 2 || u === 2)) cluster = 'C';
+  else if (z <= 1 && f <= 1) cluster = 'D';
+
+  let ampel = cluster === 'A' ? (absence.art === 'sofort' ? 'rot' : 'vorher')
+            : cluster === 'B' ? 'gruen'
+            : cluster === 'C' ? 'gelb'
+            : cluster === 'E' ? 'rot' : 'ruht';
+  let regel = '';
+  if (stufe === 'kurz' && f !== 3) { ampel = 'ruht'; regel = 'Kurze Abwesenheit: nichts wird umgehängt, die Wache zeigt nur Fristen.'; }
+  else if (stufe === 'lang' && ampel === 'gelb') { regel = 'Lange Abwesenheit: ab Tag 15 entscheidet die Vertretung gelbe Punkte ohne Einspruchsfrist.'; }
+
+  const luecke = u >= 2;
+  const satz = `${CLUSTER_TEXT[cluster]}, weil ${gruende.join('; ')} (Z${z} F${f} U${u} G${g}).`;
+  return { z, f, u, g, score: z + f + u + g, dringend, wichtig, quadrant, cluster, ampel, luecke,
+           regel_note: regel, begruendung: satz.charAt(0).toUpperCase() + satz.slice(1) };
+}
+
+/* Wer vertritt: erst (Person, Strang), dann (Person, gf) wenn G = 3, dann (Person, *), sonst der Standard der Abwesenheit.
+   Bei ruht und vorher bleibt die Vertretung leer, denn dort wird nichts umgehängt. */
+function vertretungFuer(bew: any, item: any, absence: any, deputies: any[]){
+  if (bew.ampel === 'ruht' || bew.ampel === 'vorher') return null;
+  const meine = deputies.filter(d => whoNorm(d.person) === whoNorm(absence.person) && d.active !== false);
+  const strang = item.strand ? meine.find(d => d.bereich === item.strand) : null;
+  const gf = bew.g === 3 ? meine.find(d => d.bereich === 'gf') : null;
+  const stern = meine.find(d => d.bereich === '*');
+  return (strang?.vertretung) || (gf?.vertretung) || (stern?.vertretung) || absence.vertretung_standard || null;
+}
+
+/* Dossier je Korbzeile: alles, was das Backend über den Vorgang schon weiß. Keine neuen Abfragen nach außen,
+   Mail und Drive nur über die schon gespeicherten Quelllinks der Neuigkeiten. */
+async function dossierFuer(item: any, absence: any){
+  const d: Record<string, unknown> = { art: item.kind, stand: item.short_description || null, naechster_schritt: item.next_action || null };
+  if (item.kind === 'thema') {
+    d.kontext = item.context || null; d.entscheidung = item.decision || null; d.notizen = item.notes || null;
+    d.verantwortung = item.owner || null; d.beteiligte = item.involved || null;
+    const [news, besch] = await Promise.all([
+      admin.from('gfweekly_news').select('title,body,source,source_title,source_url,happened_at').eq('topic_id', item.ref_id).order('happened_at',{ascending:false}).limit(5),
+      admin.from('gfweekly_decisions').select('decision,next_action,owner,decided_at,decided_by').eq('topic_id', item.ref_id).order('decided_at',{ascending:false}).limit(5),
+    ]);
+    d.news = news.data || []; d.beschluesse = besch.data || [];
+  } else if (item.kind === 'kandidat') {
+    d.text = item.body || null; d.zitat = item.quote || null; d.quelle = item.source_title || item.source || null; d.quelle_url = item.source_url || null;
+  } else if (item.kind === 'partner') {
+    d.partner = item.title; d.phase = item.stage || null; d.wartet_auf = item.waiting_for || null; d.signal = item.signal || null;
+    d.zieldatum = item.frist || null; d.verantwortung = item.owner || null;
+  } else if (item.kind === 'meilenstein') {
+    d.beschreibung = item.context || null; d.zeitraum = item.zeitraum || null; d.verantwortung = item.owner || null; d.stand = item.status || null;
+  } else if (item.kind === 'ritual') {
+    d.hinweis = item.context || null; d.phase = item.phase || null;
+  } else if (item.kind === 'termin') {
+    d.beschreibung = item.body || null; d.wer = item.who || null; d.quelle_url = item.source_url || null;
+  }
+  const leer = !d.stand && !d.naechster_schritt && !(d as any).kontext && !(d as any).text && !(d as any).beschreibung && !(d as any).signal;
+  if (leer) {
+    d.leer = true;
+    const fragen = new Set<string>();
+    for (const w of (item.who || '').split(/[,;]| und /i)) { const n = w.trim(); if (n && whoNorm(n) !== whoNorm(absence.person)) fragen.add(n); }
+    if (item.owner && whoNorm(item.owner) !== whoNorm(absence.person)) fragen.add(item.owner);
+    d.fragen = [...fragen];
+  }
+  return d;
+}
+
+/* Sammelt alles, was im Fenster der Abwesenheit liegt, und vereinheitlicht es zu Korbzeilen. */
+async function handoverItems(absence: any){
+  const person = whoNorm(absence.person), gate = absGate(absence.person);
+  const von = absence.von as string, ende = absEnde(absence), heute = heuteBerlin();
+  const items: any[] = [];
+
+  const { data: themen } = await admin.from('gfweekly_topics')
+    .select('id,title,short_description,context,decision,notes,next_action,owner,involved,priority,relevance,board_lane,gate,gate_frist,archived')
+    .eq('archived', false).limit(500);
+  for (const x of (themen || [])) {
+    const frist = x.gate_frist || null;
+    const imFenster = !!frist && frist <= addDays(ende, 14);
+    const meins = x.gate === gate || whoNorm(x.owner) === person;
+    const gfImFenster = x.gate === 'gf' && imFenster;
+    if (!(meins || gfImFenster || imFenster)) continue;
+    items.push({ kind:'thema', ref_id:x.id, title:x.title, strand:null, frist,
+      short_description:x.short_description, context:x.context, decision:x.decision, notes:x.notes, next_action:x.next_action,
+      owner:x.owner, who:[x.owner, x.involved].filter(Boolean).join(', '), involved:x.involved,
+      priority:x.priority, relevance:x.relevance, board_lane:x.board_lane, gate:x.gate });
+  }
+
+  const { data: kandidaten } = await admin.from('gfweekly_news')
+    .select('id,title,body,quote,relevance,strand,who,source,source_title,source_url,happened_at,gate,gate_frist')
+    .eq('kind','kandidat').eq('status','neu').eq('gate', gate).limit(300);
+  for (const x of (kandidaten || [])) {
+    items.push({ kind:'kandidat', ref_id:x.id, title:x.title, strand:x.strand, frist:x.gate_frist || null,
+      body:x.body, quote:x.quote, relevance:x.relevance, who:x.who, source:x.source, source_title:x.source_title,
+      source_url:x.source_url, gate:x.gate });
+  }
+
+  const { data: meilen } = await admin.from('gfweekly_milestones')
+    .select('id,title,description,date_from,date_to,zeitraum,strand,owner,status,archived')
+    .eq('archived', false).not('status','in','("erreicht","abgesagt")').limit(200);
+  for (const x of (meilen || [])) {
+    const frist = x.date_from || null;
+    if (!frist || frist < von || frist > addDays(ende, 14)) continue;
+    items.push({ kind:'meilenstein', ref_id:x.id, title:x.title, strand:x.strand, frist,
+      context:x.description, zeitraum:x.zeitraum, owner:x.owner, who:x.owner, status:x.status, priority:null, gate:null });
+  }
+
+  const { data: phasen } = await admin.from('gfweekly_cycle_phases').select('key,label,months,lead');
+  const monate = new Set<number>();
+  for (let d = von; d <= ende; d = addDays(d, 1)) monate.add(parseInt(d.slice(5,7)));
+  const meinePhasen = (phasen || []).filter((p: any) => whoNorm(p.lead) === person && (p.months || []).some((m: number) => monate.has(m)));
+  if (meinePhasen.length) {
+    const { data: rituale } = await admin.from('gfweekly_rituals').select('id,phase_key,title,hint,active')
+      .in('phase_key', meinePhasen.map((p: any) => p.key)).eq('active', true).limit(100);
+    for (const x of (rituale || [])) {
+      items.push({ kind:'ritual', ref_id:x.id, title:x.title, strand:null, frist:null, context:x.hint,
+        phase:(meinePhasen.find((p: any)=>p.key===x.phase_key)||{}).label, owner:absence.person, who:absence.person, gate:null });
+    }
+  }
+
+  const { data: partner } = await admin.from('hh_partner_stand')
+    .select('partner_id,name,lane,stage,owner,next_action,target_on,waiting_for,signal,overdue').limit(300);
+  for (const x of (partner || [])) {
+    const mein = whoNorm(x.owner) === person || (x.owner || '').toLowerCase() === 'together';
+    if (!mein) continue;
+    const frist = x.target_on || null;
+    const passt = x.overdue || (!!frist && frist >= von && frist <= addDays(ende, 14));
+    if (!passt) continue;
+    items.push({ kind:'partner', ref_id:String(x.partner_id), title:x.name, strand:'wwp', frist,
+      next_action:x.next_action, waiting_for:x.waiting_for, signal:x.signal, stage:x.stage, owner:x.owner, who:x.owner, gate:null });
+  }
+
+  const { data: termine } = await admin.from('gfweekly_news')
+    .select('id,title,body,who,happened_at,source_url,source_title,strand')
+    .eq('source','kalender').gte('happened_at', von+'T00:00:00Z').lte('happened_at', ende+'T23:59:59Z').limit(300);
+  for (const x of (termine || [])) {
+    if (whoNorm(x.who) !== person && !(x.who || '').toLowerCase().includes(person.toLowerCase())) continue;
+    items.push({ kind:'termin', ref_id:'cal:'+x.id, title:x.title, strand:x.strand, frist:(x.happened_at||'').slice(0,10),
+      body:x.body, who:x.who, source_url:x.source_url, gate:null });
+  }
+  return items;
+}
+
+/* Baut den Korb neu: bewertet jede Zeile, legt neue an, ergänzt bestehende. Bestätigte Zeilen bleiben unangetastet,
+   nur frist, dossier und luecke wandern nach. */
+async function handoverBuild(absence: any){
+  const [{ data: deputies }, { data: alt }] = await Promise.all([
+    admin.from('gfweekly_deputies').select('*').eq('active', true),
+    admin.from('gfweekly_handover').select('*').eq('absence_id', absence.id),
+  ]);
+  const vorhanden = new Map<string, any>((alt || []).map((r: any) => [r.kind+'|'+r.ref_id, r]));
+  const items = await handoverItems(absence);
+  let neu = 0, ergaenzt = 0;
+  for (const item of items) {
+    const bew = score(item, absence);
+    const dossier = await dossierFuer(item, absence);
+    const da = vorhanden.get(item.kind+'|'+item.ref_id);
+    if (da && da.status !== 'vorschlag') {
+      const patch: Record<string, unknown> = { frist:item.frist || null, dossier, luecke:bew.luecke, updated_at:new Date().toISOString() };
+      await admin.from('gfweekly_handover').update(patch).eq('id', da.id); ergaenzt++;
+      continue;
+    }
+    const row: Record<string, unknown> = {
+      absence_id: absence.id, kind: item.kind, ref_id: String(item.ref_id),
+      title: (item.title ?? '').toString().slice(0,500), strand: item.strand || null, frist: item.frist || null,
+      z: bew.z, f: bew.f, u: bew.u, g: bew.g, score: bew.score, dringend: bew.dringend, wichtig: bew.wichtig,
+      quadrant: bew.quadrant, cluster: bew.cluster, ampel: bew.ampel, regel_note: bew.regel_note || null,
+      begruendung: bew.begruendung, dossier, luecke: bew.luecke,
+      vertretung: vertretungFuer(bew, item, absence, deputies || []),
+      status: 'vorschlag', by: 'lauf', updated_at: new Date().toISOString(),
+    };
+    if (da) { await admin.from('gfweekly_handover').update(row).eq('id', da.id); ergaenzt++; }
+    else { await admin.from('gfweekly_handover').insert(row); neu++; }
+  }
+  return { neu, ergaenzt, gesamt: items.length };
+}
+
+/* Zähler und Übernahmefähigkeit für die Übergabeseite. */
+function handoverZaehler(rows: any[]){
+  const zaehl = (feld: string) => rows.reduce((a: Record<string,number>, r: any) => { const k = r[feld] || 'offen'; a[k] = (a[k]||0)+1; return a; }, {} as Record<string,number>);
+  const ohneLuecke = rows.filter((r: any) => !r.luecke).length;
+  return { quadrant: zaehl('quadrant'), cluster: zaehl('cluster'), ampel: zaehl('ampel'), status: zaehl('status'),
+    luecken: rows.filter((r: any) => r.luecke).length, gesamt: rows.length,
+    uebernahmefaehigkeit: rows.length ? Math.round(ohneLuecke / rows.length * 100) : null };
+}
+
+async function handoverLog(absence_id: string, art: string, text: string, who: string, handover_id?: string|null){
+  await admin.from('gfweekly_handover_log').insert({ absence_id, handover_id: handover_id || null, art, who: who || null, text: (text||'').slice(0,2000) });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method === 'GET') { try { await ensurePageInStorage(); } catch(_e){} return new Response(null,{ status:302, headers:{ 'Location':PUBLIC_PAGE, 'Cache-Control':'no-store' } }); }
@@ -325,7 +628,7 @@ Deno.serve(async (req: Request) => {
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:28, secretConfigured: !!PASSWORD, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
+    if (action === 'ping') return json({ ok:true, version:29, secretConfigured: !!PASSWORD, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -824,6 +1127,257 @@ Deno.serve(async (req: Request) => {
       const { data, error } = await q; if(error) throw error; return json({ events:data });
     }
     if (action === 'score_rules') { const { data } = await admin.from('gfweekly_score_rules').select('*').order('sort_order'); const { data: lv } = await admin.from('gfweekly_score_levels').select('*').order('threshold'); return json({ rules:data, levels:lv, badges: BADGES.map(b=>({ key:b[0], label:b[1], scope:b[2] })), dayGoals: DAY_GOALS.map(g=>({ key:g[0], label:g[1] })) }); }
+
+    /* ----- Vertretung (v29, 21.09.2026): Abwesenheit, Vertretungslinie, Übergabekorb, Protokoll, Tick.
+       Migration 20260921_hh_vertretung. Die Matrix steht als reine Funktion score(item, absence) weiter oben. ----- */
+    if (action === 'absence_set') {
+      const person = whoNorm(t.person);
+      if (!t.von) return json({ error:'von fehlt' },400);
+      if (!ABS_ART.includes(t.art)) return json({ error:'art: '+ABS_ART.join('|') },400);
+      if (!ABS_KONTAKT.includes(t.kontakt)) return json({ error:'kontakt: '+ABS_KONTAKT.join('|') },400);
+      const roh: Record<string, unknown> = {
+        person, von: t.von, bis: t.bis || null, bis_geschaetzt: t.bis_geschaetzt || null,
+        art: t.art, kontakt: t.kontakt, kanal: (t.kanal ?? '').toString().slice(0,300) || null,
+        gespraech_zeit: (t.gespraech_zeit ?? '').toString().slice(0,200) || null,
+        vertretung_standard: (t.vertretung_standard ?? '').toString().slice(0,120) || null,
+        test: !!t.test, note: (t.note ?? '').toString().slice(0,2000) || null,
+        updated_at: new Date().toISOString(),
+      };
+      roh.stufe = absStufe(roh);
+      const heute = heuteBerlin();
+      let absence: any;
+      if (t.id) {
+        const { data: vorher } = await admin.from('gfweekly_absences').select('status').eq('id', t.id).single();
+        roh.status = (vorher?.status === 'rueckkehr' || vorher?.status === 'beendet') ? vorher.status : ((roh.von as string) > heute ? 'geplant' : 'aktiv');
+        const { data, error } = await admin.from('gfweekly_absences').update(roh).eq('id', t.id).select().single();
+        if (error) throw error; absence = data;
+      } else {
+        roh.status = (roh.von as string) > heute ? 'geplant' : 'aktiv';
+        roh.created_by = WHO;
+        const { data, error } = await admin.from('gfweekly_absences').insert(roh).select().single();
+        if (error) throw error; absence = data;
+      }
+      const bau = await handoverBuild(absence);
+      const { data: rows } = await admin.from('gfweekly_handover').select('*').eq('absence_id', absence.id);
+      return json({ absence, bau, zaehler: handoverZaehler(rows || []) });
+    }
+    if (action === 'absence_list') {
+      let q = admin.from('gfweekly_absences').select('*').order('von', { ascending:false });
+      if (t.status) q = q.in('status', Array.isArray(t.status) ? t.status : [t.status]);
+      if (!t.include_test) q = q.eq('test', false);
+      const { data, error } = await q; if (error) throw error;
+      const ids = (data || []).map((a: any) => a.id);
+      let zaehler: Record<string, unknown> = {};
+      if (ids.length) {
+        const { data: rows } = await admin.from('gfweekly_handover').select('absence_id,quadrant,cluster,ampel,status,luecke,vertretung').in('absence_id', ids);
+        for (const a of (data || [])) zaehler[a.id] = handoverZaehler((rows || []).filter((r: any) => r.absence_id === a.id));
+      }
+      return json({ absences: data, zaehler });
+    }
+    if (action === 'absence_end') {
+      if (!t.id) return json({ error:'id fehlt' },400);
+      const { data: absence, error } = await admin.from('gfweekly_absences')
+        .update({ status:'beendet', updated_at:new Date().toISOString() }).eq('id', t.id).select().single();
+      if (error) throw error;
+      const { data: rows } = await admin.from('gfweekly_handover').select('id,ref_id,kind').eq('absence_id', t.id).eq('kind','thema');
+      for (const r of (rows || [])) await admin.from('gfweekly_topics').update({ owner_backup:null }).eq('id', r.ref_id);
+      await handoverLog(t.id, 'notiz', `Rückübergabe bestätigt, ${(rows||[]).length} Themen wieder bei ${absence.person}.`, WHO);
+      return json({ absence });
+    }
+    if (action === 'deputies_list') {
+      let q = admin.from('gfweekly_deputies').select('*').order('person').order('sort');
+      if (t.person) q = q.eq('person', whoNorm(t.person));
+      const { data, error } = await q; if (error) throw error; return json({ deputies:data });
+    }
+    if (action === 'deputies_set') {
+      if (!t.person || !t.bereich || (!t.vertretung && t.active !== false)) return json({ error:'person, bereich und vertretung fehlen' },400);
+      const row: Record<string, unknown> = {
+        person: whoNorm(t.person), bereich: (t.bereich ?? '').toString().slice(0,60),
+        vertretung: (t.vertretung ?? '').toString().slice(0,120),
+        vollmacht: t.vollmacht === undefined ? undefined : ((t.vollmacht ?? '').toString().slice(0,1000) || null),
+        sort: t.sort === undefined ? undefined : (parseInt(t.sort) || 100),
+        active: t.active === undefined ? undefined : !!t.active,
+        updated_at: new Date().toISOString(),
+      };
+      for (const k of Object.keys(row)) if (row[k] === undefined) delete row[k];
+      const { data, error } = await admin.from('gfweekly_deputies').upsert(row, { onConflict:'person,bereich' }).select().single();
+      if (error) throw error; return json({ deputy:data });
+    }
+    if (action === 'handover_build') {
+      if (!t.absence_id) return json({ error:'absence_id fehlt' },400);
+      const { data: absence, error } = await admin.from('gfweekly_absences').select('*').eq('id', t.absence_id).single();
+      if (error || !absence) return json({ error:'Abwesenheit fehlt' },404);
+      const bau = await handoverBuild(absence);
+      const { data: rows } = await admin.from('gfweekly_handover').select('*').eq('absence_id', absence.id);
+      return json({ bau, zaehler: handoverZaehler(rows || []) });
+    }
+    if (action === 'handover_list') {
+      if (!t.absence_id) return json({ error:'absence_id fehlt' },400);
+      let q = admin.from('gfweekly_handover').select('*').eq('absence_id', t.absence_id)
+        .order('score', { ascending:false }).order('frist', { ascending:true, nullsFirst:false });
+      if (t.cluster) q = q.in('cluster', Array.isArray(t.cluster) ? t.cluster : [t.cluster]);
+      if (t.quadrant) q = q.in('quadrant', Array.isArray(t.quadrant) ? t.quadrant : [t.quadrant]);
+      if (t.status) q = q.in('status', Array.isArray(t.status) ? t.status : [t.status]);
+      const { data, error } = await q; if (error) throw error;
+      const { data: alle } = await admin.from('gfweekly_handover').select('quadrant,cluster,ampel,status,luecke').eq('absence_id', t.absence_id);
+      const { data: absence } = await admin.from('gfweekly_absences').select('*').eq('id', t.absence_id).single();
+      return json({ items:data, absence, ...handoverZaehler(alle || []) });
+    }
+    if (action === 'handover_set' || action === 'handover_set_many') {
+      const liste = action === 'handover_set' ? [t] : (Array.isArray(t.items) ? t.items.slice(0,500) : []);
+      const by = (t.by ?? WHO).toString().slice(0,60);
+      const ergebnis: any[] = []; let n = 0;
+      for (const it of liste) {
+        if (!it.id) continue;
+        const { data: alt } = await admin.from('gfweekly_handover').select('*').eq('id', it.id).single();
+        if (!alt) continue;
+        const { data: absence } = await admin.from('gfweekly_absences').select('*').eq('id', alt.absence_id).single();
+        const patch: Record<string, unknown> = { by, updated_at:new Date().toISOString() };
+        if (it.cluster !== undefined && HO_CLUSTER.includes(it.cluster)) patch.cluster = it.cluster;
+        if (it.ampel !== undefined && HO_AMPEL.includes(it.ampel)) patch.ampel = it.ampel;
+        if (it.vertretung !== undefined) patch.vertretung = (it.vertretung ?? '').toString().slice(0,120) || null;
+        if (it.frist !== undefined) patch.frist = it.frist || null;
+        if (it.regel_note !== undefined) patch.regel_note = (it.regel_note ?? '').toString().slice(0,500) || null;
+        patch.status = (it.status !== undefined && HO_STATUS.includes(it.status)) ? it.status : 'bestaetigt';
+        const { data: neu, error } = await admin.from('gfweekly_handover').update(patch).eq('id', it.id).select().single();
+        if (error) throw error;
+        n++; ergebnis.push(neu);
+
+        const ampel = (patch.ampel ?? alt.ampel) as string;
+        const vertretung = (patch.vertretung ?? alt.vertretung) as string | null;
+        if (neu.kind === 'thema' && absence) {
+          const themenPatch: Record<string, unknown> = { handover_id: neu.id, updated_at:new Date().toISOString() };
+          if (ampel === 'ruht') {
+            themenPatch.gate = 'warten';
+            themenPatch.gate_frist = addDays(absEnde(absence), 1);
+            themenPatch.gate_by = by; themenPatch.gate_at = new Date().toISOString();
+            themenPatch.gate_note = `ruht bis zur Rückkehr von ${absence.person}`;
+          } else if (vertretung) {
+            const g = absGate(vertretung);
+            themenPatch.owner_backup = vertretung;
+            themenPatch.gate = g || 'team';
+            themenPatch.gate_by = by; themenPatch.gate_at = new Date().toISOString();
+            themenPatch.gate_note = `in Vertretung für ${absence.person}`;
+          }
+          await admin.from('gfweekly_topics').update(themenPatch).eq('id', neu.ref_id);
+        }
+        if (absence) {
+          const wort = ampel === 'ruht' ? 'ruht bis zur Rückkehr' : vertretung ? `geht an ${vertretung}` : 'bestätigt';
+          await handoverLog(absence.id, patch.status === 'erledigt' ? 'erledigt' : vertretung ? 'weitergabe' : 'notiz',
+            `${neu.title}: ${wort} (Ampel ${ampel || 'offen'}).`, by, neu.id);
+        }
+      }
+      return action === 'handover_set' ? json({ item: ergebnis[0] || null }) : json({ ok:true, updated:n });
+    }
+    if (action === 'handover_dossier') {
+      if (!t.id) return json({ error:'id fehlt' },400);
+      const { data: row } = await admin.from('gfweekly_handover').select('*').eq('id', t.id).single();
+      if (!row) return json({ error:'Zeile fehlt' },404);
+      const { data: absence } = await admin.from('gfweekly_absences').select('*').eq('id', row.absence_id).single();
+      const items = await handoverItems(absence);
+      const item = items.find((x: any) => x.kind === row.kind && String(x.ref_id) === row.ref_id);
+      if (!item) return json({ error:'Vorgang nicht mehr im Fenster' },404);
+      const dossier = await dossierFuer(item, absence);
+      const { data, error } = await admin.from('gfweekly_handover').update({ dossier, updated_at:new Date().toISOString() }).eq('id', t.id).select().single();
+      if (error) throw error; return json({ item:data });
+    }
+    if (action === 'handover_log_add') {
+      if (!t.absence_id || !t.art) return json({ error:'absence_id und art fehlen' },400);
+      await handoverLog(t.absence_id, t.art, (t.text ?? '').toString(), (t.who ?? WHO).toString(), t.handover_id || null);
+      const { data } = await admin.from('gfweekly_handover_log').select('*').eq('absence_id', t.absence_id).order('at', { ascending:false }).limit(200);
+      return json({ log:data });
+    }
+    if (action === 'handover_log') {
+      if (!t.absence_id) return json({ error:'absence_id fehlt' },400);
+      const { data, error } = await admin.from('gfweekly_handover_log').select('*').eq('absence_id', t.absence_id).order('at', { ascending:false }).limit(300);
+      if (error) throw error; return json({ log:data });
+    }
+    if (action === 'uebernahme_stat') {
+      const personen = t.person ? [whoNorm(t.person)] : ['Alex','Lea'];
+      const stat: Record<string, unknown> = {};
+      for (const p of personen) {
+        const { data } = await admin.from('gfweekly_topics').select('id,short_description,next_action,gate_frist,owner,gate').eq('archived', false);
+        const meine = (data || []).filter((x: any) => whoNorm(x.owner) === p || x.gate === absGate(p));
+        const ohneStand = meine.filter((x: any) => !(x.short_description || '').trim()).length;
+        const ohneSchritt = meine.filter((x: any) => !(x.next_action || '').trim()).length;
+        const ohneFrist = meine.filter((x: any) => !x.gate_frist).length;
+        const bereit = meine.filter((x: any) => (x.short_description || '').trim() && (x.next_action || '').trim()).length;
+        stat[p] = { themen: meine.length, ohne_stand: ohneStand, ohne_schritt: ohneSchritt, ohne_frist: ohneFrist,
+                    uebernahmefaehigkeit: meine.length ? Math.round(bereit / meine.length * 100) : null };
+      }
+      return json({ stat });
+    }
+    if (action === 'absence_tick') {
+      const heute = heuteBerlin();
+      const { data: laufende } = await admin.from('gfweekly_absences').select('*').in('status', ['geplant','aktiv','rueckkehr']);
+      const bericht: any[] = [];
+      for (const a of (laufende || [])) {
+        const schritte: string[] = [];
+        let absence = a;
+
+        // Hochstufung bei einer sofortigen Abwesenheit ohne Enddatum
+        if (absence.art === 'sofort' && absence.status !== 'rueckkehr') {
+          const tag = tageBis(absence.von, heute) + 1;
+          const neueStufe = tag >= 15 ? 'lang' : tag >= 4 ? 'mittel' : absence.stufe;
+          if (neueStufe !== absence.stufe && (absence.stufe === 'kurz' || absence.stufe === 'mittel')) {
+            const { data } = await admin.from('gfweekly_absences').update({ stufe:neueStufe, updated_at:new Date().toISOString() }).eq('id', absence.id).select().single();
+            absence = data || absence;
+            await handoverLog(absence.id, 'hochstufung', `Tag ${tag}: aus einer ${a.stufe}en Abwesenheit wird eine ${neueStufe}e. Die Vorschläge werden neu bewertet.`, 'lauf');
+            await admin.from('gfweekly_handover').delete().eq('absence_id', absence.id).eq('status','vorschlag');
+            schritte.push('hochgestuft auf '+neueStufe);
+          }
+        }
+
+        if (absence.status !== 'rueckkehr') {
+          const bau = await handoverBuild(absence);
+          schritte.push(`Korb: ${bau.neu} neu, ${bau.ergaenzt} ergänzt`);
+        }
+
+        // Statuswechsel
+        const ende = absence.bis || null;
+        if (absence.status === 'geplant' && absence.von <= heute) {
+          await admin.from('gfweekly_absences').update({ status:'aktiv', updated_at:new Date().toISOString() }).eq('id', absence.id);
+          await handoverLog(absence.id, 'notiz', `Die Abwesenheit von ${absence.person} beginnt heute.`, 'lauf');
+          absence.status = 'aktiv'; schritte.push('aktiv');
+        }
+        if (absence.status === 'aktiv' && ende && heute > ende) {
+          const { data: log } = await admin.from('gfweekly_handover_log').select('art,text,at').eq('absence_id', absence.id).order('at');
+          const gruppe = (art: string) => (log || []).filter((l: any) => l.art === art).length;
+          const { data: offen } = await admin.from('gfweekly_handover').select('id,title,ampel,status').eq('absence_id', absence.id).neq('status','erledigt');
+          const briefing = [
+            `Seit ${absence.von} bis ${ende}:`,
+            `${gruppe('entscheidung')} Entscheidungen in Vertretung`,
+            `${gruppe('weitergabe')} Weitergaben`,
+            `${gruppe('erledigt')} erledigte Punkte`,
+            `${(offen || []).filter((o: any) => o.ampel === 'rot' || o.ampel === 'ruht').length} Punkte warten auf dich`,
+          ].join('\n');
+          await admin.from('gfweekly_absences').update({ status:'rueckkehr', note_rueckkehr:briefing, updated_at:new Date().toISOString() }).eq('id', absence.id);
+          await handoverLog(absence.id, 'notiz', `Rückkehr von ${absence.person}, das Briefing steht bereit.`, 'lauf');
+          absence.status = 'rueckkehr'; schritte.push('Rückkehr');
+        }
+        if (absence.status === 'rueckkehr') {
+          const seit = tageBis((absence.updated_at || '').slice(0,10) || heute, heute);
+          if (seit >= 3) {
+            await admin.from('gfweekly_absences').update({ status:'beendet', updated_at:new Date().toISOString() }).eq('id', absence.id);
+            const { data: themen } = await admin.from('gfweekly_handover').select('ref_id').eq('absence_id', absence.id).eq('kind','thema');
+            for (const r of (themen || [])) await admin.from('gfweekly_topics').update({ owner_backup:null }).eq('id', r.ref_id);
+            await handoverLog(absence.id, 'notiz', 'Drei Tage nach der Rückkehr ohne Bestätigung: die Abwesenheit ist beendet.', 'lauf');
+            schritte.push('beendet');
+          }
+        }
+
+        // Wache: was in den nächsten drei Tagen fällig wird, bekommt eine Marke im Dossier
+        const { data: bald } = await admin.from('gfweekly_handover').select('id,dossier,frist,status')
+          .eq('absence_id', absence.id).neq('status','erledigt').not('frist','is',null).lte('frist', addDays(heute, 3));
+        for (const r of (bald || [])) {
+          const d = { ...(r.dossier || {}), wache:true };
+          await admin.from('gfweekly_handover').update({ dossier:d }).eq('id', r.id);
+        }
+        if ((bald || []).length) { schritte.push(`${(bald || []).length} auf der Wache`); }
+        bericht.push({ id:absence.id, person:absence.person, status:absence.status, stufe:absence.stufe, schritte });
+      }
+      return json({ ok:true, heute, absences:bericht.length, bericht });
+    }
 
     return json({ error:'unknown action' }, 400);
   } catch (e) { return json({ error:String((e as Error).message ?? e) }, 500); }

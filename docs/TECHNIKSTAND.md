@@ -86,3 +86,47 @@ Vorschaubild `site/assets/previews/gfweekly.webp` neu aus der Startseite (800 ×
 **Offen.** Die Kopfbilder (`site/assets/img/*.webp`, `site/assets/game/*.webp`) sind Illustrationen und blieben unberührt;
 einzelne zeigen türkise Fahrzeuge und Zelte. Der Farbscan nimmt Bilder aus. Umfärben wäre ein eigener Schritt
 (`pruefung/icons-umfaerben.py` aus dem Patch-Ordner).
+
+## V24a (21.09.2026) · Vertretung: Daten, Matrix, Automatik
+
+Migration `supabase/migrations/20260921_hh_vertretung.sql` (angewendet am 21.09.2026), Edge Function v29.
+
+**Tabellen.** `gfweekly_absences` (Person, von, bis, Schätzung, art geplant/sofort, kontakt keiner/wochenbrief/gespraech,
+Kanal, Gesprächszeit, Standardvertretung, stufe kurz/mittel/lang, status geplant/aktiv/rueckkehr/beendet, test, note,
+note_rueckkehr) · `gfweekly_deputies` (Vertretungslinie je Person und Bereich, Bereich ist ein Strang-Schlüssel, `gf` oder `*`,
+mit Vollmacht als Freitext, UNIQUE person+bereich, vier Seed-Zeilen) · `gfweekly_handover` (Übergabekorb, UNIQUE
+absence_id+kind+ref_id) · `gfweekly_handover_log` (Protokoll). Dazu `gfweekly_topics.owner_backup` und `.handover_id`.
+RLS ist überall an, ohne Policies: nur die Edge Function mit dem service_role-Schlüssel kommt heran.
+
+**Matrix.** `score(item, absence)` in der Edge Function, reine Funktion, keine KI. Vier Achsen 0 bis 3:
+Z Zeitdruck aus der Frist, F Folgen bei Stillstand (Geld ab 5.000 €, Pförtner-Stichworte der gf-Klasse, Relevanz),
+U Übertragbarkeit (hoch heißt schwer), G Entscheidungsgewicht aus gate und Priorität.
+`dringend = Z ≥ 2`, `wichtig = F + G ≥ 3`, daraus die vier Quadranten sofort, planen, delegieren, warten.
+Cluster in dieser Reihenfolge: A vor Abreise, E zu der anderen GF, C übergeben mit Rückfrage, D ruht, sonst B.
+Ampel: A vorher (bei art sofort rot), B grün, C gelb, E rot, D ruht. Bei Stufe kurz ruht alles außer Notfall (F = 3).
+Jede Zeile bekommt einen Begründungssatz, der die Achsen nennt. `luecke = U ≥ 2`.
+
+Drei Festlegungen, die die Paketdatei offenließ:
+- Ohne `bis` und ohne Schätzung rechnet das Fenster mit 14 Tagen, damit Z eine Kante hat.
+- F = 1 „Teamname im who-Feld“ meint einen Namen, der weder Alex noch Lea ist.
+- Stichworte treffen nur am Wortanfang: „Ankündigungen“ ist keine „Kündigung“, „Datenbank“ keine „Bank“.
+  (`\b` hilft bei Umlauten nicht, deshalb die ausdrückliche Grenze `(?<![a-zäöüß])`.)
+
+**Aktionen v29.** `absence_set` (berechnet stufe und status, baut den Korb sofort), `absence_list`, `absence_end`,
+`deputies_set`, `deputies_list`, `handover_build`, `handover_list` (Zeilen plus Zähler je Quadrant, Cluster, Ampel,
+Lücken und Übernahmefähigkeit), `handover_set`, `handover_set_many`, `handover_dossier`, `handover_log_add`,
+`handover_log`, `uebernahme_stat`, `absence_tick`. Bestätigte Korbzeilen überschreibt der Lauf nie, er ergänzt nur
+frist, dossier und luecke. `handover_set` setzt bei einer Vertretung zusätzlich `gfweekly_topics.owner_backup`,
+`gate` und `gate_note` („in Vertretung für <person>“), bei ruht `gate = warten` mit Frist einen Tag nach der Rückkehr.
+
+**Automatik.** `pg_net` ist aktiviert, `public.hh_absence_tick()` ruft die Edge Function mit `absence_tick` auf und holt
+das Passwort aus dem Vault-Secret `gfweekly_password`; fehlt das Secret, tut die Funktion nichts und sagt es im
+Protokoll. Cron-Job `hh_absence_tick`, täglich 04:40 UTC. Fallback bleibt Abschnitt H6 des täglichen Auftrags.
+
+**Prüfung ohne Deploy.** `pruefung/matrix-probe.mjs` holt die reinen Funktionen aus der Edge Function und stellt sie
+node zur Verfügung; `pruefung/matrix-test.mjs` rechnet 26 Proben dagegen (Stufe, Geldbeträge, alle vier Achsen,
+Cluster, Ampel, Wache, Regeltext, Vertretungslinie, Wortgrenzen). `pruefung/korb-probe.mjs` rechnet die Matrix über
+echte Zeilen: die Sammelabfrage (dieselben Filter wie `handoverItems`) läuft über den Supabase-MCP, ihr JSON geht in
+das Skript. Trockenlauf Lea 05.10. bis 25.10.: 87 Zeilen (21 Themen, 59 Kandidaten, 7 Partner), Quadranten
+planen 44, warten 36, delegieren 4, sofort 3; Cluster E 39, D 36, A 7, B 5; Lücken 70 von 87.
+Aufruf: `TS_BASIS=file://<ordner mit typescript>/x.mjs node pruefung/matrix-test.mjs`.
