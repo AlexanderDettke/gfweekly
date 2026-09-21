@@ -178,8 +178,8 @@ export const ANTWORT = {
     NEUE.push(neu); KORB['abs-neu'] = [];
     return { absence:neu, bau:{ neu:0, ergaenzt:0, fehler:0, gesamt:0, truncated:false }, zaehler:zaehleKorb([]) };
   },
-  handover_list: (p) => { const rows=KORB[p.absence_id]||KORB['abs-1'];
-    const abs=[A1,A2,A3].find(a=>a.id===p.absence_id)||A1;
+  handover_list: (p) => { const rows=KORB[p.absence_id] || (p.absence_id ? [] : KORB['abs-1']);
+    const abs=[...NEUE, A1, A2, A3].find(a=>a.id===p.absence_id) || A1;
     return { items:rows, absence:abs, ...zaehleKorb(rows) }; },
   handover_log: (p) => ({ log: PROTOKOLL[p.absence_id]||[] }),
   /* v30: handover_set läuft über die Datenbankfunktion und antwortet mit Zeile und Vorgang.
@@ -197,9 +197,18 @@ export const ANTWORT = {
     return { item:{ ...z }, vorgang: vorgangVon(z) };
   },
   handover_set_many: (p) => {
-    let n = 0;
-    for (const it of (p.items || [])) { const z = zeileVon(it.id); if (!z) continue; z.status = 'bestaetigt'; z.by = p.by || 'Alex'; n++; }
-    return { ok:true, updated:n, misslungen:[] };
+    let n = 0; const misslungen = [];
+    for (const it of (p.items || [])) {
+      if (!it.id) { misslungen.push({ id:null, titel:null, grund:'ohne id' }); continue; }
+      const z = zeileVon(it.id);
+      if (!z) { misslungen.push({ id:it.id, titel:null, grund:'Korbzeile gibt es nicht' }); continue; }
+      if (it.cluster) z.cluster = it.cluster;
+      if (it.ampel) z.ampel = it.ampel;
+      if (it.vertretung !== undefined) z.vertretung = it.vertretung || null;
+      if (z.ampel === 'ruht' || z.ampel === 'vorher') z.vertretung = null;
+      z.status = it.status || 'bestaetigt'; z.by = p.by || 'Alex'; n++;
+    }
+    return { ok: misslungen.length === 0, updated:n, misslungen };
   },
   /* Rücknahme bei der Rückkehr: die Antwort zeigt, was das Backend gespeichert hat. */
   handover_zurueck: (p) => {
@@ -215,8 +224,22 @@ export const ANTWORT = {
     { id:'d2', person:'Lea', bereich:'*', vertretung:'Alex', vollmacht:null, sort:90, active:true },
     { id:'d3', person:'Alex', bereich:'gf', vertretung:'Lea', vollmacht:'Ausgaben bis 2.000 € aus freigegebenen Budgets, keine neuen Verpflichtungen', sort:10, active:true },
     { id:'d4', person:'Alex', bereich:'*', vertretung:'Lea', vollmacht:null, sort:90, active:true } ] },
-  uebernahme_stat: { stat:{ Alex:{ themen:24, ohne_stand:9, ohne_schritt:6, ohne_frist:14, uebernahmefaehigkeit:58 },
-                            Lea:{ themen:18, ohne_stand:11, ohne_schritt:8, ohne_frist:12, uebernahmefaehigkeit:39 } } },
+  /* Die Übernahmefähigkeit wird aus denselben Themen gerechnet, die der Lückenfilter im Board zeigt.
+     Sonst könnten Kachel und Board verschiedene Zahlen nennen, ohne dass es auffällt. */
+  uebernahme_stat: () => {
+    const wer = (x) => { const t=(x||'').toLowerCase(); return t.includes('lea') ? 'Lea' : t.includes('alex') ? 'Alex' : 'Team'; };
+    const rechne = (p) => {
+      const tor = p === 'Lea' ? 'lea' : 'alex';
+      const meine = THEMEN.filter(t => !t.archived && (wer(t.owner) === p || t.gate === tor));
+      const ohneStand = meine.filter(t => !(t.short_description||'').trim()).length;
+      const ohneSchritt = meine.filter(t => !(t.next_action||'').trim()).length;
+      const bereit = meine.filter(t => (t.short_description||'').trim() && (t.next_action||'').trim()).length;
+      return { themen:meine.length, ohne_stand:ohneStand, ohne_schritt:ohneSchritt,
+               ohne_frist:meine.filter(t => !t.gate_frist).length,
+               uebernahmefaehigkeit: meine.length ? Math.round(bereit/meine.length*100) : null };
+    };
+    return { stat:{ Alex:rechne('Alex'), Lea:rechne('Lea') } };
+  },
   inbox_list: { items:[ { id:'i1', title:'Alter Eintrag aus dem Archiv', raw_text:'Kam über das Formular.', source:'form', priority:'mittel', created_at:zeit(-90), created_by:'Alex', status:'neu' } ] },
   score_get: { state:{ year:new Date().getFullYear(), week:heute.slice(0,4)+'-W38', day:heute, who:'Alex', total:1240, weekPts:180, todayPts:15,
     level:{ key:'dorf', label:'Dorf', threshold:1800, image:'habitat-3-dorf' }, next:{ key:'festival', label:'Festival', threshold:3600 },

@@ -509,20 +509,26 @@ async function dossierFuer(item: any, absence: any){
 
 /* Sammelt alles, was im Fenster der Abwesenheit liegt, und vereinheitlicht es zu Korbzeilen. */
 const HO_GRENZE = 2000;
-/* Befund 7.2: die Obergrenzen bleiben, aber der Korb sagt, wenn eine Quelle an ihre Grenze gestoßen ist.
-   Solange truncated false ist, ist der Korb vollständig. */
-let hoAbgeschnitten: string[] = [];
+/* Befund 7.2: die Obergrenzen bleiben, aber der Korb sagt, welche Quelle an ihre Grenze gestoßen ist.
+   Erkannt wird das über die genaue Zeilenzahl der Quelle, nicht über die Länge der Antwort: ein niedrigeres
+   Limit der Plattform bliebe sonst unbemerkt. Die Liste gehört zum Ergebnis, nicht in eine globale Variable,
+   sonst überschreiben sich zwei gleichzeitige Bauten gegenseitig. */
 async function handoverItems(absence: any){
-  hoAbgeschnitten = [];
+  const hoAbgeschnitten: string[] = [];
   const person = whoNorm(absence.person), gate = absGate(absence.person);
   const von = absence.von as string, ende = absEnde(absence), heute = heuteBerlin();
   const items: any[] = [];
 
+  const zaehle = async (name: string, q: any, geholt: number) => {
+    const { count, error } = await q;
+    if (error) throw new Error(name + ' konnten nicht gezählt werden: ' + error.message);
+    if ((count ?? 0) > geholt) hoAbgeschnitten.push(`${name} (${geholt} von ${count})`);
+  };
   const { data: themen, error: e1 } = await admin.from('gfweekly_topics')
     .select('id,title,short_description,context,decision,notes,next_action,owner,involved,priority,relevance,board_lane,gate,gate_frist,archived')
     .eq('archived', false).limit(HO_GRENZE);
   if (e1) throw new Error('Themen konnten nicht gelesen werden: '+e1.message);
-  if ((themen || []).length >= HO_GRENZE) hoAbgeschnitten.push('Themen');
+  await zaehle('Themen', admin.from('gfweekly_topics').select('id', { count:'exact', head:true }).eq('archived', false), (themen || []).length);
   for (const x of (themen || [])) {
     const frist = x.gate_frist || null;
     /* Fenster der Abwesenheit. Überfälliges zählt mit, denn es bleibt liegen, solange niemand da ist. */
@@ -539,7 +545,8 @@ async function handoverItems(absence: any){
     .select('id,title,body,quote,relevance,strand,who,source,source_title,source_url,happened_at,gate,gate_frist')
     .eq('kind','kandidat').eq('status','neu').eq('gate', gate).limit(HO_GRENZE);
   if (e2) throw new Error('Kandidaten konnten nicht gelesen werden: '+e2.message);
-  if ((kandidaten || []).length >= HO_GRENZE) hoAbgeschnitten.push('Kandidaten');
+  await zaehle('Kandidaten', admin.from('gfweekly_news').select('id', { count:'exact', head:true })
+    .eq('kind','kandidat').eq('status','neu').eq('gate', gate), (kandidaten || []).length);
   for (const x of (kandidaten || [])) {
     items.push({ kind:'kandidat', ref_id:x.id, title:x.title, strand:x.strand, frist:x.gate_frist || null,
       body:x.body, quote:x.quote, relevance:x.relevance, who:x.who, source:x.source, source_title:x.source_title,
@@ -550,7 +557,8 @@ async function handoverItems(absence: any){
     .select('id,title,description,date_from,date_to,zeitraum,strand,owner,status,archived')
     .eq('archived', false).not('status','in','("erreicht","abgesagt")').limit(HO_GRENZE);
   if (e3) throw new Error('Meilensteine konnten nicht gelesen werden: '+e3.message);
-  if ((meilen || []).length >= HO_GRENZE) hoAbgeschnitten.push('Meilensteine');
+  await zaehle('Meilensteine', admin.from('gfweekly_milestones').select('id', { count:'exact', head:true })
+    .eq('archived', false).not('status','in','("erreicht","abgesagt")'), (meilen || []).length);
   for (const x of (meilen || [])) {
     const frist = x.date_from || null;
     if (!frist || frist < von || frist > ende) continue;
@@ -567,8 +575,10 @@ async function handoverItems(absence: any){
   const meinePhasen = (phasen || []).filter((p: any) => fuehrt(p.lead) && (p.months || []).some((m: number) => monate.has(m)));
   if (meinePhasen.length) {
     const { data: rituale, error: e7 } = await admin.from('gfweekly_rituals').select('id,phase_key,title,hint,active')
-      .in('phase_key', meinePhasen.map((p: any) => p.key)).eq('active', true).limit(500);
+      .in('phase_key', meinePhasen.map((p: any) => p.key)).eq('active', true).limit(HO_GRENZE);
     if (e7) throw new Error('Rituale konnten nicht gelesen werden: '+e7.message);
+    await zaehle('Rituale', admin.from('gfweekly_rituals').select('id', { count:'exact', head:true })
+      .in('phase_key', meinePhasen.map((p: any) => p.key)).eq('active', true), (rituale || []).length);
     for (const x of (rituale || [])) {
       items.push({ kind:'ritual', ref_id:x.id, title:x.title, strand:null, frist:null, context:x.hint,
         phase:(meinePhasen.find((p: any)=>p.key===x.phase_key)||{}).label, owner:absence.person, who:absence.person, gate:null });
@@ -578,7 +588,7 @@ async function handoverItems(absence: any){
   const { data: partner, error: e4 } = await admin.from('hh_partner_stand')
     .select('partner_id,name,lane,stage,owner,next_action,target_on,waiting_for,signal,overdue').limit(HO_GRENZE);
   if (e4) throw new Error('Partnerstand konnte nicht gelesen werden: '+e4.message);
-  if ((partner || []).length >= HO_GRENZE) hoAbgeschnitten.push('Partner');
+  await zaehle('Partner', admin.from('hh_partner_stand').select('partner_id', { count:'exact', head:true }), (partner || []).length);
   for (const x of (partner || [])) {
     const mein = whoNorm(x.owner) === person || (x.owner || '').toLowerCase() === 'together';
     if (!mein) continue;
@@ -595,7 +605,9 @@ async function handoverItems(absence: any){
     .select('id,title,body,who,happened_at,source_url,source_title,strand,source_ref')
     .eq('source','kalender').gte('happened_at', addDays(von,-1)+'T00:00:00Z').lte('happened_at', addDays(ende,1)+'T23:59:59Z').limit(HO_GRENZE);
   if (e5) throw new Error('Termine konnten nicht gelesen werden: '+e5.message);
-  if ((termine || []).length >= HO_GRENZE) hoAbgeschnitten.push('Termine');
+  await zaehle('Termine', admin.from('gfweekly_news').select('id', { count:'exact', head:true })
+    .eq('source','kalender').gte('happened_at', addDays(von,-1)+'T00:00:00Z').lte('happened_at', addDays(ende,1)+'T23:59:59Z'),
+    (termine || []).length);
   for (const x of (termine || [])) {
     const tag = new Date(x.happened_at).toLocaleDateString('sv-SE', { timeZone:'Europe/Berlin' });
     if (tag < von || tag > ende) continue;
@@ -606,7 +618,8 @@ async function handoverItems(absence: any){
   }
   /* Ein Vorgang, eine Zeile: derselbe Termin kann als mehrere Neuigkeiten vorliegen. */
   const gesehen = new Set<string>();
-  return items.filter(x => { const k = x.kind+'|'+x.ref_id; if (gesehen.has(k)) return false; gesehen.add(k); return true; });
+  const eindeutig = items.filter(x => { const k = x.kind+'|'+x.ref_id; if (gesehen.has(k)) return false; gesehen.add(k); return true; });
+  return { items: eindeutig, abgeschnitten: hoAbgeschnitten };
 }
 
 /* Baut den Korb neu: bewertet jede Zeile, legt neue an, ergänzt bestehende. Bestätigte Zeilen bleiben unangetastet,
@@ -620,7 +633,7 @@ async function handoverBuild(absence: any){
   if (vor.error) throw new Error('Der bisherige Korb konnte nicht gelesen werden: '+vor.error.message);
   const deputies = dep.data, alt = vor.data;
   const vorhanden = new Map<string, any>((alt || []).map((r: any) => [r.kind+'|'+r.ref_id, r]));
-  const items = await handoverItems(absence);
+  const { items, abgeschnitten } = await handoverItems(absence);
   const heute = heuteBerlin();
   let neu = 0, ergaenzt = 0, fehler = 0;
   for (const item of items) {
@@ -652,13 +665,17 @@ async function handoverBuild(absence: any){
     }
   }
   /* Der Zustand steht an der Abwesenheit, damit die Übergabeseite den Hinweis auch dann zeigt,
-     wenn sie nur liest und nicht selbst baut. */
-  await admin.from('gfweekly_absences').update({
-    korb_truncated: hoAbgeschnitten.length > 0,
-    korb_abgeschnitten: hoAbgeschnitten.length ? hoAbgeschnitten.join(', ') : null,
+     wenn sie nur liest und nicht selbst baut. Schreibfehler beim Korb zählen mit: dann ist der Korb
+     genauso unvollständig, als wäre eine Quelle abgeschnitten worden. */
+  const unvollstaendig = abgeschnitten.length > 0 || fehler > 0;
+  const grund = [...abgeschnitten, ...(fehler ? [`${fehler} Zeilen ließen sich nicht schreiben`] : [])];
+  const { error: kf } = await admin.from('gfweekly_absences').update({
+    korb_truncated: unvollstaendig,
+    korb_abgeschnitten: grund.length ? grund.join(', ') : null,
   }).eq('id', absence.id);
   return { neu, ergaenzt, fehler, gesamt: items.length,
-           truncated: hoAbgeschnitten.length > 0, abgeschnitten: [...hoAbgeschnitten] };
+           truncated: unvollstaendig, abgeschnitten: grund,
+           hinweis_gespeichert: !kf };
 }
 
 /* Zähler und Übernahmefähigkeit für die Übergabeseite. */
@@ -696,6 +713,16 @@ async function asana(pfad: string, methode = 'GET', koerper?: unknown){
   let d: any = {}; try { d = JSON.parse(text); } catch (_e) { d = { raw: text }; }
   if (!res.ok) throw new Error(`Asana ${methode} ${pfad}: ${res.status} ${(d?.errors?.[0]?.message) || text.slice(0,200)}`);
   return d.data;
+}
+/* Eine Seite der Asana-Antwort mit next_page, damit Listen vollständig gelesen werden können. */
+async function asanaSeite(pfad: string){
+  const res = await fetch('https://app.asana.com/api/1.0' + pfad, {
+    headers: { 'Authorization': 'Bearer ' + ASANA_TOKEN, 'Accept': 'application/json' },
+  });
+  const text = await res.text();
+  let d: any = {}; try { d = JSON.parse(text); } catch (_e) { d = {}; }
+  if (!res.ok) throw new Error(`Asana GET ${pfad}: ${res.status} ${(d?.errors?.[0]?.message) || text.slice(0,200)}`);
+  return d;
 }
 /* Welcher Abschnitt für welche Zeile: der Quadrant sticht, danach die Ampel. */
 function asanaAbschnitt(row: any){
@@ -1409,7 +1436,7 @@ Deno.serve(async (req: Request) => {
       const by = (t.by ?? WHO).toString().slice(0,60);
       const ergebnis: any[] = []; const misslungen: any[] = []; let n = 0;
       for (const it of liste) {
-        if (!it.id) continue;
+        if (!it.id) { misslungen.push({ id:null, titel:null, grund:'ohne id' }); continue; }
         const patch: Record<string, unknown> = {};
         if (it.cluster !== undefined && HO_CLUSTER.includes(it.cluster)) patch.cluster = it.cluster;
         if (it.ampel !== undefined && HO_AMPEL.includes(it.ampel)) patch.ampel = it.ampel;
@@ -1420,7 +1447,8 @@ Deno.serve(async (req: Request) => {
         const { data, error } = await admin.rpc('hh_handover_set', { p_id: it.id, p_by: by, p_patch: patch });
         if (error) {
           if (action === 'handover_set') return json({ error:'Übergabe nicht gespeichert: '+error.message },500);
-          misslungen.push({ id: it.id, grund: error.message });
+          const { data: t0 } = await admin.from('gfweekly_handover').select('title').eq('id', it.id).maybeSingle();
+          misslungen.push({ id: it.id, titel: t0?.title ?? null, grund: error.message });
           continue;
         }
         n++; ergebnis.push({ ...(data?.item ?? {}), vorgang: data?.vorgang ?? null });
@@ -1466,7 +1494,7 @@ Deno.serve(async (req: Request) => {
       const { data: row } = await admin.from('gfweekly_handover').select('*').eq('id', t.id).single();
       if (!row) return json({ error:'Zeile fehlt' },404);
       const { data: absence } = await admin.from('gfweekly_absences').select('*').eq('id', row.absence_id).single();
-      const items = await handoverItems(absence);
+      const { items } = await handoverItems(absence);
       const item = items.find((x: any) => x.kind === row.kind && String(x.ref_id) === row.ref_id);
       if (!item) return json({ error:'Vorgang nicht mehr im Fenster' },404);
       const dossier = await dossierFuer(item, absence);
@@ -1612,19 +1640,29 @@ Deno.serve(async (req: Request) => {
       /* v30 (Befund 7.3): Wer noch keine Asana-Kennung hat, bekommt sie einmalig über die E-Mail.
          Die Liste aus Asana wird einmal je Export geholt, die Treffer wandern nach gfweekly_people.
          Wer dort kein Konto hat, erscheint in der Antwort und seine Aufgaben gehen an die Vertretung. */
-      const fehlen = (leute || []).filter((p: any) => !p.asana_gid && p.email);
+      /* Jessica bleibt bis zur Entscheidung von Hand ausgenommen: im Arbeitsbereich stehen zwei Konten,
+         und welches gilt, ist eine Entscheidung, keine Ableitung (ANTWORTEN_ZU_FRAGEN.md, Punkt 4). */
+      const ASANA_OFFEN = ['jessica'];
+      const offeneZuordnung = (p: any) => ASANA_OFFEN.some(x => norm(p.name).includes(x) || norm(p.email).startsWith(x));
+      const fehlen = (leute || []).filter((p: any) => !p.asana_gid && p.email && !offeneZuordnung(p));
+      let nutzerFehler = '';
       if (fehlen.length) {
         try {
-          const nutzer = await asana(`/users?workspace=${ASANA_WORKSPACE}&opt_fields=email,name&limit=100`);
           const nachMail = new Map<string,string>();
-          for (const u of (nutzer || [])) if (u?.email) nachMail.set(norm(u.email), u.gid);
+          let pfad = `/users?workspace=${ASANA_WORKSPACE}&opt_fields=email,name&limit=100`;
+          for (let seite = 0; seite < 20 && pfad; seite++) {
+            const antwort = await asanaSeite(pfad);
+            for (const u of (antwort.data || [])) if (u?.email) nachMail.set(norm(u.email), u.gid);
+            pfad = antwort.next_page?.path || '';
+          }
           for (const p of fehlen) {
             const gid = nachMail.get(norm(p.email));
             if (!gid) continue;
             const { error } = await admin.from('gfweekly_people').update({ asana_gid: gid }).eq('id', p.id);
-            if (!error) p.asana_gid = gid;
+            if (error) nutzerFehler = 'Kennung ließ sich nicht merken: ' + error.message;
+            else p.asana_gid = gid;
           }
-        } catch (_e) { /* ohne Nutzerliste bleibt es bei den vorhandenen Kennungen */ }
+        } catch (e) { nutzerFehler = 'Nutzerliste nicht lesbar: ' + String((e as Error).message).slice(0,160); }
       }
 
       const gidVon = (name: string) => {
@@ -1682,7 +1720,11 @@ Deno.serve(async (req: Request) => {
       for (const a of (vorhanden || [])) abschnitt[a.name] = a.gid;
       for (const n of ASANA_ABSCHNITTE) if (!abschnitt[n]) abschnitt[n] = (await asana(`/projects/${projekt}/sections`, 'POST', { name:n })).gid;
 
-      const folgen = [gidVon('Alex'), gidVon('Lea')].filter(Boolean) as string[];
+      /* Wer kein Asana-Konto hat, dessen Aufgaben gehen an Alex; die Namen stehen in der Antwort.
+         So bleibt keine Aufgabe herrenlos (ANTWORTEN_ZU_FRAGEN.md, Punkt 7.3). */
+      const ersatz = (leute || []).find((q: any) => norm(q.email) === 'alex@wildemoehre.org')?.asana_gid
+                  || (leute || []).find((q: any) => norm(q.name).includes('alex'))?.asana_gid || null;
+      const folgen = [ersatz, (leute || []).find((q: any) => norm(q.name).includes('lea'))?.asana_gid].filter(Boolean) as string[];
       let neu = 0, aktualisiert = 0;
       for (const row of rows) {
         const sek = asanaAbschnitt(row);
@@ -1691,7 +1733,7 @@ Deno.serve(async (req: Request) => {
           notes: asanaNotiz(row, absence, vollmachtVon(row)),
           due_on: row.frist || null,
         };
-        const zu = row.vertretung ? gidVon(row.vertretung) : null;
+        const zu = (row.vertretung ? gidVon(row.vertretung) : null) ?? (row.vertretung ? ersatz : null);
         if (row.asana_gid) {
           /* Beim Auffrischen wird die Zuweisung ausdrücklich gesetzt oder gelöscht, sonst bliebe sie
              bei der Person hängen, die vorher vertreten hat. */
@@ -1709,8 +1751,11 @@ Deno.serve(async (req: Request) => {
         }
       }
       await handoverLog(absence.id, 'asana', `Nach Asana exportiert: ${neu} neue und ${aktualisiert} aktualisierte Aufgaben.`
-        + (ohneGid.length ? ` Ohne Zuweisung, weil die Asana-Kennung fehlt: ${ohneGid.join(', ')}.` : ''), (t.by ?? WHO).toString());
-      return json({ ok:true, projekt, neu, aktualisiert, ohne_zuweisung:ohneGid, url:`https://app.asana.com/0/${projekt}` });
+        + (ohneGid.length ? ` Ohne eigenes Asana-Konto, deshalb an Alex: ${ohneGid.join(', ')}.` : '')
+        + (nutzerFehler ? ` ${nutzerFehler}` : ''), (t.by ?? WHO).toString());
+      return json({ ok:true, projekt, neu, aktualisiert, ohne_zuweisung:ohneGid,
+        ersatz_zuweisung: ohneGid.length ? 'Alex' : null, nutzerliste: nutzerFehler || null,
+        url:`https://app.asana.com/0/${projekt}` });
     }
     if (action === 'asana_sync') {
       if (!ASANA_TOKEN) return json({ error:'ASANA_TOKEN fehlt' },400);

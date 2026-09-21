@@ -82,17 +82,19 @@ const params=new URLSearchParams(location.search);
 let VIEW=params.get("view")==="kacheln"?"kacheln":"board";
 let GROUP=localStorage.getItem("gf_board_group")||"ablauf";
 let SHOW_REC=localStorage.getItem("gf_board_rec")==="1", SHOW_DONE=localStorage.getItem("gf_board_done")==="1";
-/* V24d (Befund 7.4): ?owner=<Name> filtert wirklich auf die Verantwortung, ?luecke=1 zeigt nur Themen ohne
-   Stand oder ohne nächsten Schritt. ?q= sucht weiterhin im Text vor. So führt der Weg aus der Übergabe
-   („lückenhafte Themen“) zu genau den Themen, die die Kachel zählt. */
+/* V24d (Befund 7.4): ?owner=<Name> filtert auf genau die Menge, die uebernahme_stat zählt, ?luecke=1 zeigt
+   davon nur die ohne Stand oder ohne nächsten Schritt. ?q= sucht weiterhin im Text vor. ?person= bleibt als
+   alter Name erhalten. Damit zeigt der Weg aus der Übergabe genau die Themen, die die Kachel gezählt hat. */
 let Q=(params.get("q")||"").trim().toLowerCase(), DRAG=null, UNDO=null, UNDO_T=null;
-let OWNER=(params.get("owner")||"").trim(), OWNER_ON=!!params.get("owner");
+let OWNER=(params.get("owner")||params.get("person")||"").trim(), OWNER_ON=!!OWNER;
 let LUECKE=params.get("luecke")==="1";
 function istLuecke(t){ return !(t.short_description||"").trim() || !(t.next_action||"").trim(); }
+/* Dieselbe Regel wie uebernahme_stat in der Edge Function: Verantwortung der Person oder ihr Ausgang.
+   whoNorm macht aus „Alexander Dettke“ Alex und aus allem Übrigen Team. */
 function gehoert(t, name){
-  const n=name.toLowerCase(); const o=(t.owner||"").toLowerCase();
-  const tor=(t.gate||"").toLowerCase(), meins=n.includes("lea")?"lea":n.includes("alex")?"alex":"";
-  return o.includes(n) || (!!meins && tor===meins) || (t.owner_backup||"").toLowerCase().includes(n);
+  const wer=gfWhoNorm(name);
+  const tor=wer==="Lea"?"lea":wer==="Alex"?"alex":"";
+  return gfWhoNorm(t.owner)===wer || (!!tor && (t.gate||"")===tor);
 }
 
 /* ---- Datum-Helfer ---- */
@@ -331,7 +333,12 @@ $("#showRec").onchange=e=>{ SHOW_REC=e.target.checked; localStorage.setItem("gf_
 $("#showDone").onchange=e=>{ SHOW_DONE=e.target.checked; localStorage.setItem("gf_board_done",SHOW_DONE?"1":"0"); render(); };
 $("#q").oninput=e=>{ Q=e.target.value.trim().toLowerCase(); render(); };
 if(Q) $("#q").value=Q;
-if(OWNER){ $("#owWrap").hidden=false; $("#owName").textContent="nur "+OWNER; $("#owOn").checked=true; }
+if(OWNER){
+  /* Der Filter aus der Kachel soll zeigen, was die Kachel gezählt hat: die zählt auch wiederkehrende und
+     erledigte Themen mit, deshalb werden die beiden Haken für diesen Weg eingeschaltet. */
+  $("#owWrap").hidden=false; $("#owName").textContent="nur "+OWNER; $("#owOn").checked=true;
+  SHOW_REC=true; SHOW_DONE=true; $("#showRec").checked=true; $("#showDone").checked=true;
+}
 $("#owOn").onchange=e=>{ OWNER_ON=e.target.checked; render(); };
 $("#lueckeOn").checked=LUECKE;
 $("#lueckeOn").onchange=e=>{ LUECKE=e.target.checked; render(); };

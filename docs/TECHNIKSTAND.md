@@ -318,21 +318,29 @@ alles in einer Transaktion. Die Edge Function ruft nur noch diese Funktion; `han
 und misslungene Zeilen stehen namentlich in der Antwort (`misslungen`). `SECURITY DEFINER`, fester `search_path`,
 Ausführungsrecht nur für `service_role`. Damit kann es keine bestätigte Korbzeile ohne Wirkung mehr geben.
 
-**7.2 Der Korb sagt, wenn er unvollständig ist.** Die Obergrenze bleibt bei 2000 Zeilen je Quelle. `handoverBuild`
-merkt sich, welche Quelle an die Grenze gestoßen ist, und schreibt das nach `gfweekly_absences.korb_truncated`
-und `.korb_abgeschnitten`. Die Übergabeseite blendet dann einen Hinweis über dem Korb ein. Solange die Spalte
-`false` ist, ist der Korb vollständig.
+**7.2 Der Korb sagt, wenn er unvollständig ist.** Die Obergrenze bleibt bei 2000 Zeilen je Quelle. Erkannt wird
+eine Abschneidung über die genaue Zeilenzahl der Quelle (`count: exact`), nicht über die Länge der Antwort: ein
+niedrigeres Limit der Plattform bliebe sonst unbemerkt. Auch Schreibfehler beim Korb zählen als unvollständig.
+Das Ergebnis steht in `gfweekly_absences.korb_truncated` und `.korb_abgeschnitten` (mit Quelle und Zahlen), die
+Übergabeseite blendet dann einen Hinweis über dem Korb ein. `false` heißt: bei diesem Bau wurde keine Abschneidung
+erkannt und keine Zeile blieb ungeschrieben. Es heißt nicht, dass ein früherer Bau vollständig war; bestehende
+Abwesenheiten stehen bis zum nächsten Bau auf dem Vorgabewert `false`.
 
-**7.3 Asana-Kennungen über die E-Mail.** `asana_export` holt einmal je Lauf `GET /users?workspace=…&opt_fields=email,name`,
-ordnet fehlende Kennungen über die E-Mail zu und schreibt sie nach `gfweekly_people.asana_gid`. Fünf Startwerte
-stehen als Seed in der Migration (Alex, Lea, Amelie, Antonia, Helge); Jessica bleibt offen, weil im Workspace zwei
-Konten stehen und die Zuordnung eine Entscheidung ist. Wer kein Asana-Konto hat, erscheint in der Antwort unter
-`ohne_zuweisung`, und die Aufgabe geht ohne Zuweisung ins Projekt.
+**7.3 Asana-Kennungen über die E-Mail.** `asana_export` liest `GET /users?workspace=…` über **alle** Seiten
+(`next_page`, höchstens zwanzig), ordnet fehlende Kennungen über die E-Mail zu und schreibt sie nach
+`gfweekly_people.asana_gid`. Fünf Startwerte stehen als Seed in der Migration (Alex, Lea, Amelie, Antonia, Helge).
+**Jessica ist von der automatischen Auflösung ausgenommen**, bis die Entscheidung zwischen den beiden Konten
+gefallen ist; sonst würde der erste Export sie stillschweigend festlegen. Wer kein Asana-Konto hat, erscheint in
+der Antwort unter `ohne_zuweisung`, und die Aufgabe geht **an Alex** statt ins Leere. Ein Fehler beim Lesen der
+Nutzerliste steht als `nutzerliste` in der Antwort und im Protokoll, statt still zu verschwinden.
 
-**7.4 Lückenfilter im Board.** `board.html?owner=<Name>&luecke=1` filtert wirklich: `owner` trifft die Verantwortung,
-den Ausgang der Person oder ihre Vertretung, `luecke` zeigt nur Themen ohne Stand oder ohne nächsten Schritt.
-Beide Schalter stehen als Haken in der Board-Leiste und lassen sich einzeln abschalten. Die Kachel
-„Übernahmefähigkeit“ auf der Vertretungsseite verlinkt genau dorthin und nennt die Zahlen, die sie zählt.
+**7.4 Lückenfilter im Board.** `board.html?owner=<Name>&luecke=1` filtert nach **derselben Regel wie
+`uebernahme_stat`**: Verantwortung der Person (normalisiert wie `whoNorm`) oder ihr Ausgang beim Pförtner.
+`luecke` zeigt davon nur Themen ohne Stand oder ohne nächsten Schritt. Der Weg aus der Kachel schaltet
+wiederkehrende und erledigte Themen ein, weil die Kachel sie mitzählt; so zeigt das Board genau die Menge, die
+die Kachel genannt hat. Beide Schalter stehen als Haken in der Board-Leiste. `?person=` bleibt als alter Name
+erhalten. Die beiden Zahlen der Kachel (ohne Stand, ohne nächsten Schritt) dürfen nicht addiert werden:
+ein Thema kann beides fehlen lassen.
 
 **Prüfung.** `pruefung/testdaten.mjs` merkt sich jetzt, was geschrieben wurde: eine bestätigte Zeile kommt beim
 nächsten Lesen als bestätigt zurück, eine neu angelegte Abwesenheit taucht in der Liste auf. `zuruecksetzen()`
@@ -340,6 +348,13 @@ stellt vor jedem Fall den Saatstand her. Dadurch prüft die Bedienprüfung nicht
 sondern auch die Wirkung: die bestätigte Zeile verlässt die Ansicht, das Anlegen leitet zur neuen Übergabe weiter,
 die Rücknahme räumt die Zeile aus „wartet auf dich“. Dazu zwei neue Fälle für den Lückenfilter und den Hinweis auf
 einen unvollständigen Korb.
+
+**Aus der Prüfung von a9f1a9e nachgezogen** (Migration `20260922_hh_handover_set_namen.sql`, angewendet):
+`hh_handover_set` traf den Ausgang nur bei den Zeichenketten `alex` und `lea` und hätte „Alexander Dettke“ nach
+`team` geschickt; die neue Funktion `hh_person_gate` bildet dieselbe Regel wie `whoNorm`. Ein gespeicherter
+Leerstring gilt nicht mehr als frühere Vertretung. Dazu: die abgeschnittenen Quellen sind kein globaler Zustand
+mehr (zwei gleichzeitige Bauten überschrieben sich), misslungene Zeilen einer Sammelübernahme stehen mit Titel in
+der Antwort und erscheinen in der Oberfläche, und der Fehler des abschließenden Updates wird gemeldet.
 
 **Offen bleibt** (aus derselben Review, nicht Teil dieser Runde): echte Pagination statt Obergrenzen, und der
 Nachweis, dass Tick, Cron, Vault und Asana live tun, was sie sollen. Das ist die Live-Abnahme nach dem Deploy.

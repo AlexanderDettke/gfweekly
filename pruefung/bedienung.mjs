@@ -200,12 +200,20 @@ console.log('\n== Lückenfilter im Board (Befund 7.4) ==');
     karten === 2 && titel.includes('Zeltwiese') && titel.includes('Gastro-Partner'), `${karten} Karten: ${titel.slice(0,90)}`);
   pruefe('der Personenschalter ist sichtbar und trägt den Namen',
     (await p.locator('#owWrap').innerText()).includes('Lea'));
-  await p.locator('#lueckeOn').uncheck(); await p.waitForTimeout(200);
+  await p.locator('#lueckeOn').uncheck(); await p.waitForTimeout(250);
   const ohneLuecke = await p.locator('.bcard').count();
-  pruefe('ohne Lückenhaken zeigt er alle Themen von Lea', ohneLuecke > 1, `${ohneLuecke} Karten`);
-  await p.locator('#owOn').uncheck(); await p.waitForTimeout(200);
-  pruefe('ohne Personenhaken zeigt er alles', await p.locator('.bcard').count() >= ohneLuecke);
+  pruefe('ohne Lückenhaken stehen genau Leas drei Themen da', ohneLuecke === 3, `${ohneLuecke} Karten`);
+  await p.locator('#owOn').uncheck(); await p.waitForTimeout(250);
+  const alles = await p.locator('.bcard').count();
+  pruefe('ohne Personenhaken stehen alle fünf da', alles === 5, `${alles} Karten`);
   await p.close();
+
+  /* Kachel und Filter müssen dieselbe Menge meinen, sonst führt der Weg ins Leere. */
+  const v = await seite('/vertretung.html');
+  const kachel = await v.locator('.vt-stat').filter({ hasText:'Lea' }).innerText();
+  pruefe('die Kachel nennt dieselben Zahlen wie der Filter', kachel.includes('3 Themen') && kachel.includes('2 ohne Stand'),
+    kachel.replace(/\n/g,' ').slice(0,90));
+  await v.close();
 }
 
 console.log('\n== Hinweis auf einen unvollständigen Korb (Befund 7.2) ==');

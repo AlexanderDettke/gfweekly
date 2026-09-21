@@ -208,7 +208,12 @@ async function alleUebernehmen(){
   if(!confirm(`${list.length} Vorschläge so übernehmen, wie das Haus sie gesetzt hat?`)) return;
   try{
     const d=await gfApi("handover_set_many",{ by:gfWho(), items:list.map(x=>({ id:x.id })) });
-    gfToast(`${d.updated} übernommen`); await zaehlerNeu(); renderList(); await protLaden();
+    const schief=(d.misslungen||[]);
+    gfToast(schief.length
+      ? `${d.updated} übernommen, ${schief.length} nicht: ${schief.map(m=>m.titel||m.id||"ohne Kennung").slice(0,3).join(", ")}`
+      : `${d.updated} übernommen`);
+    if(schief.length) console.warn("Nicht übernommen:", schief);
+    await zaehlerNeu(); renderList(); await protLaden();
   }catch(e){ gfToast("Fehler: "+e.message); }
 }
 $("#list").addEventListener("click",async e=>{

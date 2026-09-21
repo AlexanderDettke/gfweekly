@@ -12,6 +12,9 @@ const GF_FN = "https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/gfweekly";
 /* ---- session helpers ---- */
 function gfPW(){ return sessionStorage.getItem("gf_pw") || ""; }
 function gfWho(){ return sessionStorage.getItem("gf_who") || "Alex"; }
+/* Dieselbe Regel wie whoNorm in der Edge Function: enthält lea, enthält alex, sonst Team.
+   Damit zählen Oberfläche und Backend dieselben Themen zu derselben Person. */
+function gfWhoNorm(w){ const s=(w??"").toString().toLowerCase(); return s.includes("lea")?"Lea":s.includes("alex")?"Alex":"Team"; }
 function gfSetWho(w){ sessionStorage.setItem("gf_who", w); }
 function gfEsc(s){ return (s||"").toString().replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
