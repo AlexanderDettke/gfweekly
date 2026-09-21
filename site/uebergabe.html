@@ -61,7 +61,7 @@
    nur Fristen, Ampeln gesperrt, nichts wird umgehängt. */
 const $=s=>document.querySelector(s);
 const KIND_LBL={ thema:"Thema", kandidat:"Kandidat", meilenstein:"Meilenstein", ritual:"Ritual", termin:"Termin", asana:"Asana", partner:"Partner" };
-let ABSENCE=null, ITEMS=[], ZAEHL={}, FILTER={ quadrant:"", cluster:"", ampel:"", nurVorschlag:true, nurLuecken:false }, LOG=[], PERSONEN=[];
+let ABSENCE=null, ITEMS=[], ZAEHL={}, GEKUERZT=false, FILTER={ quadrant:"", cluster:"", ampel:"", nurVorschlag:true, nurLuecken:false }, LOG=[], PERSONEN=[];
 
 function istWache(){ return ABSENCE && ABSENCE.art==="sofort" && ABSENCE.stufe==="kurz"; }
 function gesperrt(x){ return istWache() && x.f!==3; }
@@ -93,6 +93,7 @@ function renderKopf(){
   const hinweise=[];
   if(istWache()) hinweise.push(`${gfZustand("warn","Wache")} Kurze Abwesenheit: nichts wird umgehängt. Am Tag 4 baut das Haus die Übergabe.`);
   if(a.korb_truncated) hinweise.push(`${gfZustand("warn","Unvollständig")} Beim letzten Bau lagen ${gfEsc(a.korb_abgeschnitten||"eine Quelle")} an der Obergrenze. Der Korb kann Zeilen vermissen.`);
+  if(GEKUERZT) hinweise.push(`${gfZustand("warn","Ausschnitt")} Diese Ansicht zeigt nicht alle Zeilen des Korbs. Die Zähler sind deshalb zu klein.`);
   $("#wache").innerHTML = hinweise.map(h=>`<div class="ub-wache">${h}</div>`).join("");
 }
 function renderQuads(){
@@ -199,7 +200,7 @@ async function setzen(id, patch){
 }
 async function zaehlerNeu(){
   const d=await gfApi("handover_list",{ absence_id:ABSENCE.id });
-  ITEMS=d.items||[]; ZAEHL={ quadrant:d.quadrant, cluster:d.cluster, ampel:d.ampel, status:d.status, luecken:d.luecken, gesamt:d.gesamt, uebernahmefaehigkeit:d.uebernahmefaehigkeit };
+  ITEMS=d.items||[]; GEKUERZT=!!d.gekuerzt; ZAEHL={ quadrant:d.quadrant, cluster:d.cluster, ampel:d.ampel, status:d.status, luecken:d.luecken, gesamt:d.gesamt, uebernahmefaehigkeit:d.uebernahmefaehigkeit };
   renderKopf(); renderQuads(); renderBar();
 }
 async function alleUebernehmen(){
@@ -274,8 +275,14 @@ async function nachAsana(){
   const b=$("#asanaBtn"); if(b){ b.disabled=true; b.textContent="läuft …"; }
   try{
     const d=await gfApi("asana_export",{ absence_id:ABSENCE.id, by:gfWho() });
+    const offen=(d.ohne_zuweisung||[]);
+    /* „ohne Zuweisung“ hieße, die Aufgabe liegt bei niemandem. Meist liegt sie beim Ersatz, und das gehört
+       in die Meldung, sonst widerspricht sie dem, was in Asana zu sehen ist. */
     gfToast(`Asana: ${d.neu} neu, ${d.aktualisiert} aktualisiert`
-      + ((d.ohne_zuweisung||[]).length ? ` · ohne Zuweisung: ${d.ohne_zuweisung.join(", ")}` : ""));
+      + (offen.length ? (d.ersatz_zuweisung
+          ? ` · ohne eigenes Konto, deshalb an ${gfEsc(d.ersatz_zuweisung)}: ${offen.join(", ")}`
+          : ` · ohne Zuweisung: ${offen.join(", ")}`) : "")
+      + (d.nutzerliste ? ` · ${gfEsc(d.nutzerliste)}` : ""));
     if(d.url) window.open(d.url,"_blank","noopener");
     await protLaden();
   }catch(e){ gfToast(e.message && e.message.includes("ASANA_TOKEN") ? "Asana ist noch nicht eingerichtet, das Token fehlt." : "Fehler: "+(e.message||"Asana")); }
@@ -298,14 +305,14 @@ $("#protAdd").onclick=async()=>{
 async function load(){
   const id=new URLSearchParams(location.search).get("id");
   let absence=null;
-  if(id){ const l=await gfApi("handover_list",{ absence_id:id }); absence=l.absence; ITEMS=l.items||[];
+  if(id){ const l=await gfApi("handover_list",{ absence_id:id }); absence=l.absence; ITEMS=l.items||[]; GEKUERZT=!!l.gekuerzt;
     ZAEHL={ quadrant:l.quadrant, cluster:l.cluster, ampel:l.ampel, status:l.status, luecken:l.luecken, gesamt:l.gesamt, uebernahmefaehigkeit:l.uebernahmefaehigkeit }; }
   else {
     const a=await gfApi("absence_list",{ include_test:true });
     const alle=a.absences||[];
     const naechste=(k)=>alle.filter(x=>x.status===k).sort((x,y)=>(x.von||"").localeCompare(y.von||""))[0];
     absence=naechste("aktiv") || naechste("geplant") || naechste("rueckkehr") || alle[0] || null;
-    if(absence){ const l=await gfApi("handover_list",{ absence_id:absence.id }); ITEMS=l.items||[];
+    if(absence){ const l=await gfApi("handover_list",{ absence_id:absence.id }); ITEMS=l.items||[]; GEKUERZT=!!l.gekuerzt;
       ZAEHL={ quadrant:l.quadrant, cluster:l.cluster, ampel:l.ampel, status:l.status, luecken:l.luecken, gesamt:l.gesamt, uebernahmefaehigkeit:l.uebernahmefaehigkeit }; }
   }
   ABSENCE=absence;

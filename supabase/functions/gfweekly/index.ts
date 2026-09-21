@@ -701,6 +701,9 @@ const ASANA_TOKEN = Deno.env.get('ASANA_TOKEN') ?? '';
 const ASANA_WORKSPACE = Deno.env.get('ASANA_WORKSPACE') ?? '57435200923138';
 const ASANA_TEAM = Deno.env.get('ASANA_TEAM') ?? '';
 const ASANA_ABSCHNITTE = ['Sofort', 'Grün', 'Gelb', 'Rot bei der GF', 'Ruht bis Rückkehr'];
+/* Die Vertretungslinie kennt nur diese beiden. Ihre E-Mail ist der eindeutige Schlüssel zum Asana-Konto. */
+const MAIL_ALEX = 'alex@wildemoehre.org';
+const MAIL_LEA  = 'lea@wildemoehre.org';
 const HH_BASIS = 'https://hohes-haus.netlify.app';
 
 async function asana(pfad: string, methode = 'GET', koerper?: unknown){
@@ -774,18 +777,44 @@ async function asanaSync(absence: any){
   const { data: schon, error: se } = await admin.from('gfweekly_handover_log').select('text').eq('absence_id', absence.id).eq('art','asana');
   if (se) return { erledigt:0, kommentare:0, fehler:1 };   // ohne die bekannten Kennungen würde doppelt protokolliert
   const bekannt = new Set((schon || []).map((l: any) => (String(l.text).match(/\[asana:(\d+)\]/) || [])[1]).filter(Boolean));
+  /* Welche Zeilen ihren Erledigungsvermerk schon haben. Damit kann der Vermerk vor dem Status geschrieben
+     werden: scheitert er, versucht der nächste Lauf es erneut, statt am gesetzten Status vorbeizulaufen. */
+  const { data: vermerkt, error: ve } = await admin.from('gfweekly_handover_log')
+    .select('handover_id').eq('absence_id', absence.id).eq('art','erledigt').not('handover_id','is',null);
+  if (ve) return { erledigt:0, kommentare:0, fehler:1 };
+  const schonVermerkt = new Set((vermerkt || []).map((l: any) => String(l.handover_id)));
   let erledigt = 0, kommentare = 0, fehler = 0;
   for (const row of (rows || [])) {
     let aufgabe: any = null;
     try { aufgabe = await asana(`/tasks/${row.asana_gid}?opt_fields=completed,completed_at,name`); } catch (_e) { fehler++; continue; }
-    if (aufgabe?.completed && row.status !== 'erledigt') {
-      const { error } = await admin.from('gfweekly_handover').update({ status:'erledigt', updated_at:new Date().toISOString() }).eq('id', row.id);
-      if (error) { fehler++; }
-      else if (await handoverLog(absence.id, 'erledigt', `${row.title}: in Asana erledigt.`, 'asana', row.id)) erledigt++;
-      else fehler++;
+    if (aufgabe?.completed && (row.status !== 'erledigt' || !schonVermerkt.has(String(row.id)))) {
+      /* Erst der Vermerk, dann der Status: umgekehrt hätte ein misslungenes Protokoll die Zeile für immer
+         übersprungen, weil der nächste Lauf sie schon als erledigt sieht. */
+      let gut = true;
+      if (!schonVermerkt.has(String(row.id))) {
+        gut = await handoverLog(absence.id, 'erledigt', `${row.title}: in Asana erledigt.`, 'asana', row.id);
+        if (gut) schonVermerkt.add(String(row.id));
+      }
+      if (!gut) fehler++;
+      else if (row.status !== 'erledigt') {
+        const { error } = await admin.from('gfweekly_handover').update({ status:'erledigt', updated_at:new Date().toISOString() }).eq('id', row.id);
+        if (error) fehler++; else erledigt++;
+      }
     }
-    let stories: any[] = [];
-    try { stories = await asana(`/tasks/${row.asana_gid}/stories?opt_fields=gid,text,created_at,type,created_by.name`) || []; } catch (_e) { fehler++; continue; }
+    /* Die Kommentare kommen seitenweise. Ungeblättert schneidet Asana lange Listen ab, und weil der
+       Zeitstempel danach vorrückt, fielen die fehlenden Kommentare für immer aus dem Fenster. */
+    let stories: any[] = []; let seitenRest = false;
+    try {
+      let pfad = `/tasks/${row.asana_gid}/stories?opt_fields=gid,text,created_at,type,created_by.name&limit=100`;
+      let seite = 0;
+      for (; seite < 20 && pfad; seite++) {
+        const antwort = await asanaSeite(pfad);
+        stories = stories.concat(antwort.data || []);
+        pfad = antwort.next_page?.path || '';
+      }
+      seitenRest = !!pfad;
+    } catch (_e) { fehler++; continue; }
+    if (seitenRest) fehler++;   // unvollständig gelesen: das Zeitfenster bleibt stehen
     for (const s of stories) {
       if (s.type !== 'comment' || !s.created_at) continue;
       if (s.created_at <= seit || s.created_at > laufBeginn) continue;   // genau das Fenster dieses Laufs
@@ -820,7 +849,7 @@ Deno.serve(async (req: Request) => {
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:30, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
+    if (action === 'ping') return json({ ok:true, version:31, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -1419,15 +1448,21 @@ Deno.serve(async (req: Request) => {
     }
     if (action === 'handover_list') {
       if (!t.absence_id) return json({ error:'absence_id fehlt' },400);
-      let q = admin.from('gfweekly_handover').select('*').eq('absence_id', t.absence_id)
+      let q = admin.from('gfweekly_handover').select('*', { count:'exact' }).eq('absence_id', t.absence_id)
         .order('score', { ascending:false }).order('frist', { ascending:true, nullsFirst:false });
       if (t.cluster) q = q.in('cluster', Array.isArray(t.cluster) ? t.cluster : [t.cluster]);
       if (t.quadrant) q = q.in('quadrant', Array.isArray(t.quadrant) ? t.quadrant : [t.quadrant]);
       if (t.status) q = q.in('status', Array.isArray(t.status) ? t.status : [t.status]);
-      const { data, error } = await q; if (error) throw error;
-      const { data: alle } = await admin.from('gfweekly_handover').select('quadrant,cluster,ampel,status,luecke').eq('absence_id', t.absence_id);
+      q = q.range(0, 4999);
+      const { data, error, count } = await q; if (error) throw error;
+      const { data: alle, count: alleZahl } = await admin.from('gfweekly_handover')
+        .select('quadrant,cluster,ampel,status,luecke', { count:'exact' }).eq('absence_id', t.absence_id).range(0, 4999);
       const { data: absence } = await admin.from('gfweekly_absences').select('*').eq('id', t.absence_id).single();
-      return json({ items:data, absence, ...handoverZaehler(alle || []) });
+      /* Nicht nur der Bau kann an eine Obergrenze stoßen, auch die Antwort selbst. Dann zeigt die Seite
+         einen Ausschnitt und zu kleine Zähler; gesagt wird es hier, nicht erst beim nächsten Bau. */
+      const gekuerzt = (count ?? 0) > (data || []).length || (alleZahl ?? 0) > (alle || []).length;
+      return json({ items:data, absence, gekuerzt,
+        ...handoverZaehler(alle || []), gesamt: alleZahl ?? (alle || []).length });
     }
     if (action === 'handover_set' || action === 'handover_set_many') {
       /* v30 (Befund 7.1): Korbzeile, Vorgang und Protokoll wandern in einem Zug über die Datenbankfunktion
@@ -1552,7 +1587,9 @@ Deno.serve(async (req: Request) => {
         if (absence.status !== 'rueckkehr') {
           try {
             const bau = await handoverBuild(absence);
-            schritte.push(`Korb: ${bau.neu} neu, ${bau.ergaenzt} ergänzt` + (bau.fehler ? `, ${bau.fehler} Fehler` : ''));
+            schritte.push(`Korb: ${bau.neu} neu, ${bau.ergaenzt} ergänzt` + (bau.fehler ? `, ${bau.fehler} Fehler` : '')
+              + (bau.truncated ? `, unvollständig (${bau.abgeschnitten.join(', ')})` : '')
+              + (bau.hinweis_gespeichert ? '' : ', Hinweis auf den unvollständigen Korb ließ sich nicht speichern'));
           } catch (e) { schritte.push('Korb konnte nicht gebaut werden: ' + String((e as Error).message).slice(0,160)); }
         }
 
@@ -1629,10 +1666,14 @@ Deno.serve(async (req: Request) => {
       const { data: rows } = await admin.from('gfweekly_handover').select('*').eq('absence_id', absence.id)
         .eq('status','bestaetigt').neq('ampel','vorher');
       if (!rows || !rows.length) return json({ error:'nichts zu exportieren', hinweis:'Es gibt keine bestätigten Zeilen außerhalb von „vor Abreise“.' },400);
-      const [{ data: leute }, { data: deputies }] = await Promise.all([
+      const [{ data: leute, error: lf }, { data: deputies, error: df }] = await Promise.all([
         admin.from('gfweekly_people').select('id,name,email,asana_gid'),
         admin.from('gfweekly_deputies').select('*').eq('person', absence.person).eq('active', true),
       ]);
+      /* Ohne Personenliste wüsste der Export nicht, wem die Aufgaben gehören, und würde sie stillschweigend
+         herrenlos anlegen oder bestehende Zuweisungen löschen. Dann lieber nichts tun. */
+      if (lf || df) return json({ error:'Die Personen ließen sich nicht lesen: ' + (lf || df)!.message,
+        hinweis:'In Asana wurde nichts geändert. Bitte später erneut versuchen.' },502);
       /* Zuordnung über den Namen selbst, nicht über whoNorm: das macht aus Merle und Tim sonst dieselbe Person. */
       const norm = (x: unknown) => (x ?? '').toString().trim().toLowerCase();
       const ohneGid: string[] = [];
@@ -1653,6 +1694,9 @@ Deno.serve(async (req: Request) => {
             for (const u of (antwort.data || [])) if (u?.email) nachMail.set(norm(u.email), u.gid);
             pfad = antwort.next_page?.path || '';
           }
+          /* Zwanzig Seiten sind die Schutzgrenze, nicht das Listenende. Bleibt danach etwas übrig, ist die
+             Auflösung unvollständig, und das gehört in die Antwort statt in die Annahme „kein Konto“. */
+          if (pfad) nutzerFehler = 'Die Nutzerliste war nach zwanzig Seiten nicht zu Ende; einzelne Kennungen bleiben offen.';
           for (const p of fehlen) {
             const gid = nachMail.get(norm(p.email));
             if (!gid) continue;
@@ -1663,13 +1707,21 @@ Deno.serve(async (req: Request) => {
         } catch (e) { nutzerFehler = 'Nutzerliste nicht lesbar: ' + String((e as Error).message).slice(0,160); }
       }
 
+      const perMail = (mail: string) => (leute || []).find((q: any) => norm(q.email) === mail) || null;
       const gidVon = (name: string) => {
         if (!name) return null;
         let p = (leute || []).find((q: any) => norm(q.name) === norm(name));
         /* Die Vertretungslinie führt „Alex“ und „Lea“, die Personenliste „Alexander Dettke“ und „Lea Luce“.
-           Für diese beiden ist whoNorm eindeutig; für alle anderen bleibt der genaue Name stehen, damit nicht
-           Merle und Tim zur selben Person werden. */
-        if (!p) { const w = whoNorm(name); if (w === 'Alex' || w === 'Lea') p = (leute || []).find((q: any) => whoNorm(q.name) === w); }
+           Aufgelöst wird über die feste E-Mail der beiden. Ein Vergleich auf die Zeichenkette im Namen würde
+           „Alexandra“ mitnehmen; erst wenn die E-Mail nicht trifft und genau ein Name übrig bleibt, gilt der.
+           Für alle anderen zählt der genaue Name, sonst würden Merle und Tim zur selben Person. */
+        if (!p) {
+          const w = whoNorm(name);
+          if (w === 'Alex' || w === 'Lea') {
+            p = perMail(w === 'Alex' ? MAIL_ALEX : MAIL_LEA);
+            if (!p) { const treffer = (leute || []).filter((q: any) => whoNorm(q.name) === w); p = treffer.length === 1 ? treffer[0] : null; }
+          }
+        }
         if (!p?.asana_gid) { if (name && !ohneGid.includes(name)) ohneGid.push(name); return null; }
         return p.asana_gid;
       };
@@ -1732,10 +1784,10 @@ Deno.serve(async (req: Request) => {
       }
 
       /* Wer kein Asana-Konto hat, dessen Aufgaben gehen an Alex; die Namen stehen in der Antwort.
-         So bleibt keine Aufgabe herrenlos (ANTWORTEN_ZU_FRAGEN.md, Punkt 7.3). */
-      const ersatz = (leute || []).find((q: any) => norm(q.email) === 'alex@wildemoehre.org')?.asana_gid
-                  || (leute || []).find((q: any) => norm(q.name).includes('alex'))?.asana_gid || null;
-      const folgen = [ersatz, (leute || []).find((q: any) => norm(q.name).includes('lea'))?.asana_gid].filter(Boolean) as string[];
+         So bleibt keine Aufgabe herrenlos (ANTWORTEN_ZU_FRAGEN.md, Punkt 7.3). Fehlt auch Alex eine Kennung,
+         bleibt die Aufgabe unzugewiesen, und die Antwort sagt genau das, statt einen Empfänger zu behaupten. */
+      const ersatz = perMail(MAIL_ALEX)?.asana_gid || null;
+      const folgen = [ersatz, perMail(MAIL_LEA)?.asana_gid].filter(Boolean) as string[];
       let neu = 0, aktualisiert = 0;
       for (const row of rows) {
         const sek = asanaAbschnitt(row);
@@ -1761,11 +1813,12 @@ Deno.serve(async (req: Request) => {
           neu++;
         }
       }
+      const wohin = ersatz ? ', deshalb an Alex' : ', und auch Alex hat keine Kennung: diese Aufgaben bleiben unzugewiesen';
       await handoverLog(absence.id, 'asana', `Nach Asana exportiert: ${neu} neue und ${aktualisiert} aktualisierte Aufgaben.`
-        + (ohneGid.length ? ` Ohne eigenes Asana-Konto, deshalb an Alex: ${ohneGid.join(', ')}.` : '')
+        + (ohneGid.length ? ` Ohne eigenes Asana-Konto${wohin}: ${ohneGid.join(', ')}.` : '')
         + (nutzerFehler ? ` ${nutzerFehler}` : ''), (t.by ?? WHO).toString());
       return json({ ok:true, projekt, neu, aktualisiert, ohne_zuweisung:ohneGid,
-        ersatz_zuweisung: ohneGid.length ? 'Alex' : null, nutzerliste: nutzerFehler || null,
+        ersatz_zuweisung: ohneGid.length ? (ersatz ? 'Alex' : null) : null, nutzerliste: nutzerFehler || null,
         url:`https://app.asana.com/0/${projekt}` });
     }
     if (action === 'asana_sync') {

@@ -244,10 +244,11 @@ Textbaustein zum Eintragen in den Auftrag (trig_01A6gnSNUDbvF4bhW3wzhGL2). Er er
 > **H7 Neues an Abwesende.** Entsteht im Lauf ein Kandidat mit `who` = abwesende Person, setze `gate` auf die
 > Vertretung (`gate_note` „in Vertretung für <Name>“) und schreibe einen Protokolleintrag der Art `weitergabe`.
 
-**Bewusste Abweichungen in V24c:** Das Asana-Team wird nicht aus bestehenden GF-Projekten ermittelt, sondern kommt
-aus `ASANA_TEAM` oder aus der Nutzlast; ohne Token lässt sich kein Projekt lesen, aus dem es abzuleiten wäre.
+**Bewusste Abweichungen in V24c:** Das Asana-Team kommt aus der Nutzlast oder aus `ASANA_TEAM`; ist beides leer,
+liest der Export als letzten Ausweg das Team eines bestehenden, nicht archivierten Projekts des Arbeitsbereichs.
 Die Vollmacht im Aufgabentext folgt derselben Bereichsregel wie die Vertretung (Strang, dann `gf`, dann `*`).
-Fehlt zu einer Person die `asana_gid`, bleibt die Aufgabe ohne Zuweisung, und die Antwort nennt die Namen.
+Fehlt zu einer Person die `asana_gid`, geht die Aufgabe seit V24d an Alex, und die Antwort nennt die Namen;
+hat auch Alex keine Kennung, bleibt die Aufgabe unzugewiesen, und die Antwort sagt genau das.
 
 **Nachgetragen am 22.09.2026:** `ASANA_TOKEN` steht als Secret, die Abnahme 4c ist gelaufen (siehe unten).
 Offen bleibt der Eintrag von Abschnitt H in den täglichen Auftrag; der Text oben ist dafür fertig.
@@ -389,3 +390,30 @@ entfernt.
 **Vorschaubild.** `site/assets/previews/gfweekly.webp` zeigt seit dem 22.09.2026 die Startseite mit echten Daten,
 aufgenommen im Prüfbrowser mit dem Passwort aus der Umgebung. Das Passwort steht in keiner Datei und in keinem
 Commit; die Check-in-Karte war über `localStorage` unterdrückt.
+
+
+## Zweite Prüfrunde 22.09.2026 · zehn Befunde, Edge Function v31
+
+Unabhängige Review (Codex, read-only) über den vollständigen Umfang `e8854bb..81a0941`. Alle zehn Befunde sind
+behoben, Migration `20260922_hh_handover_set_ruhe.sql` ist angewendet.
+
+**Hoch.** `gidVon` nahm bei „Alex“ und „Lea“ die erste Person, deren Name die Zeichenkette enthält; „Alexandra“
+hätte Alexanders Aufgaben bekommen. Aufgelöst wird jetzt über die feste E-Mail der beiden (`MAIL_ALEX`,
+`MAIL_LEA`); trifft sie nicht, gilt ein Namenstreffer nur, wenn er der einzige ist. Derselbe Fehler steckte in der
+Wahl des Ersatzempfängers. Zweitens verschluckte der Export den Lesefehler der Personen- und Vertretungsliste:
+mit leerer Liste hätte er bestehende Zuweisungen in Asana gelöscht und trotzdem „deshalb an Alex“ gemeldet. Jetzt
+bricht er vor dem ersten Schreibzugriff mit 502 ab, und „an Alex“ steht nur in der Antwort, wenn Alex wirklich
+eine Kennung hat.
+
+**Mittel.** Eine aufgehobene Ruhe ließ am Thema stehen, was die Ruhe gesetzt hatte (Ausgang `warten`,
+Rückkehrfrist, Notiz); `hh_handover_set` merkt den Wechsel jetzt und räumt auf. `handover_list` vergleicht die
+gelieferten Zeilen mit der genauen Gesamtzahl und meldet `gekuerzt`, damit ein Ausschnitt nicht als vollständiger
+Korb erscheint; die Übergabeseite zeigt dafür einen eigenen Hinweis. Der Tick sagt, wenn sich der Hinweis auf
+einen unvollständigen Korb nicht speichern ließ. Die Nutzerliste aus Asana meldet, wenn sie nach zwanzig Seiten
+nicht zu Ende war, statt die fehlenden Personen als „kein Konto“ zu behandeln. Im Rücksync steht der
+Erledigungsvermerk jetzt vor dem Status, sonst hätte ein misslungenes Protokoll die Zeile für immer übersprungen;
+Kommentare werden seitenweise gelesen, und eine unvollständig gelesene Liste hält das Zeitfenster an.
+
+**Niedrig.** Die Übergabeseite sagt „ohne eigenes Konto, deshalb an Alex“ statt „ohne Zuweisung“, wenn der Ersatz
+gegriffen hat, und zeigt eine Störung der Nutzerliste an. Überholte Sätze in `ARBEITSSTAND.md`,
+`FRAGEN_FUER_MORGEN.md` und in diesem Dokument sind richtiggestellt.

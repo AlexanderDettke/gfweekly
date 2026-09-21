@@ -26,16 +26,15 @@ Drei Codex-Runden (`f0394c5`, `0c1a463`, `bd9de47`), alle bestätigten Befunde b
   `gfweekly_topics.owner_backup` und `.handover_id`, RLS an ohne Policies.
 - `pg_net` aktiviert, Funktion `public.hh_absence_tick()` angelegt, Cron-Job `hh_absence_tick` täglich 04:40 UTC.
   Das Passwort holt die Funktion aus dem Vault-Secret `gfweekly_password`. Fehlt es, tut sie nichts.
-  **Das Secret fehlt noch** (siehe Fragen), bis dahin ist der Job ein Leerlauf.
-- Edge Function v29 im Repo: 13 neue Aktionen (`absence_set`, `absence_list`, `absence_end`,
+  Das Secret liegt seit dem 22.09.2026 im Vault, der Job läuft.
+- Edge Function: 13 neue Aktionen (`absence_set`, `absence_list`, `absence_end`,
   `deputies_set`, `deputies_list`, `handover_build`, `handover_list`, `handover_set`, `handover_set_many`,
   `handover_dossier`, `handover_log_add`, `handover_log`, `uebernahme_stat`, `absence_tick`)
   und die Matrix als reine Funktion `score(item, absence)` mit Begründungssatz.
-- **Nicht deployt.** Der Supabase-MCP-Deploy verlangt den vollständigen Quelltext (107 kB) im Werkzeugaufruf.
-  Den schreibe ich nicht blind ab, solange die Live-Funktion daran hängt: ein Tippfehler legt das Cockpit lahm.
-  Der Deploy dauert mit der CLI zehn Sekunden (siehe Fragen).
+- **Deployt am 22.09.2026** aus der Supabase-CLI, inzwischen als v31 (siehe unten). Der Supabase-MCP-Deploy
+  schied aus, weil er den vollständigen Quelltext im Werkzeugaufruf verlangt; abgeschrieben wäre das ein Blindflug.
 
-Prüfungen ohne Deploy:
+Prüfungen vor dem Deploy:
 - `pruefung/matrix-test.mjs`: 26 Proben auf Stufe, Geldbeträge, alle vier Achsen, Cluster, Ampel,
   Wache bei kurzer Abwesenheit, Regeltext bei langer, Vertretungslinie, Wortgrenzen. Alle grün.
 - `pruefung/korb-probe.mjs`: Trockenlauf gegen die echten Daten (Lea, 05.10. bis 25.10.):
@@ -63,8 +62,8 @@ Prüfungen:
 Commit `39886dc`. Migration `20260921_hh_asana.sql` angewendet (`asana_gid`, `asana_project_gid`, `asana_synced_at`).
 `asana_export` und `asana_sync` in der Edge Function, Rücksync im Tick, Archivierung bei Rückkehr,
 „Nach Asana“ im Kopf der Übergabe, Kachel „Asana offen“ auf der Rückkehr, Abschnitt H (H1 bis H7) im Technikstand.
-Ohne `ASANA_TOKEN` tut der Export nichts und sagt warum. Die Abnahme aus 4c (Testprojekt, Rücksync, löschen)
-braucht das Token.
+Ohne `ASANA_TOKEN` tut der Export nichts und sagt warum. Das Token steht seit dem 22.09.2026 als Secret,
+die Abnahme 4c ist gelaufen.
 
 ## Unabhängige Review
 
@@ -81,6 +80,13 @@ bewusst nicht mehr angefasst, weil sie größere Umbauten sind.
 Grundlage `ANTWORTEN_ZU_FRAGEN.md`. Gebaut: `hh_handover_set` als eine Transaktion (7.1), Asana-Kennungen
 über die E-Mail (7.3), Lückenfilter im Board (7.4), Zähler für abgeschnittene Quellen (7.2).
 Edge Function v30, Migrationen `20260922_hh_handover_set.sql` und `20260922_hh_handover_set_namen.sql` angewendet.
+
+Zweite Prüfrunde über den vollständigen Umfang (Stand `81a0941`): zehn Befunde, alle behoben, Edge Function v31.
+Die beiden schweren betrafen Asana: die Auflösung von „Alex“ und „Lea“ läuft jetzt über die feste E-Mail statt
+über eine Zeichenkette im Namen, und ein Lesefehler der Personenliste bricht den Export ab, statt Zuweisungen zu
+löschen. Dazu: eine aufgehobene Ruhe räumt Ausgang und Frist am Thema auf (Migration
+`20260922_hh_handover_set_ruhe.sql`), der Rücksync schreibt den Vermerk vor dem Status und liest Kommentare
+seitenweise, und eine gekürzte Antwort sagt es der Übergabeseite.
 
 Live abgenommen: Paket 2 (zwei Testabwesenheiten, `absence_tick` zweimal, Testdaten restlos zurückgebaut),
 Vault-Secret und Cron-Lauf, Paket 4c (Projekt angelegt, Aufgabe erledigt, Rücksync, archiviert),

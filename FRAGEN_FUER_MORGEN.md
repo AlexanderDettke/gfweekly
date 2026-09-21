@@ -34,8 +34,10 @@ mit 200 durch, der Cron-Lauf steht auf täglich 04:40 UTC.
 in keiner Datei und in keinem Commit.
 
 ~~**4. Asana-Token und Personen.**~~ `ASANA_TOKEN` steht als Secret, die Kennungen kommen über die E-Mail.
-Die Frage nach den zwei Konten einer dritten Person ist hinfällig: zugewiesen bekommt nur, wer in der
-Vertretungslinie steht, und das sind Alex und Lea. Abnahme 4c ist gelaufen.
+Die Frage nach den zwei Konten einer dritten Person ist hinfällig: die Vertretungslinie führt nur Alex und Lea,
+und die Aufgabe geht an die Person, die in der Korbzeile als Vertretung steht. Wird dort von Hand ein anderer
+Name eingetragen, prüft der Export das nicht nach; er ordnet diesen Namen genau zu oder gibt die Aufgabe an Alex.
+Abnahme 4c ist gelaufen.
 
 ~~**5. Vorschaubild mit Testdaten.**~~ Neu aufgenommen mit echten Daten.
 
