@@ -6,9 +6,12 @@
    Der Waechter urteilt nicht ueber Geschmack. Er prueft nur Dinge, die falsch oder richtig sind. */
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const WURZEL = path.join(path.dirname(new URL(import.meta.url).pathname), '..');
+/* fileURLToPath statt URL.pathname: sonst bleibt in einem Pfad mit Leerzeichen %20 stehen
+   und jede Datei gilt als fehlend (Befund 10 der Prüfung von 4cdd506). */
+const WURZEL = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const lies = (p) => fs.readFileSync(path.join(WURZEL, p), 'utf8');
 const gibt = (p) => fs.existsSync(path.join(WURZEL, p));
 const befunde = [];
@@ -71,6 +74,13 @@ function selbstbestaetigung() {
         `pruefung/${f} fängt Aufrufe ab, nennt sich aber nicht Oberflächentest. `
         + 'Ein Test gegen selbst gebaute Antworten belegt die Oberfläche, nicht die Wirkung.');
     }
+    /* Das Stichwort im Kopf darf die Behauptung nicht legitimieren: wer abfängt, darf nicht
+       „Abnahme bestanden“ ausgeben (Befund 3 der Prüfung von 4cdd506). */
+    const behauptet = t.split('\n').filter(z => /Abnahme (bestanden|erfolgreich|ok)/i.test(z) && !/^\s*(\/\/|\/\*|\*)/.test(z));
+    if (behauptet.length) {
+      melde('selbstbestaetigung',
+        `pruefung/${f} fängt Aufrufe ab und meldet trotzdem eine bestandene Abnahme: „${behauptet[0].trim().slice(0, 70)}“.`);
+    }
   }
   if (gibt('pruefung/abnahme.sh')) {
     const t = lies('pruefung/abnahme.sh');
@@ -105,14 +115,27 @@ function frische() {
   }
   let d = {};
   try { d = JSON.parse(lies(datei)); } catch (_e) { melde('frische', `${datei} ist kein gültiges JSON.`); return; }
-  for (const feld of ['stand', 'commit', 'datum', 'laeufe', 'ungeprueft']) {
-    if (!(feld in d)) melde('frische', `${datei} nennt „${feld}“ nicht.`);
+  /* Ein Beleg mit passender Prüfsumme, aber leeren Feldern wäre ein Freifahrtschein
+     (Befund 5 der Prüfung von 4cdd506). Deshalb wird der Inhalt geprüft, nicht nur das Vorhandensein. */
+  const PFLICHT = ['tokens', 'farbscan', 'kontrast', 'matrix', 'schirme', 'bedienung', 'waechter'];
+  if (!/^[0-9a-f]{64}$/.test(String(d.stand || ''))) melde('frische', `${datei}: „stand“ ist keine Prüfsumme.`);
+  if (!/^[0-9a-f]{40}$/.test(String(d.commit || ''))) melde('frische', `${datei}: „commit“ ist kein Commit.`);
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(String(d.datum || ''))) melde('frische', `${datei}: „datum“ fehlt oder ist keine Zeitangabe.`);
+  if (!Array.isArray(d.laeufe) || !d.laeufe.length) melde('frische', `${datei}: „laeufe“ ist leer.`);
+  else {
+    const fehlt = PFLICHT.filter(n => !d.laeufe.some(l => String(l).toLowerCase().includes(n)));
+    if (fehlt.length) melde('frische', `${datei}: der Beleg nennt diese Läufe nicht: ${fehlt.join(', ')}.`);
   }
+  if (!String(d.ungeprueft || '').trim()) melde('frische', `${datei}: „ungeprueft“ ist leer. Jede Prüfung hat blinde Flecken, sie gehören benannt.`);
   /* Der Stand ist eine Prüfsumme über alles, was die Abnahme prüft. Er haengt bewusst nicht am Commit:
      sonst waere der Beleg nach jedem weiteren Commit veraltet, ohne dass sich Geprueftes geaendert hat. */
   let jetzt = '';
-  try { jetzt = execSync('pruefung/stand.sh', { cwd: WURZEL }).toString().trim(); } catch (_e) { return; }
-  if (jetzt && d.stand !== jetzt) {
+  /* Scheitert die Prüfsumme, ist das ein Befund und kein Grund zum Durchwinken
+     (Befund 6 der Prüfung von 4cdd506). */
+  try { jetzt = execSync('pruefung/stand.sh', { cwd: WURZEL, stdio:['ignore','pipe','pipe'] }).toString().trim(); }
+  catch (e) { melde('frische', 'pruefung/stand.sh ließ sich nicht ausführen: ' + String(e.message).slice(0, 120)); return; }
+  if (!/^[0-9a-f]{64}$/.test(jetzt)) { melde('frische', 'pruefung/stand.sh hat keine Prüfsumme geliefert.'); return; }
+  if (d.stand !== jetzt) {
     melde('frische', `Seit der letzten Abnahme (${String(d.datum).slice(0, 16)}) hat sich Geprüftes geändert. `
       + `Beleg ${String(d.stand).slice(0, 12)}, jetzt ${jetzt.slice(0, 12)}. Die Abnahme gehört nicht zu diesem Stand.`);
   }
@@ -133,7 +156,7 @@ function maengelSichtbar() {
 const pruefungen = [migrationen, behauptungen, selbstbestaetigung, stichtag, maengelSichtbar];
 if (!process.env.WAECHTER_OHNE_FRISCHE) pruefungen.push(frische);
 for (const f of pruefungen) {
-  try { f(); } catch (e) { melde(f.name, 'Prüfung selbst fehlgeschlagen: ' + e.message); }
+  try { f(); } catch (e) { melde(f.name, 'Prüfung selbst fehlgeschlagen, das gilt als Befund: ' + e.message); }
 }
 
 if (!befunde.length) {

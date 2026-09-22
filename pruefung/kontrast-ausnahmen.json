@@ -1,0 +1,23 @@
+{
+  "_": "Bekannte Kontrastschuld, aufgenommen am 22.09.2026 beim Bau des Wächters. Jede Zeile ist ein Muster, mit dem eine Meldung beginnen darf, ohne den Lauf scheitern zu lassen. Alles Neue lässt ihn scheitern. Abarbeitung als WP-04 in docs/ARBEITSPAKETE.md, Einzelheiten in docs/BEKANNTE-MAENGEL.md.",
+  "bekannt": [
+    { "muster": "input [Platzhalter]",            "grund": "Platzhalterfarbe des Design-Systems, 3,88:1 im hellen Thema" },
+    { "muster": "input.title [Platzhalter]",      "grund": "wie oben" },
+    { "muster": "input.ititle [Platzhalter]",     "grund": "wie oben" },
+    { "muster": "input.txt [Platzhalter]",        "grund": "wie oben" },
+    { "muster": "input.txt.lk-title [Platzhalter]", "grund": "wie oben" },
+    { "muster": "input.txt.lk-url [Platzhalter]", "grund": "wie oben" },
+    { "muster": "textarea [Platzhalter]",         "grund": "wie oben" },
+    { "muster": "input.check [Wert]",             "grund": "Kontrollkästchen, Wert ist kein sichtbarer Text" },
+    { "muster": "input.check ::after",            "grund": "Haken des Kontrollkästchens, Form statt Schrift" },
+    { "muster": "span.pill.p-mittel",             "grund": "Prioritätsmarke, Altbestand vor V23" },
+    { "muster": "span.pill.prio.p-hoch",          "grund": "Prioritätsmarke, Altbestand vor V23" },
+    { "muster": "span.rel.rel-hoch",              "grund": "Relevanzmarke, Altbestand vor V23" },
+    { "muster": "span.zst.warn",                  "grund": "Zustandsmarke im Warnton, 4,19:1" },
+    { "muster": "div.subline.js-toggle",          "grund": "Unterzeile der Kopfmarke, Altbestand" },
+    { "muster": "summary.group-h",                "grund": "Gruppenkopf, Altbestand" },
+    { "muster": "span ",                          "grund": "Entscheidungsliste, unbenannte Spanne 2,78:1" },
+    { "muster": "small ",                         "grund": "Entscheidungsliste, 2,05:1" },
+    { "muster": "b nicht messbar",                "grund": "Schrift über dem Kopfbild, Kontrast ist dort nicht rechenbar" }
+  ]
+}

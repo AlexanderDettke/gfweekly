@@ -17,9 +17,9 @@ jobs:
           node-version: '22'
       - name: Wächter
         run: node pruefung/waechter.mjs
-      - name: Tokens gegen die Quelle
-        run: python3 pruefung/tokens.py
-        continue-on-error: true   # braucht die Quelle des Design-Systems, die nicht im Repo liegt
+      # tokens.py vergleicht gegen die Quelle des Design-Systems, die außerhalb dieses Repos liegt.
+      # In CI wird sie deshalb nicht ausgeführt, statt sie mit continue-on-error scheinbar zu bestehen
+      # (Befund 9 der Prüfung von 4cdd506). Sie läuft lokal in pruefung/abnahme.sh.
       - name: Farbscan
         run: |
           FUNDE=$(python3 pruefung/farbscan.py site/assets)
