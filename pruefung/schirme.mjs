@@ -1,4 +1,6 @@
-/* Schirmpruefung (V23): alle Seiten bei 1440 und 390, dunkel und hell.
+/* OBERFLÄCHENTEST. Die Edge Function wird abgefangen und mit Testdaten beantwortet; dieses Skript belegt
+   Aufbau, Kontrast, Überlauf und Konsole, NICHT die Wirkung in der Datenbank.
+   Schirmpruefung (V23): alle Seiten bei 1440 und 390, dunkel und hell.
    Die Edge Function wird abgefangen und mit Testdaten beantwortet, damit ohne Passwort geprueft werden kann.
    Aufruf:  PLAYWRIGHT_MODUL=<pfad>/node_modules/playwright/index.mjs node pruefung/schirme.mjs [zielordner]
    (ohne die Variable muss playwright im Suchpfad liegen; das Paket gehoert bewusst nicht ins Repo)
@@ -91,6 +93,64 @@ for (const thema of THEMES) {
           })(),
           kern: el ? (el.innerText || '').trim().length : -1,
           laedt: (document.body.innerText || '').includes('lädt …'),
+          /* Waechter: laeuft die Seite seitlich ueber den Schirm hinaus? Genau das hat die Pruefung vom
+             22.09.2026 uebersehen: die Aufnahmen fuer 390 waren in Wahrheit 428 Pixel breit. */
+          breite: document.documentElement.scrollWidth,
+          /* Waechter: Kontrast wird gemessen, nicht aus einer Liste gelesen. Die Liste in kontrast.py hat
+             am 22.09.2026 genau das Paar ausgelassen, das zu dunkel war (--text-3 auf --surface-2, 4,19:1).
+             Hier zaehlt, was der Browser wirklich uebereinander legt, samt Deckkraft. */
+          kontrast: (() => {
+            const zahl = (x) => (x.match(/[\d.]+/g) || []).map(Number);
+            const lum = (r,g,b) => { const f = v => { v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); };
+              return 0.2126*f(r)+0.7152*f(g)+0.0722*f(b); };
+            const grund = (el) => {
+              for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+                const c = zahl(getComputedStyle(n).backgroundColor);
+                if (c.length >= 3 && (c[3] === undefined || c[3] > 0.95)) return [c[0],c[1],c[2]];
+              }
+              const c = zahl(getComputedStyle(document.body).backgroundColor);
+              return c.length >= 3 ? [c[0],c[1],c[2]] : [255,255,255];
+            };
+            const gesehen = new Set(); const schwach = [];
+            for (const el of document.querySelectorAll('body *')) {
+              const eigen = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim().length > 1);
+              if (!eigen) continue;
+              const st = getComputedStyle(el);
+              if (st.visibility === 'hidden' || st.display === 'none' || Number(st.opacity) < 0.1) continue;
+              /* Deaktivierte Bedienelemente sind von der Kontrastregel ausgenommen (WCAG 1.4.3). */
+              if (el.disabled || el.getAttribute('aria-disabled') === 'true' || el.closest('[disabled],[aria-disabled="true"]')) continue;
+              const r = el.getBoundingClientRect(); if (r.width < 2 || r.height < 2) continue;
+              const v = zahl(st.color); if (v.length < 3) continue;
+              const a = v[3] === undefined ? 1 : v[3];
+              const bg = grund(el);
+              const vg = [0,1,2].map(i => v[i]*a + bg[i]*(1-a));
+              const l1 = lum(...vg), l2 = lum(...bg);
+              const k = (Math.max(l1,l2)+0.05) / (Math.min(l1,l2)+0.05);
+              const px = parseFloat(st.fontSize) || 16;
+              const dick = Number(st.fontWeight) >= 700;
+              const grenze = (px >= 24 || (px >= 18.66 && dick)) ? 3 : 4.5;
+              if (k >= grenze) continue;
+              const name = el.tagName.toLowerCase() + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/).join('.') : '');
+              const schluessel = name + '|' + st.color + '|' + bg.join(',');
+              if (gesehen.has(schluessel)) continue;
+              gesehen.add(schluessel);
+              schwach.push(`${name} ${k.toFixed(2)}:1 (mind. ${grenze})`);
+              if (schwach.length >= 5) break;
+            }
+            return schwach;
+          })(),
+          ueber: (() => {
+            const grenze = document.documentElement.clientWidth + 1;
+            const raus = [];
+            for (const el of document.querySelectorAll('body *')) {
+              const r = el.getBoundingClientRect();
+              if (r.width === 0 && r.height === 0) continue;
+              if (getComputedStyle(el).position === 'fixed') continue;
+              if (r.right > grenze + 1) raus.push((el.tagName.toLowerCase()) + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/)[0] : '') + ' bis ' + Math.round(r.right));
+              if (raus.length >= 3) break;
+            }
+            return raus;
+          })(),
         };
       }, kern);
       if (befund.tor) meldungen.push('Tor blieb zu');
@@ -101,6 +161,9 @@ for (const thema of THEMES) {
       if (befund.kern < 0) meldungen.push('Kerninhalt ' + kern + ' fehlt im Aufbau');
       else if (befund.kern < 20) meldungen.push('Kerninhalt ' + kern + ' blieb leer (' + befund.kern + ' Zeichen)');
       if (befund.laedt) meldungen.push('„lädt …“ blieb stehen');
+      for (const k of befund.kontrast) meldungen.push('Kontrast zu schwach: ' + k);
+      if (befund.breite > s.w + 1) meldungen.push(`Seitlicher Überlauf: ${befund.breite} px statt ${s.w} px`
+        + (befund.ueber.length ? ' (zuerst ' + befund.ueber.join(', ') + ')' : ''));
       const datei = path.join(OUT, `${seite.replace('.html','')}--${s.name}--${thema}.png`);
       await page.screenshot({ path:datei, fullPage:true });
       bilder++;

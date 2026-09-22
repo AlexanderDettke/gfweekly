@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./pruefung/waechter-hook.sh",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

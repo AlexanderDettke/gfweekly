@@ -28,6 +28,13 @@ V9.1 (13.09.2026) legt die Optik des Design Systems „Modernist" (Claude Design
 
 Farbrollen, Dunkelmodus und Statusfarben bleiben unverändert Habitate. Modernists roter Akzent (#ec3013) wurde **bewusst nicht** übernommen: er kollidiert mit `--crit` („ausgefallen"), das im Cockpit dieselbe Farbe als Signal trägt. Die vier Diagrammfarben `--chart-teal/-peach/-coral/-grid` sind aus der Habitate-Quelle nachgezogen und stehen für spätere Kennzahl-Visualisierungen bereit.
 
+## Wächter und Prüfungen
+`pruefung/abnahme.sh` fährt alles: Tokens gegen die Quelle des Design-Systems, Farbscan, Kontrast der Token-Zone, Matrix, Schirme (16 Seiten × 1440/390 × dunkel/hell) und Bedienproben.
+`pruefung/waechter.mjs` sind die statischen Prüfungen, die keine Meinung brauchen: eindeutige Versionskennungen der Migrationen, Behauptungen in der Dokumentation ohne Beleg, Prüfskripte, die sich selbst bestätigen, feste Datumswerte ohne Stichtag, und ob die letzte Abnahme zum aktuellen Stand der geprüften Dateien gehört (`pruefung/stand.sh`, Beleg in `pruefung/letzte-abnahme.json`).
+Der Wächter läuft dreifach: in `abnahme.sh`, bei jedem Push über `.github/workflows/waechter.yml`, und als Stop-Hook in Claude Code (`.claude/settings.json`), damit keine Sitzung „fertig" sagen kann, solange er Befunde meldet.
+**Schirme und Bedienung sind Oberflächentests**: sie fangen die Edge Function ab und belegen Aufbau, Kontrast, Überlauf und Bedienwege, nicht die Wirkung in der Datenbank.
+Arbeitspakete und Rollen stehen in `docs/ARBEITSPAKETE.md`, offene Befunde in `docs/BEKANNTE-MAENGEL.md`.
+
 ## Deploy
 Repo: <https://github.com/AlexanderDettke/gfweekly> (privat — `supabase/functions/gfweekly/index.ts` enthält das Zugangspasswort und gehört nie in `site/`).
 

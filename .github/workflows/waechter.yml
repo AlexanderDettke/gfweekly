@@ -1,0 +1,62 @@
+# Der Wächter läuft bei jedem Push, unabhängig davon, was ein Modell im Chat behauptet.
+name: Wächter
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  statisch:
+    name: Statische Prüfungen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Wächter
+        run: node pruefung/waechter.mjs
+      - name: Tokens gegen die Quelle
+        run: python3 pruefung/tokens.py
+        continue-on-error: true   # braucht die Quelle des Design-Systems, die nicht im Repo liegt
+      - name: Farbscan
+        run: |
+          FUNDE=$(python3 pruefung/farbscan.py site/assets)
+          if [ -n "$FUNDE" ]; then echo "$FUNDE"; exit 1; fi
+          echo "null Funde"
+      - name: Kontrast der Token-Zone
+        run: python3 pruefung/kontrast.py
+
+  oberflaeche:
+    name: Oberfläche (Schirme und Bedienung)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm i --no-save playwright typescript@5.6.3 >/dev/null
+          npx playwright install --with-deps chromium
+      - name: Schirme, Überlauf und gemessener Kontrast
+        env:
+          PLAYWRIGHT_MODUL: ${{ github.workspace }}/node_modules/playwright/index.mjs
+        run: node pruefung/schirme.mjs "$RUNNER_TEMP/schirme"
+      - name: Bedienung
+        env:
+          PLAYWRIGHT_MODUL: ${{ github.workspace }}/node_modules/playwright/index.mjs
+        run: node pruefung/bedienung.mjs
+      - name: Matrix
+        env:
+          TS_BASIS: file://${{ github.workspace }}/node_modules/typescript/lib/typescript.js
+        run: node pruefung/matrix-test.mjs
+      - name: Bilder aufheben
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: schirme
+          path: ${{ runner.temp }}/schirme
+          if-no-files-found: ignore

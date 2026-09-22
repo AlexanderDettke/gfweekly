@@ -123,7 +123,7 @@ Festlegungen, die die Paketdatei offenließ:
 **Aktionen v29.** `absence_set` (berechnet stufe und status, baut den Korb sofort), `absence_list`, `absence_end`,
 `deputies_set`, `deputies_list`, `handover_build`, `handover_list` (Zeilen plus Zähler je Quadrant, Cluster, Ampel,
 Lücken und Übernahmefähigkeit), `handover_set`, `handover_set_many`, `handover_dossier`, `handover_log_add`,
-`handover_log`, `uebernahme_stat`, `absence_tick`. Bestätigte Korbzeilen überschreibt der Lauf nie, er ergänzt nur
+`handover_log`, `uebernahme_stat`, `absence_tick`. Bestätigte Korbzeilen überschreibt der Lauf nicht (Bedingung `status = 'vorschlag'` in `index.ts`), er ergänzt nur
 frist, dossier und luecke. `handover_set` setzt bei einer Vertretung zusätzlich `gfweekly_topics.owner_backup`,
 `gate` und `gate_note` („in Vertretung für <person>“), bei ruht `gate = warten` mit Frist einen Tag nach der Rückkehr.
 
@@ -420,7 +420,7 @@ gelieferten Zeilen mit der genauen Gesamtzahl und meldet `gekuerzt`, damit ein A
 Korb erscheint; die Übergabeseite zeigt dafür einen eigenen Hinweis. Der Tick sagt, wenn sich der Hinweis auf
 einen unvollständigen Korb nicht speichern ließ. Die Nutzerliste aus Asana meldet, wenn sie nach zwanzig Seiten
 nicht zu Ende war, statt die fehlenden Personen als „kein Konto“ zu behandeln. Im Rücksync steht der
-Erledigungsvermerk jetzt vor dem Status, sonst hätte ein misslungenes Protokoll die Zeile für immer übersprungen;
+Erledigungsvermerk jetzt vor dem Status, sonst hätte ein misslungenes Protokoll die Zeile dauerhaft übersprungen;
 Kommentare werden seitenweise gelesen, und eine unvollständig gelesene Liste hält das Zeitfenster an.
 
 **Niedrig.** Die Übergabeseite sagt „ohne eigenes Konto, deshalb an Alex“ statt „ohne Zuweisung“, wenn der Ersatz

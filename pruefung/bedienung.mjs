@@ -1,3 +1,6 @@
+/* OBERFLÄCHENTEST. Dieses Skript fängt alle Aufrufe der Edge Function ab und antwortet mit Testdaten.
+   Es belegt die Oberfläche und die abgeschickte Nutzlast, NICHT die Wirkung in der Datenbank.
+   Was live wirkt, muss live geprüft werden (Regel 6 der Zusammenarbeit). */
 /* Bedienprüfung der Vertretung (V24b): klickt die Wege durch, die die Paketdatei als Abnahme nennt.
    Die Edge Function wird abgefangen (pruefung/testdaten.mjs); geprüft wird, was die Seite daraufhin tut
    und welche Aktion sie mit welcher Nutzlast schickt.

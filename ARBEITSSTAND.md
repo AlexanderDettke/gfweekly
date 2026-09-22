@@ -23,7 +23,7 @@ Prüfungen (`./pruefung/abnahme.sh`, alle grün):
 
 Drei Codex-Runden (`f0394c5`, `0c1a463`, `bd9de47`), alle bestätigten Befunde behoben.
 
-## Paket 2 · V24a Fundament — fertig, deployt und live abgenommen
+## Paket 2 · V24a Fundament — fertig, deployt, live durchgespielt am 22.09.2026
 
 - Migration `supabase/migrations/20260921_hh_vertretung.sql` ist **angewendet**:
   `gfweekly_absences`, `gfweekly_deputies` (4 Seed-Zeilen), `gfweekly_handover`, `gfweekly_handover_log`,
@@ -61,7 +61,7 @@ Prüfungen:
   Ampelklick, Vertretungsbrief, Wache, Anlegen mit fünf Eingaben, Rückkehr, Rückübergabe, Startseite, Besprechung).
 - Zwei Befunde aus den Bildern behoben: `.ub-doss` überschrieb `hidden`, und niemand steht mehr als eigene Vertretung.
 
-## Paket 4 · V24c Asana, Kalender, Mail — gebaut, 4c nur teilweise abgenommen
+## Paket 4 · V24c Asana, Kalender, Mail — gebaut, aus 4c ein Durchgang am 22.09.2026
 
 Commit `39886dc`. Migration `20260921_hh_asana.sql` angewendet (`asana_gid`, `asana_project_gid`, `asana_synced_at`).
 `asana_export` und `asana_sync` in der Edge Function, Rücksync im Tick, Archivierung bei Rückkehr,
@@ -93,7 +93,7 @@ löschen. Dazu: eine aufgehobene Ruhe räumt Ausgang und Frist am Thema auf (Mig
 `20260922_hh_handover_set_ruhe.sql`), der Rücksync schreibt den Vermerk vor dem Status und liest Kommentare
 seitenweise, und eine gekürzte Antwort sagt es der Übergabeseite.
 
-Live abgenommen: Paket 2 (zwei Testabwesenheiten, `absence_tick` zweimal, Testdaten restlos zurückgebaut),
+Live durchgespielt am 22.09.2026: Paket 2 (zwei Testabwesenheiten, `absence_tick` zweimal, Testdaten restlos zurückgebaut),
 Vault-Secret und Cron-Lauf, aus 4c ein Durchgang (Projekt angelegt, Aufgabe erledigt, Rücksync, archiviert),
 Adresse von „by Nature“ korrigiert, Vorschaubild mit echten Daten neu aufgenommen. Einzelheiten im Technikstand
 unter „Live-Abnahme 22.09.2026“.
