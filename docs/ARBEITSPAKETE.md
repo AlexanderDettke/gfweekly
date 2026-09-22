@@ -60,6 +60,23 @@ am genauen Commit prüfen. Zusammenarbeit, die es nicht gibt, wird nicht behaupt
   das Stichwort „Oberflächentest“ legitimierte eine Abnahmebehauptung; CI ließ eine ausgefallene Prüfung
   durchgehen; Pfade mit Leerzeichen brachen die Datei­suche. Jedes dieser Szenarien ist nachgestellt und
   schlägt jetzt fehl, wie es soll.
+  **Prüfrunde 2 (Codex, Stand `12d9458`): vierzehn Punkte.** Behoben sind die neun, die den Wächter blind oder
+  kaputt machten: die Überlaufprüfung stürzte ab, weil beim Umbau ein Feld verlorenging und der Zugriff blieb
+  (sie wäre beim nächsten echten Überlauf mit einem TypeError abgebrochen); die Grenze von acht Treffern zählte
+  vor dem Filtern und konnte einen neuen Verstoß hinter bekannter Schuld verstecken, ohne sie kamen 52 weitere
+  Altfälle ans Licht; die Ausnahmeliste galt für das ganze Haus statt für Seite, Thema und Messwert und ist
+  jetzt maschinell erzeugt (`KONTRAST_AUSNAHMEN_SCHREIBEN=1`, 64 Einträge, 137 unterdrückte Treffer, null neue);
+  die Deckkraft einer Gruppe wirkt jetzt auch auf deren Hintergrund; `stand.sh` ist als `stand.mjs` neu
+  geschrieben, weil eine Shell-Pipeline weder Dateinamen mit Zeilenumbruch noch Fehler mittendrin sauber
+  behandelt; der Beleg wird jetzt inhaltlich geprüft (existierender Commit, gültiges Datum in der
+  Vergangenheit, je Lauf ein eigener kurzer Eintrag); die Abnahmebehauptung wird auch mit Füllwörtern erkannt
+  und eine Verneinung nicht falsch getroffen; `fileURLToPath` auch in `schirme.mjs`.
+
+  **Nicht behoben, mit Absicht (Grenze von zwei Korrekturrunden erreicht), weiter als WP-05:** die
+  Kontrastmessung bleibt eine Näherung. Deckkraftgruppen werden schichtweise gerechnet, nicht als eigene
+  Ebene; Pseudoelemente werden ohne eigenen Hintergrund gemessen; einzelne Zeichen in Eingabefeldern fallen
+  unter die Mindestlänge; und `tokens.py` läuft in CI gar nicht, weil die Quelle des Design-Systems außerhalb
+  des Repos liegt. Das sind Grenzen der Messung, keine offenen Lücken in der Aufhängung.
 - **Nächster Schritt:** keiner, das Paket ist abgeschlossen.
 
 ### WP-02 · Die elf schweren Befunde aus `docs/BEKANNTE-MAENGEL.md`
@@ -71,16 +88,27 @@ am genauen Commit prüfen. Zusammenarbeit, die es nicht gibt, wird nicht behaupt
 - **Abnahmekriterien:** je Befund ein Szenario, das vorher fehlschlägt und nachher nicht mehr; Prüfung live
   gegen die Datenbank, nicht gegen Testdaten.
 
+### WP-05 · Grenzen der Kontrastmessung schließen
+
+- **Auftrag:** Deckkraftgruppen als eigene Ebene rechnen statt schichtweise; Pseudoelemente mit ihrem eigenen
+  Hintergrund messen; einzelne Zeichen in Eingabefeldern erfassen; `tokens.py` mit einer versionierten
+  Referenz in CI verbindlich laufen lassen.
+- **Zuständig:** frei.
+- **Stand:** offen, benannt in Prüfrunde 2 zu WP-01.
+- **Abnahmekriterien:** Die vier Gegenbeispiele des Prüfers (weiße Schrift auf schwarzem Container mit
+  `opacity: .5` über Weiß; weißer Pseudotext auf eigenem weißem Hintergrund; Eingabewert `"1"` weiß auf weiß;
+  CI ohne Tokenvergleich) werden erkannt.
+
 ### WP-04 · Bekannte Kontrastschuld abtragen
 
 - **Auftrag:** Die 18 Muster aus `pruefung/kontrast-ausnahmen.json` auf mindestens 4,5:1 bringen. Gefunden hat
   sie der gemessene Kontrast des Wächters, der anders als die alte Liste am gerenderten Bild misst.
   Der größte Brocken ist die Platzhalterfarbe des Design-Systems (3,88:1 im hellen Thema), sie betrifft jedes
-  Eingabefeld. Dazu Prioritäts- und Relevanzmarken aus der Zeit vor V23 und zwei Stellen in der
-  Entscheidungsliste (2,78:1 und 2,05:1).
+  Eingabefeld. Dazu Prioritäts- und Relevanzmarken aus der Zeit vor V23, Knöpfe im Cockpit, und zwei Stellen in
+  der Entscheidungsliste (2,78:1 und 2,05:1). Die schlechtesten Werte liegen bei 1,00:1 und 2,05:1.
 - **Zuständig:** frei.
 - **Stand:** offen. Die Ausnahmeliste hält den Lauf grün, zählt die Treffer aber bei jedem Lauf sichtbar mit
-  (zuletzt 85). Neue Verstöße lassen den Lauf sofort scheitern.
+  (zuletzt 137 Treffer aus 64 Einträgen). Neue Verstöße und Verschlechterungen lassen den Lauf sofort scheitern.
 - **Abnahmekriterien:** `pruefung/kontrast-ausnahmen.json` ist leer, und die Schirme melden null Kontrastfälle.
   Farben nur über Tokens, keine neuen Farben.
 

@@ -76,7 +76,10 @@ function selbstbestaetigung() {
     }
     /* Das Stichwort im Kopf darf die Behauptung nicht legitimieren: wer abfängt, darf nicht
        „Abnahme bestanden“ ausgeben (Befund 3 der Prüfung von 4cdd506). */
-    const behauptet = t.split('\n').filter(z => /Abnahme (bestanden|erfolgreich|ok)/i.test(z) && !/^\s*(\/\/|\/\*|\*)/.test(z));
+    const behauptet = t.split('\n').filter(z =>
+      /Abnahme\b[^\n]{0,40}?\b(bestanden|erfolgreich|in Ordnung|grün)\b/i.test(z)
+      && !/\b(keine|kein|nicht|ohne)\b[^\n]{0,20}Abnahme/i.test(z)
+      && !/^\s*(\/\/|\/\*|\*|#)/.test(z));
     if (behauptet.length) {
       melde('selbstbestaetigung',
         `pruefung/${f} fängt Aufrufe ab und meldet trotzdem eine bestandene Abnahme: „${behauptet[0].trim().slice(0, 70)}“.`);
@@ -117,16 +120,31 @@ function frische() {
   try { d = JSON.parse(lies(datei)); } catch (_e) { melde('frische', `${datei} ist kein gültiges JSON.`); return; }
   /* Ein Beleg mit passender Prüfsumme, aber leeren Feldern wäre ein Freifahrtschein
      (Befund 5 der Prüfung von 4cdd506). Deshalb wird der Inhalt geprüft, nicht nur das Vorhandensein. */
+  /* Streng, weil ein Beleg sonst nur eine Behauptung in Dateiform ist (Befund 14 der Prüfung von 12d9458):
+     echter Commit, echtes Datum in der Vergangenheit, je Lauf ein eigener kurzer Eintrag. */
   const PFLICHT = ['tokens', 'farbscan', 'kontrast', 'matrix', 'schirme', 'bedienung', 'waechter'];
   if (!/^[0-9a-f]{64}$/.test(String(d.stand || ''))) melde('frische', `${datei}: „stand“ ist keine Prüfsumme.`);
   if (!/^[0-9a-f]{40}$/.test(String(d.commit || ''))) melde('frische', `${datei}: „commit“ ist kein Commit.`);
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(String(d.datum || ''))) melde('frische', `${datei}: „datum“ fehlt oder ist keine Zeitangabe.`);
+  else {
+    try { execSync(`git cat-file -e ${d.commit}^{commit}`, { cwd: WURZEL, stdio:'ignore' }); }
+    catch (_e) { melde('frische', `${datei}: den Commit ${String(d.commit).slice(0,7)} gibt es in diesem Repo nicht.`); }
+  }
+  const zeit = Date.parse(String(d.datum || ''));
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(String(d.datum || '')) || Number.isNaN(zeit)) {
+    melde('frische', `${datei}: „datum“ fehlt oder ist keine gültige Zeitangabe.`);
+  } else if (zeit > Date.now() + 3600000) {
+    melde('frische', `${datei}: „datum“ liegt in der Zukunft.`);
+  }
   if (!Array.isArray(d.laeufe) || !d.laeufe.length) melde('frische', `${datei}: „laeufe“ ist leer.`);
   else {
-    const fehlt = PFLICHT.filter(n => !d.laeufe.some(l => String(l).toLowerCase().includes(n)));
-    if (fehlt.length) melde('frische', `${datei}: der Beleg nennt diese Läufe nicht: ${fehlt.join(', ')}.`);
+    const eintraege = d.laeufe.map(l => String(l).toLowerCase().trim());
+    if (eintraege.some(l => l.length > 40)) melde('frische', `${datei}: ein Eintrag in „laeufe“ ist keine Laufbezeichnung, sondern ein Satz.`);
+    const fehlt = PFLICHT.filter(n => !eintraege.some(l => l.split(/[^a-zäöüß]+/).includes(n)));
+    if (fehlt.length) melde('frische', `${datei}: der Beleg nennt diese Läufe nicht als eigenen Eintrag: ${fehlt.join(', ')}.`);
   }
-  if (!String(d.ungeprueft || '').trim()) melde('frische', `${datei}: „ungeprueft“ ist leer. Jede Prüfung hat blinde Flecken, sie gehören benannt.`);
+  if (typeof d.ungeprueft !== 'string' || d.ungeprueft.trim().length < 10) {
+    melde('frische', `${datei}: „ungeprueft“ fehlt oder ist zu dünn. Jede Prüfung hat blinde Flecken, sie gehören benannt.`);
+  }
   /* Der Stand ist eine Prüfsumme über alles, was die Abnahme prüft. Er haengt bewusst nicht am Commit:
      sonst waere der Beleg nach jedem weiteren Commit veraltet, ohne dass sich Geprueftes geaendert hat. */
   let jetzt = '';
