@@ -5,9 +5,9 @@ durchgestrichen und mit einem Satz, wie es ausgegangen ist. Was noch von dir kom
 
 ## Noch offen
 
-**Push.** Der Stand liegt lokal, `origin/main` kennt ihn noch nicht. Bis zum `git push` sind Vertretung,
-Übergabe und Rückkehr nicht live. Das ist der einzige Schritt, der zwischen dem heutigen Stand und der
-Startseite steht.
+**34 Befunde aus der vollständigen Prüfung**, elf davon schwer, stehen in `docs/BEKANNTE-MAENGEL.md`. Auf
+deine Entscheidung vom 22.09.2026 bleiben sie vorerst offen. Das ist der größte offene Punkt, nicht die
+Kleinigkeiten weiter unten.
 
 **Testprojekt in Asana löschen.** `app.asana.com/0/1218725644227780` ist archiviert, aber noch da. Der
 Anschluss darf Projekte nicht löschen, das geht nur von Hand.
@@ -25,7 +25,7 @@ reicht das weit; greift die Grenze doch einmal, sagt die Übergabeseite es seit 
 
 ## Erledigt am 22.09.2026
 
-~~**1. Edge Function v29 deployen.**~~ Deploy aus der Supabase-CLI, inzwischen v30. `ping` meldet 30.
+~~**1. Edge Function v29 deployen.**~~ Deploy aus der Supabase-CLI, inzwischen v32. `ping` meldet 32.
 
 ~~**2. Vault-Secret für den täglichen Tick.**~~ `gfweekly_password` liegt im Vault, `hh_absence_tick()` kommt
 mit 200 durch, der Cron-Lauf steht auf täglich 04:40 UTC.
@@ -37,7 +37,7 @@ in keiner Datei und in keinem Commit.
 Die Frage nach den zwei Konten einer dritten Person ist hinfällig: die Vertretungslinie führt nur Alex und Lea,
 und die Aufgabe geht an die Person, die in der Korbzeile als Vertretung steht. Wird dort von Hand ein anderer
 Name eingetragen, prüft der Export das nicht nach; er ordnet diesen Namen genau zu oder gibt die Aufgabe an Alex.
-Abnahme 4c ist gelaufen.
+Aus der Abnahme 4c ist ein Durchgang gelaufen, nicht die volle Prüfung der Paketdatei.
 
 ~~**5. Vorschaubild mit Testdaten.**~~ Neu aufgenommen mit echten Daten.
 

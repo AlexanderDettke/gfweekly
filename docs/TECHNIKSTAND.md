@@ -38,7 +38,7 @@ und gehören zur Welt des Spiels, nicht zur Bedienoberfläche.
 2. „Kritisch“ auf kritischer Fläche nimmt `--crit-text` statt `--crit` (dunkel 4,28:1, jetzt 5,89:1).
 3. Die goldene Kennzahlenkarte (`.stat.accent`) färbt Zahl, Beschriftung und Zusatz auf `--on-action`;
    die alte helle Schrift `--on-photo-2` kam auf Honiggold nur auf 1,37:1.
-4. Die dritte Textstufe steht nicht mehr auf der zweiten Fläche (dort 4,19:1 im Dunkeln): Ticker-Zeit und -Strang,
+4. Die dritte Textstufe sollte nicht mehr auf der zweiten Fläche stehen (dort 4,19:1 im Dunkeln): Ticker-Zeit und -Strang,
    Korb-Meta, Filterspalte, Themenlage-Zeilen, Laufband-Person, Personenname im Ticker und der Plattform-Hinweis
    tragen `--text-2`. Ebenso die Einheit in der KPI-Kachel (`.kk-v small`), die auf `--surface-2` sitzt.
 5. „Löschen“ trägt `--crit-text` statt `--crit` (Board-Panel, Meilensteine, Wichtige Seiten): im Hover liegt der Knopf
@@ -156,7 +156,9 @@ Rückkehr = ankunft. Stile im Block „V24b“ in `styles.css`.
 **vertretung.html** Ein Primärknopf, ein Modal mit genau fünf Eingaben. „unklar“ schaltet das Enddatum auf eine
 Schätzung in Tagen (Stepper) um; „Gespräch“ blendet das Zeitfeld ein. Speichern ruft `absence_set` und geht sofort
 zur Übergabe. Die Vertretungslinie speichert je Feld (Chips sofort, Vollmacht nach 1,5 Sekunden Tippruhe).
-Niemand steht als eigene Vertretung zur Wahl.
+**Falsch, siehe `docs/BEKANNTE-MAENGEL.md` Befund 1:** Der Filter vergleicht den genauen Namen
+(`n !== ABSENCE.person`). Die Abwesenheit führt „Lea“, die Personenliste „Lea Luce“, also bleibt sie als ihre
+eigene Vertretung wählbar. Ebenso stehen Personen außerhalb der Vertretungslinie zur Wahl.
 
 **uebergabe.html** Ohne `?id=` die nächste aktive, sonst die nächste geplante Abwesenheit. „Alle Vorschläge
 übernehmen“ wirkt genau auf die aktuelle Ansicht (Filter plus „nur Vorschläge“). Der Vertretungsbrief ist ein
@@ -187,7 +189,8 @@ Migration `supabase/migrations/20260921_hh_asana.sql` (angewendet): `gfweekly_pe
 **Asana aus der Edge Function.** Secrets: `ASANA_TOKEN` (Personal Access Token), `ASANA_WORKSPACE`
 (Standard 57435200923138), `ASANA_TEAM` (nur nötig, wenn der Arbeitsbereich ein Team verlangt).
 Ohne Token tut `asana_export` nichts und antwortet mit `{ error: 'ASANA_TOKEN fehlt' }` samt Hinweis;
-es entstehen nie halbe Projekte.
+Bei zwei gleichzeitigen Aufrufen oder einem Abbruch zwischen dem Anlegen in Asana und dem Merken der Kennung
+können dagegen sehr wohl halbe oder doppelte Projekte entstehen (`docs/BEKANNTE-MAENGEL.md`, Befund 14).
 
 - `asana_export {absence_id}` legt das Projekt „Vertretung <Name> · <von> bis <bis>“ an oder frischt das
   bestehende auf (`asana_project_gid`), dazu die Abschnitte Sofort, Grün, Gelb, Rot bei der GF, Ruht bis Rückkehr.
@@ -199,7 +202,8 @@ es entstehen nie halbe Projekte.
 - `asana_sync {absence_id}` liest `completed` und die neuen Kommentare seit `asana_synced_at`, setzt erledigte
   Zeilen auf `erledigt` und schreibt Kommentare als Protokolleinträge der Art `asana`. Der tägliche Tick ruft das
   für jede Abwesenheit mit Projekt selbst auf; bei Rückkehr wandert das Projekt ins Archiv.
-- Oberfläche: „Nach Asana“ steht als Primärknopf im Kopf der Übergabe, sobald es bestätigte Zeilen gibt;
+- Oberfläche: „Nach Asana“ steht im Kopf der Übergabe, sobald es bestätigte Zeilen gibt, als `btn-brand` und
+  damit als zweite Aktion, nicht als Primärknopf wie in der Paketdatei verlangt (bewusste Abweichung, siehe unten);
   die Rückkehr zeigt die Kachel „Asana offen“ mit der Zahl der erledigten Aufgaben.
 
 ### Abschnitt H für den täglichen Auftrag „GF Weekly · Neuigkeiten täglich“
@@ -250,7 +254,8 @@ Die Vollmacht im Aufgabentext folgt derselben Bereichsregel wie die Vertretung (
 Fehlt zu einer Person die `asana_gid`, geht die Aufgabe seit V24d an Alex, und die Antwort nennt die Namen;
 hat auch Alex keine Kennung, bleibt die Aufgabe unzugewiesen, und die Antwort sagt genau das.
 
-**Nachgetragen am 22.09.2026:** `ASANA_TOKEN` steht als Secret, die Abnahme 4c ist gelaufen (siehe unten).
+**Nachgetragen am 22.09.2026:** `ASANA_TOKEN` steht als Secret, aus 4c ist ein Durchgang gelaufen (siehe unten);
+die volle Abnahme nach Paketdatei steht aus (`docs/BEKANNTE-MAENGEL.md`, Befund 33).
 Offen bleibt der Eintrag von Abschnitt H in den täglichen Auftrag; der Text oben ist dafür fertig.
 
 
@@ -304,7 +309,9 @@ Bewusst nicht geändert, mit Begründung:
   ist „Alle Vorschläge übernehmen“. Die Paketdatei nennt beide Primary, das widerspricht sich.
 - **`score` behält `heuteBerlin()` als Standardwert.** Mit übergebenem Stichtag ist die Funktion rein; der Standard
   ist die Bequemlichkeit für den Aufruf aus dem Lauf.
-- **Keine Datenbanktransaktion** für `handover_zurueck`: supabase-js kann keine Transaktion über mehrere Tabellen.
+- **Keine Datenbanktransaktion** für `handover_zurueck`. Die ursprüngliche Begründung, supabase-js könne keine
+  Transaktion über mehrere Tabellen, trägt seit V24d nicht mehr: `hh_handover_set` löst genau das über eine
+  Datenbankfunktion. Für `handover_zurueck` fehlt sie weiterhin (`docs/BEKANNTE-MAENGEL.md`, Befund 4).
   Stattdessen die sichere Reihenfolge (erst der Vorgang, dann die Korbzeile) und eine Fehlermeldung, die sagt,
   was nicht ging.
 ## V24d (22.09.2026) · Nacharbeit aus der Review, Edge Function v30
@@ -379,7 +386,7 @@ Function auf. Beim ersten Versuch stand dort ein falsches Passwort, der Aufruf k
 Passwort der Edge Function geändert, müssen **beide** Stellen nachgezogen werden: das Supabase-Secret
 `GFWEEKLY_PASSWORD` und das Vault-Secret `gfweekly_password`.
 
-**Paket 4c live.** Mit einer Testabwesenheit für Lea: `asana_export` legte das Projekt an, eine Aufgabe wurde in
+**Aus Paket 4c ein Durchgang live**, nicht die volle Abnahme. Mit einer Testabwesenheit für Lea: `asana_export` legte das Projekt an, eine Aufgabe wurde in
 Asana erledigt, `asana_sync` holte sie zurück, danach wurde das Projekt archiviert und die Testabwesenheit
 gelöscht. Zwei Befunde daraus sind behoben: `gidVon('Alex')` fand „Alexander Dettke“ nur über den Notnagel, jetzt
 greift dieselbe Normalisierung wie sonst im Haus; und der von Asana automatisch angelegte „Unbenannte Abschnitt“

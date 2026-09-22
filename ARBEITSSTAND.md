@@ -4,7 +4,11 @@ Ziel: die vier Pakete aus `docs/PAKETE-V23-V24.md` umsetzen. Alex ist bis morgen
 deshalb arbeite ich die Pakete ohne Zwischenstopp durch, treffe risikoarme Entscheidungen selbst
 und sammle alles Offene in `FRAGEN_FUER_MORGEN.md`. Gepusht wird nicht, das macht Alex.
 
-Stand: 22.09.2026, nach Deploy (v30) und Live-Abnahme. Offen ist nur noch der Push.
+Stand: 22.09.2026, nach Deploy (v32), Live-Abnahme und Push. `origin/main` steht auf `ad5719e`.
+
+**Nicht abnahmefähig.** Eine vierte, vollständige Prüfung gegen die Paketdatei hat 34 Befunde gemeldet, elf davon
+schwer. Sie stehen in `docs/BEKANNTE-MAENGEL.md` und werden auf Entscheidung von Alex vorerst nicht behoben.
+Was unten als „geprüft“ steht, meint in der Regel die Oberfläche, nicht die Wirkung in der Datenbank.
 
 ## Paket 1 · V23 Farbpatch — fertig
 
@@ -57,13 +61,14 @@ Prüfungen:
   Ampelklick, Vertretungsbrief, Wache, Anlegen mit fünf Eingaben, Rückkehr, Rückübergabe, Startseite, Besprechung).
 - Zwei Befunde aus den Bildern behoben: `.ub-doss` überschrieb `hidden`, und niemand steht mehr als eigene Vertretung.
 
-## Paket 4 · V24c Asana, Kalender, Mail — fertig, Abnahme 4c gelaufen
+## Paket 4 · V24c Asana, Kalender, Mail — gebaut, 4c nur teilweise abgenommen
 
 Commit `39886dc`. Migration `20260921_hh_asana.sql` angewendet (`asana_gid`, `asana_project_gid`, `asana_synced_at`).
 `asana_export` und `asana_sync` in der Edge Function, Rücksync im Tick, Archivierung bei Rückkehr,
 „Nach Asana“ im Kopf der Übergabe, Kachel „Asana offen“ auf der Rückkehr, Abschnitt H (H1 bis H7) im Technikstand.
 Ohne `ASANA_TOKEN` tut der Export nichts und sagt warum. Das Token steht seit dem 22.09.2026 als Secret,
-die Abnahme 4c ist gelaufen.
+aus 4c ist ein Durchgang mit einem Projekt und einer Aufgabe gelaufen. Die Paketdatei verlangt mehr
+(mindestens zehn Aufgaben, geprüfte Empfänger und Themenlinks, Abschnitt H mit Kalendertest, Projekt löschen).
 
 ## Unabhängige Review
 
@@ -89,7 +94,7 @@ löschen. Dazu: eine aufgehobene Ruhe räumt Ausgang und Frist am Thema auf (Mig
 seitenweise, und eine gekürzte Antwort sagt es der Übergabeseite.
 
 Live abgenommen: Paket 2 (zwei Testabwesenheiten, `absence_tick` zweimal, Testdaten restlos zurückgebaut),
-Vault-Secret und Cron-Lauf, Paket 4c (Projekt angelegt, Aufgabe erledigt, Rücksync, archiviert),
+Vault-Secret und Cron-Lauf, aus 4c ein Durchgang (Projekt angelegt, Aufgabe erledigt, Rücksync, archiviert),
 Adresse von „by Nature“ korrigiert, Vorschaubild mit echten Daten neu aufgenommen. Einzelheiten im Technikstand
 unter „Live-Abnahme 22.09.2026“.
 

@@ -1,5 +1,9 @@
 # Das Hohe Haus (vormals GF Weekly)
 
+> **Stand 22.09.2026: der Bereich Vertretung (V24) ist nicht abgenommen.** Eine vollständige unabhängige Prüfung
+> gegen die Paketdatei hat 34 Befunde gemeldet, elf davon schwer. Sie stehen in `docs/BEKANNTE-MAENGEL.md` und
+> sind auf Entscheidung von Alex vorerst nicht behoben. Der Rest des Hauses ist davon nicht betroffen.
+
 Geschäftsführung der Wilden Habitate: internes Cockpit von Alex und Lea. Live: https://hohes-haus.netlify.app (Netlify-Projekt am 15.09.2026 von gfweekly auf hohes-haus umbenannt; Repo, Site-ID, Tabellen und Edge Function heißen weiter gfweekly).
 
 ## Aufbau
@@ -109,7 +113,7 @@ Geprüft mit `pruefung/schirme.mjs` (16 Seiten je 1440 und 390 in Dunkel und Hel
 ## V24c (21.09.2026): Asana, Kalender, Mail
 Migration `supabase/migrations/20260921_hh_asana.sql`: `asana_gid` an den Personen, `asana_project_gid` und `asana_synced_at` an den Abwesenheiten.
 Edge Function: `asana_export {absence_id}` legt das Projekt „Vertretung <Name> · <von> bis <bis>“ mit den Abschnitten Sofort, Grün, Gelb, Rot bei der GF und Ruht bis Rückkehr an und schreibt je bestätigter Korbzeile eine Aufgabe „[Vertretung] <Titel>“ mit Stand, nächstem Schritt, Ampelregel, Notfalldefinition, Vollmacht, Frist und Link ins Haus; ein erneuter Export aktualisiert. `asana_sync {absence_id}` holt erledigte Aufgaben und neue Kommentare zurück und läuft im täglichen Tick mit, bei Rückkehr wird das Projekt archiviert. Ohne das Secret `ASANA_TOKEN` passiert nichts und die Antwort sagt warum.
-Oberfläche: „Nach Asana“ als Primärknopf im Kopf der Übergabe, sobald bestätigte Zeilen vorliegen; Kachel „Asana offen“ auf der Rückkehr.
+Oberfläche: „Nach Asana“ im Kopf der Übergabe, sobald bestätigte Zeilen vorliegen (als zweite Aktion, nicht als Primärknopf wie in der Paketdatei verlangt); Kachel „Asana offen“ auf der Rückkehr.
 Der Textbaustein für Abschnitt H des täglichen Auftrags (Abwesenheiten aus dem Kalender erkennen, Termine im Fenster, Vertretungsbrief, Wochenbrief, Rückkehr, Tick, Neues an Abwesende) steht in `docs/TECHNIKSTAND.md`.
 
 ## V24d (22.09.2026): Übergabe als ein Vorgang, Asana über die E-Mail, Lückenfilter
@@ -117,7 +121,7 @@ Migrationen `supabase/migrations/20260922_hh_handover_set.sql` und `20260922_hh_
 Edge Function v30: `handover_set` und `handover_set_many` rufen nur noch die Datenbankfunktion. `asana_export` löst fehlende Asana-Kennungen einmalig über die E-Mail auf (`GET /users`, bis zu zwanzig Seiten; reicht das nicht, sagt die Antwort es) und schreibt sie nach `gfweekly_people.asana_gid`; wer kein Konto hat, steht in der Antwort unter `ohne_zuweisung` und seine Aufgaben gehen an Alex.
 Nachbesserung v31 aus der zweiten und v32 aus der dritten Prüfrunde: „Alex“ und „Lea“ werden über ihre feste E-Mail aufgelöst statt über den Namen, ein Lesefehler der Personenliste bricht den Export ab, eine aufgehobene Ruhe räumt Ausgang und Frist am Thema auf (`20260922_hh_handover_set_ruhe.sql`), der Rücksync schreibt den Vermerk vor dem Status und liest Kommentare seitenweise, und eine gekürzte Antwort von `handover_list` meldet sich als `gekuerzt`.
 Oberfläche: `board.html?owner=<Name>&luecke=1` filtert nach derselben Regel wie die Kachel Übernahmefähigkeit (zuständig und ohne Stand oder ohne nächsten Schritt), mit Chip „Lücken“ in der Board-Leiste und Link aus der Kachel. Ist der Korb an einer Obergrenze gelaufen, sagt die Übergabeseite es.
-Live abgenommen am 22.09.2026: Paket 2 (zwei Testabwesenheiten, `absence_tick` zweimal, Testdaten restlos zurückgebaut), Paket 4c (Asana-Projekt angelegt, Aufgabe erledigt, Rücksync, Projekt archiviert), Vault-Secret `gfweekly_password` und der tägliche Cron-Lauf.
+Live durchgespielt am 22.09.2026: Paket 2 (zwei Testabwesenheiten, `absence_tick` zweimal, Testdaten restlos zurückgebaut), aus 4c ein Durchgang mit einem Projekt und einer Aufgabe, dazu Vault-Secret `gfweekly_password` und der tägliche Cron-Lauf. Das ist **keine** vollständige Abnahme von 4c: die Paketdatei verlangt mindestens zehn Aufgaben mit geprüften Empfängern und Themenlinks sowie einen manuellen Durchlauf von Abschnitt H mit Kalendertest, und das Testprojekt wurde archiviert statt gelöscht.
 
 ## Backend
 Tabellen `gfweekly_topics`, `gfweekly_inbox`, `gfweekly_people`, `gfweekly_links`, `gfweekly_protocol_requests`, `gfweekly_assets`, `gfweekly_sites`, `gfweekly_site_categories`, `gfweekly_sessions`, `gfweekly_decisions`, `gfweekly_news`, `gfweekly_score_rules`, `gfweekly_score_levels`, `gfweekly_score_events`, `gfweekly_checkins`, `gfweekly_badges`, dazu die Meta-Planungs-Tabellen aus V10.
