@@ -280,9 +280,9 @@ async function nachAsana(){
        in die Meldung, sonst widerspricht sie dem, was in Asana zu sehen ist. */
     gfToast(`Asana: ${d.neu} neu, ${d.aktualisiert} aktualisiert`
       + (offen.length ? (d.ersatz_zuweisung
-          ? ` · ohne eigenes Konto, deshalb an ${gfEsc(d.ersatz_zuweisung)}: ${offen.join(", ")}`
+          ? ` · ohne eigenes Konto, deshalb an ${d.ersatz_zuweisung}: ${offen.join(", ")}`
           : ` · ohne Zuweisung: ${offen.join(", ")}`) : "")
-      + (d.nutzerliste ? ` · ${gfEsc(d.nutzerliste)}` : ""));
+      + (d.nutzerliste ? ` · ${d.nutzerliste}` : ""));
     if(d.url) window.open(d.url,"_blank","noopener");
     await protLaden();
   }catch(e){ gfToast(e.message && e.message.includes("ASANA_TOKEN") ? "Asana ist noch nicht eingerichtet, das Token fehlt." : "Fehler: "+(e.message||"Asana")); }

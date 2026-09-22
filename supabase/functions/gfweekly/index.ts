@@ -777,28 +777,29 @@ async function asanaSync(absence: any){
   const { data: schon, error: se } = await admin.from('gfweekly_handover_log').select('text').eq('absence_id', absence.id).eq('art','asana');
   if (se) return { erledigt:0, kommentare:0, fehler:1 };   // ohne die bekannten Kennungen würde doppelt protokolliert
   const bekannt = new Set((schon || []).map((l: any) => (String(l.text).match(/\[asana:(\d+)\]/) || [])[1]).filter(Boolean));
-  /* Welche Zeilen ihren Erledigungsvermerk schon haben. Damit kann der Vermerk vor dem Status geschrieben
-     werden: scheitert er, versucht der nächste Lauf es erneut, statt am gesetzten Status vorbeizulaufen. */
-  const { data: vermerkt, error: ve } = await admin.from('gfweekly_handover_log')
-    .select('handover_id').eq('absence_id', absence.id).eq('art','erledigt').not('handover_id','is',null);
-  if (ve) return { erledigt:0, kommentare:0, fehler:1 };
-  const schonVermerkt = new Set((vermerkt || []).map((l: any) => String(l.handover_id)));
+  /* Ob eine Zeile ihren Erledigungsvermerk schon hat, wird je Zeile gefragt. Eine vorab geladene Liste
+     könnte an der Obergrenze abgeschnitten sein, und dann schriebe jeder Lauf denselben Vermerk erneut. */
+  const hatVermerk = async (handover_id: string) => {
+    const { data, error } = await admin.from('gfweekly_handover_log').select('id')
+      .eq('absence_id', absence.id).eq('handover_id', handover_id).eq('art','erledigt').limit(1);
+    return error ? null : (data || []).length > 0;
+  };
   let erledigt = 0, kommentare = 0, fehler = 0;
   for (const row of (rows || [])) {
     let aufgabe: any = null;
     try { aufgabe = await asana(`/tasks/${row.asana_gid}?opt_fields=completed,completed_at,name`); } catch (_e) { fehler++; continue; }
-    if (aufgabe?.completed && (row.status !== 'erledigt' || !schonVermerkt.has(String(row.id)))) {
+    if (aufgabe?.completed) {
       /* Erst der Vermerk, dann der Status: umgekehrt hätte ein misslungenes Protokoll die Zeile für immer
          übersprungen, weil der nächste Lauf sie schon als erledigt sieht. */
-      let gut = true;
-      if (!schonVermerkt.has(String(row.id))) {
-        gut = await handoverLog(absence.id, 'erledigt', `${row.title}: in Asana erledigt.`, 'asana', row.id);
-        if (gut) schonVermerkt.add(String(row.id));
-      }
-      if (!gut) fehler++;
-      else if (row.status !== 'erledigt') {
-        const { error } = await admin.from('gfweekly_handover').update({ status:'erledigt', updated_at:new Date().toISOString() }).eq('id', row.id);
-        if (error) fehler++; else erledigt++;
+      const da = await hatVermerk(String(row.id));
+      if (da === null) fehler++;
+      else {
+        const gut = da || await handoverLog(absence.id, 'erledigt', `${row.title}: in Asana erledigt.`, 'asana', row.id);
+        if (!gut) fehler++;
+        else if (row.status !== 'erledigt') {
+          const { error } = await admin.from('gfweekly_handover').update({ status:'erledigt', updated_at:new Date().toISOString() }).eq('id', row.id);
+          if (error) fehler++; else erledigt++;
+        }
       }
     }
     /* Die Kommentare kommen seitenweise. Ungeblättert schneidet Asana lange Listen ab, und weil der
@@ -806,15 +807,23 @@ async function asanaSync(absence: any){
     let stories: any[] = []; let seitenRest = false;
     try {
       let pfad = `/tasks/${row.asana_gid}/stories?opt_fields=gid,text,created_at,type,created_by.name&limit=100`;
-      let seite = 0;
-      for (; seite < 20 && pfad; seite++) {
+      /* Zweihundert Seiten sind zwanzigtausend Einträge an einer einzigen Aufgabe. Wird das je erreicht,
+         steht der Zeitstempel dieser Abwesenheit still, und jeder Lauf begänne wieder bei Seite eins.
+         Deshalb bleibt es nicht bei einem stummen Zähler: der Fall steht im Protokoll und braucht eine Hand. */
+      for (let seite = 0; seite < 200 && pfad; seite++) {
         const antwort = await asanaSeite(pfad);
         stories = stories.concat(antwort.data || []);
         pfad = antwort.next_page?.path || '';
       }
       seitenRest = !!pfad;
     } catch (_e) { fehler++; continue; }
-    if (seitenRest) fehler++;   // unvollständig gelesen: das Zeitfenster bleibt stehen
+    if (seitenRest) {
+      fehler++;   // unvollständig gelesen: das Zeitfenster bleibt stehen, sonst gingen Kommentare verloren
+      await handoverLog(absence.id, 'asana',
+        `${row.title}: die Kommentare dieser Aufgabe sind nach zweihundert Seiten nicht zu Ende. `
+        + 'Der Rücksync dieser Abwesenheit kommt nicht weiter, bis die Aufgabe geteilt oder archiviert ist.',
+        'asana', row.id);
+    }
     for (const s of stories) {
       if (s.type !== 'comment' || !s.created_at) continue;
       if (s.created_at <= seit || s.created_at > laufBeginn) continue;   // genau das Fenster dieses Laufs
@@ -849,7 +858,7 @@ Deno.serve(async (req: Request) => {
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:31, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
+    if (action === 'ping') return json({ ok:true, version:32, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -1712,15 +1721,12 @@ Deno.serve(async (req: Request) => {
         if (!name) return null;
         let p = (leute || []).find((q: any) => norm(q.name) === norm(name));
         /* Die Vertretungslinie führt „Alex“ und „Lea“, die Personenliste „Alexander Dettke“ und „Lea Luce“.
-           Aufgelöst wird über die feste E-Mail der beiden. Ein Vergleich auf die Zeichenkette im Namen würde
-           „Alexandra“ mitnehmen; erst wenn die E-Mail nicht trifft und genau ein Name übrig bleibt, gilt der.
-           Für alle anderen zählt der genaue Name, sonst würden Merle und Tim zur selben Person. */
+           Aufgelöst wird allein über die feste E-Mail der beiden. Ein Vergleich auf die Zeichenkette im Namen
+           würde „Alexandra“ mitnehmen, auch als einziger Treffer; dann lieber keine Kennung und ein Name in
+           der Antwort. Für alle anderen zählt der genaue Name, sonst würden Merle und Tim zur selben Person. */
         if (!p) {
           const w = whoNorm(name);
-          if (w === 'Alex' || w === 'Lea') {
-            p = perMail(w === 'Alex' ? MAIL_ALEX : MAIL_LEA);
-            if (!p) { const treffer = (leute || []).filter((q: any) => whoNorm(q.name) === w); p = treffer.length === 1 ? treffer[0] : null; }
-          }
+          if (w === 'Alex' || w === 'Lea') p = perMail(w === 'Alex' ? MAIL_ALEX : MAIL_LEA);
         }
         if (!p?.asana_gid) { if (name && !ohneGid.includes(name)) ohneGid.push(name); return null; }
         return p.asana_gid;

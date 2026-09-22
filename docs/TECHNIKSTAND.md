@@ -328,12 +328,14 @@ Abwesenheiten stehen bis zum nächsten Bau auf dem Vorgabewert `false`.
 
 **7.3 Asana-Kennungen über die E-Mail.** `asana_export` liest `GET /users?workspace=…` über **alle** Seiten
 (`next_page`, höchstens zwanzig), ordnet fehlende Kennungen über die E-Mail zu und schreibt sie nach
-`gfweekly_people.asana_gid`. Fünf Startwerte stehen als Seed in der Migration (Alex, Lea, Amelie, Antonia, Helge). Die Zuordnung läuft über die
-E-Mail und ist damit je Person eindeutig; zugewiesen bekommt ohnehin nur, wer in der Vertretungslinie steht, und das
-sind Alex und Lea. Wer kein Asana-Konto hat, erscheint in der Antwort unter `ohne_zuweisung`, und die Aufgabe geht
-**an Alex** statt ins Leere. Die Vertretungslinie führt „Alex“, die Personenliste „Alexander Dettke“: für diese
-beiden Namen greift dieselbe Normalisierung wie im Rest des Hauses, bei allen anderen zählt der genaue Name. Ein Fehler beim Lesen der
-Nutzerliste steht als `nutzerliste` in der Antwort und im Protokoll, statt still zu verschwinden.
+`gfweekly_people.asana_gid`. Fünf Startwerte stehen als Seed in der Migration (Alex, Lea, Amelie, Antonia, Helge).
+Die Zuordnung läuft über die E-Mail und ist damit je Person eindeutig. Zugewiesen wird der Name, der in der
+Korbzeile als Vertretung steht; die Vertretungslinie schlägt ihn vor, aber der Export prüft nicht nach, ob ein
+von Hand eingetragener Name darin vorkommt. Die Linie führt „Alex“ und „Lea“, die Personenliste „Alexander
+Dettke“ und „Lea Luce“: diese beiden werden über ihre feste E-Mail aufgelöst, bei allen anderen zählt der genaue
+Name. Wer kein Asana-Konto hat, erscheint in der Antwort unter `ohne_zuweisung`, und die Aufgabe geht **an Alex**
+statt ins Leere; fehlt auch Alex die Kennung, bleibt sie unzugewiesen, und die Antwort sagt das. Ein Fehler beim
+Lesen der Nutzerliste steht als `nutzerliste` in der Antwort und im Protokoll, statt still zu verschwinden.
 
 **7.4 Lückenfilter im Board.** `board.html?owner=<Name>&luecke=1` filtert nach **derselben Regel wie
 `uebernahme_stat`**: Verantwortung der Person (normalisiert wie `whoNorm`) oder ihr Ausgang beim Pförtner.
@@ -417,3 +419,11 @@ Kommentare werden seitenweise gelesen, und eine unvollständig gelesene Liste h�
 **Niedrig.** Die Übergabeseite sagt „ohne eigenes Konto, deshalb an Alex“ statt „ohne Zuweisung“, wenn der Ersatz
 gegriffen hat, und zeigt eine Störung der Nutzerliste an. Überholte Sätze in `ARBEITSSTAND.md`,
 `FRAGEN_FUER_MORGEN.md` und in diesem Dokument sind richtiggestellt.
+
+**Dritte Runde, letzte nach der Regel (Edge Function v32).** Sie hat vier weitere Punkte gefunden, alle behoben. Der Rückfall auf
+einen einzigen unscharfen Namenstreffer war noch da und hätte „Alexandra“ genommen, wenn Alexanders Zeile fehlt;
+jetzt entscheidet allein die feste E-Mail, sonst gibt es keine Kennung. Die neue Liste der Erledigungsvermerke
+hätte an der Obergrenze abgeschnitten sein und denselben Vermerk in jedem Lauf erneut schreiben können; gefragt
+wird jetzt je Zeile. Die Seitengrenze der Kommentare liegt bei zweihundert statt zwanzig, und wird sie doch
+erreicht, steht der Fall im Protokoll, statt den Rücksync still stehen zu lassen. Und `gfToast` setzt
+`textContent`: die zusätzliche Maskierung im Meldungstext ist raus, sie wäre als Zeichenfolge sichtbar gewesen.
