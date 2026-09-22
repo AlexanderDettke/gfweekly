@@ -25,6 +25,19 @@ ist damit in der Regel die Oberfläche gemeint, nicht der Durchstich.
 Gegenprobe zu den übrigen Befunden steht aus. Sie sind hier als Behauptung des Prüfers festgehalten, nicht als
 bestätigte Tatsache.
 
+## Nachtrag 22.09.2026: Kontrastschuld, gefunden vom Wächter
+
+Der gemessene Kontrast (`pruefung/schirme.mjs`, misst am gerenderten Bild statt aus einer Liste) hat 18 Muster
+gefunden, die unter 4,5:1 liegen. Sie stehen in `pruefung/kontrast-ausnahmen.json`, werden bei jedem Lauf
+gezählt (zuletzt 85 Treffer über alle Seiten und Themen) und sind als **WP-04** in `docs/ARBEITSPAKETE.md`
+zur Abarbeitung eingetragen. Der größte Anteil ist die Platzhalterfarbe des Design-Systems mit 3,88:1 im
+hellen Thema; sie betrifft jedes Eingabefeld im Haus. Zwei Stellen in der Entscheidungsliste liegen bei
+2,78:1 und 2,05:1.
+
+Behoben wurden dabei sofort: `.linkrow .lt` (2,78:1 im hellen Thema, jetzt `--on-band` auf `--info` mit
+10,59:1) und der seitliche Überlauf der Vertretungstabelle (428 px statt 390; die vier Spalten stehen unter
+560 px jetzt untereinander).
+
 ---
 
 Geprüft: vollständiger Quelldiff `5db861d..ad5719e`, Paketdatei, Migrationen, Dokumentation und sämtliche Prüfskripte. HEAD und `origin/main` stehen auf `ad5719e`. Die live bereitgestellte Edge Function ist bytegleich mit der Repositorydatei. Datenbankprüfungen erfolgten ausschließlich lesend. Keine Dateien verändert, keinen weiteren Reviewer gestartet.

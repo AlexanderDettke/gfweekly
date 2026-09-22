@@ -31,4 +31,26 @@ node pruefung/schirme.mjs "$ZIEL"
 echo "\n== Bedienung (Vertretung: Übergabe, Wache, Anlegen, Rückkehr) =="
 node pruefung/bedienung.mjs | tail -1
 
-echo "\nAbnahme bestanden."
+echo "\n== Wächter (statische Prüfungen) =="
+WAECHTER_OHNE_FRISCHE=1 node pruefung/waechter.mjs
+
+echo "\nAlle Prüfungen bestanden."
+echo "Hinweis: Schirme und Bedienung sind Oberflächentests, sie fangen die Edge Function ab."
+echo "Sie belegen Aufbau, Kontrast, Überlauf und Bedienwege, nicht die Wirkung in der Datenbank."
+# Beleg schreiben, damit „fertig“ nicht ohne frische Prüfung behauptet werden kann.
+# Der Beleg haengt am Inhalt der geprueften Dateien, nicht am Commit: sonst waere er nach dem
+# naechsten Commit veraltet, obwohl sich nichts Geprueftes geaendert hat.
+STAND=$(pruefung/stand.sh)
+cat > pruefung/letzte-abnahme.json <<JSON
+{
+  "stand": "$STAND",
+  "commit": "$(git rev-parse HEAD)",
+  "datum": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "laeufe": ["tokens", "farbscan", "kontrast", "matrix", "schirme (Oberfläche)", "bedienung (Oberfläche)", "waechter"],
+  "ungeprueft": "Wirkung in der Datenbank, Asana-Lebenszyklus, Nebenläufigkeit, verborgene Oberflächenteile"
+}
+JSON
+echo "Beleg geschrieben: pruefung/letzte-abnahme.json"
+
+echo "\n== Wächter, vollständig (mit Frischeprüfung) =="
+node pruefung/waechter.mjs

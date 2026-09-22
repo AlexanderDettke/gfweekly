@@ -120,10 +120,12 @@ function renderAbs(){
 function depZeile(d, personen, bereiche){
   const vert=gfChips("v_"+d.id, personen, d.vertretung||"", {attr:`data-f="vertretung" data-id="${d.id}"`, label:"Vertretung", cls:"compact"});
   const ber=gfChips("b_"+d.id, bereiche, d.bereich||"", {attr:`data-f="bereich" data-id="${d.id}"`, label:"Bereich", cls:"compact"});
+  /* data-sp traegt die Spaltenbeschriftung, damit die Tabelle auf dem Handy untereinander stehen kann,
+     ohne dass die Kopfzeile fehlt (Befund 26 der Pruefung vom 22.09.2026). */
   return `<tr data-id="${d.id}">
-    <td>${ber}</td>
-    <td>${vert}</td>
-    <td><input class="txt" data-f="vollmacht" data-id="${d.id}" value="${gfEsc(d.vollmacht||"")}" placeholder="Vollmacht, zum Beispiel Ausgaben bis 2.000 € aus freigegebenen Budgets"></td>
+    <td data-sp="Bereich">${ber}</td>
+    <td data-sp="Vertretung">${vert}</td>
+    <td data-sp="Vollmacht"><input class="txt" data-f="vollmacht" data-id="${d.id}" value="${gfEsc(d.vollmacht||"")}" placeholder="Vollmacht, zum Beispiel Ausgaben bis 2.000 € aus freigegebenen Budgets"></td>
     <td>${d.neu?"":`<button class="icon-btn" data-act="depdel" data-id="${d.id}" title="Zeile abschalten">✕</button>`}</td>
   </tr>`;
 }

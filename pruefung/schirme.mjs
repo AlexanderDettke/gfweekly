@@ -1,14 +1,17 @@
-/* Schirmpruefung (V23): alle Seiten bei 1440 und 390, dunkel und hell.
+/* OBERFLÄCHENTEST. Die Edge Function wird abgefangen und mit Testdaten beantwortet; dieses Skript belegt
+   Aufbau, Kontrast, Überlauf und Konsole, NICHT die Wirkung in der Datenbank.
+   Schirmpruefung (V23): alle Seiten bei 1440 und 390, dunkel und hell.
    Die Edge Function wird abgefangen und mit Testdaten beantwortet, damit ohne Passwort geprueft werden kann.
    Aufruf:  PLAYWRIGHT_MODUL=<pfad>/node_modules/playwright/index.mjs node pruefung/schirme.mjs [zielordner]
    (ohne die Variable muss playwright im Suchpfad liegen; das Paket gehoert bewusst nicht ins Repo)
    Ergebnis: je Seite ein Bild im Zielordner, Konsolenfehler und fehlende Dateien auf der Ausgabe. */
 const { chromium } = await import(process.env.PLAYWRIGHT_MODUL || 'playwright');
 import http from 'node:http';
+import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'site');
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'site');
 const OUT = process.argv[2] || '/tmp/hh-schirme';
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -25,6 +28,30 @@ await new Promise(r => server.listen(0, r));
 const BASE = 'http://127.0.0.1:' + server.address().port;
 
 import { ANTWORT, FALLBACK, SCHREIBEND, TPA, heute } from './testdaten.mjs';
+
+/* Bekannte Kontrastschuld: Paare, die heute schon zu schwach sind und in docs/BEKANNTE-MAENGEL.md stehen.
+   Sie werden gezaehlt und benannt, lassen den Lauf aber nicht scheitern. Alles, was NICHT in der Liste
+   steht, ist neu und laesst ihn scheitern. So bleibt der Waechter scharf, ohne taeglich rot zu sein. */
+const AUSNAHMEN = (() => {
+  const f = path.join(path.dirname(fileURLToPath(import.meta.url)), 'kontrast-ausnahmen.json');
+  if (!fs.existsSync(f)) return [];
+  try { return JSON.parse(fs.readFileSync(f, 'utf8')).bekannt || []; }
+  catch (e) { console.log('Ausnahmeliste unlesbar: ' + e.message); return []; }
+})();
+/* Eine Ausnahme gilt nur fuer genau diese Seite, dieses Thema und diesen Messwert. Sonst deckte
+   „span“ jeden klassenlosen span im ganzen Haus ab, auch einen neuen, schlechteren (Befund 11). */
+/* Mit KONTRAST_AUSNAHMEN_SCHREIBEN=1 wird die Liste aus dem aktuellen Lauf neu erzeugt, statt sie
+   von Hand zu pflegen. Nur benutzen, wenn die gefundene Schuld bewusst als Grundlinie gelten soll. */
+const SCHREIBE_AUSNAHMEN = !!process.env.KONTRAST_AUSNAHMEN_SCHREIBEN;
+const gesammelt = [];
+const istBekannt = (text, seite, thema) => AUSNAHMEN.some(a => {
+  if (a.seite && a.seite !== seite) return false;
+  if (a.thema && a.thema !== thema) return false;
+  const m = text.match(/ ([\d.]+):1 /);
+  if (a.wert != null && m && Number(m[1]) < a.wert - 0.05) return false;   // deutlich schlechter als bekannt   // schlechter als bekannt: neuer Befund
+  return text.startsWith(a.muster);
+});
+let bekannteSchuld = 0;
 
 const SEITEN = [
   ['index.html', '#fdEntL'], ['neuigkeiten.html', '#feed'], ['besprechung.html', '#bsAgL'], ['board.html', '#lanes,#grid,.board'],
@@ -91,6 +118,105 @@ for (const thema of THEMES) {
           })(),
           kern: el ? (el.innerText || '').trim().length : -1,
           laedt: (document.body.innerText || '').includes('lädt …'),
+          /* Waechter: laeuft die Seite seitlich ueber den Schirm hinaus? Genau das hat die Pruefung vom
+             22.09.2026 uebersehen: die Aufnahmen fuer 390 waren in Wahrheit 428 Pixel breit. */
+          breite: document.documentElement.scrollWidth,
+          ueber: (() => {
+            const grenze = document.documentElement.clientWidth + 1;
+            const raus = [];
+            for (const el of document.querySelectorAll('body *')) {
+              const r = el.getBoundingClientRect();
+              if (r.width === 0 && r.height === 0) continue;
+              if (getComputedStyle(el).position === 'fixed') continue;
+              if (r.right > grenze) raus.push(el.tagName.toLowerCase()
+                + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/)[0] : '')
+                + ' bis ' + Math.round(r.right));
+              if (raus.length >= 3) break;
+            }
+            return raus;
+          })(),
+          /* Waechter: Kontrast wird gemessen, nicht aus einer Liste gelesen. Die Liste in kontrast.py hat
+             am 22.09.2026 genau das Paar ausgelassen, das zu dunkel war (--text-3 auf --surface-2, 4,19:1).
+             Hier zaehlt, was der Browser wirklich uebereinander legt, samt Deckkraft. */
+          kontrast: (() => {
+            /* Gemessen wird, was der Browser wirklich uebereinander legt: Deckkraft der Vorfahren,
+               halbdurchsichtige Hintergruende, Platzhalter, Eingabewerte und Pseudoelemente.
+               Was sich nicht messen laesst (Hintergrundbild, Verlauf), wird gemeldet statt uebergangen. */
+            const zahl = (x) => (x.match(/[\d.]+/g) || []).map(Number);
+            const lum = (c) => { const f = v => { v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); };
+              return 0.2126*f(c[0])+0.7152*f(c[1])+0.0722*f(c[2]); };
+            const ueber = (fg, a, bg) => [0,1,2].map(i => fg[i]*a + bg[i]*(1-a));
+            const deckkraft = (el) => { let o = 1; for (let n = el; n && n !== document.documentElement; n = n.parentElement) o *= Number(getComputedStyle(n).opacity || 1); return o; };
+            /* Untergrund: halbdurchsichtige Schichten werden von oben nach unten aufeinandergelegt. */
+            /* Untergrund: Schichten von innen nach aussen. Eine Gruppe mit opacity < 1 verduennt alles,
+               was in ihr liegt, also auch ihren eigenen Hintergrund, nicht nur die Schrift. */
+            const grund = (el) => {
+              const schichten = []; let gruppe = 1;
+              for (let n = el; n; n = n.parentElement) {
+                const st = getComputedStyle(n);
+                if (st.backgroundImage && st.backgroundImage !== 'none') return { nichtMessbar: 'Hintergrundbild an ' + n.tagName.toLowerCase() };
+                const c = zahl(st.backgroundColor);
+                if (c.length >= 3) {
+                  const a = (c[3] === undefined ? 1 : c[3]) * gruppe;
+                  if (a > 0) {
+                    schichten.push([[c[0],c[1],c[2]], a]);
+                    if (a > 0.99) break;
+                  }
+                }
+                gruppe *= Number(st.opacity || 1);   // gilt fuer alles weiter aussen
+                if (n === document.documentElement) break;
+              }
+              let farbe = [255,255,255];
+              for (let i = schichten.length - 1; i >= 0; i--) farbe = ueber(schichten[i][0], schichten[i][1], farbe);
+              return { farbe };
+            };
+            const gesehen = new Set(); const schwach = [];
+            const merke = (name, k, grenze) => {
+              const schluessel = name + '|' + k.toFixed(2);
+              if (gesehen.has(schluessel)) return;
+              gesehen.add(schluessel);
+              schwach.push(`${name} ${k.toFixed(2)}:1 (mind. ${grenze})`);
+            };
+            const nameVon = (el, zusatz) => el.tagName.toLowerCase()
+              + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/).join('.') : '')
+              + (zusatz || '');
+            const pruefe = (el, farbeRoh, px, dick, zusatz) => {
+              const v = zahl(farbeRoh); if (v.length < 3) return;
+              const g = grund(el);
+              if (g.nichtMessbar) { merke(nameVon(el, zusatz) + ' nicht messbar: ' + g.nichtMessbar, 0, 0); return; }
+              const a = (v[3] === undefined ? 1 : v[3]) * deckkraft(el);
+              const vg = ueber([v[0],v[1],v[2]], a, g.farbe);
+              const l1 = lum(vg), l2 = lum(g.farbe);
+              const k = (Math.max(l1,l2)+0.05) / (Math.min(l1,l2)+0.05);
+              const grenze = (px >= 24 || (px >= 18.66 && dick)) ? 3 : 4.5;
+              if (k < grenze) merke(nameVon(el, zusatz), k, grenze);
+            };
+            for (const el of document.querySelectorAll('body *')) {
+              const st = getComputedStyle(el);
+              if (st.visibility === 'hidden' || st.display === 'none') continue;
+              if (deckkraft(el) < 0.1) continue;   // praktisch unsichtbar, kein Kontrastfall
+              if (el.disabled || el.getAttribute('aria-disabled') === 'true' || el.closest('[disabled],[aria-disabled="true"]')) continue;
+              const r = el.getBoundingClientRect(); if (r.width < 2 || r.height < 2) continue;
+              const px = parseFloat(st.fontSize) || 16, dick = Number(st.fontWeight) >= 700;
+              if ([...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim().length > 1)) pruefe(el, st.color, px, dick, '');
+              /* Eingabefelder tragen ihren Text als Wert, nicht als Textknoten. */
+              if (/^(input|textarea|select)$/i.test(el.tagName)) {
+                if (el.value && String(el.value).trim().length > 1) pruefe(el, st.color, px, dick, ' [Wert]');
+                if (el.placeholder) {
+                  const ph = getComputedStyle(el, '::placeholder');
+                  pruefe(el, ph.color || st.color, parseFloat(ph.fontSize) || px, dick, ' [Platzhalter]');
+                }
+              }
+              for (const teil of ['::before', '::after']) {
+                const ps = getComputedStyle(el, teil);
+                const inhalt = ps.content;
+                if (!inhalt || inhalt === 'none' || inhalt === 'normal') continue;
+                if (/^("")|^('')$/.test(inhalt.trim())) continue;
+                pruefe(el, ps.color, parseFloat(ps.fontSize) || px, Number(ps.fontWeight) >= 700, ' ' + teil);
+              }
+            }
+            return schwach;
+          })(),
         };
       }, kern);
       if (befund.tor) meldungen.push('Tor blieb zu');
@@ -101,6 +227,17 @@ for (const thema of THEMES) {
       if (befund.kern < 0) meldungen.push('Kerninhalt ' + kern + ' fehlt im Aufbau');
       else if (befund.kern < 20) meldungen.push('Kerninhalt ' + kern + ' blieb leer (' + befund.kern + ' Zeichen)');
       if (befund.laedt) meldungen.push('„lädt …“ blieb stehen');
+      for (const k of befund.kontrast) {
+        if (SCHREIBE_AUSNAHMEN) {
+          const m = k.match(/^(.*?) ([\d.]+):1 /);
+          gesammelt.push({ muster: m ? m[1] : k, seite, thema, wert: m ? Number(m[2]) : null });
+          continue;
+        }
+        if (istBekannt(k, seite, thema)) { bekannteSchuld++; continue; }
+        meldungen.push('Kontrast zu schwach: ' + k);
+      }
+      if (befund.breite > s.w + 1) meldungen.push(`Seitlicher Überlauf: ${befund.breite} px statt ${s.w} px`
+        + (befund.ueber.length ? ' (zuerst ' + befund.ueber.join(', ') + ')' : ''));
       const datei = path.join(OUT, `${seite.replace('.html','')}--${s.name}--${thema}.png`);
       await page.screenshot({ path:datei, fullPage:true });
       bilder++;
@@ -113,5 +250,26 @@ for (const thema of THEMES) {
 await browser.close();
 server.close();
 if (unbekannt.size) { console.log('\nAktionen ohne Testdaten (Antwort war ein leerer Erfolg): ' + [...unbekannt].join(', ')); fehler += unbekannt.size; }
+if (SCHREIBE_AUSNAHMEN) {
+  const ziel = path.join(path.dirname(fileURLToPath(import.meta.url)), 'kontrast-ausnahmen.json');
+  const einmalig = [];
+  for (const g of gesammelt) {
+    const da = einmalig.find(e => e.muster === g.muster && e.seite === g.seite && e.thema === g.thema);
+    /* Der schlechteste Wert zaehlt: derselbe Baustein kann auf einer Seite mehrfach und auf
+       verschiedenen Untergruenden stehen. Sonst gilt die Grundlinie als unterschritten. */
+    if (!da) einmalig.push(g);
+    else if (g.wert != null && (da.wert == null || g.wert < da.wert)) da.wert = g.wert;
+  }
+  einmalig.sort((a, b) => (a.seite + a.thema + a.muster).localeCompare(b.seite + b.thema + b.muster));
+  fs.writeFileSync(ziel, JSON.stringify({
+    _: 'Bekannte Kontrastschuld, maschinell aus einem Lauf erzeugt. Jede Zeile gilt nur fuer genau diese Seite, '
+       + 'dieses Thema und diesen Messwert; wird es schlechter oder taucht es woanders auf, ist es ein neuer Befund. '
+       + 'Abarbeitung als WP-04 in docs/ARBEITSPAKETE.md.',
+    erzeugt: new Date().toISOString().slice(0, 10),
+    bekannt: einmalig,
+  }, null, 2) + '\n');
+  console.log(`\nAusnahmeliste neu geschrieben: ${einmalig.length} Einträge in ${ziel}`);
+}
+if (bekannteSchuld) console.log(`\nBekannte Kontrastschuld übergangen: ${bekannteSchuld} Treffer (pruefung/kontrast-ausnahmen.json, docs/BEKANNTE-MAENGEL.md).`);
 console.log(`\nBilder: ${bilder}  ·  Meldungen: ${fehler}  ·  Ordner: ${OUT}`);
 process.exit(fehler ? 1 : 0);

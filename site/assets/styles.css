@@ -272,7 +272,7 @@ a:hover{text-decoration:underline}
 /* linked docs */
 .linklist{display:flex;flex-direction:column;gap:7px}
 .linkrow{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-m);padding:8px 11px;font-size:var(--stufe-2)}
-.linkrow .lt{font-size:var(--stufe-1);font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--on-action);background:var(--info);border-radius:var(--radius-s);padding:2px 6px;flex:0 0 auto}
+.linkrow .lt{font-size:var(--stufe-1);font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--on-band);background:var(--info);border-radius:var(--radius-s);padding:2px 6px;flex:0 0 auto}
 
 /* delegation control */
 .deleg-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px}
@@ -1383,6 +1383,19 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 .vt-line td{padding:6px 8px 6px 0;border-top:var(--rahmen) solid var(--border);vertical-align:top}
 .vt-line td:last-child{width:34px}
 .vt-line input.txt{min-width:160px}
+/* Auf schmalen Geraeten stehen die vier Spalten untereinander, sonst laeuft die Tabelle ueber den Schirm
+   hinaus: das Vollmachtfeld allein verlangt 160 px (Befund 26 der Pruefung vom 22.09.2026).
+   Die Kopfzeile verschwindet, jede Zelle traegt ihre Beschriftung selbst ueber data-sp. */
+@media(max-width:560px){
+  .vt-line thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .vt-line,.vt-line tbody,.vt-line tr,.vt-line td{display:block;width:100%}
+  .vt-line tr{border-top:var(--rahmen) solid var(--border);padding:8px 0}
+  .vt-line td{border-top:0;padding:3px 0}
+  .vt-line td:last-child{width:auto;text-align:right}
+  .vt-line td[data-sp]::before{content:attr(data-sp);display:block;font-size:var(--stufe-1);font-weight:600;
+    color:var(--text-2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+  .vt-line input.txt{min-width:0;width:100%}
+}
 .vt-stat{display:flex;flex-direction:column;gap:6px}
 .vt-stat .bar{height:8px;background:var(--fill);border-radius:var(--radius-s);overflow:hidden}
 .vt-stat .bar i{display:block;height:100%;background:var(--accent)}

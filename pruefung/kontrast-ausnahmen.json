@@ -1,0 +1,390 @@
+{
+  "_": "Bekannte Kontrastschuld, maschinell aus einem Lauf erzeugt. Jede Zeile gilt nur fuer genau diese Seite, dieses Thema und diesen Messwert; wird es schlechter oder taucht es woanders auf, ist es ein neuer Befund. Abarbeitung als WP-04 in docs/ARBEITSPAKETE.md.",
+  "erzeugt": "2026-09-22",
+  "bekannt": [
+    {
+      "muster": "input [Platzhalter]",
+      "seite": "bearbeiten.html",
+      "thema": "dark",
+      "wert": 2.47
+    },
+    {
+      "muster": "input.title [Platzhalter]",
+      "seite": "bearbeiten.html",
+      "thema": "dark",
+      "wert": 2.47
+    },
+    {
+      "muster": "input.txt.lk-title [Platzhalter]",
+      "seite": "bearbeiten.html",
+      "thema": "dark",
+      "wert": 2.47
+    },
+    {
+      "muster": "input.txt.lk-url [Platzhalter]",
+      "seite": "bearbeiten.html",
+      "thema": "dark",
+      "wert": 2.47
+    },
+    {
+      "muster": "input [Platzhalter]",
+      "seite": "bearbeiten.html",
+      "thema": "light",
+      "wert": 3.88
+    },
+    {
+      "muster": "input.title [Platzhalter]",
+      "seite": "bearbeiten.html",
+      "thema": "light",
+      "wert": 3.88
+    },
+    {
+      "muster": "input.txt.lk-title [Platzhalter]",
+      "seite": "bearbeiten.html",
+      "thema": "light",
+      "wert": 3.88
+    },
+    {
+      "muster": "input.txt.lk-url [Platzhalter]",
+      "seite": "bearbeiten.html",
+      "thema": "light",
+      "wert": 3.88
+    },
+    {
+      "muster": "input [Platzhalter]",
+      "seite": "board.html",
+      "thema": "dark",
+      "wert": 3.09
+    },
+    {
+      "muster": "textarea [Platzhalter]",
+      "seite": "capture.html",
+      "thema": "dark",
+      "wert": 2.47
+    },
+    {
+      "muster": "textarea [Platzhalter]",
+      "seite": "capture.html",
+      "thema": "light",
+      "wert": 3.88
+    },
+    {
+      "muster": "a.del",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 3.57
+    },
+    {
+      "muster": "b nicht messbar: Hintergrundbild an div",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 0
+    },
+    {
+      "muster": "button.btn-sm.btn-asana.js-asana",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 3.2
+    },
+    {
+      "muster": "button.btn-sm.btn-copy.js-copydeleg",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 3.78
+    },
+    {
+      "muster": "button.chip",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 3.57
+    },
+    {
+      "muster": "button.chip.on",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 3.78
+    },
+    {
+      "muster": "button.dd-btn.js-dd",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 3.57
+    },
+    {
+      "muster": "div.dlabel",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 3.14
+    },
+    {
+      "muster": "div.dtext",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 3.21
+    },
+    {
+      "muster": "div.subline.js-toggle",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 3.57
+    },
+    {
+      "muster": "input [Platzhalter]",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 3.09
+    },
+    {
+      "muster": "input.check ::after",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 3.57
+    },
+    {
+      "muster": "input.check [Wert]",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 1.45
+    },
+    {
+      "muster": "input.title [Platzhalter]",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 2.47
+    },
+    {
+      "muster": "span.by",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 3.14
+    },
+    {
+      "muster": "span.pill.prio.p-hoch",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 3.66
+    },
+    {
+      "muster": "span.pill.s-erledigt",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 2.99
+    },
+    {
+      "muster": "span.rel.rel-hoch",
+      "seite": "cockpit.html",
+      "thema": "dark",
+      "wert": 3.66
+    },
+    {
+      "muster": "a.del",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 2.85
+    },
+    {
+      "muster": "b nicht messbar: Hintergrundbild an div",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 0
+    },
+    {
+      "muster": "button.btn-sm.btn-asana.js-asana",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 3.06
+    },
+    {
+      "muster": "button.btn-sm.btn-copy.js-copydeleg",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 3.78
+    },
+    {
+      "muster": "button.chip",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 2.85
+    },
+    {
+      "muster": "button.chip.on",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 3.78
+    },
+    {
+      "muster": "button.dd-btn.js-dd",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 2.85
+    },
+    {
+      "muster": "div.dlabel",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 2.75
+    },
+    {
+      "muster": "div.dtext",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 2.75
+    },
+    {
+      "muster": "div.subline.js-toggle",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 2.85
+    },
+    {
+      "muster": "input.check ::after",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 3.44
+    },
+    {
+      "muster": "input.check [Wert]",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 1.9
+    },
+    {
+      "muster": "input.title [Platzhalter]",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 3.88
+    },
+    {
+      "muster": "span.by",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 2.77
+    },
+    {
+      "muster": "span.expand-btn.js-toggle",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 3.04
+    },
+    {
+      "muster": "span.pill.p-mittel",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 4.19
+    },
+    {
+      "muster": "span.pill.prio.p-hoch",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 2.8
+    },
+    {
+      "muster": "span.pill.s-erledigt",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 2.55
+    },
+    {
+      "muster": "span.rel.rel-hoch",
+      "seite": "cockpit.html",
+      "thema": "light",
+      "wert": 2.8
+    },
+    {
+      "muster": "input [Platzhalter]",
+      "seite": "entscheidungen.html",
+      "thema": "dark",
+      "wert": 3.09
+    },
+    {
+      "muster": "small",
+      "seite": "entscheidungen.html",
+      "thema": "dark",
+      "wert": 2.56
+    },
+    {
+      "muster": "span",
+      "seite": "entscheidungen.html",
+      "thema": "dark",
+      "wert": 3.73
+    },
+    {
+      "muster": "small",
+      "seite": "entscheidungen.html",
+      "thema": "light",
+      "wert": 2.05
+    },
+    {
+      "muster": "span",
+      "seite": "entscheidungen.html",
+      "thema": "light",
+      "wert": 2.78
+    },
+    {
+      "muster": "input.ititle [Platzhalter]",
+      "seite": "inbox.html",
+      "thema": "dark",
+      "wert": 2.47
+    },
+    {
+      "muster": "input.ititle [Platzhalter]",
+      "seite": "inbox.html",
+      "thema": "light",
+      "wert": 3.88
+    },
+    {
+      "muster": "span",
+      "seite": "jahr.html",
+      "thema": "light",
+      "wert": 4.5
+    },
+    {
+      "muster": "summary.group-h",
+      "seite": "neuigkeiten.html",
+      "thema": "dark",
+      "wert": 3.71
+    },
+    {
+      "muster": "summary.group-h",
+      "seite": "neuigkeiten.html",
+      "thema": "light",
+      "wert": 4.41
+    },
+    {
+      "muster": "input [Platzhalter]",
+      "seite": "seiten.html",
+      "thema": "dark",
+      "wert": 3.09
+    },
+    {
+      "muster": "input.txt [Platzhalter]",
+      "seite": "uebergabe.html",
+      "thema": "dark",
+      "wert": 2.47
+    },
+    {
+      "muster": "input.txt [Platzhalter]",
+      "seite": "uebergabe.html",
+      "thema": "light",
+      "wert": 3.88
+    },
+    {
+      "muster": "span.zst.warn",
+      "seite": "uebergabe.html",
+      "thema": "light",
+      "wert": 4.19
+    },
+    {
+      "muster": "input.txt [Platzhalter]",
+      "seite": "vertretung.html",
+      "thema": "dark",
+      "wert": 2.47
+    },
+    {
+      "muster": "input.txt [Platzhalter]",
+      "seite": "vertretung.html",
+      "thema": "light",
+      "wert": 3.88
+    }
+  ]
+}

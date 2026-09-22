@@ -10,6 +10,9 @@ try { const h = JSON.parse(roh); roh = typeof h === 'string' ? h : (h.result ?? 
 const a = roh.indexOf('[{'), b = roh.lastIndexOf('}]');
 const daten = JSON.parse(roh.slice(a, b + 2));
 const korb = daten[0].korb || [];
+/* Fester Stichtag, damit der Trockenlauf nicht allein durch Zeitablauf andere Zahlen liefert
+   (Befund 30 der Prüfung vom 22.09.2026). Über die Umgebung überschreibbar: STICHTAG=2026-10-10 node … */
+const STICHTAG = process.env.STICHTAG || '2026-09-22';
 const absence = { id:'probe', person:'Lea', von:'2026-10-05', bis:'2026-10-25', art:'geplant', kontakt:'wochenbrief', test:true };
 absence.stufe = absStufe(absence);
 const dep = [
@@ -17,12 +20,12 @@ const dep = [
   { person:'Lea', bereich:'*',  vertretung:'Alex', active:true },
 ];
 const zeilen = korb.map(x => {
-  const bew = score(x, absence);
+  const bew = score(x, absence, STICHTAG);
   return { ...bew, kind:x.kind, title:(x.title||'').slice(0,58), frist:x.frist,
            vertretung: vertretungFuer(bew, x, absence, dep) };
 });
 const zaehl = (feld) => zeilen.reduce((m, r) => (m[r[feld]] = (m[r[feld]]||0)+1, m), {});
-console.log(`Abwesenheit Lea ${absence.von} bis ${absence.bis} · Stufe ${absence.stufe} · ${zeilen.length} Zeilen im Korb\n`);
+console.log(`Abwesenheit Lea ${absence.von} bis ${absence.bis} · Stufe ${absence.stufe} · Stichtag ${STICHTAG} · ${zeilen.length} Zeilen im Korb\n`);
 console.log('Art       ', JSON.stringify(zaehl('kind')));
 console.log('Quadrant  ', JSON.stringify(zaehl('quadrant')));
 console.log('Cluster   ', JSON.stringify(zaehl('cluster')));
