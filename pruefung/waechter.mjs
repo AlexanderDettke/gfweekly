@@ -126,8 +126,14 @@ function frische() {
   if (!/^[0-9a-f]{64}$/.test(String(d.stand || ''))) melde('frische', `${datei}: „stand“ ist keine Prüfsumme.`);
   if (!/^[0-9a-f]{40}$/.test(String(d.commit || ''))) melde('frische', `${datei}: „commit“ ist kein Commit.`);
   else {
-    try { execSync(`git cat-file -e ${d.commit}^{commit}`, { cwd: WURZEL, stdio:'ignore' }); }
-    catch (_e) { melde('frische', `${datei}: den Commit ${String(d.commit).slice(0,7)} gibt es in diesem Repo nicht.`); }
+    /* In einem flachen Klon (GitHub Actions holt standardmäßig nur einen Commit) fehlt die Geschichte.
+       Dann ist ein unbekannter Commit kein Befund, sondern eine Grenze des Klons. */
+    let flach = false;
+    try { flach = execSync('git rev-parse --is-shallow-repository', { cwd: WURZEL }).toString().trim() === 'true'; } catch (_e) {}
+    if (!flach) {
+      try { execSync(`git cat-file -e ${d.commit}^{commit}`, { cwd: WURZEL, stdio:'ignore' }); }
+      catch (_e) { melde('frische', `${datei}: den Commit ${String(d.commit).slice(0,7)} gibt es in diesem Repo nicht.`); }
+    }
   }
   const zeit = Date.parse(String(d.datum || ''));
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(String(d.datum || '')) || Number.isNaN(zeit)) {

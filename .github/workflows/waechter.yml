@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # ohne Geschichte kann der Commit im Frischebeleg nicht geprüft werden
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
