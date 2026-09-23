@@ -152,11 +152,12 @@ const GF_ICONS={
   x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg>',
   schild:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 5 6v6c0 4 3 7.2 7 8.5 4-1.3 7-4.5 7-8.5V6l-7-2.5Z"/><path d="m9 12 2 2 4-4"/></svg>',
   tausch:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>',
+  rad:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 3.5V8M12 16v4.5"/></svg>',
   tuer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v17"/><path d="M4 21h16"/><circle cx="13" cy="12" r="1" fill="currentColor"/></svg>'
 };
 const GF_NAV=[
   ["Heute",[["start","index.html","Für dich","home",null,"Deine Entscheidungen, seit gestern, nächste Fristen"],["neuigkeiten","neuigkeiten.html","Neuigkeiten","bell","newsBadge","Ticker, Sichtungskorb, Themenlage"],["besprechung","besprechung.html","Besprechung","check",null,"Agenda der GF, abarbeiten, Protokoll"]]],
-  ["Arbeiten",[["themen","board.html","Themen","board","themenBadge","Board, Kacheln, Liste, Entscheidungen"],["jahr","jahr.html","Jahr","cal",null,"Zyklus, Meilensteine, Rituale, Team, Plattformen, Habitat"],["capture","capture.html","Eingabe","pen",null,"Thema erfassen"]]],
+  ["Arbeiten",[["themen","board.html","Themen","board","themenBadge","Board, Kacheln, Liste, Entscheidungen"],["jahr","jahr.html","Jahr","cal",null,"Zyklus, Meilensteine, Rituale, Team, Plattformen, Habitat"],["saison","saison.html","Saison","rad",null,"Jahresrad der Festivalsaison, Abstimmung Alex und Lea"],["capture","capture.html","Eingabe","pen",null,"Thema erfassen"]]],
   ["Vertretung",[["vertretung","vertretung.html","Abwesenheiten","schild",null,"Wer ist wann weg, wer vertritt, mit welcher Vollmacht"],["uebergabe","uebergabe.html","Übergabe","tausch","uebergabeBadge","Der Korb einer Abwesenheit: was vorher, was an die Vertretung, was ruht"],["rueckkehr","rueckkehr.html","Rückkehr","tuer",null,"Was in deiner Abwesenheit entschieden wurde und was auf dich wartet"]]],
   ["Verwalten",[["seiten","seiten.html","Wichtige Seiten","grid",null,"Arbeitsseiten mit Zugang"],["edit","bearbeiten.html","Bearbeiten","sliders",null,"Themen, Personen, Links pflegen"],["aufraeumen","aufraeumen.html","Aufräumen","check",null,"Jedem Eintrag einen Ausgang geben"]]]
 ];

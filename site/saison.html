@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#171d18" />
+<title>Das Hohe Haus · Saison</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=24" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=24" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=24" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=24" />
+<link rel="stylesheet" href="/assets/styles.css?v=24" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
+<style>
+:root{--sz-nach:var(--text-3);--sz-sys:#a391d6;--sz-plan:var(--accent);--sz-prod:var(--chart-coral);--sz-fest:var(--crit);--sz-sales:var(--action);--sz-koll:var(--chart-peach);--sz-prog:#8c9ad8;--sz-dot:var(--warn)}
+[data-theme="light"]{--sz-sys:#6d58a8;--sz-prog:#4f60b0;--sz-dot:var(--warn)}
+.sz-tools{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:6px 2px 12px}
+.sz-stats{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.sz-stage{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);padding:12px}
+.sz-stage svg{display:block;width:100%;height:auto}
+.sz-stage svg text{font-family:var(--font-ui)}
+.sz-seg{cursor:pointer;transition:opacity var(--motion-fast)}
+.sz-seg:hover{opacity:1!important;filter:brightness(1.12)}
+.sz-info{min-height:52px;margin:10px 0 0;padding:10px 14px;background:var(--surface-2);border-radius:var(--radius-m);font-size:var(--stufe-2);color:var(--text-2);line-height:var(--leading-text)}
+.sz-info b{color:var(--text)}
+.sz-lg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:var(--stufe-2);color:var(--text-2);margin:12px 2px 0}
+.sz-lg span{display:inline-flex;align-items:center;gap:6px}
+.sz-sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.sz-rows{display:flex;flex-wrap:wrap;gap:6px;margin:10px 2px 0}
+.sz-sec{margin-top:26px}
+.sz-list{display:flex;flex-direction:column;gap:6px}
+.sz-item{display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);cursor:pointer;text-align:left;width:100%;color:var(--text)}
+.sz-item:hover{border-color:var(--border-strong)}
+.sz-item .t{font-weight:600}
+.sz-item .m{font-size:var(--stufe-2);color:var(--text-2)}
+.sz-item .n{grid-column:2/4;font-size:var(--stufe-2);color:var(--text-2)}
+.sz-grp{font-size:var(--stufe-1);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:12px 2px 2px}
+.sz-meta{font-size:var(--stufe-1);color:var(--muted)}
+.panel .fchips .chip{min-height:36px}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Das Hohe Haus</h1>
+    <div class="sub">Saison · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+  <div id="hero"></div>
+
+  <div class="sz-tools">
+    <div class="segs" role="group" aria-label="Ansicht"><button class="seg on" data-view="rad">Jahresrad</button><button class="seg" data-view="leiste">Zeitleiste</button></div>
+    <label class="chk"><input type="checkbox" data-lvl="1" checked> Ebene 1 Kreislauf</label>
+    <label class="chk"><input type="checkbox" data-lvl="2" checked> Ebene 2 Departments</label>
+    <label class="chk"><input type="checkbox" data-lvl="3" checked> Ebene 3 Festivals</label>
+    <label class="chk"><input type="checkbox" id="nurOffen"> nur offene</label>
+    <div class="sz-stats" id="stats"></div>
+  </div>
+
+  <div class="sz-stage" id="stage"></div>
+  <div class="sz-info" id="info">Tippe auf ein Element, um es zu bearbeiten. Hell hinterlegt: Oktober ist Engpass, November ist dicht.</div>
+  <div class="sz-lg" id="legend"></div>
+  <div class="sz-rows" id="rowChips"></div>
+
+  <section class="sz-sec" aria-label="Abstimmung">
+    <div class="sec-h"><h2>Zur Abstimmung</h2><span class="hint" id="openHint"></span><button class="btn btn-sm btn-brand" id="newItem">Neues Element</button><button class="btn btn-sm btn-brand" id="newRow">Neue Zeile</button></div>
+    <div class="sz-list" id="openList"></div>
+  </section>
+
+  <section class="sz-sec" aria-label="Verlauf">
+    <div class="sec-h"><h2>Zuletzt geändert</h2></div>
+    <div class="sz-list" id="logList"></div>
+  </section>
+</div>
+
+<div class="panel-back" id="pBack"></div>
+<aside class="panel" id="panel" aria-hidden="true">
+  <div class="panel-h"><h3 id="pTitle">Element</h3><button class="icon-btn" id="pClose" title="Schließen" aria-label="Schließen">✕</button></div>
+  <div class="panel-b" id="pBody"></div>
+  <div class="panel-f" id="pFoot"></div>
+</aside>
+<div class="toast" id="toast"></div>
+<script src="/assets/core.js?v=24"></script>
+<script src="/assets/game.js?v=24"></script>
+<script src="/assets/eggs.js?v=24" defer></script>
+<script>
+/* Saison · Jahresrad der Festivalsaison 2026/27 (24.09.2026).
+   Daten über die eigene Edge Function „saison“ (gleiches Passwort wie das Hohe Haus).
+   Das Rad läuft ab 1. Oktober im Uhrzeigersinn; Termine werden nach Monat und Tag eingezeichnet, damit ein
+   Vorlauf im September der Vorsaison am Ende des Kreises vor dem 1. Oktober liegt (Kreislauf-Logik). */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const SZ_FN="https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/saison";
+async function szApi(action,payload){
+  const res=await fetch(SZ_FN,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,password:gfPW(),payload})});
+  let d={}; try{ d=await res.json(); }catch(e){}
+  if(res.status===401) throw {auth:true};
+  if(!res.ok) throw new Error(d.error||("HTTP "+res.status));
+  return d;
+}
+const CATS=[["nach","Nachbereitung"],["sys","Neue Systeme"],["plan","Planung"],["prod","Produktion"],["fest","Durchführung"],["sales","Vorverkauf"],["koll","Kollektive und Partner"],["prog","Programm und Inhalte"]];
+const FORMS=[["band","Band"],["light","Verkauf läuft"],["thin","Vorlauf, schmal"],["dot","Stichtag"]];
+const ANCH=[["fest","fester Termin"],["vvk","VVK-Start"],["festival","Festivalbeginn"],["festival_ende","Festivalende"]];
+const STAT=[["vorschlag","Vorschlag"],["abgestimmt","abgestimmt"],["strittig","strittig"]];
+const LVL=[["1","Ebene 1"],["2","Ebene 2"],["3","Ebene 3"]];
+const KINDS=[["kreislauf","Kreislauf"],["meta","Metaphasen"],["department","Department"],["festival","Festival"],["strang","Strang"]];
+const MON=["Okt","Nov","Dez","Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep"];
+const MS=[10,11,12,1,2,3,4,5,6,7,8,9];
+const col=c=>`var(--sz-${c})`;
+let ROWS=[], ITEMS=[], LOG=[], VIEW="rad", OPEN=null, TIMER=null;
+try{ const v=localStorage.getItem("gf_sz_view"); if(v==="leiste"||v==="rad") VIEW=v; }catch(e){}
+
+/* ---- Datum auf den Kreis ab 1. Oktober ---- */
+const CUM=(()=>{ const len=[31,30,31,31,28,31,30,31,30,31,31,30]; const o={}; let s=0; MS.forEach((m,i)=>{ o[m]=s; s+=len[i]; }); return o; })();
+function cyc(iso){ const m=+iso.slice(5,7), d=+iso.slice(8,10); return Math.min(364,CUM[m]+Math.min(d,m===2?28:31)-1); }
+function realDays(a,b){ return Math.round((Date.parse(b)-Date.parse(a))/864e5)+1; }
+function spans(it){ const len=Math.min(365,realDays(it.starts_on,it.ends_on)); const e=cyc(it.ends_on)+1; let a=len>=365?e-364:cyc(it.starts_on); if(a<0) a+=365; const b=a+len; return b<=365?[[a,b]]:[[a,365],[0,b-365]]; }
+const fmt=iso=>{ if(!iso) return ""; const[y,m,d]=iso.split("-"); return `${+d}.${+m}.${y.slice(2)}`; };
+const TODAY=new Date().toISOString().slice(0,10);
+
+/* ---- Filter ---- */
+function levels(){ return $$("[data-lvl]").filter(c=>c.checked).map(c=>+c.dataset.lvl); }
+function visRows(){ const L=levels(); return ROWS.filter(r=>L.includes(r.level)); }
+const ORD={light:0,band:1,thin:2,dot:3};
+function segs(){ return ITEMS.slice().sort((a,b)=>(ORD[a.form]??1)-(ORD[b.form]??1)); }
+function dimmed(it){ return $("#nurOffen").checked && it.status==="abgestimmt"; }
+const ns="http://www.w3.org/2000/svg";
+function el(t,a){ const e=document.createElementNS(ns,t); for(const k in a) e.setAttribute(k,a[k]); return e; }
+function styleSeg(e,it){
+  const light=it.form==="light";
+  e.setAttribute("class","sz-seg"); e.dataset.id=it.id;
+  e.style.fill=col(it.cat); e.style.fillOpacity=dimmed(it)?0.12:(light?0.28:0.88);
+  if(it.status==="strittig"){ e.style.stroke="var(--crit)"; e.style.strokeWidth="2"; e.style.strokeDasharray="4 3"; }
+  e.addEventListener("mouseenter",()=>showInfo(it)); e.addEventListener("click",()=>openItem(it.id));
+}
+
+/* ---- Jahresrad ---- */
+function drawRad(){
+  const rs=visRows(), cx=340, cy=340, r0=84, r1=288;
+  const svg=el("svg",{viewBox:"0 0 680 680",role:"img","aria-label":"Jahresrad der Festivalsaison ab 1. Oktober"});
+  const A=t=>t/365*2*Math.PI-Math.PI/2, P=(r,a)=>(cx+r*Math.cos(a)).toFixed(1)+" "+(cy+r*Math.sin(a)).toFixed(1);
+  const arc=(ri,ro,d0,d1)=>{ const a0=A(d0),a1=A(d1),L=d1-d0>182.5?1:0; return "M"+P(ro,a0)+"A"+ro+" "+ro+" 0 "+L+" 1 "+P(ro,a1)+"L"+P(ri,a1)+"A"+ri+" "+ri+" 0 "+L+" 0 "+P(ri,a0)+"Z"; };
+  const w1=el("path",{d:arc(r0-6,r1+6,0,31)}); w1.style.fill="var(--crit)"; w1.style.fillOpacity=.09; svg.appendChild(w1);
+  const w2=el("path",{d:arc(r0-6,r1+6,31,61)}); w2.style.fill="var(--crit)"; w2.style.fillOpacity=.04; svg.appendChild(w2);
+  if(!rs.length){ const t=el("text",{x:cx,y:cy,"text-anchor":"middle","font-size":14}); t.style.fill="var(--text-2)"; t.textContent="Keine Ebene gewählt"; svg.appendChild(t); return svg; }
+  const gap=(i)=>i&&rs[i-1].level!==rs[i].level?8:2;
+  const gaps=rs.reduce((g,_,i)=>g+gap(i),0), tw=rs.reduce((a,r)=>a+(+r.weight||1),0), u=(r1-r0-gaps)/tw, pos={}; let r=r0;
+  rs.forEach((x,i)=>{ r+=gap(i); pos[x.id]=[r,r+(+x.weight||1)*u]; r+=(+x.weight||1)*u; });
+  MS.forEach((m,i)=>{ const d=CUM[m], a=A(d); const l=el("line",{x1:cx+(r0-6)*Math.cos(a),y1:cy+(r0-6)*Math.sin(a),x2:cx+(r1+6)*Math.cos(a),y2:cy+(r1+6)*Math.sin(a),"stroke-width":.6}); l.style.stroke="var(--border-strong)"; svg.appendChild(l);
+    const am=A(d+15), t=el("text",{x:cx+(r1+24)*Math.cos(am),y:cy+(r1+24)*Math.sin(am)+4,"text-anchor":"middle","font-size":13}); t.style.fill="var(--text-2)"; t.textContent=MON[i]; svg.appendChild(t); });
+  segs().forEach(it=>{ const p=pos[it.row_id]; if(!p) return; const[ri,ro]=p;
+    if(it.form==="dot"){ const a=A(cyc(it.starts_on)+.5), rm=(ri+ro)/2; const c=el("circle",{cx:cx+rm*Math.cos(a),cy:cy+rm*Math.sin(a),r:5}); styleSeg(c,it); c.style.fill="var(--sz-dot)"; c.style.fillOpacity=dimmed(it)?.2:1; c.style.stroke="var(--surface)"; c.style.strokeWidth="1.5"; svg.appendChild(c); return; }
+    spans(it).forEach(([a,b])=>{ const i2=it.form==="thin"?ri+(ro-ri)*.55:ri; const e=el("path",{d:arc(i2,ro,a+.3,Math.max(a+.6,b-.3))}); styleSeg(e,it); svg.appendChild(e); }); });
+  const ta=A(cyc(TODAY)+.5); const nd=el("line",{x1:cx+(r0-8)*Math.cos(ta),y1:cy+(r0-8)*Math.sin(ta),x2:cx+(r1+8)*Math.cos(ta),y2:cy+(r1+8)*Math.sin(ta),"stroke-width":1.8}); nd.style.stroke="var(--text)"; svg.appendChild(nd);
+  [["Saison 2026/27",-10,15,"var(--text)",600],["beginnt 1. Oktober",10,12,"var(--text-2)",400],["heute "+fmt(TODAY),28,12,"var(--text-2)",400]].forEach(([s,dy,f,c,w])=>{ const t=el("text",{x:cx,y:cy+dy,"text-anchor":"middle","font-size":f,"font-weight":w}); t.style.fill=c; t.textContent=s; svg.appendChild(t); });
+  return svg;
+}
+
+/* ---- Zeitleiste ---- */
+function drawLeiste(){
+  const rs=visRows(), x0=172, x1=670, h=22, g=5, top=28, X=d=>x0+d/365*(x1-x0); let y=top; const pos={};
+  rs.forEach((r,i)=>{ if(i&&rs[i-1].level!==r.level) y+=10; pos[r.id]=y; y+=h+g; });
+  const H=y+34, svg=el("svg",{viewBox:"0 0 680 "+H,role:"img","aria-label":"Zeitleiste der Festivalsaison ab 1. Oktober"});
+  const b1=el("rect",{x:X(0),y:top-6,width:X(31)-X(0),height:y-top+6}); b1.style.fill="var(--crit)"; b1.style.fillOpacity=.09; svg.appendChild(b1);
+  const b2=el("rect",{x:X(31),y:top-6,width:X(61)-X(31),height:y-top+6}); b2.style.fill="var(--crit)"; b2.style.fillOpacity=.04; svg.appendChild(b2);
+  MS.forEach((m,i)=>{ const d=CUM[m]; const l=el("line",{x1:X(d),y1:top-6,x2:X(d),y2:y,"stroke-width":.6}); l.style.stroke="var(--border-strong)"; svg.appendChild(l);
+    const t=el("text",{x:X(d+15),y:16,"text-anchor":"middle","font-size":12}); t.style.fill="var(--text-2)"; t.textContent=MON[i]; svg.appendChild(t); });
+  rs.forEach(r=>{ const t=el("text",{x:0,y:pos[r.id]+15,"font-size":13,"font-weight":r.level===1?600:400}); t.style.fill=r.level===1?"var(--text)":"var(--text-2)"; t.style.cursor="pointer"; t.textContent=r.label.length>24?r.label.slice(0,23)+"…":r.label; t.addEventListener("click",()=>openRow(r.id)); svg.appendChild(t); });
+  segs().forEach(it=>{ const yy=pos[it.row_id]; if(yy===undefined) return;
+    if(it.form==="dot"){ const c=el("circle",{cx:X(cyc(it.starts_on)+.5),cy:yy+h/2,r:5}); styleSeg(c,it); c.style.fill="var(--sz-dot)"; c.style.fillOpacity=dimmed(it)?.2:1; c.style.stroke="var(--surface)"; c.style.strokeWidth="1.5"; svg.appendChild(c); return; }
+    spans(it).forEach(([a,b])=>{ const th=it.form==="thin"; const e=el("rect",{x:X(a)+.4,y:th?yy+h*.55:yy,width:Math.max(2,X(b)-X(a)-.8),height:th?h*.45:h,rx:3}); styleSeg(e,it); svg.appendChild(e); }); });
+  const tx=X(cyc(TODAY)+.5); const nd=el("line",{x1:tx,y1:top-6,x2:tx,y2:y,"stroke-width":1.8}); nd.style.stroke="var(--text)"; svg.appendChild(nd);
+  const t=el("text",{x:tx,y:y+20,"text-anchor":"end","font-size":12}); t.style.fill="var(--text-2)"; t.textContent="heute "+fmt(TODAY); svg.appendChild(t);
+  return svg;
+}
+
+function rowOf(id){ return ROWS.find(r=>r.id===id); }
+function statusWord(s){ return s==="abgestimmt"?gfZustand("ok","abgestimmt"):s==="strittig"?gfZustand("crit","strittig"):gfZustand("offen","Vorschlag"); }
+function showInfo(it){
+  const r=rowOf(it.row_id), z=it.starts_on===it.ends_on?fmt(it.starts_on):fmt(it.starts_on)+" bis "+fmt(it.ends_on);
+  const notes=[it.note_alex?`Alex: ${gfEsc(it.note_alex)}`:"",it.note_lea?`Lea: ${gfEsc(it.note_lea)}`:""].filter(Boolean).join(" · ");
+  $("#info").innerHTML=`<b>${gfEsc(r?r.label:"")} · ${gfEsc(it.title)}</b> · ${z} · ${statusWord(it.status)}<br>${gfEsc(it.body||"")}${notes?`<br><span class="sz-meta">${notes}</span>`:""}`;
+}
+function renderStats(){
+  const n=ITEMS.length, ab=ITEMS.filter(i=>i.status==="abgestimmt").length, st=ITEMS.filter(i=>i.status==="strittig").length;
+  $("#stats").innerHTML=`${gfZustand("ok",ab+" von "+n+" abgestimmt")} ${st?gfZustand("crit",st+" strittig"):""}`;
+}
+function renderLegend(){
+  $("#legend").innerHTML=CATS.map(([k,l])=>`<span><i class="sz-sw" style="background:${col(k)}"></i>${l}</span>`).join("")+
+    `<span><i class="sz-sw" style="background:var(--sz-sales);opacity:.3"></i>Verkauf läuft</span><span><i class="sz-sw" style="background:var(--sz-dot);border-radius:50%"></i>VVK-Start</span><span><i class="sz-sw" style="border:2px dashed var(--crit)"></i>strittig</span>`;
+  $("#rowChips").innerHTML=`<span class="sz-meta" style="align-self:center">Zeilen bearbeiten:</span>`+ROWS.map(r=>`<button class="chip" data-row="${gfEsc(r.id)}">${gfEsc(r.label)}</button>`).join("");
+}
+function renderOpen(){
+  const open=ITEMS.filter(i=>i.status!=="abgestimmt");
+  $("#openHint").textContent=open.length?open.length+" offen":"alles abgestimmt";
+  if(!open.length){ $("#openList").innerHTML=`<div class="empty soft">Alles abgestimmt. Die Saison kann ans Team.</div>`; return; }
+  let html="";
+  ROWS.forEach(r=>{ const list=open.filter(i=>i.row_id===r.id); if(!list.length) return;
+    html+=`<div class="sz-grp">${gfEsc(r.label)}</div>`+list.map(i=>`<button class="sz-item" data-id="${i.id}">
+      <i class="sz-sw" style="background:${col(i.cat)}"></i>
+      <span><span class="t">${gfEsc(i.title)}</span> <span class="m">${i.starts_on===i.ends_on?fmt(i.starts_on):fmt(i.starts_on)+" bis "+fmt(i.ends_on)}</span></span>
+      ${statusWord(i.status)}
+      ${(i.note_alex||i.note_lea)?`<span class="n">${i.note_alex?"Alex: "+gfEsc(i.note_alex):""}${i.note_alex&&i.note_lea?" · ":""}${i.note_lea?"Lea: "+gfEsc(i.note_lea):""}</span>`:""}
+    </button>`).join(""); });
+  $("#openList").innerHTML=html;
+}
+const WHAT={item_add:"neu",item_update:"geändert",item_delete:"entfernt",row_add:"Zeile neu",row_update:"Zeile geändert",row_delete:"Zeile entfernt"};
+function renderLog(){
+  if(!LOG.length){ $("#logList").innerHTML=`<div class="empty soft">Noch keine Änderungen.</div>`; return; }
+  $("#logList").innerHTML=LOG.slice(0,12).map(l=>{ const r=rowOf(l.row_id); const t=l.detail&&(l.detail.title||l.detail.label)||"";
+    return `<div class="sz-item" style="cursor:default"><i></i><span><span class="t">${gfEsc(t)}</span> <span class="m">${gfEsc(r?r.label:"")}</span></span><span class="m">${gfEsc(WHAT[l.what]||l.what)} · ${gfEsc(l.who||"")} · ${new Date(l.at).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}</span></div>`; }).join("");
+}
+function draw(){ const st=$("#stage"); st.innerHTML=""; st.appendChild(VIEW==="rad"?drawRad():drawLeiste()); $$("[data-view]").forEach(b=>b.classList.toggle("on",b.dataset.view===VIEW)); }
+function renderAll(){ draw(); renderStats(); renderLegend(); renderOpen(); renderLog(); }
+
+/* ---- Bearbeiten: Element ---- */
+function panelOpen(title){ $("#pTitle").textContent=title; $("#panel").classList.add("open"); $("#pBack").classList.add("open"); $("#panel").setAttribute("aria-hidden","false"); }
+function panelClose(){ if(OPEN&&OPEN.dirty&&OPEN.id) saveItem(true); OPEN=null; $("#panel").classList.remove("open"); $("#pBack").classList.remove("open"); $("#panel").setAttribute("aria-hidden","true"); }
+$("#pClose").onclick=panelClose; $("#pBack").onclick=panelClose;
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#panel").classList.contains("open")) panelClose(); });
+
+function openItem(id, preset){
+  const it=id?ITEMS.find(x=>x.id===id):Object.assign({row_id:(ROWS[2]||ROWS[0]).id,title:"",starts_on:TODAY,ends_on:TODAY,cat:"plan",form:"band",anchor_start:"fest",anchor_end:"fest",status:"vorschlag"},preset||{});
+  if(!it) return;
+  OPEN={kind:"item",id:it.id||null,dirty:false};
+  const me=gfWho();
+  $("#pBody").innerHTML=`<div class="fgrid">
+    <div class="fld ffull"><label>Titel</label><input name="title" value="${gfEsc(it.title)}" placeholder="Was passiert?" /></div>
+    <div class="fld ffull"><label>Status</label>${gfChips("status",STAT,it.status,{label:"Status"})}</div>
+    <div class="fld"><label>von</label><input name="starts_on" type="date" value="${it.starts_on}" /></div>
+    <div class="fld"><label>bis</label><input name="ends_on" type="date" value="${it.ends_on}" /></div>
+    <div class="fld ffull"><label>Zeile</label>${gfChips("row_id",ROWS.map(r=>[r.id,r.label]),it.row_id,{label:"Zeile"})}</div>
+    <div class="fld ffull"><label>Kategorie</label>${gfChips("cat",CATS,it.cat,{label:"Kategorie"})}</div>
+    <div class="fld ffull"><label>Darstellung</label>${gfChips("form",FORMS,it.form,{label:"Darstellung"})}</div>
+    <div class="fld"><label>Beginn hängt an</label>${gfChips("anchor_start",ANCH,it.anchor_start,{label:"Beginn hängt an"})}</div>
+    <div class="fld"><label>Ende hängt an</label>${gfChips("anchor_end",ANCH,it.anchor_end,{label:"Ende hängt an"})}</div>
+    <div class="fld ffull"><label>Beschreibung</label><textarea name="body" rows="3">${gfEsc(it.body||"")}</textarea></div>
+    <div class="fld ffull"><label>Anmerkung Alex</label><textarea name="note_alex" rows="2"${me==="Lea"?' placeholder="Alex trägt hier ein"':""}>${gfEsc(it.note_alex||"")}</textarea></div>
+    <div class="fld ffull"><label>Anmerkung Lea</label><textarea name="note_lea" rows="2"${me==="Alex"?' placeholder="Lea trägt hier ein"':""}>${gfEsc(it.note_lea||"")}</textarea></div>
+  </div>
+  <div class="sz-meta">Hängt ein Termin am VVK-Start oder am Festival, wandert er mit, wenn sich dieses Datum in der Zeile ändert. ${it.updated_by?`Zuletzt ${gfEsc(it.updated_by)}, ${new Date(it.updated_at).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}.`:""}</div>`;
+  $("#pFoot").innerHTML=it.id
+    ? `<span class="sz-meta" id="pState">Speichert automatisch</span><button class="btn btn-sm btn-ghost" id="pDel" style="margin-left:auto">Entfernen</button>`
+    : `<button class="btn btn-primary" id="pSave">Anlegen</button><button class="btn btn-ghost" id="pCancel">Abbrechen</button>`;
+  panelOpen(it.id?"Element bearbeiten":"Neues Element");
+  const b=$("#pBody");
+  const mark=()=>{ OPEN.dirty=true; if(!OPEN.id) return; const s=$("#pState"); if(s) s.textContent="Ungespeichert …"; clearTimeout(TIMER); TIMER=setTimeout(()=>saveItem(true),700); };
+  b.addEventListener("input",mark); b.addEventListener("change",mark);
+  if(it.id) $("#pDel").onclick=async()=>{ if(!confirm("Dieses Element entfernen?")) return; try{ await szApi("item_delete",{id:it.id,who:gfWho()}); ITEMS=ITEMS.filter(x=>x.id!==it.id); OPEN=null; panelClose(); await loadLog(); renderAll(); gfToast("Entfernt"); }catch(e){ gfToast("Fehler: "+e.message); } };
+  else { $("#pSave").onclick=()=>saveItem(false); $("#pCancel").onclick=()=>{ OPEN=null; panelClose(); }; }
+  setTimeout(()=>{ const f=b.querySelector('[name="title"]'); if(f&&!it.id) f.focus(); },60);
+}
+function readForm(){ const o={}; $$("#pBody [name]").forEach(f=>{ o[f.name]=f.value; }); return o; }
+async function saveItem(silent){
+  if(!OPEN||OPEN.kind!=="item") return; clearTimeout(TIMER);
+  const f=readForm(); if(!f.ends_on) f.ends_on=f.starts_on;
+  if(f.ends_on<f.starts_on){ const s=$("#pState"); if(s) s.textContent="Ende liegt vor dem Anfang"; else gfToast("Ende liegt vor dem Anfang"); return; }
+  const payload=Object.assign({},f,{id:OPEN.id||undefined,who:gfWho()});
+  try{
+    const d=await szApi("item_save",payload);
+    const i=ITEMS.findIndex(x=>x.id===d.item.id); if(i>=0) ITEMS[i]=d.item; else ITEMS.push(d.item);
+    if(OPEN){ OPEN.dirty=false; }
+    const s=$("#pState"); if(s) s.textContent="Gespeichert";
+    loadLog().then(renderLog);
+    draw(); renderStats(); renderOpen();
+    if(!payload.id){ OPEN=null; panelClose(); gfToast("Angelegt"); openItem(d.item.id); }
+  }catch(e){ const s=$("#pState"); if(s) s.textContent="Fehler: "+e.message; else gfToast("Fehler: "+e.message); }
+}
+
+/* ---- Bearbeiten: Zeile ---- */
+function openRow(id){
+  const r=id?rowOf(id):{id:"",label:"",level:2,kind:"department"}; if(!r) return;
+  OPEN={kind:"row",id:r.id||null};
+  const fest=r.kind==="festival"||r.kind==="strang";
+  $("#pBody").innerHTML=`<div class="fgrid">
+    <div class="fld ffull"><label>Name</label><input name="label" value="${gfEsc(r.label)}" /></div>
+    <div class="fld ffull"><label>Ebene</label>${gfChips("level",LVL,String(r.level),{label:"Ebene"})}</div>
+    <div class="fld ffull"><label>Art</label>${gfChips("kind",KINDS,r.kind,{label:"Art"})}</div>
+    <div class="fld"><label>VVK-Start</label><input name="vvk_start" type="date" value="${r.vvk_start||""}" /></div>
+    <div class="fld"><label>Verkaufsziel</label><input name="target" inputmode="numeric" value="${r.target??""}" /></div>
+    <div class="fld"><label>Festival von</label><input name="festival_start" type="date" value="${r.festival_start||""}" /></div>
+    <div class="fld"><label>Festival bis</label><input name="festival_end" type="date" value="${r.festival_end||""}" /></div>
+    <div class="fld ffull"><label>Notiz</label><textarea name="note" rows="2">${gfEsc(r.note||"")}</textarea></div>
+  </div>
+  <div class="sz-meta">${fest?"Ändert sich der VVK-Start oder der Festivaltermin, verschieben sich Vorlauf, Verkauf und Stichtag dieser Zeile mit. ":""}Die Termine in der Plattform Wilde Habitate bleiben unverändert, bis ihr die Saison freigebt.</div>`;
+  $("#pFoot").innerHTML=`<button class="btn btn-primary" id="rSave">${r.id?"Speichern":"Anlegen"}</button><button class="btn btn-sm btn-brand" id="rAdd"${r.id?"":" hidden"}>Element in dieser Zeile</button>${r.id?`<button class="btn btn-sm btn-ghost" id="rDel" style="margin-left:auto">Zeile entfernen</button>`:""}`;
+  panelOpen(r.id?"Zeile bearbeiten":"Neue Zeile");
+  $("#rSave").onclick=async()=>{ const f=readForm(); try{ const d=await szApi("row_save",Object.assign(f,{id:r.id||undefined,who:gfWho()})); await load(); gfToast(d.moved?`Gespeichert, ${d.moved} Termine mitverschoben`:"Gespeichert"); OPEN=null; panelClose(); }catch(e){ gfToast("Fehler: "+e.message); } };
+  if(r.id) $("#rAdd").onclick=()=>{ OPEN=null; panelClose(); openItem(null,{row_id:r.id}); };
+  if(r.id) $("#rDel").onclick=async()=>{ if(!confirm(`Zeile „${r.label}“ mit allen Elementen entfernen?`)) return; try{ await szApi("row_delete",{id:r.id,who:gfWho()}); OPEN=null; panelClose(); await load(); gfToast("Zeile entfernt"); }catch(e){ gfToast("Fehler: "+e.message); } };
+}
+
+/* ---- Bedienung ---- */
+$$("[data-view]").forEach(b=>b.onclick=()=>{ VIEW=b.dataset.view; try{ localStorage.setItem("gf_sz_view",VIEW); }catch(e){} draw(); });
+$$("[data-lvl]").forEach(c=>c.onchange=draw);
+$("#nurOffen").onchange=draw;
+$("#openList").addEventListener("click",e=>{ const b=e.target.closest(".sz-item[data-id]"); if(b) openItem(b.dataset.id); });
+$("#rowChips").addEventListener("click",e=>{ const b=e.target.closest("[data-row]"); if(b) openRow(b.dataset.row); });
+$("#newItem").onclick=()=>openItem(null);
+$("#newRow").onclick=()=>openRow(null);
+
+async function loadLog(){ try{ const l=await szApi("log",{limit:30}); LOG=l.log||[]; }catch(e){ LOG=[]; } }
+async function load(){
+  const d=await szApi("get",{});
+  ROWS=(d.rows||[]).map(r=>Object.assign(r,{level:+r.level}));
+  ITEMS=d.items||[];
+  await loadLog();
+  renderAll();
+}
+gfGate(async()=>{
+  $("#app").style.display="block"; gfMountTopbar("saison");
+  gfMountHero("karten","Saison 2026/27","Jahresrad der Festivalsaison. Alex und Lea stimmen hier ab, bevor die Saison ans Team geht.",{compact:true});
+  $("#stage").innerHTML=gfSkeleton(1);
+  try{ await load(); }catch(e){ $("#stage").innerHTML=`<div class="empty soft">Die Saison ließ sich nicht laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+});
+</script>
+</body>
+</html>
