@@ -6,38 +6,99 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Das Hohe Haus · Saison</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=24" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=24" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=24" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=24" />
-<link rel="stylesheet" href="/assets/styles.css?v=24" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=25" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=25" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=25" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=25" />
+<link rel="stylesheet" href="/assets/styles.css?v=25" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 <style>
-:root{--sz-nach:var(--text-3);--sz-sys:#a391d6;--sz-plan:var(--accent);--sz-prod:var(--chart-coral);--sz-fest:var(--crit);--sz-sales:var(--action);--sz-koll:var(--chart-peach);--sz-prog:#8c9ad8;--sz-dot:var(--warn)}
-[data-theme="light"]{--sz-sys:#6d58a8;--sz-prog:#4f60b0;--sz-dot:var(--warn)}
-.sz-tools{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:6px 2px 12px}
-.sz-stats{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
-.sz-stage{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);padding:12px}
-.sz-stage svg{display:block;width:100%;height:auto}
-.sz-stage svg text{font-family:var(--font-ui)}
-.sz-seg{cursor:pointer;transition:opacity var(--motion-fast)}
-.sz-seg:hover{opacity:1!important;filter:brightness(1.12)}
-.sz-info{min-height:52px;margin:10px 0 0;padding:10px 14px;background:var(--surface-2);border-radius:var(--radius-m);font-size:var(--stufe-2);color:var(--text-2);line-height:var(--leading-text)}
-.sz-info b{color:var(--text)}
-.sz-lg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:var(--stufe-2);color:var(--text-2);margin:12px 2px 0}
-.sz-lg span{display:inline-flex;align-items:center;gap:6px}
-.sz-sw{width:12px;height:12px;border-radius:3px;display:inline-block}
-.sz-rows{display:flex;flex-wrap:wrap;gap:6px;margin:10px 2px 0}
-.sz-sec{margin-top:26px}
-.sz-list{display:flex;flex-direction:column;gap:6px}
-.sz-item{display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);cursor:pointer;text-align:left;width:100%;color:var(--text)}
-.sz-item:hover{border-color:var(--border-strong)}
-.sz-item .t{font-weight:600}
-.sz-item .m{font-size:var(--stufe-2);color:var(--text-2)}
-.sz-item .n{grid-column:2/4;font-size:var(--stufe-2);color:var(--text-2)}
-.sz-grp{font-size:var(--stufe-1);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:12px 2px 2px}
-.sz-meta{font-size:var(--stufe-1);color:var(--muted)}
-.panel .fchips .chip{min-height:36px}
+/* Saison (V25, 30.09.2026): die fünf Metaphasen als Steckbriefe in Worten, ohne Farbcode.
+   Status, Fristen und Abstände rechnet die Seite aus dem heutigen Datum; die Inhalte stehen im HTML. */
+#sp{max-width:880px;display:grid;gap:22px;margin-top:6px}
+#sp .sp-lead{color:var(--text-2);max-width:66ch;margin:0;line-height:var(--leading-text)}
+#sp .sp-key{font-size:var(--stufe-2);color:var(--text-3);margin:6px 0 0}
+.sp-eb{font-size:var(--stufe-1);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
+
+/* Phasen als Wortkette */
+.sp-chain{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:0;padding:0;list-style:none}
+.sp-chain li{display:flex;min-width:0}
+.sp-chain a{display:block;width:100%;text-decoration:none;color:var(--text);background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:9px 12px;min-height:44px}
+.sp-chain a:hover{border-color:var(--border-strong)}
+.sp-chain a:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.sp-chain b{display:block;font-size:var(--stufe-2);font-weight:600;line-height:1.3}
+.sp-chain span{display:block;font-size:var(--stufe-1);color:var(--text-3);margin-top:2px}
+.sp-chain .ist-jetzt a{background:var(--accent-soft);border-color:var(--accent)}
+.sp-chain .ist-naechste a{border-color:var(--action)}
+.sp-chain .ist-vorbei a{opacity:.72}
+
+/* Die nächsten Termine */
+.sp-jetzt{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);padding:16px 18px}
+.sp-jetzt h2{font-size:var(--stufe-4);margin:4px 0 10px}
+.sp-dates{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.sp-dates li{display:grid;grid-template-columns:4.4rem 6.6rem minmax(0,1fr);gap:10px;align-items:baseline}
+.sp-dates .d{font-weight:700;font-variant-numeric:tabular-nums}
+.sp-dates .rel{font-size:var(--stufe-2);color:var(--text-2)}
+.sp-dates .rel.bald{color:var(--text);font-weight:600}
+.sp-dates .wo{color:var(--text-3);font-size:var(--stufe-2)}
+.sp-hint{margin-top:12px;background:var(--warn-bg);color:var(--text);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:var(--leading-text)}
+.sp-hint b{color:var(--warn)}
+
+/* Phasen-Steckbriefe */
+.sp-phases{display:grid;gap:14px}
+details.sp-ph{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);scroll-margin-top:80px}
+details.sp-ph[open]{border-color:var(--border-strong)}
+details.sp-ph.ist-jetzt{border-color:var(--accent)}
+.sp-ph > summary,.sp-part > summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;align-items:start;border-radius:var(--radius-l)}
+.sp-ph > summary{padding:16px 18px}
+.sp-ph > summary::-webkit-details-marker,.sp-part > summary::-webkit-details-marker{display:none}
+.sp-ph > summary:focus-visible,.sp-part > summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.sp-ph h3{margin:0;font-size:var(--stufe-4);line-height:1.3;text-wrap:balance}
+.sp-when{font-size:var(--stufe-2);color:var(--text-2);margin-top:2px}
+.sp-what{grid-column:1/-1;color:var(--text-2);margin-top:6px;max-width:66ch;line-height:var(--leading-text)}
+.sp-chev{display:inline-block;margin-left:6px;color:var(--text-3);transition:transform var(--motion-fast,.15s)}
+details[open] > summary .sp-chev{transform:rotate(90deg)}
+.sp-tag{font-size:var(--stufe-1);font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;border:var(--rahmen) solid var(--border-strong);color:var(--text-2)}
+.sp-tag.jetzt{background:var(--accent-soft);border-color:var(--accent);color:var(--text)}
+.sp-tag.naechste{border-color:var(--action);color:var(--text)}
+.sp-body{padding:0 18px 18px;display:grid;gap:18px}
+.sp-two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.sp-two > div{min-width:0}
+.sp-body h4{margin:0 0 6px}
+.sp-body p{margin:0;max-width:66ch;line-height:var(--leading-text)}
+.sp-ok{margin:0;padding-left:1.1em;line-height:var(--leading-text)}
+.sp-steps{list-style:none;margin:0;padding:0;border-top:var(--rahmen) solid var(--border)}
+.sp-steps li{display:grid;grid-template-columns:7.4rem minmax(0,1fr) auto;gap:3px 14px;padding:9px 0;border-bottom:var(--rahmen) solid var(--border);align-items:baseline}
+.sp-steps .d{font-size:var(--stufe-2);font-weight:700;font-variant-numeric:tabular-nums}
+.sp-steps .who{font-size:var(--stufe-2);color:var(--text-3);text-align:right}
+.sp-steps .x{grid-column:2/-1;font-size:var(--stufe-2);color:var(--text-2);line-height:var(--leading-text)}
+.sp-vs,.sp-offen{font-size:.66rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:var(--radius-s);padding:0 5px;margin-left:6px;vertical-align:1px;white-space:nowrap}
+.sp-vs{color:var(--text);border:var(--rahmen) solid var(--action)}
+.sp-offen{color:var(--text-2);border:var(--rahmen) dashed var(--border-strong)}
+.sp-parts{display:grid;gap:10px}
+details.sp-part{background:var(--surface-2);border-radius:var(--radius-m)}
+.sp-part > summary{padding:12px 14px}
+.sp-part h3{font-size:var(--stufe-3)}
+.sp-part .sp-body{padding:0 14px 14px;gap:14px}
+.sp-tbl{overflow-x:auto}
+.sp-tbl table{width:100%;border-collapse:collapse;font-size:var(--stufe-2)}
+.sp-tbl th,.sp-tbl td{text-align:left;padding:8px 12px 8px 0;border-bottom:var(--rahmen) solid var(--border);vertical-align:top}
+.sp-tbl th{font-size:var(--stufe-1);letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);font-weight:700}
+.sp-tbl td{font-variant-numeric:tabular-nums}
+.sp-tbl td.bald{font-weight:600}
+.sp-hand{border-left:3px solid var(--action);padding:2px 0 2px 12px;color:var(--text-2);line-height:var(--leading-text)}
+.sp-foot{color:var(--text-3);font-size:var(--stufe-2);max-width:66ch;line-height:var(--leading-text)}
+@media (max-width:760px){
+  .sp-two{grid-template-columns:1fr}
+  .sp-chain{grid-template-columns:1fr 1fr}
+  .sp-chain li:last-child{grid-column:1/-1}
+  .sp-steps li{grid-template-columns:5.8rem minmax(0,1fr)}
+  .sp-steps .who{grid-column:2;text-align:left}
+  .sp-dates li{grid-template-columns:4rem minmax(0,1fr)}
+  .sp-dates .rel{grid-column:1;grid-row:2;font-size:var(--stufe-1)}
+  .sp-dates li > span:last-child{grid-column:2;grid-row:1/3}
+}
+@media (prefers-reduced-motion:reduce){.sp-chev{transition:none}}
 </style>
 </head>
 <body>
@@ -58,269 +119,267 @@
   <header id="topbar"></header>
   <div id="hero"></div>
 
-  <div class="sz-tools">
-    <div class="segs" role="group" aria-label="Ansicht"><button class="seg on" data-view="rad">Jahresrad</button><button class="seg" data-view="leiste">Zeitleiste</button></div>
-    <label class="chk"><input type="checkbox" data-lvl="1" checked> Ebene 1 Kreislauf</label>
-    <label class="chk"><input type="checkbox" data-lvl="2" checked> Ebene 2 Departments</label>
-    <label class="chk"><input type="checkbox" data-lvl="3" checked> Ebene 3 Festivals</label>
-    <label class="chk"><input type="checkbox" id="nurOffen"> nur offene</label>
-    <div class="sz-stats" id="stats"></div>
-  </div>
+  <main id="sp">
+    <div>
+      <p class="sp-lead">Fünf Phasen im Jahr, jede mit ihrer eigenen Arbeitsweise. Tippe auf eine Phase, um zu sehen, was bis wann passieren muss und wer es trägt.</p>
+      <p class="sp-key"><span class="sp-vs">Vorschlag</span> heißt noch nicht entschieden, <span class="sp-offen">offen</span> heißt, es fehlt noch.</p>
+    </div>
 
-  <div class="sz-stage" id="stage"></div>
-  <div class="sz-info" id="info">Tippe auf ein Element, um es zu bearbeiten. Hell hinterlegt: Oktober ist Engpass, November ist dicht.</div>
-  <div class="sz-lg" id="legend"></div>
-  <div class="sz-rows" id="rowChips"></div>
+    <ol class="sp-chain" id="spChain" aria-label="Phasen der Saison">
+      <li data-p="p1"><a href="#p1"><b>Abbau und Analyse</b><span>Sep bis Mitte Okt</span></a></li>
+      <li data-p="p2"><a href="#p2"><b>Systembau, Launch und Formatpartner</b><span>Okt bis Dez</span></a></li>
+      <li data-p="p3"><a href="#p3"><b>Kernteam-Planung</b><span>Jan bis Mär</span></a></li>
+      <li data-p="p4"><a href="#p4"><b>Onboarding</b><span>Apr bis Jun</span></a></li>
+      <li data-p="p5"><a href="#p5"><b>Aufbau und Produktion</b><span>Jul bis Sep</span></a></li>
+    </ol>
 
-  <section class="sz-sec" aria-label="Abstimmung">
-    <div class="sec-h"><h2>Zur Abstimmung</h2><span class="hint" id="openHint"></span><button class="btn btn-sm btn-brand" id="newItem">Neues Element</button><button class="btn btn-sm btn-brand" id="newRow">Neue Zeile</button></div>
-    <div class="sz-list" id="openList"></div>
-  </section>
+    <section class="sp-jetzt" aria-labelledby="spJetztH">
+      <div class="sp-eb" id="spStand">Stand heute</div>
+      <h2 id="spJetztH">Die nächsten Termine</h2>
+      <ul class="sp-dates" id="spDates"></ul>
+      <div class="sp-hint" id="spEng" hidden><b>Engpass Oktober:</b> Analyse, Systembau und drei Launches fallen zusammen. Ob wir parallel arbeiten oder verschieben, ist noch nicht entschieden.</div>
+    </section>
 
-  <section class="sz-sec" aria-label="Verlauf">
-    <div class="sec-h"><h2>Zuletzt geändert</h2></div>
-    <div class="sz-list" id="logList"></div>
-  </section>
+    <div class="sp-phases">
+
+      <details class="sp-ph" id="p1" data-von="2026-09-01" data-bis="2026-10-15">
+        <summary>
+          <div><h3>Abbau und Analyse<span class="sp-chev" aria-hidden="true">›</span></h3><div class="sp-when">September bis Mitte Oktober 2026</div></div>
+          <span class="sp-tag" data-tag></span>
+          <div class="sp-what">Das Gelände zurückbauen, auswerten, was gut und was schlecht lief, und erholen.</div>
+        </summary>
+        <div class="sp-body">
+          <div class="sp-two">
+            <div><h4 class="sp-eb">So arbeitet das Team</h4><p>Kleinere Crew, wenige Aufgaben gleichzeitig. Erholung ist eingeplante Zeit. Feedback wird nach Wirkung und Umsetzbarkeit sortiert: Nicht jeder Kommentar wird ein Projekt.</p></div>
+            <div><h4 class="sp-eb">Fertig, wenn</h4><ul class="sp-ok"><li>das Gelände zurückgebaut ist</li><li>jedes Department seine Auswertung gemacht hat</li><li>eine priorisierte Lernliste an den Systembau übergeben ist</li></ul></div>
+          </div>
+          <div>
+            <h4 class="sp-eb">Was bis wann passieren muss</h4>
+            <ul class="sp-steps">
+              <li><span class="d">bis Ende Sep</span><span>Abbau abschließen</span><span class="who">Produktion</span></li>
+              <li><span class="d">bis 15.10.</span><span>Auswertung je Department<span class="sp-vs">Vorschlag</span></span><span class="who">alle</span><span class="x">Kurzes festes Fenster, reicht in die neue Saison hinein.</span></li>
+              <li><span class="d">bis 15.10.</span><span>Feedback einordnen</span><span class="who">alle</span><span class="x">Je Punkt: Verbesserung, Experiment oder bewusste Entscheidung.</span></li>
+            </ul>
+          </div>
+          <div class="sp-hand">Übergang: Produktion, Kommunikation und Booking wechseln nach der Saison ihren Modus und gehen in die Kollektivsuche und den Launch.</div>
+        </div>
+      </details>
+
+      <details class="sp-ph" id="p2" data-von="2026-10-01" data-bis="2026-12-31">
+        <summary>
+          <div><h3>Systembau, Launch und Formatpartner<span class="sp-chev" aria-hidden="true">›</span></h3><div class="sp-when">1. Oktober bis 31. Dezember 2026, Januar als Puffer</div></div>
+          <span class="sp-tag" data-tag></span>
+          <div class="sp-what">Die Werkzeuge für die Saison bauen, die Festivals nacheinander in den Verkauf bringen und die Kollektive und Partner gewinnen, die den Launch mittragen. Drei Teile laufen gleichzeitig, jeder nach eigener Logik.</div>
+        </summary>
+        <div class="sp-body">
+          <div class="sp-two">
+            <div><h4 class="sp-eb">Fertig, wenn</h4><ul class="sp-ok"><li>Welle 1 der Werkzeuge im Einsatz ist</li><li>alle Festivals im Verkauf sind</li><li>alle Plätze im Gesamthabitat belegt sind (31.12.)</li></ul></div>
+            <div><h4 class="sp-eb">Offen</h4><p>Wer für welches Festival das Ergebnis verantwortet. Welches Festival die neuen Werkzeuge zuerst erprobt.</p></div>
+          </div>
+
+          <div class="sp-parts">
+            <details class="sp-part" open>
+              <summary><div><h3>Systembau<span class="sp-chev" aria-hidden="true">›</span></h3><div class="sp-when">Einmal bauen, an echter Festivalarbeit testen, dann für alle übernehmen</div></div><span class="sp-tag">Okt bis Dez</span></summary>
+              <div class="sp-body">
+                <p>Fertig ist ein Werkzeug, wenn ein echtes Arbeitspaket damit einfacher, verlässlicher oder selbstständiger erledigt wird.</p>
+                <ul class="sp-steps">
+                  <li><span class="d">ab 01.10.</span><span>Habitat Hub als zentrale Stelle für Mitarbeitende</span><span class="who">Alex</span><span class="x">Coda-Stammdaten werden eigene Tabellen und Seiten.</span></li>
+                  <li><span class="d">bis 31.12.</span><span>Welle 1</span><span class="who">Alex</span><span class="x">Hub-Kern, Orte und Kollektive, CRM, Aufgaben und Meilensteine, Personal, Booking, Finanzen, Lager, Bestellwesen, Wiki, Datenübernahme.</span></li>
+                  <li><span class="d">offen</span><span>Pilotfestival je Werkzeug<span class="sp-offen">offen</span></span><span class="who">—</span></li>
+                </ul>
+              </div>
+            </details>
+
+            <details class="sp-part" open>
+              <summary><div><h3>Launch<span class="sp-chev" aria-hidden="true">›</span></h3><div class="sp-when">Im Takt der VVK-Starts, ein Festival nach dem anderen</div></div><span class="sp-tag">01.10. bis 15.11.</span></summary>
+              <div class="sp-body">
+                <p>Höchstens zwei Festivals gleichzeitig in intensiver Launcharbeit<span class="sp-vs">Vorschlag</span>. Bereits gestartete Festivals behalten feste Zeit für Kommunikation und Betreuung.</p>
+                <div class="sp-tbl"><table>
+                  <thead><tr><th>Festival</th><th>VVK-Start</th><th>Stand</th><th>Nächster Schritt</th></tr></thead>
+                  <tbody id="spLaunch">
+                    <tr data-vvk="2026-08-01"><td>Fluidity</td><td>01.08.</td><td class="st"></td><td>Boost-Plan mit Termin</td></tr>
+                    <tr data-vvk="2026-09-01"><td>Wilde Möhre</td><td>01.09.</td><td class="st"></td><td>Kampagne bis Jahresende, Community-Fenster 1.000 Tickets</td></tr>
+                    <tr data-vvk="2026-10-01"><td>Draußenbande</td><td>01.10.</td><td class="st"></td><td>Rückblick nach 24 Stunden und nach 7 Tagen</td></tr>
+                    <tr data-vvk="2026-10-15"><td>Lusatia</td><td>15.10.</td><td class="st"></td><td>Launch-Checkliste und Partnerpaket</td></tr>
+                    <tr data-vvk="2026-11-01"><td>by nature</td><td>01.11.</td><td class="st"></td><td>Preisbasis bestätigen</td></tr>
+                    <tr data-vvk="2026-11-15"><td>mit Freude eG</td><td>15.11.</td><td class="st"></td><td>Pakete und Flex-Tickets für alle Festivals, Verrechnung klären</td></tr>
+                  </tbody>
+                </table></div>
+                <div>
+                  <h4 class="sp-eb">Jeder Launch hat dieselben Schritte</h4>
+                  <p>Positionierung und Kernbotschaft · Ticketmodell und Preislogik · Landingpage und Tracking · Content und Hauptfilm · Newsletter · Partnerpaket · Rechte · Launch-Checkliste · Launchtag · Rückblick nach 24 Stunden und nach 7 Tagen</p>
+                </div>
+              </div>
+            </details>
+
+            <details class="sp-part" open>
+              <summary><div><h3>Formatpartner<span class="sp-chev" aria-hidden="true">›</span></h3><div class="sp-when">Kollektive und andere Partner, die im Launch als Multiplikatoren wirken</div></div><span class="sp-tag">Okt bis Dez</span></summary>
+              <div class="sp-body">
+                <p>Gesucht wird für alle Festivals zugleich, in der Reihenfolge der Launches. Erst wenn alle Plätze im Gesamthabitat vergeben sind, wird das Programm gebucht.</p>
+                <ul class="sp-steps">
+                  <li><span class="d">31.10.</span><span>Soll: Kollektive für alle Festivals gefunden</span><span class="who">Booking, Produktion</span></li>
+                  <li><span class="d">Nov bis Dez</span><span>Winterverkauf: Sonderaktionen mit und für die Kollektive</span><span class="who">Kommunikation</span></li>
+                  <li><span class="d">31.12.</span><span>Muss: alle Plätze belegt, danach Programm buchen</span><span class="who">Booking</span></li>
+                  <li><span class="d">vor jedem Launch</span><span>Zwei bis drei Ankerpartner je Festival<span class="sp-vs">Vorschlag</span></span><span class="who">—</span><span class="x">Damit sie im Launch schon mittragen können.</span></li>
+                </ul>
+                <div class="sp-tbl"><table>
+                  <thead><tr><th>Festival</th><th>Gespräche im System</th></tr></thead>
+                  <tbody>
+                    <tr><td>Fluidity</td><td>Fluidity-Kollektiv</td></tr>
+                    <tr><td>Draußenbande</td><td>Björn Oesingmann, NDA und Absichtserklärung offen</td></tr>
+                    <tr><td>Lusatia</td><td>Subardo, in Qualifizierung</td></tr>
+                    <tr><td>by nature</td><td>Natural High, Antwort offen</td></tr>
+                    <tr><td>Wilde Möhre</td><td>noch keiner eingetragen</td></tr>
+                  </tbody>
+                </table></div>
+              </div>
+            </details>
+          </div>
+          <div class="sp-hand">Übergang: Im Januar werden die neuen Werkzeuge eingeführt, bevor die Planung richtig beginnt.</div>
+        </div>
+      </details>
+
+      <details class="sp-ph" id="p3" data-von="2027-01-01" data-bis="2027-03-31">
+        <summary>
+          <div><h3>Kernteam-Planung<span class="sp-chev" aria-hidden="true">›</span></h3><div class="sp-when">Januar bis März 2027</div></div>
+          <span class="sp-tag" data-tag></span>
+          <div class="sp-what">Das Kernteam plant die Festivals im Detail, bevor weitere Leute dazukommen.</div>
+        </summary>
+        <div class="sp-body">
+          <div class="sp-two">
+            <div><h4 class="sp-eb">So arbeitet das Team</h4><p>Kleines Kernteam, geplant wird rückwärts vom jeweiligen Festivaltermin.</p></div>
+            <div><h4 class="sp-eb">Fertig, wenn</h4><p>Noch nicht festgelegt.<span class="sp-offen">offen</span></p></div>
+          </div>
+          <ul class="sp-steps">
+            <li><span class="d">Januar</span><span>Neue Werkzeuge einführen</span><span class="who">alle</span></li>
+            <li><span class="d">ab 01.01.</span><span>Programm buchen, bis 30.04.</span><span class="who">Booking</span><span class="x">Erst wenn die Plätze vergeben sind.</span></li>
+            <li><span class="d">ab 01.01.</span><span>Lineups und Inhalte je Festival kommunizieren</span><span class="who">Kommunikation</span></li>
+            <li><span class="d">Jan bis Mär</span><span>Bedarfe und Systeme</span><span class="who">Produktion</span><span class="x">Baubedarfe, Material, Dienstleister vorbereiten.</span></li>
+            <li><span class="d">Jan bis Apr</span><span>Systembau Welle 2</span><span class="who">Alex</span><span class="x">Aufbauplanung, Fuhrpark, Schichten und Check-in, Vergabe am Tresen, Telefonposten und Protokolle, Festival-Handbuch, Gastronomie.</span></li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="sp-ph" id="p4" data-von="2027-04-01" data-bis="2027-06-30">
+        <summary>
+          <div><h3>Onboarding<span class="sp-chev" aria-hidden="true">›</span></h3><div class="sp-when">April bis Juni 2027</div></div>
+          <span class="sp-tag" data-tag></span>
+          <div class="sp-what">Weitere Leute kommen dazu und übernehmen ihre Bereiche.</div>
+        </summary>
+        <div class="sp-body">
+          <div class="sp-two">
+            <div><h4 class="sp-eb">So arbeitet das Team</h4><p>Rollen besetzen und einarbeiten. Jeder Aufgabenbereich bekommt seine vier Verantwortungen: System, Planung, Betreuung, Ausführung.</p></div>
+            <div><h4 class="sp-eb">Fertig, wenn</h4><p>Noch nicht festgelegt.<span class="sp-offen">offen</span></p></div>
+          </div>
+          <ul class="sp-steps">
+            <li><span class="d">Apr bis Jun</span><span>Dienstleister akquirieren</span><span class="who">Produktion</span><span class="x">Nach oder parallel zu Lineup und Inhalten.</span></li>
+            <li><span class="d">30.04.</span><span>Programm gebucht</span><span class="who">Booking</span></li>
+            <li><span class="d">Mai bis Jun</span><span>Artist-Planung: Riders, Anreise, Logistik</span><span class="who">Booking</span></li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="sp-ph" id="p5" data-von="2027-07-01" data-bis="2027-09-30">
+        <summary>
+          <div><h3>Aufbau und Produktion<span class="sp-chev" aria-hidden="true">›</span></h3><div class="sp-when">Juli bis August 2027, Abbau bis Ende September</div></div>
+          <span class="sp-tag" data-tag></span>
+          <div class="sp-what">Fünf Festivals in 38 Tagen, mit kurzen Umbaufenstern dazwischen.</div>
+        </summary>
+        <div class="sp-body">
+          <div class="sp-two">
+            <div><h4 class="sp-eb">So arbeitet das Team</h4><p>Täglich nach Produktionsplan. Zwischen den Festivals wird umgebaut, gewartet und Personal gewechselt.</p></div>
+            <div><h4 class="sp-eb">Fertig, wenn</h4><p>Alle fünf Festivals durchgeführt sind und der Abbau geplant ist.</p></div>
+          </div>
+          <ul class="sp-steps">
+            <li><span class="d">ab 01.07.</span><span>Aufbau</span><span class="who">Produktion</span></li>
+            <li><span class="d">23.–25.07.</span><span>Lusatia</span><span class="who"></span><span class="x">danach 4 Tage Umbau</span></li>
+            <li><span class="d">30.07.–01.08.</span><span>Malina, Morio &amp; die Draußenbande</span><span class="who"></span><span class="x">danach 4 Tage Umbau</span></li>
+            <li><span class="d">06.–08.08.</span><span>by nature</span><span class="who"></span><span class="x">danach 11 Tage Umbau</span></li>
+            <li><span class="d">20.–23.08.</span><span>Wilde Möhre Freude Edition</span><span class="who"></span><span class="x">danach 3 Tage Umbau</span></li>
+            <li><span class="d">27.–29.08.</span><span>Fluidity</span><span class="who"></span></li>
+            <li><span class="d">bis Ende Sep</span><span>Abbau, dann beginnt der Kreislauf von vorn</span><span class="who">Produktion</span></li>
+          </ul>
+        </div>
+      </details>
+
+    </div>
+
+    <p class="sp-foot">Termine aus der Plattform Wilde Habitate und aus Alex' Angaben, Inhalte Stand 30.09.2026. Welche Phase läuft und wie weit ein Termin entfernt ist, rechnet die Seite jeden Tag neu. Das frühere Jahresrad liegt noch unter saison-rad.html.</p>
+  </main>
 </div>
 
-<div class="panel-back" id="pBack"></div>
-<aside class="panel" id="panel" aria-hidden="true">
-  <div class="panel-h"><h3 id="pTitle">Element</h3><button class="icon-btn" id="pClose" title="Schließen" aria-label="Schließen">✕</button></div>
-  <div class="panel-b" id="pBody"></div>
-  <div class="panel-f" id="pFoot"></div>
-</aside>
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=24"></script>
-<script src="/assets/game.js?v=24"></script>
-<script src="/assets/eggs.js?v=24" defer></script>
+<script src="/assets/core.js?v=25"></script>
+<script src="/assets/game.js?v=25"></script>
+<script src="/assets/eggs.js?v=25" defer></script>
 <script>
-/* Saison · Jahresrad der Festivalsaison 2026/27 (24.09.2026).
-   Daten über die eigene Edge Function „saison“ (gleiches Passwort wie das Hohe Haus).
-   Das Rad läuft ab 1. Oktober im Uhrzeigersinn; Termine werden nach Monat und Tag eingezeichnet, damit ein
-   Vorlauf im September der Vorsaison am Ende des Kreises vor dem 1. Oktober liegt (Kreislauf-Logik). */
-const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const SZ_FN="https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/saison";
-async function szApi(action,payload){
-  const res=await fetch(SZ_FN,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,password:gfPW(),payload})});
-  let d={}; try{ d=await res.json(); }catch(e){}
-  if(res.status===401) throw {auth:true};
-  if(!res.ok) throw new Error(d.error||("HTTP "+res.status));
-  return d;
-}
-const CATS=[["nach","Nachbereitung"],["sys","Neue Systeme"],["plan","Planung"],["prod","Produktion"],["fest","Durchführung"],["sales","Vorverkauf"],["koll","Kollektive und Partner"],["prog","Programm und Inhalte"]];
-const FORMS=[["band","Band"],["light","Verkauf läuft"],["thin","Vorlauf, schmal"],["dot","Stichtag"]];
-const ANCH=[["fest","fester Termin"],["vvk","VVK-Start"],["festival","Festivalbeginn"],["festival_ende","Festivalende"]];
-const STAT=[["vorschlag","Vorschlag"],["abgestimmt","abgestimmt"],["strittig","strittig"]];
-const LVL=[["1","Ebene 1"],["2","Ebene 2"],["3","Ebene 3"]];
-const KINDS=[["kreislauf","Kreislauf"],["meta","Metaphasen"],["department","Department"],["festival","Festival"],["strang","Strang"]];
-const MON=["Okt","Nov","Dez","Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep"];
-const MS=[10,11,12,1,2,3,4,5,6,7,8,9];
-const col=c=>`var(--sz-${c})`;
-let ROWS=[], ITEMS=[], LOG=[], VIEW="rad", OPEN=null, TIMER=null;
-try{ const v=localStorage.getItem("gf_sz_view"); if(v==="leiste"||v==="rad") VIEW=v; }catch(e){}
+/* Termine, die in „Die nächsten Termine“ erscheinen. Bereiche als Wort, keine Farbe. */
+const SP_TERMINE=[
+  ["2026-10-01","Neue Saison beginnt, VVK-Start Draußenbande","Launch"],
+  ["2026-10-15","VVK-Start Lusatia","Launch"],
+  ["2026-10-15","Analyse abgeschlossen","alle Departments"],
+  ["2026-10-31","Soll: Kollektive für alle Festivals gefunden","Formatpartner"],
+  ["2026-11-01","VVK-Start by nature","Launch"],
+  ["2026-11-15","eG-Pakete und Flex-Tickets für alle Festivals","Launch"],
+  ["2026-12-31","Muss: alle Plätze belegt, Welle 1 fertig","Formatpartner, Systembau"],
+  ["2027-01-01","Programm buchen beginnt, Lineups kommunizieren","Kernteam-Planung"],
+  ["2027-04-30","Programm gebucht","Booking"],
+  ["2027-07-01","Aufbau beginnt","Produktion"],
+  ["2027-07-23","Lusatia","Festival"],
+  ["2027-07-30","Malina, Morio & die Draußenbande","Festival"],
+  ["2027-08-06","by nature","Festival"],
+  ["2027-08-20","Wilde Möhre Freude Edition","Festival"],
+  ["2027-08-27","Fluidity","Festival"]
+];
+const $=s=>document.querySelector(s);
+const SP_DAY=864e5;
+function spHeute(){ const d=new Date(); return new Date(d.getFullYear(),d.getMonth(),d.getDate()); }
+function spDatum(iso){ const [y,m,t]=iso.split("-").map(Number); return new Date(y,m-1,t); }
+function spTage(iso){ return Math.round((spDatum(iso)-spHeute())/SP_DAY); }
+function spKurz(iso){ const [y,m,t]=iso.split("-"); return `${t}.${m}.`; }
+function spRel(n){ if(n===0) return "heute"; if(n===1) return "morgen"; if(n===2) return "übermorgen"; if(n<0) return n===-1?"gestern":`vor ${-n} Tagen`; if(n<=20) return `in ${n} Tagen`; if(n<=62) return `in ${Math.round(n/7)} Wochen`; return `in ${Math.round(n/30.4)} Monaten`; }
 
-/* ---- Datum auf den Kreis ab 1. Oktober ---- */
-const CUM=(()=>{ const len=[31,30,31,31,28,31,30,31,30,31,31,30]; const o={}; let s=0; MS.forEach((m,i)=>{ o[m]=s; s+=len[i]; }); return o; })();
-function cyc(iso){ const m=+iso.slice(5,7), d=+iso.slice(8,10); return Math.min(364,CUM[m]+Math.min(d,m===2?28:31)-1); }
-function realDays(a,b){ return Math.round((Date.parse(b)-Date.parse(a))/864e5)+1; }
-function spans(it){ const len=Math.min(365,realDays(it.starts_on,it.ends_on)); const e=cyc(it.ends_on)+1; let a=len>=365?e-364:cyc(it.starts_on); if(a<0) a+=365; const b=a+len; return b<=365?[[a,b]]:[[a,365],[0,b-365]]; }
-const fmt=iso=>{ if(!iso) return ""; const[y,m,d]=iso.split("-"); return `${+d}.${+m}.${y.slice(2)}`; };
-const TODAY=new Date().toISOString().slice(0,10);
+function spRender(){
+  const h=spHeute();
+  $("#spStand").textContent="Stand heute, "+h.toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  /* Phasen: läuft jetzt, als Nächstes, später, vorbei */
+  const ph=[...document.querySelectorAll(".sp-ph")];
+  const laeuft=ph.filter(p=>spTage(p.dataset.von)<=0 && spTage(p.dataset.bis)>=0);
+  const naechste=ph.find(p=>spTage(p.dataset.von)>0);
+  ph.forEach(p=>{
+    const tag=p.querySelector("[data-tag]"), li=document.querySelector(`.sp-chain li[data-p="${p.id}"]`);
+    const an=spTage(p.dataset.von), bis=spTage(p.dataset.bis);
+    let wort="später", cls="", licls="";
+    if(laeuft.includes(p)){ wort=bis<=14?`läuft, noch ${bis+1} ${bis===0?"Tag":"Tage"}`:"läuft jetzt"; cls="jetzt"; licls="ist-jetzt"; }
+    else if(p===naechste){ wort="beginnt "+spRel(an); cls="naechste"; licls="ist-naechste"; }
+    else if(bis<0){ wort="vorbei"; licls="ist-vorbei"; }
+    tag.textContent=wort; tag.className="sp-tag"+(cls?" "+cls:"");
+    p.classList.toggle("ist-jetzt",laeuft.includes(p));
+    if(li){ li.className=licls; const s=li.querySelector("span"); if(s && !s.dataset.orig) s.dataset.orig=s.textContent; if(s) s.textContent=s.dataset.orig+(licls==="ist-jetzt"?" · läuft":licls==="ist-naechste"?" · als Nächstes":""); }
+    if(laeuft.includes(p)||(p===naechste&&laeuft.length<2)) p.open=true;
+  });
+  /* Die nächsten fünf Termine */
+  const kommend=SP_TERMINE.filter(t=>spTage(t[0])>=0).slice(0,5);
+  $("#spDates").innerHTML=kommend.length?kommend.map(([d,t,w])=>{ const n=spTage(d); return `<li><span class="d">${spKurz(d)}</span><span class="rel${n<=7?" bald":""}">${spRel(n)}</span><span>${gfEsc(t)} <span class="wo">· ${gfEsc(w)}</span></span></li>`; }).join(""):`<li><span></span><span></span><span>Die Saison 2026/27 ist abgeschlossen.</span></li>`;
+  $("#spEng").hidden=!(spTage("2026-11-01")>=0);
+  /* Launch-Stand je Festival */
+  document.querySelectorAll("#spLaunch tr").forEach(tr=>{
+    const n=spTage(tr.dataset.vvk), td=tr.querySelector(".st");
+    let s;
+    if(n<0) s="im Verkauf seit "+spKurz(tr.dataset.vvk);
+    else if(n<=2) s="Launch "+spRel(n);
+    else if(n<=28) s="Launchvorbereitung, Start "+spRel(n);
+    else { const v=spDatum(tr.dataset.vvk); v.setDate(v.getDate()-28); s="Vorbereitung ab "+v.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}); }
+    td.textContent=s; td.classList.toggle("bald",n>=0&&n<=7);
+  });
+}
+/* Sprung aus der Wortkette öffnet die Phase */
+document.getElementById("spChain").addEventListener("click",e=>{ const a=e.target.closest("a[href^='#']"); if(!a) return; const d=document.querySelector(a.getAttribute("href")); if(d) d.open=true; });
 
-/* ---- Filter ---- */
-function levels(){ return $$("[data-lvl]").filter(c=>c.checked).map(c=>+c.dataset.lvl); }
-function visRows(){ const L=levels(); return ROWS.filter(r=>L.includes(r.level)); }
-const ORD={light:0,band:1,thin:2,dot:3};
-function segs(){ return ITEMS.slice().sort((a,b)=>(ORD[a.form]??1)-(ORD[b.form]??1)); }
-function dimmed(it){ return $("#nurOffen").checked && it.status==="abgestimmt"; }
-const ns="http://www.w3.org/2000/svg";
-function el(t,a){ const e=document.createElementNS(ns,t); for(const k in a) e.setAttribute(k,a[k]); return e; }
-function styleSeg(e,it){
-  const light=it.form==="light";
-  e.setAttribute("class","sz-seg"); e.dataset.id=it.id;
-  e.style.fill=col(it.cat); e.style.fillOpacity=dimmed(it)?0.12:(light?0.28:0.88);
-  if(it.status==="strittig"){ e.style.stroke="var(--crit)"; e.style.strokeWidth="2"; e.style.strokeDasharray="4 3"; }
-  e.addEventListener("mouseenter",()=>showInfo(it)); e.addEventListener("click",()=>openItem(it.id));
-}
-
-/* ---- Jahresrad ---- */
-function drawRad(){
-  const rs=visRows(), cx=340, cy=340, r0=84, r1=288;
-  const svg=el("svg",{viewBox:"0 0 680 680",role:"img","aria-label":"Jahresrad der Festivalsaison ab 1. Oktober"});
-  const A=t=>t/365*2*Math.PI-Math.PI/2, P=(r,a)=>(cx+r*Math.cos(a)).toFixed(1)+" "+(cy+r*Math.sin(a)).toFixed(1);
-  const arc=(ri,ro,d0,d1)=>{ const a0=A(d0),a1=A(d1),L=d1-d0>182.5?1:0; return "M"+P(ro,a0)+"A"+ro+" "+ro+" 0 "+L+" 1 "+P(ro,a1)+"L"+P(ri,a1)+"A"+ri+" "+ri+" 0 "+L+" 0 "+P(ri,a0)+"Z"; };
-  const w1=el("path",{d:arc(r0-6,r1+6,0,31)}); w1.style.fill="var(--crit)"; w1.style.fillOpacity=.09; svg.appendChild(w1);
-  const w2=el("path",{d:arc(r0-6,r1+6,31,61)}); w2.style.fill="var(--crit)"; w2.style.fillOpacity=.04; svg.appendChild(w2);
-  if(!rs.length){ const t=el("text",{x:cx,y:cy,"text-anchor":"middle","font-size":14}); t.style.fill="var(--text-2)"; t.textContent="Keine Ebene gewählt"; svg.appendChild(t); return svg; }
-  const gap=(i)=>i&&rs[i-1].level!==rs[i].level?8:2;
-  const gaps=rs.reduce((g,_,i)=>g+gap(i),0), tw=rs.reduce((a,r)=>a+(+r.weight||1),0), u=(r1-r0-gaps)/tw, pos={}; let r=r0;
-  rs.forEach((x,i)=>{ r+=gap(i); pos[x.id]=[r,r+(+x.weight||1)*u]; r+=(+x.weight||1)*u; });
-  MS.forEach((m,i)=>{ const d=CUM[m], a=A(d); const l=el("line",{x1:cx+(r0-6)*Math.cos(a),y1:cy+(r0-6)*Math.sin(a),x2:cx+(r1+6)*Math.cos(a),y2:cy+(r1+6)*Math.sin(a),"stroke-width":.6}); l.style.stroke="var(--border-strong)"; svg.appendChild(l);
-    const am=A(d+15), t=el("text",{x:cx+(r1+24)*Math.cos(am),y:cy+(r1+24)*Math.sin(am)+4,"text-anchor":"middle","font-size":13}); t.style.fill="var(--text-2)"; t.textContent=MON[i]; svg.appendChild(t); });
-  segs().forEach(it=>{ const p=pos[it.row_id]; if(!p) return; const[ri,ro]=p;
-    if(it.form==="dot"){ const a=A(cyc(it.starts_on)+.5), rm=(ri+ro)/2; const c=el("circle",{cx:cx+rm*Math.cos(a),cy:cy+rm*Math.sin(a),r:5}); styleSeg(c,it); c.style.fill="var(--sz-dot)"; c.style.fillOpacity=dimmed(it)?.2:1; c.style.stroke="var(--surface)"; c.style.strokeWidth="1.5"; svg.appendChild(c); return; }
-    spans(it).forEach(([a,b])=>{ const i2=it.form==="thin"?ri+(ro-ri)*.55:ri; const e=el("path",{d:arc(i2,ro,a+.3,Math.max(a+.6,b-.3))}); styleSeg(e,it); svg.appendChild(e); }); });
-  const ta=A(cyc(TODAY)+.5); const nd=el("line",{x1:cx+(r0-8)*Math.cos(ta),y1:cy+(r0-8)*Math.sin(ta),x2:cx+(r1+8)*Math.cos(ta),y2:cy+(r1+8)*Math.sin(ta),"stroke-width":1.8}); nd.style.stroke="var(--text)"; svg.appendChild(nd);
-  [["Saison 2026/27",-10,15,"var(--text)",600],["beginnt 1. Oktober",10,12,"var(--text-2)",400],["heute "+fmt(TODAY),28,12,"var(--text-2)",400]].forEach(([s,dy,f,c,w])=>{ const t=el("text",{x:cx,y:cy+dy,"text-anchor":"middle","font-size":f,"font-weight":w}); t.style.fill=c; t.textContent=s; svg.appendChild(t); });
-  return svg;
-}
-
-/* ---- Zeitleiste ---- */
-function drawLeiste(){
-  const rs=visRows(), x0=172, x1=670, h=22, g=5, top=28, X=d=>x0+d/365*(x1-x0); let y=top; const pos={};
-  rs.forEach((r,i)=>{ if(i&&rs[i-1].level!==r.level) y+=10; pos[r.id]=y; y+=h+g; });
-  const H=y+34, svg=el("svg",{viewBox:"0 0 680 "+H,role:"img","aria-label":"Zeitleiste der Festivalsaison ab 1. Oktober"});
-  const b1=el("rect",{x:X(0),y:top-6,width:X(31)-X(0),height:y-top+6}); b1.style.fill="var(--crit)"; b1.style.fillOpacity=.09; svg.appendChild(b1);
-  const b2=el("rect",{x:X(31),y:top-6,width:X(61)-X(31),height:y-top+6}); b2.style.fill="var(--crit)"; b2.style.fillOpacity=.04; svg.appendChild(b2);
-  MS.forEach((m,i)=>{ const d=CUM[m]; const l=el("line",{x1:X(d),y1:top-6,x2:X(d),y2:y,"stroke-width":.6}); l.style.stroke="var(--border-strong)"; svg.appendChild(l);
-    const t=el("text",{x:X(d+15),y:16,"text-anchor":"middle","font-size":12}); t.style.fill="var(--text-2)"; t.textContent=MON[i]; svg.appendChild(t); });
-  rs.forEach(r=>{ const t=el("text",{x:0,y:pos[r.id]+15,"font-size":13,"font-weight":r.level===1?600:400}); t.style.fill=r.level===1?"var(--text)":"var(--text-2)"; t.style.cursor="pointer"; t.textContent=r.label.length>24?r.label.slice(0,23)+"…":r.label; t.addEventListener("click",()=>openRow(r.id)); svg.appendChild(t); });
-  segs().forEach(it=>{ const yy=pos[it.row_id]; if(yy===undefined) return;
-    if(it.form==="dot"){ const c=el("circle",{cx:X(cyc(it.starts_on)+.5),cy:yy+h/2,r:5}); styleSeg(c,it); c.style.fill="var(--sz-dot)"; c.style.fillOpacity=dimmed(it)?.2:1; c.style.stroke="var(--surface)"; c.style.strokeWidth="1.5"; svg.appendChild(c); return; }
-    spans(it).forEach(([a,b])=>{ const th=it.form==="thin"; const e=el("rect",{x:X(a)+.4,y:th?yy+h*.55:yy,width:Math.max(2,X(b)-X(a)-.8),height:th?h*.45:h,rx:3}); styleSeg(e,it); svg.appendChild(e); }); });
-  const tx=X(cyc(TODAY)+.5); const nd=el("line",{x1:tx,y1:top-6,x2:tx,y2:y,"stroke-width":1.8}); nd.style.stroke="var(--text)"; svg.appendChild(nd);
-  const t=el("text",{x:tx,y:y+20,"text-anchor":"end","font-size":12}); t.style.fill="var(--text-2)"; t.textContent="heute "+fmt(TODAY); svg.appendChild(t);
-  return svg;
-}
-
-function rowOf(id){ return ROWS.find(r=>r.id===id); }
-function statusWord(s){ return s==="abgestimmt"?gfZustand("ok","abgestimmt"):s==="strittig"?gfZustand("crit","strittig"):gfZustand("offen","Vorschlag"); }
-function showInfo(it){
-  const r=rowOf(it.row_id), z=it.starts_on===it.ends_on?fmt(it.starts_on):fmt(it.starts_on)+" bis "+fmt(it.ends_on);
-  const notes=[it.note_alex?`Alex: ${gfEsc(it.note_alex)}`:"",it.note_lea?`Lea: ${gfEsc(it.note_lea)}`:""].filter(Boolean).join(" · ");
-  $("#info").innerHTML=`<b>${gfEsc(r?r.label:"")} · ${gfEsc(it.title)}</b> · ${z} · ${statusWord(it.status)}<br>${gfEsc(it.body||"")}${notes?`<br><span class="sz-meta">${notes}</span>`:""}`;
-}
-function renderStats(){
-  const n=ITEMS.length, ab=ITEMS.filter(i=>i.status==="abgestimmt").length, st=ITEMS.filter(i=>i.status==="strittig").length;
-  $("#stats").innerHTML=`${gfZustand("ok",ab+" von "+n+" abgestimmt")} ${st?gfZustand("crit",st+" strittig"):""}`;
-}
-function renderLegend(){
-  $("#legend").innerHTML=CATS.map(([k,l])=>`<span><i class="sz-sw" style="background:${col(k)}"></i>${l}</span>`).join("")+
-    `<span><i class="sz-sw" style="background:var(--sz-sales);opacity:.3"></i>Verkauf läuft</span><span><i class="sz-sw" style="background:var(--sz-dot);border-radius:50%"></i>VVK-Start</span><span><i class="sz-sw" style="border:2px dashed var(--crit)"></i>strittig</span>`;
-  $("#rowChips").innerHTML=`<span class="sz-meta" style="align-self:center">Zeilen bearbeiten:</span>`+ROWS.map(r=>`<button class="chip" data-row="${gfEsc(r.id)}">${gfEsc(r.label)}</button>`).join("");
-}
-function renderOpen(){
-  const open=ITEMS.filter(i=>i.status!=="abgestimmt");
-  $("#openHint").textContent=open.length?open.length+" offen":"alles abgestimmt";
-  if(!open.length){ $("#openList").innerHTML=`<div class="empty soft">Alles abgestimmt. Die Saison kann ans Team.</div>`; return; }
-  let html="";
-  ROWS.forEach(r=>{ const list=open.filter(i=>i.row_id===r.id); if(!list.length) return;
-    html+=`<div class="sz-grp">${gfEsc(r.label)}</div>`+list.map(i=>`<button class="sz-item" data-id="${i.id}">
-      <i class="sz-sw" style="background:${col(i.cat)}"></i>
-      <span><span class="t">${gfEsc(i.title)}</span> <span class="m">${i.starts_on===i.ends_on?fmt(i.starts_on):fmt(i.starts_on)+" bis "+fmt(i.ends_on)}</span></span>
-      ${statusWord(i.status)}
-      ${(i.note_alex||i.note_lea)?`<span class="n">${i.note_alex?"Alex: "+gfEsc(i.note_alex):""}${i.note_alex&&i.note_lea?" · ":""}${i.note_lea?"Lea: "+gfEsc(i.note_lea):""}</span>`:""}
-    </button>`).join(""); });
-  $("#openList").innerHTML=html;
-}
-const WHAT={item_add:"neu",item_update:"geändert",item_delete:"entfernt",row_add:"Zeile neu",row_update:"Zeile geändert",row_delete:"Zeile entfernt"};
-function renderLog(){
-  if(!LOG.length){ $("#logList").innerHTML=`<div class="empty soft">Noch keine Änderungen.</div>`; return; }
-  $("#logList").innerHTML=LOG.slice(0,12).map(l=>{ const r=rowOf(l.row_id); const t=l.detail&&(l.detail.title||l.detail.label)||"";
-    return `<div class="sz-item" style="cursor:default"><i></i><span><span class="t">${gfEsc(t)}</span> <span class="m">${gfEsc(r?r.label:"")}</span></span><span class="m">${gfEsc(WHAT[l.what]||l.what)} · ${gfEsc(l.who||"")} · ${new Date(l.at).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}</span></div>`; }).join("");
-}
-function draw(){ const st=$("#stage"); st.innerHTML=""; st.appendChild(VIEW==="rad"?drawRad():drawLeiste()); $$("[data-view]").forEach(b=>b.classList.toggle("on",b.dataset.view===VIEW)); }
-function renderAll(){ draw(); renderStats(); renderLegend(); renderOpen(); renderLog(); }
-
-/* ---- Bearbeiten: Element ---- */
-function panelOpen(title){ $("#pTitle").textContent=title; $("#panel").classList.add("open"); $("#pBack").classList.add("open"); $("#panel").setAttribute("aria-hidden","false"); }
-function panelClose(){ if(OPEN&&OPEN.dirty&&OPEN.id) saveItem(true); OPEN=null; $("#panel").classList.remove("open"); $("#pBack").classList.remove("open"); $("#panel").setAttribute("aria-hidden","true"); }
-$("#pClose").onclick=panelClose; $("#pBack").onclick=panelClose;
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#panel").classList.contains("open")) panelClose(); });
-
-function openItem(id, preset){
-  const it=id?ITEMS.find(x=>x.id===id):Object.assign({row_id:(ROWS[2]||ROWS[0]).id,title:"",starts_on:TODAY,ends_on:TODAY,cat:"plan",form:"band",anchor_start:"fest",anchor_end:"fest",status:"vorschlag"},preset||{});
-  if(!it) return;
-  OPEN={kind:"item",id:it.id||null,dirty:false};
-  const me=gfWho();
-  $("#pBody").innerHTML=`<div class="fgrid">
-    <div class="fld ffull"><label>Titel</label><input name="title" value="${gfEsc(it.title)}" placeholder="Was passiert?" /></div>
-    <div class="fld ffull"><label>Status</label>${gfChips("status",STAT,it.status,{label:"Status"})}</div>
-    <div class="fld"><label>von</label><input name="starts_on" type="date" value="${it.starts_on}" /></div>
-    <div class="fld"><label>bis</label><input name="ends_on" type="date" value="${it.ends_on}" /></div>
-    <div class="fld ffull"><label>Zeile</label>${gfChips("row_id",ROWS.map(r=>[r.id,r.label]),it.row_id,{label:"Zeile"})}</div>
-    <div class="fld ffull"><label>Kategorie</label>${gfChips("cat",CATS,it.cat,{label:"Kategorie"})}</div>
-    <div class="fld ffull"><label>Darstellung</label>${gfChips("form",FORMS,it.form,{label:"Darstellung"})}</div>
-    <div class="fld"><label>Beginn hängt an</label>${gfChips("anchor_start",ANCH,it.anchor_start,{label:"Beginn hängt an"})}</div>
-    <div class="fld"><label>Ende hängt an</label>${gfChips("anchor_end",ANCH,it.anchor_end,{label:"Ende hängt an"})}</div>
-    <div class="fld ffull"><label>Beschreibung</label><textarea name="body" rows="3">${gfEsc(it.body||"")}</textarea></div>
-    <div class="fld ffull"><label>Anmerkung Alex</label><textarea name="note_alex" rows="2"${me==="Lea"?' placeholder="Alex trägt hier ein"':""}>${gfEsc(it.note_alex||"")}</textarea></div>
-    <div class="fld ffull"><label>Anmerkung Lea</label><textarea name="note_lea" rows="2"${me==="Alex"?' placeholder="Lea trägt hier ein"':""}>${gfEsc(it.note_lea||"")}</textarea></div>
-  </div>
-  <div class="sz-meta">Hängt ein Termin am VVK-Start oder am Festival, wandert er mit, wenn sich dieses Datum in der Zeile ändert. ${it.updated_by?`Zuletzt ${gfEsc(it.updated_by)}, ${new Date(it.updated_at).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}.`:""}</div>`;
-  $("#pFoot").innerHTML=it.id
-    ? `<span class="sz-meta" id="pState">Speichert automatisch</span><button class="btn btn-sm btn-ghost" id="pDel" style="margin-left:auto">Entfernen</button>`
-    : `<button class="btn btn-primary" id="pSave">Anlegen</button><button class="btn btn-ghost" id="pCancel">Abbrechen</button>`;
-  panelOpen(it.id?"Element bearbeiten":"Neues Element");
-  const b=$("#pBody");
-  const mark=()=>{ OPEN.dirty=true; if(!OPEN.id) return; const s=$("#pState"); if(s) s.textContent="Ungespeichert …"; clearTimeout(TIMER); TIMER=setTimeout(()=>saveItem(true),700); };
-  b.addEventListener("input",mark); b.addEventListener("change",mark);
-  if(it.id) $("#pDel").onclick=async()=>{ if(!confirm("Dieses Element entfernen?")) return; try{ await szApi("item_delete",{id:it.id,who:gfWho()}); ITEMS=ITEMS.filter(x=>x.id!==it.id); OPEN=null; panelClose(); await loadLog(); renderAll(); gfToast("Entfernt"); }catch(e){ gfToast("Fehler: "+e.message); } };
-  else { $("#pSave").onclick=()=>saveItem(false); $("#pCancel").onclick=()=>{ OPEN=null; panelClose(); }; }
-  setTimeout(()=>{ const f=b.querySelector('[name="title"]'); if(f&&!it.id) f.focus(); },60);
-}
-function readForm(){ const o={}; $$("#pBody [name]").forEach(f=>{ o[f.name]=f.value; }); return o; }
-async function saveItem(silent){
-  if(!OPEN||OPEN.kind!=="item") return; clearTimeout(TIMER);
-  const f=readForm(); if(!f.ends_on) f.ends_on=f.starts_on;
-  if(f.ends_on<f.starts_on){ const s=$("#pState"); if(s) s.textContent="Ende liegt vor dem Anfang"; else gfToast("Ende liegt vor dem Anfang"); return; }
-  const payload=Object.assign({},f,{id:OPEN.id||undefined,who:gfWho()});
-  try{
-    const d=await szApi("item_save",payload);
-    const i=ITEMS.findIndex(x=>x.id===d.item.id); if(i>=0) ITEMS[i]=d.item; else ITEMS.push(d.item);
-    if(OPEN){ OPEN.dirty=false; }
-    const s=$("#pState"); if(s) s.textContent="Gespeichert";
-    loadLog().then(renderLog);
-    draw(); renderStats(); renderOpen();
-    if(!payload.id){ OPEN=null; panelClose(); gfToast("Angelegt"); openItem(d.item.id); }
-  }catch(e){ const s=$("#pState"); if(s) s.textContent="Fehler: "+e.message; else gfToast("Fehler: "+e.message); }
-}
-
-/* ---- Bearbeiten: Zeile ---- */
-function openRow(id){
-  const r=id?rowOf(id):{id:"",label:"",level:2,kind:"department"}; if(!r) return;
-  OPEN={kind:"row",id:r.id||null};
-  const fest=r.kind==="festival"||r.kind==="strang";
-  $("#pBody").innerHTML=`<div class="fgrid">
-    <div class="fld ffull"><label>Name</label><input name="label" value="${gfEsc(r.label)}" /></div>
-    <div class="fld ffull"><label>Ebene</label>${gfChips("level",LVL,String(r.level),{label:"Ebene"})}</div>
-    <div class="fld ffull"><label>Art</label>${gfChips("kind",KINDS,r.kind,{label:"Art"})}</div>
-    <div class="fld"><label>VVK-Start</label><input name="vvk_start" type="date" value="${r.vvk_start||""}" /></div>
-    <div class="fld"><label>Verkaufsziel</label><input name="target" inputmode="numeric" value="${r.target??""}" /></div>
-    <div class="fld"><label>Festival von</label><input name="festival_start" type="date" value="${r.festival_start||""}" /></div>
-    <div class="fld"><label>Festival bis</label><input name="festival_end" type="date" value="${r.festival_end||""}" /></div>
-    <div class="fld ffull"><label>Notiz</label><textarea name="note" rows="2">${gfEsc(r.note||"")}</textarea></div>
-  </div>
-  <div class="sz-meta">${fest?"Ändert sich der VVK-Start oder der Festivaltermin, verschieben sich Vorlauf, Verkauf und Stichtag dieser Zeile mit. ":""}Die Termine in der Plattform Wilde Habitate bleiben unverändert, bis ihr die Saison freigebt.</div>`;
-  $("#pFoot").innerHTML=`<button class="btn btn-primary" id="rSave">${r.id?"Speichern":"Anlegen"}</button><button class="btn btn-sm btn-brand" id="rAdd"${r.id?"":" hidden"}>Element in dieser Zeile</button>${r.id?`<button class="btn btn-sm btn-ghost" id="rDel" style="margin-left:auto">Zeile entfernen</button>`:""}`;
-  panelOpen(r.id?"Zeile bearbeiten":"Neue Zeile");
-  $("#rSave").onclick=async()=>{ const f=readForm(); try{ const d=await szApi("row_save",Object.assign(f,{id:r.id||undefined,who:gfWho()})); await load(); gfToast(d.moved?`Gespeichert, ${d.moved} Termine mitverschoben`:"Gespeichert"); OPEN=null; panelClose(); }catch(e){ gfToast("Fehler: "+e.message); } };
-  if(r.id) $("#rAdd").onclick=()=>{ OPEN=null; panelClose(); openItem(null,{row_id:r.id}); };
-  if(r.id) $("#rDel").onclick=async()=>{ if(!confirm(`Zeile „${r.label}“ mit allen Elementen entfernen?`)) return; try{ await szApi("row_delete",{id:r.id,who:gfWho()}); OPEN=null; panelClose(); await load(); gfToast("Zeile entfernt"); }catch(e){ gfToast("Fehler: "+e.message); } };
-}
-
-/* ---- Bedienung ---- */
-$$("[data-view]").forEach(b=>b.onclick=()=>{ VIEW=b.dataset.view; try{ localStorage.setItem("gf_sz_view",VIEW); }catch(e){} draw(); });
-$$("[data-lvl]").forEach(c=>c.onchange=draw);
-$("#nurOffen").onchange=draw;
-$("#openList").addEventListener("click",e=>{ const b=e.target.closest(".sz-item[data-id]"); if(b) openItem(b.dataset.id); });
-$("#rowChips").addEventListener("click",e=>{ const b=e.target.closest("[data-row]"); if(b) openRow(b.dataset.row); });
-$("#newItem").onclick=()=>openItem(null);
-$("#newRow").onclick=()=>openRow(null);
-
-async function loadLog(){ try{ const l=await szApi("log",{limit:30}); LOG=l.log||[]; }catch(e){ LOG=[]; } }
-async function load(){
-  const d=await szApi("get",{});
-  ROWS=(d.rows||[]).map(r=>Object.assign(r,{level:+r.level}));
-  ITEMS=d.items||[];
-  await loadLog();
-  renderAll();
-}
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("saison");
-  gfMountHero("karten","Saison 2026/27","Jahresrad der Festivalsaison. Alex und Lea stimmen hier ab, bevor die Saison ans Team geht.",{compact:true});
-  $("#stage").innerHTML=gfSkeleton(1);
-  try{ await load(); }catch(e){ $("#stage").innerHTML=`<div class="empty soft">Die Saison ließ sich nicht laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+  gfMountHero("karten","Saison 2026/27","Was in welcher Phase bis wann passieren muss, und wer es trägt.",{slim:true});
+  spRender();
 });
 </script>
 </body>

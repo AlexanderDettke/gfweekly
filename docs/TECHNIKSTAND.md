@@ -442,3 +442,14 @@ erreicht, steht der Fall im Protokoll, statt den Rücksync still stehen zu lasse
 - Kreislauf-Logik der Anzeige: Termine werden nach Monat und Tag auf den Kreis ab 1. Oktober gelegt, nicht nach Jahr; ein Vorlauf im September der Vorsaison liegt also am Ende des Kreises. Länge über 365 Tage wird gekappt.
 - Geprüft (Playwright im Cowork-Container gegen die echten 51 Elemente, Edge Function abgefangen, Bilder nicht geladen): 1440 dunkel, 1440 hell, 390 dunkel, Zeitleiste, Panel; keine Skriptfehler. Wirkung in der Datenbank geprüft über pg_net: row_save mit geändertem VVK-Start verschob den Vorlauf um 14 Tage (Testzeile danach gelöscht).
 - Offen: Freigabe-Knopf „fürs Team“ (Übergabe an den Habitat Hub und Korrektur von `vvp_events.sales_start_on`), Saisonblock auf der Startseite, Ablösung der alten Phasenleiste auf jahr.html nach der Abstimmung.
+
+## V26 (30.09.2026) · Saison: fünf Metaphasen als Steckbriefe, aus Cowork
+
+Anlass: Alex fand Jahresrad und farbige Zeitleiste auf Anhieb unverständlich und wollte jede Metaphase im Detail sehen, mit seinen Namen (Abbau und Analyse · Systembau, Launch und Formatpartner · Kernteam-Planung · Onboarding · Aufbau und Produktion). Analyse und Vorschläge im Claude Doc „Saisonplanung im Hohen Haus: Analyse und Vorschläge“.
+
+- `site/saison.html` neu: Wortkette der fünf Phasen, Block „Die nächsten Termine“, je Phase ein aufklappbarer Steckbrief (Worum es geht, So arbeitet das Team, Fertig wenn, Was bis wann mit Wer, Übergang). Die Phase Systembau, Launch und Formatpartner hat drei aufklappbare Teile mit Launch-Tabelle je Festival. Keine Farbcodes; Status steht als Wort, „Vorschlag“ und „offen“ als Marke.
+- Die Inhalte stehen im HTML (Stand 30.09.2026). Das Skript rechnet aus dem heutigen Datum: laufende und nächste Phase (Marke, Hervorhebung, welche Steckbriefe offen sind), die nächsten fünf Termine mit Abstand in Worten, den Launch-Stand je Festival, das Ausblenden des Oktober-Hinweises nach dem 01.11.
+- Die Seite ruft keine Edge Function außer dem Gate. Die Tabellen `gfweekly_saison_*` und die Edge Function `saison` bleiben unverändert; das frühere Jahresrad liegt als `site/saison-rad.html` ohne Navigation.
+- `core.js`: nur der Hinweistext des Navigationseintrags Saison. Assets auf `?v=25` in allen Seiten.
+- `pruefung/schirme.mjs`: `saison.html` mit `#spDates` in die Schirmliste aufgenommen.
+- Offen: Inhalte aus Daten statt aus dem HTML (Launch-Cockpit in Wilde Habitate, Termine aus `vvp_events`), Zuordnung der Launch-Aufgaben an Personen, Abnahme-Lauf (`pruefung/abnahme.sh`) für diesen Stand.
