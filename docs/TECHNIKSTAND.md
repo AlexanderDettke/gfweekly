@@ -485,3 +485,7 @@ Grundlage: Auftrag „Phase B der Saisonplanung“ vom 30.09.2026 auf dem Datenm
 - Der Stand aller 122 offenen Meilensteine ist `not_started`, auch für Vergangenes (Fluidity, Wilde Möhre); Erledigtes muss von Hand auf „erledigt“ gesetzt werden, sonst zählt es in die Last.
 - Der Übergebende für Angebotsaufgaben ist die Festivalverantwortung des Festivals, sonst Alex. Bei Fluidity (Festivalverantwortung extern) und der Draußenbande (offen) landet die Aufgabe bei Alex.
 - Das Asana-Projekt merkt sich die Kennung nur im Protokoll (`gfweekly_saison_log`), weil `vvp_launch_plans` dafür keine Spalte hat; ein gelöschtes Protokoll führt zur Suche nach dem Projektnamen.
+
+## V27 Phase C (30.09.2026) · Abschluss der Saisonplanung, aus Cowork
+
+Abschluss laut Systemauftrag v1.0: Zuordnungstabelle „bestehende Logik → beibehalten, erweitern, ersetzen → Begründung → Wirkung auf Daten“ sowie die Trennung implementiert, befüllt, offen liegen im Projektdokument `claude/Saisonplanung_Abschluss_PhaseC_2026-09-30.md` (Projekt Geschäftsführung). Kurzfassung: Launch-Cockpit, vvp_events, Coda, TPA und Vertretungsmuster beibehalten und verknüpft; Saisondarstellung ersetzt (Daten unverändert); Pool und Kapazität minimal neu in gfweekly_people; vvp_launch_tasks und die leeren Personentabellen unverändert. Keine Zugriffshinderung. Offen bleiben die GF-Entscheidungen (Ergebnisverantwortung je Festival, Draußenbande-Termin, by nature 2027, Stunden je Person) und zwei Folgeaufträge: Saisonseite auf Daten statt HTML, Abgleich gfweekly_cycle_phases und gfweekly_milestones.
