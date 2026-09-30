@@ -59,7 +59,7 @@ const SEITEN = [
   ['seiten.html', '#groups'], ['bearbeiten.html', '#itemsView'], ['aufraeumen.html', '#list'], ['checkin.html', '#agenda'],
   ['inbox.html', '#list'],
   ['vertretung.html', '#absList'], ['uebergabe.html', '#list'], ['rueckkehr.html', '#entList'],
-  ['saison.html', '#spDates'],
+  ['saison.html', '#spDates'], ['launch.html', '#lnAufgaben'],
 ];
 const SCHIRME = [ { name:'1440', w:1440, h:900 }, { name:'390', w:390, h:844 } ];
 const THEMES = ['dark','light'];
@@ -222,7 +222,7 @@ for (const thema of THEMES) {
       }, kern);
       if (befund.tor) meldungen.push('Tor blieb zu');
       if (!befund.app) meldungen.push('Seiteninhalt blieb verborgen');
-      if (befund.nav !== 12) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 12 Haupteinträgen)');
+      if (befund.nav !== 14) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 14 Haupteinträgen)');
       if (befund.unternav !== 4) meldungen.push('Unternavigation unvollständig (' + befund.unternav + ' von 4 Einträgen)');
       if (befund.fehltext.length) meldungen.push('Fehlermeldung auf der Seite: ' + befund.fehltext.join(', '));
       if (befund.kern < 0) meldungen.push('Kerninhalt ' + kern + ' fehlt im Aufbau');

@@ -25,7 +25,7 @@ echo "$KONTRAST" | tail -1
 echo "\n== Matrix (reine Funktion, ohne Edge Function) =="
 node pruefung/matrix-test.mjs | tail -1
 
-echo "\n== Schirme (16 Seiten, 1440 und 390, dunkel und hell) =="
+echo "\n== Schirme (18 Seiten, 1440 und 390, dunkel und hell) =="
 node pruefung/schirme.mjs "$ZIEL"
 
 echo "\n== Bedienung (Vertretung: Übergabe, Wache, Anlegen, Rückkehr) =="

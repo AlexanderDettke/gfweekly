@@ -6,19 +6,20 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Das Hohe Haus · Saison</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=25" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=25" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=25" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=25" />
-<link rel="stylesheet" href="/assets/styles.css?v=25" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=26" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=26" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=26" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=26" />
+<link rel="stylesheet" href="/assets/styles.css?v=26" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 <style>
 /* Saison (V25, 30.09.2026): die fünf Metaphasen als Steckbriefe in Worten, ohne Farbcode.
+   30.09.2026, Phase B: Beschriftungen in Teilen auf --surface-2 von --text-3 auf --text-2, weil die Schirmprüfung 4,19:1 gemessen hat.
    Status, Fristen und Abstände rechnet die Seite aus dem heutigen Datum; die Inhalte stehen im HTML. */
 #sp{max-width:880px;display:grid;gap:22px;margin-top:6px}
 #sp .sp-lead{color:var(--text-2);max-width:66ch;margin:0;line-height:var(--leading-text)}
 #sp .sp-key{font-size:var(--stufe-2);color:var(--text-3);margin:6px 0 0}
-.sp-eb{font-size:var(--stufe-1);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
+.sp-eb{font-size:var(--stufe-1);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-2)}
 
 /* Phasen als Wortkette */
 .sp-chain{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:0;padding:0;list-style:none}
@@ -27,10 +28,10 @@
 .sp-chain a:hover{border-color:var(--border-strong)}
 .sp-chain a:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .sp-chain b{display:block;font-size:var(--stufe-2);font-weight:600;line-height:1.3}
-.sp-chain span{display:block;font-size:var(--stufe-1);color:var(--text-3);margin-top:2px}
+.sp-chain span{display:block;font-size:var(--stufe-1);color:var(--text-2);margin-top:2px}
 .sp-chain .ist-jetzt a{background:var(--accent-soft);border-color:var(--accent)}
 .sp-chain .ist-naechste a{border-color:var(--action)}
-.sp-chain .ist-vorbei a{opacity:.72}
+.sp-chain .ist-vorbei a{opacity:.85}
 
 /* Die nächsten Termine */
 .sp-jetzt{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);padding:16px 18px}
@@ -70,7 +71,7 @@ details[open] > summary .sp-chev{transform:rotate(90deg)}
 .sp-steps{list-style:none;margin:0;padding:0;border-top:var(--rahmen) solid var(--border)}
 .sp-steps li{display:grid;grid-template-columns:7.4rem minmax(0,1fr) auto;gap:3px 14px;padding:9px 0;border-bottom:var(--rahmen) solid var(--border);align-items:baseline}
 .sp-steps .d{font-size:var(--stufe-2);font-weight:700;font-variant-numeric:tabular-nums}
-.sp-steps .who{font-size:var(--stufe-2);color:var(--text-3);text-align:right}
+.sp-steps .who{font-size:var(--stufe-2);color:var(--text-2);text-align:right}
 .sp-steps .x{grid-column:2/-1;font-size:var(--stufe-2);color:var(--text-2);line-height:var(--leading-text)}
 .sp-vs,.sp-offen{font-size:.66rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:var(--radius-s);padding:0 5px;margin-left:6px;vertical-align:1px;white-space:nowrap}
 .sp-vs{color:var(--text);border:var(--rahmen) solid var(--action)}
@@ -83,7 +84,7 @@ details.sp-part{background:var(--surface-2);border-radius:var(--radius-m)}
 .sp-tbl{overflow-x:auto}
 .sp-tbl table{width:100%;border-collapse:collapse;font-size:var(--stufe-2)}
 .sp-tbl th,.sp-tbl td{text-align:left;padding:8px 12px 8px 0;border-bottom:var(--rahmen) solid var(--border);vertical-align:top}
-.sp-tbl th{font-size:var(--stufe-1);letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);font-weight:700}
+.sp-tbl th{font-size:var(--stufe-1);letter-spacing:.06em;text-transform:uppercase;color:var(--text-2);font-weight:700}
 .sp-tbl td{font-variant-numeric:tabular-nums}
 .sp-tbl td.bald{font-weight:600}
 .sp-hand{border-left:3px solid var(--action);padding:2px 0 2px 12px;color:var(--text-2);line-height:var(--leading-text)}
@@ -309,9 +310,9 @@ details.sp-part{background:var(--surface-2);border-radius:var(--radius-m)}
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=25"></script>
-<script src="/assets/game.js?v=25"></script>
-<script src="/assets/eggs.js?v=25" defer></script>
+<script src="/assets/core.js?v=26"></script>
+<script src="/assets/game.js?v=26"></script>
+<script src="/assets/eggs.js?v=26" defer></script>
 <script>
 /* Termine, die in „Die nächsten Termine“ erscheinen. Bereiche als Wort, keine Farbe. */
 const SP_TERMINE=[

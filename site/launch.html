@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#171d18" />
+<title>Das Hohe Haus · Launch verteilen</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=26" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=26" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=26" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=26" />
+<link rel="stylesheet" href="/assets/styles.css?v=26" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
+<style>
+/* Launch verteilen (V27 Phase B, 30.09.2026): Festivalwahl, Lage, vier Wege, Aufgaben je Bereich, Zeit je Person,
+   Bestätigen und Senden. Alles in Worten; Status und Last stehen als Wort, Farbe trägt keine Bedeutung. */
+#ln{max-width:1040px;display:grid;gap:22px;margin-top:6px}
+.ln-lead{color:var(--text-2);max-width:70ch;margin:0;line-height:var(--leading-text)}
+.ln-eb{font-size:var(--stufe-1);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
+.ln-sec{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);padding:16px 18px;display:grid;gap:12px}
+.ln-sec h2{font-size:var(--stufe-4);margin:0}
+.ln-sec h3{font-size:var(--stufe-3);margin:0}
+.ln-muted{color:var(--text-2);font-size:var(--stufe-2);line-height:var(--leading-text);margin:0}
+.ln-note{background:var(--warn-bg);color:var(--text);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:var(--leading-text)}
+.ln-note b{color:var(--warn)}
+.ln-ok{background:var(--pos-bg);color:var(--text);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:var(--leading-text)}
+
+/* Festivalwahl */
+.ln-fest{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:0;padding:0;list-style:none}
+.ln-fest button{width:100%;text-align:left;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:9px 12px;min-height:44px;color:var(--text)}
+.ln-fest button:hover{border-color:var(--border-strong)}
+.ln-fest button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.ln-fest button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.ln-fest b{display:block;font-size:var(--stufe-2);font-weight:600;line-height:1.3}
+.ln-fest span{display:block;font-size:var(--stufe-1);color:var(--text-2);margin-top:2px}
+
+/* Lage */
+.ln-lage p.satz{margin:0;font-size:var(--stufe-3);line-height:var(--leading-text);max-width:70ch}
+.ln-lage .kk-row{grid-template-columns:repeat(4,minmax(0,1fr))}
+
+/* Vier Wege */
+.ln-wege{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+details.ln-weg{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l)}
+details.ln-weg[open]{border-color:var(--border-strong)}
+.ln-weg>summary{list-style:none;cursor:pointer;padding:14px 16px;display:grid;gap:3px;border-radius:var(--radius-l)}
+.ln-weg>summary::-webkit-details-marker{display:none}
+.ln-weg>summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.ln-weg>summary h3{display:flex;align-items:center;gap:8px}
+.ln-weg .chev{display:inline-block;margin-left:auto;color:var(--text-3);transition:transform var(--motion-fast,.15s)}
+details[open]>summary .chev{transform:rotate(90deg)}
+.ln-weg .body{padding:0 16px 16px;display:grid;gap:12px}
+.ln-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ln-row label{display:inline-flex;align-items:center;gap:6px;font-size:var(--stufe-2);color:var(--text-2)}
+.ln-row input[type=date],.ln-row select,.ln-sel{background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-s);color:var(--text);padding:6px 8px;min-height:36px;font-size:var(--stufe-2);max-width:100%}
+.ln-row .chk{display:inline-flex;align-items:center;gap:6px;font-size:var(--stufe-2);color:var(--text-2)}
+.ln-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.ln-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:8px 10px;background:var(--surface-2);border-radius:var(--radius-m);font-size:var(--stufe-2)}
+.ln-list li .x{grid-column:1/-1;color:var(--text-2)}
+.ln-list li b{font-weight:600}
+.ln-pers{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px}
+.ln-pers button{text-align:left;background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:8px 10px;min-height:44px;color:var(--text);font-size:var(--stufe-2)}
+.ln-pers button:hover{border-color:var(--border-strong)}
+.ln-pers button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.ln-pers button span{display:block;color:var(--text-2);font-size:var(--stufe-1);margin-top:2px}
+
+/* Aufgaben je Bereich */
+.ln-ber{display:grid;gap:8px}
+.ln-ber-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;padding-top:6px;border-top:var(--rahmen) solid var(--border)}
+.ln-ber-h h3{font-size:var(--stufe-3)}
+.ln-ber-h .wer{font-size:var(--stufe-2);color:var(--text-2)}
+.ln-ber-h .n{margin-left:auto;font-size:var(--stufe-1);color:var(--text-2);font-variant-numeric:tabular-nums}
+.ln-task{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1fr) minmax(0,1.3fr) minmax(0,1.6fr) minmax(0,1.6fr) minmax(0,1.6fr);gap:6px 12px;align-items:start;padding:10px 12px;background:var(--surface-2);border-radius:var(--radius-m)}
+.ln-task .t{font-weight:600;font-size:var(--stufe-2);line-height:1.35}
+.ln-task .k{display:block;font-size:var(--stufe-1);color:var(--text-2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+.ln-task .v{font-size:var(--stufe-2);font-variant-numeric:tabular-nums;line-height:1.35}
+.ln-task .zu{font-size:var(--stufe-1);color:var(--text-2);margin-top:4px}
+.ln-task select{width:100%}
+.ln-task .fchips.compact .chip{padding:5px 9px;font-size:var(--stufe-1);min-height:32px}
+.ln-task .fchips{gap:4px}
+
+/* Zeit je Person */
+.ln-zeit{display:grid;gap:6px}
+.ln-p{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr);gap:6px 12px;align-items:center;padding:9px 12px;background:var(--surface-2);border-radius:var(--radius-m);font-size:var(--stufe-2)}
+.ln-p .name{font-weight:600}
+.ln-p .typ{display:block;font-size:var(--stufe-1);color:var(--text-2)}
+.ln-p .bar{height:8px;background:var(--fill);border-radius:var(--radius-s);overflow:hidden}
+.ln-p .bar i{display:block;height:100%;background:var(--accent)}
+.ln-p .bw{display:grid;gap:4px}
+.ln-p .bw span{font-size:var(--stufe-1);color:var(--text-2)}
+.ln-p .stepper{max-width:150px}
+.ln-p .stepper input{width:54px}
+.ln-p input[type=date]{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-s);color:var(--text);padding:5px 7px;min-height:36px;font-size:var(--stufe-2);width:100%;max-width:170px}
+.ln-p .k{display:block;font-size:var(--stufe-1);color:var(--text-2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+
+/* Bestätigen und Senden */
+.ln-best .zahlen{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:var(--stufe-2);color:var(--text-2)}
+.ln-best .zahlen b{color:var(--text)}
+.ln-vorschau{display:grid;gap:8px}
+.ln-vorschau h4{margin:0;font-size:var(--stufe-2)}
+.ln-vorschau ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.ln-vorschau li{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.6fr) auto;gap:4px 12px;font-size:var(--stufe-2);padding:6px 10px;background:var(--surface-2);border-radius:var(--radius-s)}
+.ln-vorschau li .w{color:var(--text-2)}
+.ln-vorschau li .d{font-variant-numeric:tabular-nums;color:var(--text-2)}
+.ln-vorschau li .x{grid-column:1/-1;color:var(--text-2);font-size:var(--stufe-1)}
+.ln-foot{color:var(--text-3);font-size:var(--stufe-2);max-width:70ch;line-height:var(--leading-text)}
+
+@media (max-width:900px){
+  .ln-fest{grid-template-columns:1fr 1fr} .ln-fest li:last-child{grid-column:1/-1}
+  .ln-wege{grid-template-columns:1fr}
+  .ln-lage .kk-row{grid-template-columns:1fr 1fr}
+  .ln-task{grid-template-columns:1fr 1fr}
+  .ln-task .t{grid-column:1/-1}
+  .ln-p{grid-template-columns:1fr 1fr}
+  .ln-p .bw{grid-column:1/-1}
+  .ln-vorschau li{grid-template-columns:1fr}
+}
+@media (max-width:480px){ .ln-task{grid-template-columns:1fr} .ln-p{grid-template-columns:1fr} }
+@media (prefers-reduced-motion:reduce){.ln-weg .chev{transition:none}}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Das Hohe Haus</h1>
+    <div class="sub">Launch verteilen · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+  <div id="hero"></div>
+
+  <main id="ln">
+    <p class="ln-lead">Fünf Festivals gehen nacheinander in den Verkauf. Hier steht je Festival, welche Aufgaben offen sind, wer sie trägt, ob die Zeit reicht, und am Ende geht der bestätigte Plan nach Asana. Alle Stunden sind Richtwerte als Spanne und werden über Ist-Stunden kalibriert.</p>
+
+    <ol class="ln-fest" id="lnFest" aria-label="Festival wählen"></ol>
+
+    <section class="ln-sec ln-lage" aria-labelledby="lnLageH">
+      <div class="ln-eb" id="lnStand">Stand heute</div>
+      <h2 id="lnLageH">Die Lage</h2>
+      <p class="satz" id="lnSatz">lädt …</p>
+      <div class="kk-row" id="lnKpi"></div>
+      <div id="lnHinweise"></div>
+    </section>
+
+    <section aria-label="Vier Wege">
+      <div class="ln-wege">
+        <details class="ln-weg" id="wegA" open>
+          <summary><h3>So zuweisen wie vorgeschlagen<span class="chev" aria-hidden="true">›</span></h3><p class="ln-muted">Die Besetzung je Bereich aus Phase A übernehmen und bestätigen.</p></summary>
+          <div class="body" id="wegABody"></div>
+        </details>
+        <details class="ln-weg" id="wegB">
+          <summary><h3>Umverteilen oder selbst übernehmen<span class="chev" aria-hidden="true">›</span></h3><p class="ln-muted">Einen Bereich an eine andere Person aus dem Pool geben.</p></summary>
+          <div class="body" id="wegBBody"></div>
+        </details>
+        <details class="ln-weg" id="wegC">
+          <summary><h3>VVK-Start verschieben<span class="chev" aria-hidden="true">›</span></h3><p class="ln-muted">Neuer Termin, alle Zieltermine rechnen nach.</p></summary>
+          <div class="body" id="wegCBody"></div>
+        </details>
+        <details class="ln-weg" id="wegD">
+          <summary><h3>Hilfe dazuholen<span class="chev" aria-hidden="true">›</span></h3><p class="ln-muted">Externe, Minijobs, Agenturen oder Partner übernehmen einen Anteil.</p></summary>
+          <div class="body" id="wegDBody"></div>
+        </details>
+      </div>
+    </section>
+
+    <section class="ln-sec" aria-labelledby="lnAufgabenH">
+      <h2 id="lnAufgabenH">Aufgaben je Bereich</h2>
+      <p class="ln-muted">Fertig-am ist vorwärts gerechnet: Beginn heute oder wenn der letzte Vorgänger fertig ist, eine spätere Verfügbarkeit der Person schiebt den Beginn. Ziel ist der Termin aus VVK-Start und Richtwert.</p>
+      <div id="lnAufgaben">lädt …</div>
+    </section>
+
+    <section class="ln-sec" aria-labelledby="lnZeitH">
+      <h2 id="lnZeitH">Zeit je Person über alle laufenden Launches</h2>
+      <p class="ln-muted">Stunden aus allen fünf Launches im Fenster bis zum letzten eigenen Termin, geteilt durch die Wochen. Das Wort richtet sich nach der Mitte der Spanne: passt bis 85 Prozent, knapp bis 110 Prozent, sonst zu viel. Wer keine Stunden eingetragen hat, gilt nicht als überlastet. Stunden pro Woche und verfügbar ab sind direkt änderbar.</p>
+      <div class="ln-row"><label class="chk"><input type="checkbox" id="lnNurBeteiligte" checked> nur Personen mit Aufgaben</label></div>
+      <div class="ln-zeit" id="lnZeit"></div>
+    </section>
+
+    <section class="ln-sec ln-best" aria-labelledby="lnBestH">
+      <h2 id="lnBestH">Bestätigen und senden</h2>
+      <div id="lnBest"></div>
+    </section>
+
+    <p class="ln-foot">Daten aus dem Launch-Cockpit der Plattform (Pläne, Meilensteine, VVK-Starts), dem Personenpool und den Richtwerten aus Phase A. Bestätigungen und Versand stehen im Protokoll der Saison. Keine Personal- oder Vertragsdetails; Kosten erscheinen nur, wenn ein Stundensatz eingetragen ist.</p>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/assets/core.js?v=26"></script>
+<script src="/assets/launch-logik.js?v=26"></script>
+<script src="/assets/game.js?v=26"></script>
+<script src="/assets/eggs.js?v=26" defer></script>
+<script>
+/* V27 Phase B · Launch verteilen. Die Seite hält alle Daten aus launch_list, rechnet mit LaunchLogik
+   und schreibt über launch_set, launch_confirm, launch_send. Nach jedem Schreiben wird neu geladen. */
+const $=s=>document.querySelector(s);
+const LL=LaunchLogik;
+let D=null, CUR=null, HEUTE=null;
+let UI={ wegB:{ bereich:null, generator:false, gf:false }, wegD:{ helfer:null, milestone:null, als:'hilfe' }, wegC:{ datum:null }, best:{ von:null } };
+let saveTimer={};
+
+const fmtD=iso=>LL.kurz(iso);
+const fmtK=iso=>LL.kurzOhneJahr(iso);
+function fest(){ return (D.festivals||[]).find(f=>f.short_name===CUR)||D.festivals[0]; }
+function ms(f){ f=f||fest(); return (D.meilensteine||[]).filter(m=>m.plan_id===f.plan_id); }
+function bes(f){ f=f||fest(); return (D.besetzung||[]).filter(b=>b.event_id===f.event_id); }
+function person(id){ return (D.pool||[]).find(p=>p.id===id)||null; }
+function pname(id){ const p=person(id); return p?p.name:(id?"unbekannt":"niemand"); }
+function bereichName(k){ const b=(D.bereiche||[]).find(x=>x.key===k); return b?b.name:(k||"ohne Bereich"); }
+function verfMap(){ const o={}; for(const p of D.pool||[]) if(p.verfuegbar_ab) o[p.id]=p.verfuegbar_ab; return o; }
+function rechne(){
+  const f=fest();
+  const ketten={}; const fertigJe={};
+  for(const fx of D.festivals){ ketten[fx.short_name]=LL.kette(ms(fx), D.richtwerte, { heute:HEUTE, verfuegbarAb:verfMap() }); Object.assign(fertigJe, ketten[fx.short_name].je); }
+  const last=LL.last(D.meilensteine, LL.zuweisbar(D.pool), { heute:HEUTE, fertigJe });
+  const lage=LL.lage(ms(f), last, ketten[f.short_name]);
+  return { f, kette:ketten[f.short_name], ketten, last, lage };
+}
+function optionen(cur, opts={}){
+  const pool=LL.reihenfolge(LL.zuweisbar(D.pool));
+  const gruppe=(titel, liste)=>liste.length?`<optgroup label="${titel}">${liste.map(p=>`<option value="${p.id}"${p.id===cur?" selected":""}>${gfEsc(p.name)}${p.hat_asana?"":" · ohne Asana"}</option>`).join("")}</optgroup>`:"";
+  return `<option value=""${!cur?" selected":""}>${opts.leer||"niemand"}</option>`
+    + gruppe("Team", pool.filter(p=>p.typ==="team")) + gruppe("Hilfe", pool.filter(p=>LL.istHilfeTyp(p))) + gruppe("Geschäftsführung", pool.filter(p=>p.typ==="gf"));
+}
+
+/* ---- Festivalwahl ---- */
+function renderFest(){
+  $("#lnFest").innerHTML=D.festivals.map(f=>`<li><button type="button" data-f="${gfEsc(f.short_name)}" aria-pressed="${f.short_name===CUR}"><b>${gfEsc(f.kurzname)}</b><span>VVK ${f.sales_start_on?fmtK(f.sales_start_on):"offen"}${f.launch_type==="campaign_boost"?" · Kampagnen-Boost":""}</span></button></li>`).join("");
+}
+$("#lnFest").addEventListener("click",e=>{ const b=e.target.closest("button[data-f]"); if(!b) return; CUR=b.dataset.f; history.replaceState(null,"","?event="+encodeURIComponent(CUR)); UI.wegB.bereich=null; UI.wegD.milestone=null; renderAll(); });
+
+/* ---- Lage ---- */
+function renderLage(R){
+  const { f, lage }=R;
+  $("#lnStand").textContent="Stand heute, "+new Date(HEUTE+"T00:00:00").toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  $("#lnSatz").textContent=LL.lageSatz(f, lage);
+  $("#lnKpi").innerHTML=[
+    gfKachel({ icon:"meilenstein", value:lage.offen, label:"offene Aufgaben" }),
+    gfKachel({ icon:"zahl", value:LL.spanne(lage.stunden.lo, lage.stunden.hi), unit:"Std.", label:"nach Richtwerten, Spanne" }),
+    gfKachel({ icon:"frist", value:lage.fruehesterVVK?fmtK(lage.fruehesterVVK):"offen", label:"frühester machbarer VVK-Start", title: f.sales_start_on?`geplant ${fmtD(f.sales_start_on)}`:"" }),
+    gfKachel({ icon:"partner", value:lage.ueber, label:lage.ueber===1?"Person über ihrer Zeit":"Personen über ihrer Zeit", title:lage.ueberNamen.join(", ") }),
+  ].join("");
+  const hin=[...(f.hinweise||[])];
+  if(lage.fruehesterVVK && f.sales_start_on && lage.fruehesterVVK>f.sales_start_on) hin.push(`Nach den Richtwerten ist der VVK-Start ${fmtD(f.sales_start_on)} nicht zu halten; machbar ist frühestens der ${fmtD(lage.fruehesterVVK)}. Der Weg „VVK-Start verschieben“ rechnet die Termine nach.`);
+  if(lage.ohneZeit) hin.push(`${lage.ohneZeit} beteiligte ${lage.ohneZeit===1?"Person hat":"Personen haben"} keine Stunden je Woche eingetragen; ihre Last lässt sich nicht bewerten.`);
+  for(const b of bes(f)) if(!b.person_id) hin.push(`Bereich ${bereichName(b.bereich)} ist unbesetzt${b.notiz?": "+b.notiz:""}.`);
+  $("#lnHinweise").innerHTML=hin.map(h=>`<div class="ln-note" style="margin-top:6px"><b>Hinweis:</b> ${gfEsc(h)}</div>`).join("");
+}
+
+/* ---- Weg A: so zuweisen wie vorgeschlagen ---- */
+function renderWegA(R){
+  const { f }=R; const liste=ms(f).filter(m=>!LL.FERTIG.has(m.status));
+  const zeilen=(D.bereiche||[]).map(b=>{
+    const z=bes(f).find(x=>x.bereich===b.key); const meine=liste.filter(m=>m.bereich===b.key);
+    if(!meine.length) return "";
+    let lo=0,hi=0; for(const m of meine){ lo+=Number(m.aufwand_lo||0); hi+=Number(m.aufwand_hi||m.aufwand_lo||0); }
+    const wer=z&&z.person_id?pname(z.person_id):"offen";
+    return `<li><b>${gfEsc(b.name)}</b><span>${gfEsc(wer)}${z&&z.status==="bestaetigt"?" · bestätigt":""}</span><span class="x">${meine.length} ${meine.length===1?"Aufgabe":"Aufgaben"}, ${LL.spanne(lo,hi,"Std.")}${z&&z.quelle?" · Quelle: "+gfEsc(z.quelle):""}${z&&z.notiz?" · "+gfEsc(z.notiz):""}</span></li>`;
+  }).join("");
+  const vorschlaege=liste.filter(m=>m.person_id && (m.zuordnung_status==="vorschlag"||m.zuordnung_status==="offen")).length;
+  const ohne=liste.filter(m=>!m.person_id).length;
+  $("#wegABody").innerHTML=`<ul class="ln-list">${zeilen}</ul>
+    <p class="ln-muted">${vorschlaege} ${vorschlaege===1?"Vorschlag wartet":"Vorschläge warten"} auf Bestätigung${ohne?`, ${ohne} ${ohne===1?"Aufgabe hat":"Aufgaben haben"} niemanden`:""}. Bestätigen kann Alex oder Lea, eine Bestätigung reicht.</p>
+    <div class="ln-row"><button class="btn btn-primary" data-act="confirm" ${vorschlaege?"":"disabled"}>Vorschlag übernehmen und bestätigen als ${gfEsc(gfWho())}</button></div>`;
+}
+
+/* ---- Weg B: umverteilen oder selbst übernehmen ---- */
+function renderWegB(R){
+  const { f, last }=R;
+  const bereiche=(D.bereiche||[]).filter(b=>ms(f).some(m=>m.bereich===b.key && !LL.FERTIG.has(m.status)));
+  if(!UI.wegB.bereich && bereiche.length) UI.wegB.bereich=bereiche[0].key;
+  const z=bes(f).find(x=>x.bereich===UI.wegB.bereich);
+  const kand=LL.kandidaten(UI.wegB.bereich, D.pool, { last, generatorArbeit:UI.wegB.generator, mitGF:UI.wegB.gf });
+  const lastJe=new Map(last.map(l=>[l.person_id,l]));
+  $("#wegBBody").innerHTML=`
+    <div class="ln-row">${gfChips("wegBBereich", bereiche.map(b=>[b.key,b.name]), UI.wegB.bereich, {label:"Bereich", cls:"compact"})}</div>
+    <p class="ln-muted">Heute: <b>${gfEsc(z&&z.person_id?pname(z.person_id):"niemand")}</b>. Wer den Bereich übernimmt, bekommt alle noch nicht bestätigten Aufgaben darin.</p>
+    <div class="ln-row"><label class="chk"><input type="checkbox" id="wegBGen" ${UI.wegB.generator?"checked":""}> Generator-Arbeit an alle mit Zeit</label><label class="chk"><input type="checkbox" id="wegBGf" ${UI.wegB.gf?"checked":""}> Alex und Lea anzeigen</label></div>
+    <div class="ln-pers">${kand.map(p=>{ const l=lastJe.get(p.id); return `<button type="button" data-act="besetzung" data-p="${p.id}" aria-pressed="${z&&z.person_id===p.id}">${gfEsc(p.name)}<span>${gfEsc(LL.typWort(p.typ))} · ${gfEsc(p.grund)}${l?" · "+gfEsc(l.wort):""}</span></button>`; }).join("")||`<p class="ln-muted">Niemand im Pool trägt dieses Feld. Über die Auswahl in der Aufgabenliste ist trotzdem jede Person wählbar.</p>`}</div>
+    <div class="ln-row"><button class="btn btn-brand btn-sm" data-act="selbst">Selbst übernehmen (${gfEsc(gfWho())})</button><button class="btn btn-brand btn-sm" data-act="besetzung" data-p="">Bereich freigeben</button></div>`;
+}
+
+/* ---- Weg C: VVK-Start verschieben ---- */
+function renderWegC(R){
+  const { f, lage }=R;
+  const datum=UI.wegC.datum||f.sales_start_on||HEUTE;
+  const ab=LL.abstaende(D.festivals, f.event_id, datum);
+  const neu=LL.vvkVerschieben(ms(f), D.richtwerte, datum);
+  const geaendert=neu.filter(x=>x.geaendert).length;
+  $("#wegCBody").innerHTML=`
+    <div class="ln-row"><label>Neuer VVK-Start <input type="date" id="wegCDatum" value="${gfEsc(datum)}"></label>
+      ${lage.fruehesterVVK?`<button class="btn btn-brand btn-sm" data-act="vvk-machbar">auf den machbaren Termin (${fmtK(lage.fruehesterVVK)})</button>`:""}</div>
+    <ul class="ln-list">${ab.map(a=>`<li><b>${gfEsc(a.name)}</b><span>${LL.abstandWort(a.tage)} (VVK ${fmtK(a.sales_start_on)})</span></li>`).join("")}</ul>
+    <p class="ln-muted">${geaendert} ${geaendert===1?"Zieltermin ändert":"Zieltermine ändern"} sich, der alte Termin bleibt als „vorher“ am Meilenstein. Erledigtes wird nicht verschoben.${f.launch_type==="campaign_boost"?" Dieses Festival ist ein Kampagnen-Boost ohne festen Termin; der Wert wird trotzdem gespeichert.":""}</p>
+    <div class="ln-row"><button class="btn btn-primary" data-act="vvk" ${datum===f.sales_start_on?"disabled":""}>VVK-Start auf ${fmtD(datum)} setzen</button></div>`;
+}
+
+/* ---- Weg D: Hilfe dazuholen ---- */
+function renderWegD(R){
+  const { f, last }=R;
+  const helfer=LL.reihenfolge(LL.zuweisbar(D.pool).filter(p=>LL.istHilfeTyp(p)));
+  const offen=ms(f).filter(m=>!LL.FERTIG.has(m.status));
+  const h=person(UI.wegD.helfer);
+  const passende=h?offen.filter(m=>(h.felder||[]).includes(m.bereich)||Number(m.generator_anteil||0)>0):[];
+  const m=offen.find(x=>x.id===UI.wegD.milestone)||null;
+  const bew=h&&m?LL.hilfeBewerten(m, h, { als:UI.wegD.als }):null;
+  const lastJe=new Map(last.map(l=>[l.person_id,l]));
+  $("#wegDBody").innerHTML=`
+    <p class="ln-muted">Reihenfolge: erst das Team, dann Hilfe, dann die Geschäftsführung. Briefing-Stunden werden dem Übergebenden angerechnet; neue Hilfe lohnt sich ab zwei Stunden Entlastung nach dem Briefing.</p>
+    <div class="ln-pers">${helfer.map(p=>{ const l=lastJe.get(p.id); return `<button type="button" data-act="helfer" data-p="${p.id}" aria-pressed="${UI.wegD.helfer===p.id}">${gfEsc(p.name)}<span>${gfEsc(LL.typWort(p.typ))} · Briefing ${LL.fmt(p.briefing_std||0)} Std.${p.felder&&p.felder.length?" · "+p.felder.map(bereichName).join(", "):""}${p.hat_asana?"":" · ohne Asana"}${l?" · "+gfEsc(l.wort):""}</span></button>`; }).join("")}</div>
+    ${h?`<div class="ln-row"><label>Aufgabe <select id="wegDMs" class="ln-sel"><option value="">wählen …</option>${passende.map(x=>`<option value="${x.id}"${x.id===UI.wegD.milestone?" selected":""}>${gfEsc(x.title)} · ${LL.spanne(x.aufwand_lo,x.aufwand_hi,"Std.")}${Number(x.generator_anteil||0)>0?" · Generator "+Math.round(Number(x.generator_anteil)*100)+" %":""}</option>`).join("")}</select></label>
+      ${gfChips("wegDAls",[["hilfe","nur den Generator-Anteil"],["zustaendig","die ganze Aufgabe"]],UI.wegD.als,{label:"Umfang",cls:"compact"})}</div>
+      ${passende.length?"":`<p class="ln-muted">Keine offene Aufgabe passt zu den Feldern von ${gfEsc(h.name)} und keine hat einen Generator-Anteil.</p>`}`:""}
+    ${bew?`<div class="${bew.sinnvoll?"ln-ok":"ln-note"}">${gfEsc(bew.grund)}${bew.kosten?` Kosten ${LL.spanne(bew.kosten.lo,bew.kosten.hi,"€")}.`:""} Übergibt ${gfEsc(pname(m.person_id))}.</div>
+      <div class="ln-row"><button class="btn btn-primary" data-act="hilfe" ${bew.sinnvoll?"":"disabled"}>${gfEsc(h.name)} ${UI.wegD.als==="hilfe"?"für den Generator-Anteil eintragen":"als zuständig eintragen"}</button></div>`:""}`;
+}
+
+/* ---- Aufgaben je Bereich ---- */
+function renderAufgaben(R){
+  const { f, kette }=R; const liste=ms(f);
+  if(!liste.length){ $("#lnAufgaben").innerHTML=`<div class="empty soft">Für dieses Festival liegen keine Meilensteine im Cockpit.</div>`; return; }
+  const gruppen=(D.bereiche||[]).map(b=>[b, liste.filter(m=>m.bereich===b.key)]).filter(([,l])=>l.length);
+  const rest=liste.filter(m=>!m.bereich||!(D.bereiche||[]).some(b=>b.key===m.bereich)); if(rest.length) gruppen.push([{key:"", name:"Ohne Bereich"}, rest]);
+  $("#lnAufgaben").innerHTML=gruppen.map(([b,l])=>{
+    const z=bes(f).find(x=>x.bereich===b.key); const offen=l.filter(m=>!LL.FERTIG.has(m.status));
+    return `<div class="ln-ber"><div class="ln-ber-h"><h3>${gfEsc(b.name)}</h3><span class="wer">${z&&z.person_id?"Besetzung: "+gfEsc(pname(z.person_id))+(z.status==="bestaetigt"?", bestätigt":", Vorschlag"):"Besetzung offen"}</span><span class="n">${offen.length} von ${l.length} offen</span></div>
+      ${l.map(m=>{ const k=kette.je[m.id]||{}; const g=Number(m.generator_anteil||0);
+        return `<div class="ln-task" data-id="${m.id}">
+          <div><div class="t">${gfEsc(m.title)}</div><div class="zu">${gfEsc(LL.zuordnungWort(m.zuordnung_status))}${m.responsible?" · "+gfEsc(m.responsible):""}${m.asana_task_gid?" · in Asana":""}${m.due_on_vorher&&m.due_on_vorher!==m.due_on?" · vorher "+fmtK(m.due_on_vorher):""}</div></div>
+          <div><span class="k">Aufwand</span><div class="v">${LL.spanne(m.aufwand_lo,m.aufwand_hi,"Std.")}</div><div class="zu">${m.dauer_tage||"?"} ${m.dauer_tage===1?"Tag":"Tage"}${g>0?" · Generator "+Math.round(g*100)+" %":""}</div></div>
+          <div><span class="k">Fertig am</span><div class="v">${k.fertig?fmtK(k.fertig):"offen"}</div><div class="zu">${m.due_on?"Ziel "+fmtK(m.due_on)+" · ":""}${gfEsc(k.wort||"")}</div></div>
+          <div><span class="k">Stand</span>${gfChips("st_"+m.id,[["offen","offen"],["läuft","läuft"],["erledigt","erledigt"]],LL.statusWort(m.status)==="blockiert"||LL.statusWort(m.status)==="in Prüfung"?"":LL.statusWort(m.status)==="entfällt"?"erledigt":LL.statusWort(m.status),{attr:`data-f="status" data-id="${m.id}"`,label:"Stand",cls:"compact"})}${["blocked","under_review","not_required"].includes(m.status)?`<div class="zu">im Cockpit: ${gfEsc(LL.statusWort(m.status))}</div>`:""}</div>
+          <div><span class="k">Zuständig</span><select class="ln-sel" data-f="person_id" data-id="${m.id}" aria-label="Zuständig für ${gfEsc(m.title)}">${optionen(m.person_id)}</select></div>
+          <div><span class="k">Generator-Anteil</span>${g>0?`<select class="ln-sel" data-f="hilfe_person_id" data-id="${m.id}" aria-label="Generator-Anteil für ${gfEsc(m.title)}">${optionen(m.hilfe_person_id,{leer:"bleibt beim Zuständigen"})}</select>`:`<div class="zu">keiner</div>`}</div>
+        </div>`; }).join("")}</div>`;
+  }).join("");
+}
+
+/* ---- Zeit je Person ---- */
+function renderZeit(R){
+  const { last }=R; const nur=$("#lnNurBeteiligte").checked;
+  const liste=LL.reihenfolge(LL.zuweisbar(D.pool)).map(p=>last.find(l=>l.person_id===p.id)).filter(Boolean).filter(l=>!nur||l.aufgaben>0);
+  $("#lnZeit").innerHTML=liste.map(l=>{ const p=person(l.person_id); const breite=l.prozent===null?0:Math.min(100,l.prozent);
+    return `<div class="ln-p" data-p="${l.person_id}">
+      <div><div class="name">${gfEsc(l.name)}</div><span class="typ">${gfEsc(LL.typWort(l.typ))}${p&&p.hat_asana?"":" · ohne Asana"} · ${l.aufgaben} ${l.aufgaben===1?"Aufgabe":"Aufgaben"}${l.festivals.length?" in "+l.festivals.length+(l.festivals.length===1?" Launch":" Launches"):""}</span></div>
+      <div class="bw"><div class="bar" role="img" aria-label="${gfEsc(l.wort)}"><i style="width:${breite}%"></i></div><span><b>${gfEsc(l.wort)}</b>${l.prozent!==null?" · "+l.prozent+" Prozent":""} · ${LL.spanne(l.proWoche.lo,l.proWoche.hi,"Std.")} je Woche über ${l.wochen} ${l.wochen===1?"Woche":"Wochen"}${l.ende?" bis "+fmtK(l.ende):""}</span></div>
+      <div><span class="k">Std. je Woche</span>${gfStepper("std_"+l.person_id, l.std===null?"":l.std, {min:0,max:80,attr:`data-f="launch_std_woche" data-p="${l.person_id}"`,label:"Stunden je Woche"})}</div>
+      <div><span class="k">Verfügbar ab</span><input type="date" data-f="verfuegbar_ab" data-p="${l.person_id}" value="${gfEsc(p&&p.verfuegbar_ab||"")}" aria-label="Verfügbar ab für ${gfEsc(l.name)}"></div>
+      <div class="zu ln-muted">${gfEsc(p&&p.pool_notiz||"")}</div>
+    </div>`; }).join("")||`<p class="ln-muted">Niemand hat Aufgaben.</p>`;
+}
+$("#lnNurBeteiligte").addEventListener("change",()=>renderZeit(rechne()));
+
+/* ---- Bestätigen und senden ---- */
+function renderBest(R){
+  const { f }=R; const liste=ms(f).filter(m=>!LL.FERTIG.has(m.status));
+  const n=k=>liste.filter(m=>m.zuordnung_status===k).length;
+  const vorschlaege=liste.filter(m=>m.person_id&&(m.zuordnung_status==="vorschlag"||m.zuordnung_status==="offen")).length;
+  const ohne=liste.filter(m=>!m.person_id).length;
+  const sendbar=liste.filter(m=>m.person_id&&(m.zuordnung_status==="bestaetigt"||m.zuordnung_status==="gesendet"));
+  const fv=bes(f).find(b=>b.bereich==="fv"&&b.person_id); const fvP=fv?person(fv.person_id):null;
+  const ueber=fvP&&!LL.istExtern(fvP)&&fvP.hat_asana?fvP:(D.pool.find(p=>p.typ==="gf"&&gfWhoNorm(p.name)==="Alex")||null);
+  const vorschau=(D.bereiche||[]).map(b=>{ const l=sendbar.filter(m=>m.bereich===b.key); if(!l.length) return "";
+    return `<div><h4>${gfEsc(b.name)}</h4><ul>${l.map(m=>{ const p=person(m.person_id); const weg=LL.versandWeg(p); const h=m.hilfe_person_id?person(m.hilfe_person_id):null; const g=Number(m.generator_anteil||0);
+      const wer=weg.weg==="aufgabe"?gfEsc(p.name):weg.weg==="angebot"?`Angebot einholen und beauftragen, bei ${gfEsc(ueber?ueber.name:"niemandem mit Konto")}`:weg.weg==="notiz"?`${gfEsc(p.name)} ohne Asana-Konto, bleibt als Notiz`:"niemand";
+      return `<li><span>${weg.weg==="angebot"?"Angebot einholen und beauftragen: ":""}${gfEsc(m.title)}</span><span class="w">${wer}</span><span class="d">${m.due_on?fmtK(m.due_on):"ohne Termin"}${m.asana_task_gid?" · aktualisiert":""}</span>${h&&g>0?`<span class="x">Unteraufgabe Generator-Anteil ${Math.round(g*100)} %: ${gfEsc(h.name)}${LL.versandWeg(h).weg!=="aufgabe"?" ("+gfEsc(LL.versandWeg(h).wort)+")":""}</span>`:""}</li>`; }).join("")}</ul></div>`; }).join("");
+  $("#lnBest").innerHTML=`
+    <div class="zahlen"><span><b>${n("vorschlag")+n("offen")}</b> offen oder Vorschlag</span><span><b>${n("bestaetigt")}</b> bestätigt</span><span><b>${n("gesendet")}</b> gesendet</span>${ohne?`<span><b>${ohne}</b> ohne Person</span>`:""}</div>
+    <div class="ln-row">${gfChips("bestVon",["Alex","Lea"],UI.best.von||gfWho(),{label:"Wer bestätigt"})}<button class="btn btn-primary" data-act="confirm" ${vorschlaege?"":"disabled"}>${vorschlaege?`${vorschlaege} ${vorschlaege===1?"Zuordnung":"Zuordnungen"} bestätigen`:"nichts zu bestätigen"}</button></div>
+    <p class="ln-muted">Bestätigt heißt: die Person steht als Zuständige am Meilenstein, die Besetzung des Bereichs ist fest. Eine Bestätigung von Alex oder Lea reicht.</p>
+    <div class="ln-vorschau"><h3>Vorschau Asana-Projekt „Launch ${gfEsc(f.kurzname)} 2027“</h3>
+      <p class="ln-muted">Je Bereich ein Abschnitt, je bestätigtem Meilenstein eine Aufgabe beim Zuständigen mit Termin, Aufwand, Dauer, Vorgängern und Link ins Hohe Haus. Externe bekommen keine Aufgabe; stattdessen entsteht beim Übergebenden (${gfEsc(ueber?ueber.name:"Festivalverantwortung, sonst Alex")}) die Aufgabe „Angebot einholen und beauftragen“. Wer kein Asana-Konto hat, bleibt als Notiz hier auf der Seite.</p>
+      ${vorschau||`<p class="ln-muted">Noch nichts bestätigt, darum noch nichts zu senden.</p>`}
+      <div class="ln-row"><button class="btn ${sendbar.length?"btn-primary":"btn-brand"}" data-act="send" ${sendbar.length&&D.asanaConfigured?"":"disabled"}>${sendbar.length?`${sendbar.length} ${sendbar.length===1?"Aufgabe":"Aufgaben"} nach Asana senden`:"nach Asana senden"}</button>${D.asanaConfigured?"":`<span class="ln-muted">Das Asana-Token fehlt in den Secrets; senden geht erst danach.</span>`}</div>
+      <div id="lnSendErgebnis"></div>
+    </div>`;
+}
+
+/* ---- Alles zeichnen ---- */
+function renderAll(){
+  const R=rechne();
+  renderFest(); renderLage(R); renderWegA(R); renderWegB(R); renderWegC(R); renderWegD(R); renderAufgaben(R); renderZeit(R); renderBest(R);
+}
+
+/* ---- Schreiben ---- */
+async function schreibe(payload, meldung){
+  try{ const r=await gfApi("launch_set", Object.assign({ by:gfWho() }, payload)); if(meldung) gfToast(meldung); await load(false); return r; }
+  catch(e){ gfToast("Fehler: "+(e.message||"speichern")); await load(false); return null; }
+}
+document.addEventListener("click", async e=>{
+  const b=e.target.closest("[data-act]"); if(!b||b.disabled) return;
+  const act=b.dataset.act; const f=fest();
+  if(act==="confirm"){
+    const von=($("[name=bestVon]")||{}).value||UI.best.von||gfWho();
+    try{ const r=await gfApi("launch_confirm",{ event_id:f.event_id, by:von }); gfToast(`${r.bestaetigt} bestätigt als ${r.von}${r.fehler&&r.fehler.length?", "+r.fehler.length+" Fehler":""}`); await load(false); }
+    catch(err){ gfToast("Fehler: "+err.message); }
+    return;
+  }
+  if(act==="send"){
+    if(!confirm(`Bestätigte Aufgaben von ${f.kurzname} nach Asana senden? Bestehende Aufgaben werden aktualisiert, nicht verdoppelt.`)) return;
+    b.disabled=true; b.textContent="sendet …";
+    try{ const r=await gfApi("launch_send",{ event_id:f.event_id, by:gfWho() });
+      const teile=[`${r.neu} neu, ${r.aktualisiert} aktualisiert, ${r.unteraufgaben} Unteraufgaben.`];
+      if(r.angebot&&r.angebot.length) teile.push(`Angebot einholen: ${r.angebot.join("; ")}.`);
+      if(r.ohne_konto&&r.ohne_konto.length) teile.push(`Ohne Asana-Konto, bleibt hier als Notiz: ${r.ohne_konto.join("; ")}.`);
+      if(r.fehler&&r.fehler.length) teile.push(`Fehler: ${r.fehler.join("; ")}.`);
+      await load(false);
+      $("#lnSendErgebnis").innerHTML=`<div class="${r.fehler&&r.fehler.length?"ln-note":"ln-ok"}">${teile.map(gfEsc).join(" ")} <a class="linkish" href="${gfEsc(r.url)}" target="_blank" rel="noopener">Projekt in Asana öffnen</a></div>`;
+      gfToast("Nach Asana gesendet"); }
+    catch(err){ gfToast("Fehler: "+err.message); await load(false); }
+    return;
+  }
+  if(act==="selbst"){ const ich=D.pool.find(p=>p.typ==="gf"&&gfWhoNorm(p.name)===gfWho()); if(!ich){ gfToast("Deine Person steht nicht im Pool."); return; }
+    await schreibe({ event_id:f.event_id, bereich:UI.wegB.bereich, person_id:ich.id }, `${bereichName(UI.wegB.bereich)} an ${ich.name}`); return; }
+  if(act==="besetzung"){ const pid=b.dataset.p||null;
+    await schreibe({ event_id:f.event_id, bereich:UI.wegB.bereich, person_id:pid }, pid?`${bereichName(UI.wegB.bereich)} an ${pname(pid)}`:`${bereichName(UI.wegB.bereich)} freigegeben`); return; }
+  if(act==="vvk-machbar"){ UI.wegC.datum=rechne().lage.fruehesterVVK; renderWegC(rechne()); return; }
+  if(act==="vvk"){ const d=$("#wegCDatum").value; if(!d) return;
+    if(!confirm(`VVK-Start von ${f.kurzname} auf ${fmtD(d)} setzen? Alle offenen Zieltermine werden neu gerechnet.`)) return;
+    const r=await schreibe({ event_id:f.event_id, sales_start_on:d }, null); if(r) gfToast(`VVK-Start ${fmtD(d)}, ${r.verschoben} Termine verschoben`); UI.wegC.datum=null; return; }
+  if(act==="helfer"){ UI.wegD.helfer=UI.wegD.helfer===b.dataset.p?null:b.dataset.p; UI.wegD.milestone=null; renderWegD(rechne()); return; }
+  if(act==="hilfe"){ const m=ms(f).find(x=>x.id===UI.wegD.milestone); if(!m) return;
+    const p=UI.wegD.als==="hilfe"?{ milestone_id:m.id, hilfe_person_id:UI.wegD.helfer }:{ milestone_id:m.id, person_id:UI.wegD.helfer };
+    await schreibe(p, `${pname(UI.wegD.helfer)} eingetragen`); return; }
+});
+document.addEventListener("change", async e=>{
+  const t=e.target;
+  if(t.name==="wegBBereich"){ UI.wegB.bereich=t.value; renderWegB(rechne()); return; }
+  if(t.id==="wegBGen"){ UI.wegB.generator=t.checked; renderWegB(rechne()); return; }
+  if(t.id==="wegBGf"){ UI.wegB.gf=t.checked; renderWegB(rechne()); return; }
+  if(t.id==="wegCDatum"){ UI.wegC.datum=t.value; renderWegC(rechne()); return; }
+  if(t.id==="wegDMs"){ UI.wegD.milestone=t.value||null; renderWegD(rechne()); return; }
+  if(t.name==="wegDAls"){ UI.wegD.als=t.value; renderWegD(rechne()); return; }
+  if(t.name==="bestVon"){ UI.best.von=t.value; return; }
+  const f=t.dataset.f; if(!f) return;
+  if(t.dataset.id){
+    if(f==="status") await schreibe({ milestone_id:t.dataset.id, status:t.value }, "Stand gespeichert");
+    else if(f==="person_id") await schreibe({ milestone_id:t.dataset.id, person_id:t.value||null }, t.value?`Zuständig: ${pname(t.value)}`:"Zuständigkeit gelöscht");
+    else if(f==="hilfe_person_id") await schreibe({ milestone_id:t.dataset.id, hilfe_person_id:t.value||null }, t.value?`Generator-Anteil: ${pname(t.value)}`:"Generator-Anteil bleibt beim Zuständigen");
+    return;
+  }
+  if(t.dataset.p){
+    const pid=t.dataset.p; clearTimeout(saveTimer[pid+f]);
+    saveTimer[pid+f]=setTimeout(()=>{ const v=t.value===""?null:t.value; schreibe({ person_id:pid, [f]:v }, f==="launch_std_woche"?"Stunden je Woche gespeichert":"Verfügbar ab gespeichert"); }, f==="launch_std_woche"?700:0);
+  }
+});
+
+async function load(erstes){
+  const d=await gfApi("launch_list",{});
+  D=d; HEUTE=d.heute||new Date().toISOString().slice(0,10);
+  if(!D.festivals||!D.festivals.length){ $("#lnSatz").textContent="Im Cockpit liegen keine Launch-Pläne für 2027."; $("#lnAufgaben").innerHTML=""; return; }
+  const wunsch=new URLSearchParams(location.search).get("event");
+  if(erstes||!CUR) CUR=(D.festivals.find(f=>f.short_name===wunsch)||D.festivals.find(f=>f.sales_start_on>=HEUTE)||D.festivals[0]).short_name;
+  if(!D.festivals.some(f=>f.short_name===CUR)) CUR=D.festivals[0].short_name;
+  renderAll();
+}
+gfGate(async()=>{
+  $("#app").style.display="block"; gfMountTopbar("launch");
+  gfMountHero("karten","Launch verteilen","Wer macht was bis wann, für alle fünf Festivals. Vorschlag übernehmen, umverteilen, Termin schieben oder Hilfe holen, dann bestätigen und nach Asana senden.",{slim:true});
+  try{ await load(true); }catch(e){ $("#lnSatz").textContent="Fehler beim Laden: "+(e.message||"Verbindung"); }
+});
+</script>
+</body>
+</html>

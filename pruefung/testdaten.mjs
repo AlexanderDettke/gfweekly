@@ -137,8 +137,68 @@ export const PROTOKOLL = {
     { id:'l4', absence_id:'abs-3', handover_id:null, at:zeit(-12), who:'Lea', art:'entscheidung', text:'Gastro-Partner bestätigt.' },
   ],
 };
+
+/* V27 Phase B · Launch verteilen: fünf Festivals, zehn Richtwerte, ein kleiner Pool. Termine relativ zu heute,
+   damit die Seite immer etwas Offenes, etwas Laufendes und etwas Erledigtes zeigt. */
+export const LAUNCH_BEREICHE = [
+  { key:'fv', name:'Festivalverantwortung', beschreibung:'Trägt das Ergebnis', sort_order:1 }, { key:'gf', name:'Geschäftsführung', beschreibung:'Entscheidungen der GF', sort_order:2 },
+  { key:'komm', name:'Kommunikation', beschreibung:'Website, Newsletter, Ads', sort_order:3 }, { key:'content', name:'Content', beschreibung:'Film, Fotos, Social', sort_order:4 },
+  { key:'ticket', name:'Ticketing', beschreibung:'Ticketmodell, Shop', sort_order:5 }, { key:'partner', name:'Partner', beschreibung:'Formatpartner, Kollektive', sort_order:6 },
+  { key:'sys', name:'Systeme', beschreibung:'Tracking, Technik', sort_order:7 }, { key:'recht', name:'Recht', beschreibung:'Rechte, Verträge', sort_order:8 } ];
+export const LAUNCH_RICHTWERTE = [
+  ['Launch-Termin bestätigt', 'strategy', 'gf', 0.5, 1, 1, 0, -56, [], 'Entscheidung GF'],
+  ['Positionierung freigegeben', 'strategy', 'fv', 4, 8, 5, 0, -42, [], null],
+  ['Kernbotschaft freigegeben', 'strategy', 'fv', 3, 6, 3, 0.3, -35, ['Positionierung freigegeben'], 'Entwürfe mit Generatoren'],
+  ['Ticketmodell vollständig', 'ticketing', 'ticket', 3, 6, 3, 0, -35, [], null],
+  ['Produktions-Briefing bereit', 'content', 'content', 3, 5, 2, 0.3, -35, [], null],
+  ['Content produziert', 'content', 'content', 16, 32, 10, 0.5, -14, ['Produktions-Briefing bereit'], 'Kurzclips mit Generatoren'],
+  ['Landingpage bereit', 'website', 'komm', 8, 16, 7, 0.4, -10, ['Kernbotschaft freigegeben'], null],
+  ['Partnerpaket bereit', 'partners', 'partner', 4, 8, 10, 0.3, -7, ['Kernbotschaft freigegeben'], 'Warten auf Partner'],
+  ['Bild-, Musik- und Persönlichkeitsrechte geklärt', 'legal', 'recht', 2, 4, 7, 0, -10, [], null],
+  ['Tracking getestet', 'tracking', 'sys', 2, 4, 2, 0, -3, ['Landingpage bereit'], null],
+  ['Launch durchgeführt', 'operations', 'fv', 6, 10, 1, 0, 0, ['Landingpage bereit', 'Tracking getestet', 'Content produziert', 'Partnerpaket bereit'], 'Launchtag'],
+].map(([title, category, bereich, lo, hi, dauer, g, off, vorg, hinweis]) => ({ title, category, bereich, aufwand_lo: lo, aufwand_hi: hi, dauer_tage: dauer, generator_anteil: g, vvk_offset_tage: off, vorgaenger: vorg, hinweis, quelle: 'Richtwert Claude 30.09.2026, Kalibrierung über Ist-Stunden' }));
+export const LAUNCH_POOL = [
+  { id:'a', name:'Alex', typ:'gf', felder:['gf','fv'], generator:true, launch_std_woche:6, verfuegbar_ab:null, briefing_std:0, stundensatz:null, pool_notiz:'Geschäftsführung', hat_asana:true, active:true, assignable:true, sort_order:1 },
+  { id:'l', name:'Lea', typ:'gf', felder:['gf','recht','ticket'], generator:true, launch_std_woche:null, verfuegbar_ab:null, briefing_std:0, stundensatz:null, pool_notiz:'Geschäftsführung', hat_asana:true, active:true, assignable:true, sort_order:2 },
+  { id:'m', name:'Merle', typ:'team', felder:['fv','partner'], generator:true, launch_std_woche:10, verfuegbar_ab:null, briefing_std:0, stundensatz:null, pool_notiz:'Booking, Programm', hat_asana:true, active:true, assignable:true, sort_order:3 },
+  { id:'t', name:'Tim', typ:'team', felder:['komm','content'], generator:true, launch_std_woche:4, verfuegbar_ab:null, briefing_std:0, stundensatz:null, pool_notiz:'Kommunikation', hat_asana:true, active:true, assignable:true, sort_order:4 },
+  { id:'c', name:'Christoph', typ:'extern', felder:['komm','sys'], generator:true, launch_std_woche:null, verfuegbar_ab:null, briefing_std:2, stundensatz:null, pool_notiz:'Marke und Systeme, Umfang offen', hat_asana:true, active:true, assignable:true, sort_order:5 },
+  { id:'n', name:'Nora', typ:'minijob', felder:['content'], generator:true, launch_std_woche:5, verfuegbar_ab:tag(9), briefing_std:2, stundensatz:null, pool_notiz:'Start in neun Tagen', hat_asana:false, active:true, assignable:true, sort_order:6 },
+  { id:'g', name:'Agentur Nord', typ:'agentur', felder:['content'], generator:true, launch_std_woche:null, verfuegbar_ab:null, briefing_std:3, stundensatz:60, pool_notiz:null, hat_asana:false, active:true, assignable:true, sort_order:7 },
+  { id:'k', name:'Kollektiv Ost', typ:'partner', felder:['partner','fv'], generator:false, launch_std_woche:null, verfuegbar_ab:null, briefing_std:3, stundensatz:null, pool_notiz:'formale Einbindung offen', hat_asana:false, active:true, assignable:true, sort_order:8 },
+];
+export const LAUNCH_FESTIVALS = [
+  { plan_id:'pl-fl', event_id:'ev-fl', name:'Fluidity 2027', kurzname:'Fluidity', short_name:'FLRD27', sales_start_on:tag(-60), launch_type:'campaign_boost', plan_status:'active', hinweise:[] },
+  { plan_id:'pl-wm', event_id:'ev-wm', name:'Wilde Möhre Freude Edition 2027', kurzname:'Wilde Möhre Freude Edition', short_name:'WMRD27', sales_start_on:tag(-30), launch_type:'presale_launch', plan_status:'active', hinweise:[] },
+  { plan_id:'pl-fam', event_id:'ev-fam', name:'Malina, Morio & die Draußenbande 2027', kurzname:'Malina, Morio & die Draußenbande', short_name:'FAMRD27', sales_start_on:tag(1), launch_type:'first_launch', plan_status:'active', hinweise:['Für die Draußenbande kursieren drei VVK-Termine: 01.10., 11.10. und 01.12. Welcher gilt, ist nicht entschieden.'] },
+  { plan_id:'pl-lus', event_id:'ev-lus', name:'Lusatia 2027', kurzname:'Lusatia', short_name:'LUSRD27', sales_start_on:tag(14), launch_type:'relaunch', plan_status:'active', hinweise:[] },
+  { plan_id:'pl-byn', event_id:'ev-byn', name:'by nature 2027', kurzname:'by nature', short_name:'BYNRD27', sales_start_on:tag(31), launch_type:'first_launch', plan_status:'active', hinweise:['Ob by nature 2027 stattfindet, ist als Vorhaben offen.'] },
+];
+const LAUNCH_WER = { fv:{ 'ev-fl':'c', 'ev-wm':'a', 'ev-fam':null, 'ev-lus':'m', 'ev-byn':'m' }, gf:'a', komm:'c', content:'t', ticket:'l', partner:'m', sys:'c', recht:'l' };
+export const LAUNCH_BESETZUNG = LAUNCH_FESTIVALS.flatMap(f => LAUNCH_BEREICHE.map(b => {
+  const w = typeof LAUNCH_WER[b.key] === 'object' ? LAUNCH_WER[b.key][f.event_id] : LAUNCH_WER[b.key];
+  return { id:`b-${f.short_name}-${b.key}`, event_id:f.event_id, bereich:b.key, person_id:w || null, status:w ? (f.short_name === 'WMRD27' ? 'bestaetigt' : 'vorschlag') : 'offen',
+    quelle:'Vorsortierung', notiz: !w ? 'keine tragfähige Besetzung' : null, bestaetigt_von: f.short_name === 'WMRD27' && w ? 'Alex' : null, bestaetigt_am: null }; }));
+export const LAUNCH_MEILENSTEINE = LAUNCH_FESTIVALS.flatMap(f => LAUNCH_RICHTWERTE.map((r, i) => {
+  const b = LAUNCH_BESETZUNG.find(x => x.event_id === f.event_id && x.bereich === r.bereich);
+  const due = f.launch_type === 'campaign_boost' ? null : tag(0) && (() => { const d = new Date(f.sales_start_on + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + r.vvk_offset_tage); return d.toISOString().slice(0, 10); })();
+  const vergangen = due && due < heute;
+  const status = f.short_name === 'WMRD27' ? 'complete' : (vergangen && i % 3 === 0 ? 'complete' : (vergangen && i % 3 === 1 ? 'in_progress' : 'not_started'));
+  const zu = f.short_name === 'WMRD27' ? 'gesendet' : (b && b.person_id ? 'vorschlag' : 'offen');
+  return { id:`m-${f.short_name}-${i}`, plan_id:f.plan_id, event_id:f.event_id, festival:f.short_name, title:r.title, category:r.category, status, due_on:due, due_on_vorher: f.short_name === 'LUSRD27' && due ? tag(-13 + r.vvk_offset_tage) : null,
+    bereich:r.bereich, person_id: b ? b.person_id : null, hilfe_person_id: r.title === 'Content produziert' && f.short_name === 'LUSRD27' ? 'n' : null, zuordnung_status: zu,
+    aufwand_lo:r.aufwand_lo, aufwand_hi:r.aufwand_hi, dauer_tage:r.dauer_tage, generator_anteil:r.generator_anteil, responsible: zu === 'gesendet' && b ? LAUNCH_POOL.find(p => p.id === b.person_id)?.name : null,
+    asana_task_gid: zu === 'gesendet' ? '120000000000' + i : null, ist_stunden:null, completed_on: status === 'complete' ? (due || tag(-20)) : null, sort_order:i, notes: r.title === 'Launch durchgeführt' ? 'Launchtag' : null, depends_on:null };
+}));
+export const LAUNCH_LIST = { festivals: LAUNCH_FESTIVALS, meilensteine: LAUNCH_MEILENSTEINE, besetzung: LAUNCH_BESETZUNG, pool: LAUNCH_POOL,
+  richtwerte: LAUNCH_RICHTWERTE, bereiche: LAUNCH_BEREICHE, last: [], asanaConfigured: true, heute };
+
 export const ANTWORT = {
   ping: { ok:true, version:28 },
+  launch_list: () => LAUNCH_LIST,
+  launch_confirm: (p) => ({ ok:true, von:p.by||'Alex', bestaetigt:3, besetzung:2, offen:1, fehler:[] }),
+  launch_send: () => ({ ok:true, projekt:'1200000000000001', url:'https://app.asana.com/0/1200000000000001', neu:4, aktualisiert:0, unteraufgaben:1, angebot:['Landingpage bereit → Christoph, Aufgabe bei Merle'], ohne_konto:[], fehler:[] }),
   people_list: { people:[
     { id:'a', name:'Alex', email:'alex@example.org', role:'GF', team:'GF', active:true, assignable:true, sort_order:1 },
     { id:'l', name:'Lea', email:'lea@example.org', role:'GF', team:'GF', active:true, assignable:true, sort_order:2 },
@@ -261,7 +321,7 @@ export const FALLBACK = { ok:true, items:[], topics:[], gains:[] };
 export const SCHREIBEND = new Set(['add','update','delete','capture','capture_many','checkin','score_event','decision_add','decision_update','decision_delete',
   'session_start','session_end','session_delete','ritual_toggle','ritual_save','ritual_delete','milestone_save','milestone_delete','news_update','news_accept','news_delete',
   'people_save','people_delete','link_add','link_delete','sites_save','sites_delete','category_save','gate_set','gate_set_many','inbox_promote','inbox_reject','tidy_suggest',
-  'absence_end','absence_tick','deputies_set','handover_build','handover_dossier','handover_log_add']);
+  'absence_end','absence_tick','deputies_set','handover_build','handover_dossier','handover_log_add','launch_set']);
 
 /* Je Seite: Kerninhalt, der nach dem Laden gefuellt sein muss (Text laenger als 20 Zeichen).
    Ohne diese Probe wuerde eine leer gebliebene Seite als bestanden durchgehen, weil gfGate das Tor schon vorher versteckt. */
