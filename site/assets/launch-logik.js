@@ -20,7 +20,8 @@
   const ZUORDNUNG_WORT = { offen: 'offen', vorschlag: 'Vorschlag', bestaetigt: 'bestätigt', gesendet: 'gesendet' };
   const TYP_WORT = { gf: 'Geschäftsführung', team: 'Team', extern: 'extern', minijob: 'Minijob', agentur: 'Agentur', partner: 'Partner' };
   const HILFE_TYPEN = ['extern', 'minijob', 'agentur', 'partner'];
-  /* Externe im Sinn des Versands: sie bekommen keine Asana-Aufgabe, sondern eine Angebotsaufgabe beim Übergebenden. */
+  /* Externe im Sinn des Versands (Typ extern, agentur, partner UND ohne Asana-Konto): sie bekommen keine Asana-Aufgabe,
+     sondern eine Angebotsaufgabe beim Übergebenden. Externe mit Konto bekommen Aufgaben direkt wie das Team (v34, Entscheidung Alex 30.09.2026). */
   const EXTERN_TYPEN = ['extern', 'agentur', 'partner'];
   const ENTLASTUNG_MIN = 2;          // Stunden nach Briefing, ab denen neue Hilfe sinnvoll ist
   const GRENZE_PASST = 0.85, GRENZE_KNAPP = 1.10;
@@ -212,7 +213,8 @@
     return [...(pool || [])].sort((a, b) => rang(a) - rang(b) || zahl(a.sort_order, 0) - zahl(b.sort_order, 0) || String(a.name).localeCompare(String(b.name), 'de'));
   }
   function istHilfeTyp(p) { return !!p && HILFE_TYPEN.includes(p.typ); }
-  function istExtern(p) { return !!p && EXTERN_TYPEN.includes(p.typ); }
+  function hatKonto(p) { return !!p && !!(p.hat_asana || p.asana_gid); }
+  function istExtern(p) { return !!p && EXTERN_TYPEN.includes(p.typ) && !hatKonto(p); }
   function zuweisbar(pool) { return (pool || []).filter(p => p.active !== false && p.assignable !== false); }
 
   /* ---- Kandidaten für Umverteilen: Pool-Personen mit passendem Feld; bei Generator-Arbeit alle mit Zeit;
@@ -263,7 +265,7 @@
   function versandWeg(person) {
     if (!person) return { weg: 'keine', wort: 'niemand zuständig' };
     if (istExtern(person)) return { weg: 'angebot', wort: 'Angebot einholen und beauftragen, beim Übergebenden' };
-    if (!person.hat_asana && !person.asana_gid) return { weg: 'notiz', wort: 'ohne Asana-Konto, bleibt als Notiz auf der Seite' };
+    if (!hatKonto(person)) return { weg: 'notiz', wort: 'ohne Asana-Konto, bleibt als Notiz auf der Seite' };
     return { weg: 'aufgabe', wort: 'Aufgabe in Asana' };
   }
 
@@ -275,6 +277,6 @@
 
   return { FERTIG, STATUS_WORT, ZUORDNUNG_WORT, TYP_WORT, HILFE_TYPEN, EXTERN_TYPEN, ENTLASTUNG_MIN, GRENZE_PASST, GRENZE_KNAPP,
     plusTage, tageZwischen, maxIso, kurz, kurzOhneJahr, fmt, spanne, anteile, kette, last, lage, lageSatz, hilfeBewerten,
-    reihenfolge, istHilfeTyp, istExtern, zuweisbar, kandidaten, vvkVerschieben, abstaende, abstandWort, versandWeg,
+    reihenfolge, istHilfeTyp, istExtern, hatKonto, zuweisbar, kandidaten, vvkVerschieben, abstaende, abstandWort, versandWeg,
     statusWort, statusAusWort, zuordnungWort, typWort, festivalKurz };
 });

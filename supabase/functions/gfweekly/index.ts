@@ -868,12 +868,12 @@ const LAUNCH_HINWEISE: Record<string,string[]> = {
   FAMRD27: ['Für die Draußenbande kursieren drei VVK-Termine: 01.10. (Plattform), 11.10. (Saisonabstimmung) und 01.12. Welcher gilt, ist nicht entschieden; die Termine unten rechnen mit dem Wert der Plattform.'],
   BYNRD27: ['Ob by nature 2027 stattfindet, ist als Vorhaben offen (Klärungsaufgabe 10). Die Zuordnung kann trotzdem vorbereitet werden.'],
 };
-const LAUNCH_PERSON_SPALTEN = 'id,name,typ,felder,generator,launch_std_woche,verfuegbar_ab,briefing_std,stundensatz,pool_notiz,asana_gid,active,assignable,sort_order,email';
-/* Nach außen ohne E-Mail und ohne Asana-Kennung; ob ein Konto besteht, genügt der Seite. */
+const LAUNCH_PERSON_SPALTEN = 'id,name,typ,felder,generator,launch_std_woche,verfuegbar_ab,briefing_std,stundensatz,asana_gid,active,assignable,sort_order,email';
+/* Nach außen ohne E-Mail, ohne Asana-Kennung und ohne Pool-Notiz (sie kann Vertragsdetails tragen); ob ein Konto besteht, genügt der Seite. */
 function launchPersonAussen(p: any){
   return { id:p.id, name:p.name, typ:p.typ || 'team', felder:p.felder || [], generator:p.generator !== false,
     launch_std_woche:p.launch_std_woche, verfuegbar_ab:p.verfuegbar_ab, briefing_std:p.briefing_std ?? 0, stundensatz:p.stundensatz,
-    pool_notiz:p.pool_notiz, hat_asana:!!p.asana_gid, active:p.active !== false, assignable:p.assignable !== false, sort_order:p.sort_order ?? 0 };
+    hat_asana:!!p.asana_gid, active:p.active !== false, assignable:p.assignable !== false, sort_order:p.sort_order ?? 0 };
 }
 function launchIstExtern(p: any){ return !!p && LAUNCH_EXTERN_TYPEN.includes(p.typ) && !p.asana_gid; }
 function launchFestivalKurz(name: unknown){ return String(name ?? '').replace(/\s+20\d\d$/, ''); }
@@ -941,7 +941,7 @@ Deno.serve(async (req: Request) => {
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:34, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
+    if (action === 'ping') return json({ ok:true, version:35, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -2089,8 +2089,9 @@ Deno.serve(async (req: Request) => {
         if (be) fehler.push('Besetzung: ' + be.message); else besetzung = (b || []).length;
       }
       const { count: offen } = await admin.from('vvp_launch_milestones').select('id', { count:'exact', head:true }).eq('plan_id', festival.plan_id).is('person_id', null).not('status','in','("complete","not_required")');
-      await launchLog(von, 'launch_confirm', festival.short_name, null, { bestaetigt, besetzung, offen: offen || 0, fehler, milestone_ids: t.milestone_ids || null });
-      return json({ ok:true, von, bestaetigt, besetzung, offen: offen || 0, fehler });
+      const protokoll = await launchLog(von, 'launch_confirm', festival.short_name, null, { bestaetigt, besetzung, offen: offen || 0, fehler, milestone_ids: t.milestone_ids || null });
+      if (!protokoll) fehler.push('Die Bestätigung ließ sich nicht protokollieren (gfweekly_saison_log).');
+      return json({ ok:true, von, bestaetigt, besetzung, offen: offen || 0, fehler, protokoll });
     }
     if (action === 'launch_send') {
       if (!ASANA_TOKEN) return json({ error:'ASANA_TOKEN fehlt', hinweis:'Secret in Supabase anlegen, dann erneut senden. Bis dahin bleibt der Stand „bestätigt“.' },400);
@@ -2150,8 +2151,11 @@ Deno.serve(async (req: Request) => {
         if (team) daten.team = team;
         try { projekt = String((await asana('/projects', 'POST', daten)).gid); }
         catch (e) { return json({ error:String((e as Error).message), hinweis:'Braucht der Arbeitsbereich ein Team, ASANA_TEAM setzen oder team in der Nutzlast mitgeben.' },400); }
-        /* Die Kennung wird sofort protokolliert, damit ein Abbruch danach kein zweites Projekt erzeugt. */
-        await launchLog(von, 'launch_send', festival.short_name, null, { projekt, schritt:'Projekt angelegt', neu:0, aktualisiert:0 });
+        /* Die Kennung wird sofort protokolliert, damit ein Abbruch danach kein zweites Projekt erzeugt.
+           Scheitert das, bricht der Versand vor der ersten Aufgabe ab; das Projekt steht leer in Asana und wird beim
+           nächsten Versand über den Namen wiedergefunden. */
+        const gemerktOk = await launchLog(von, 'launch_send', festival.short_name, null, { projekt, schritt:'Projekt angelegt', neu:0, aktualisiert:0 });
+        if (!gemerktOk) return json({ error:'Das Projekt steht in Asana, ließ sich aber nicht protokollieren.', projekt, hinweis:'Noch keine Aufgabe angelegt. Später erneut senden; das Projekt wird über den Namen gefunden.' },500);
       }
       /* Abschnitte je Bereich, in der Reihenfolge der Bereiche. */
       const vorhanden = await asana(`/projects/${projekt}/sections?opt_fields=name`);
@@ -2165,6 +2169,17 @@ Deno.serve(async (req: Request) => {
         try { const drin = await asana(`/sections/${a.gid}/tasks?limit=1`); if (!(drin || []).length) { await asana(`/sections/${a.gid}`, 'DELETE'); delete abschnitt[a.name]; } } catch (_e) { /* bleibt stehen */ }
       }
 
+      /* Aufgaben, die schon im Projekt stehen, nach Namen: hat ein Meilenstein keine Kennung, weil das Merken nach
+         dem Anlegen scheiterte, wird die vorhandene Aufgabe weiterverwendet statt eine zweite anzulegen. */
+      const imProjekt = new Map<string,string>();
+      try {
+        let pfad = `/projects/${projekt}/tasks?opt_fields=name&limit=100`;
+        for (let seite = 0; seite < 50 && pfad; seite++) {
+          const antwort = await asanaSeite(pfad);
+          for (const a of (antwort.data || [])) if (a?.name && !imProjekt.has(norm(a.name))) imProjekt.set(norm(a.name), String(a.gid));
+          pfad = antwort.next_page?.path || '';
+        }
+      } catch (e) { return json({ error:'Aufgabenliste des Projekts nicht lesbar: ' + String((e as Error).message).slice(0,160), projekt, hinweis:'Nichts geändert, sonst könnten Aufgaben doppelt entstehen.' },502); }
       let neu = 0, aktualisiert = 0, unteraufgaben = 0;
       const angebot: string[] = [], ohneKonto: string[] = [], fehler: string[] = [];
       const jetzt = new Date().toISOString();
@@ -2185,7 +2200,7 @@ Deno.serve(async (req: Request) => {
         } else {
           daten = { name: m.title, assignee: zust.asana_gid, due_on: m.due_on || null, notes: launchAsanaNotiz(m, r, festival, zust, helfer) };
         }
-        let gid: string | null = m.asana_task_gid || null;
+        let gid: string | null = m.asana_task_gid || imProjekt.get(norm(String(daten.name))) || null;
         try {
           if (gid) {
             await asana(`/tasks/${gid}`, 'PUT', daten);
@@ -2221,8 +2236,9 @@ Deno.serve(async (req: Request) => {
         }
       }
       const url = `https://app.asana.com/0/${projekt}`;
-      await launchLog(von, 'launch_send', festival.short_name, null, { projekt, url, neu, aktualisiert, unteraufgaben, angebot, ohne_konto: ohneKonto, fehler });
-      return json({ ok:true, projekt, url, neu, aktualisiert, unteraufgaben, angebot, ohne_konto: ohneKonto, fehler });
+      const protokoll = await launchLog(von, 'launch_send', festival.short_name, null, { projekt, url, neu, aktualisiert, unteraufgaben, angebot, ohne_konto: ohneKonto, fehler });
+      if (!protokoll) fehler.push('Der Versand ließ sich nicht protokollieren (gfweekly_saison_log); die Projektkennung ' + projekt + ' steht nur in dieser Antwort.');
+      return json({ ok:true, projekt, url, neu, aktualisiert, unteraufgaben, angebot, ohne_konto: ohneKonto, fehler, protokoll });
     }
 
     return json({ error:'unknown action' }, 400);

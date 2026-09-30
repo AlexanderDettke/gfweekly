@@ -206,12 +206,14 @@ console.log('\n== 5. Reihenfolge, Kandidaten, Wörter ==');
   gleich('Wort zurück in den Status', ['offen', 'läuft', 'erledigt'].map(L.statusAusWort), ['not_started', 'in_progress', 'complete']);
   gleich('Zuordnung als Wort', ['offen', 'vorschlag', 'bestaetigt', 'gesendet'].map(L.zuordnungWort), ['offen', 'Vorschlag', 'bestätigt', 'gesendet']);
   gleich('Spanne als Text', [L.spanne(3, 6, 'Std.'), L.spanne(4, 4, 'Std.'), L.spanne(0.5, 1)], ['3 bis 6 Std.', '4 Std.', '0,5 bis 1']);
-  gleich('Versandweg: Externe Angebot, ohne Konto Notiz, sonst Aufgabe', [
+  gleich('Versandweg: Externe ohne Konto Angebot, Externe mit Konto Aufgabe, Interne ohne Konto Notiz', [
+    L.versandWeg(Object.assign({}, PERSONEN.agentur, { hat_asana: false })).weg,
     L.versandWeg(Object.assign({}, PERSONEN.christian, { hat_asana: true })).weg,
     L.versandWeg(Object.assign({}, PERSONEN.nina, { hat_asana: false })).weg,
     L.versandWeg(Object.assign({}, PERSONEN.jessica, { hat_asana: true })).weg,
     L.versandWeg(null).weg,
-  ], ['angebot', 'notiz', 'aufgabe', 'keine']);
+  ], ['angebot', 'aufgabe', 'notiz', 'aufgabe', 'keine']);
+  gleich('istExtern gilt nur ohne Konto', [L.istExtern(Object.assign({}, PERSONEN.christian, { hat_asana: true })), L.istExtern(PERSONEN.agentur), L.istExtern(PERSONEN.nina)], [false, true, false]);
   gleich('Festivalname ohne Jahr', L.festivalKurz('Lusatia 2027'), 'Lusatia');
   /* Reinheit: dieselbe Eingabe, dasselbe Ergebnis, Eingabe unverändert. */
   const LUS = festival('lus', '2026-10-15', wer);

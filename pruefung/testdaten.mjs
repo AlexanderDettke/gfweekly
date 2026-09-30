@@ -159,14 +159,14 @@ export const LAUNCH_RICHTWERTE = [
   ['Launch durchgeführt', 'operations', 'fv', 6, 10, 1, 0, 0, ['Landingpage bereit', 'Tracking getestet', 'Content produziert', 'Partnerpaket bereit'], 'Launchtag'],
 ].map(([title, category, bereich, lo, hi, dauer, g, off, vorg, hinweis]) => ({ title, category, bereich, aufwand_lo: lo, aufwand_hi: hi, dauer_tage: dauer, generator_anteil: g, vvk_offset_tage: off, vorgaenger: vorg, hinweis, quelle: 'Richtwert Claude 30.09.2026, Kalibrierung über Ist-Stunden' }));
 export const LAUNCH_POOL = [
-  { id:'a', name:'Alex', typ:'gf', felder:['gf','fv'], generator:true, launch_std_woche:6, verfuegbar_ab:null, briefing_std:0, stundensatz:null, pool_notiz:'Geschäftsführung', hat_asana:true, active:true, assignable:true, sort_order:1 },
-  { id:'l', name:'Lea', typ:'gf', felder:['gf','recht','ticket'], generator:true, launch_std_woche:null, verfuegbar_ab:null, briefing_std:0, stundensatz:null, pool_notiz:'Geschäftsführung', hat_asana:true, active:true, assignable:true, sort_order:2 },
-  { id:'m', name:'Merle', typ:'team', felder:['fv','partner'], generator:true, launch_std_woche:10, verfuegbar_ab:null, briefing_std:0, stundensatz:null, pool_notiz:'Booking, Programm', hat_asana:true, active:true, assignable:true, sort_order:3 },
-  { id:'t', name:'Tim', typ:'team', felder:['komm','content'], generator:true, launch_std_woche:4, verfuegbar_ab:null, briefing_std:0, stundensatz:null, pool_notiz:'Kommunikation', hat_asana:true, active:true, assignable:true, sort_order:4 },
-  { id:'c', name:'Christoph', typ:'extern', felder:['komm','sys'], generator:true, launch_std_woche:null, verfuegbar_ab:null, briefing_std:2, stundensatz:null, pool_notiz:'Marke und Systeme, Umfang offen', hat_asana:true, active:true, assignable:true, sort_order:5 },
-  { id:'n', name:'Nora', typ:'minijob', felder:['content'], generator:true, launch_std_woche:5, verfuegbar_ab:tag(9), briefing_std:2, stundensatz:null, pool_notiz:'Start in neun Tagen', hat_asana:false, active:true, assignable:true, sort_order:6 },
-  { id:'g', name:'Agentur Nord', typ:'agentur', felder:['content'], generator:true, launch_std_woche:null, verfuegbar_ab:null, briefing_std:3, stundensatz:60, pool_notiz:null, hat_asana:false, active:true, assignable:true, sort_order:7 },
-  { id:'k', name:'Kollektiv Ost', typ:'partner', felder:['partner','fv'], generator:false, launch_std_woche:null, verfuegbar_ab:null, briefing_std:3, stundensatz:null, pool_notiz:'formale Einbindung offen', hat_asana:false, active:true, assignable:true, sort_order:8 },
+  { id:'a', name:'Alex', typ:'gf', felder:['gf','fv'], generator:true, launch_std_woche:6, verfuegbar_ab:null, briefing_std:0, stundensatz:null, hat_asana:true, active:true, assignable:true, sort_order:1 },
+  { id:'l', name:'Lea', typ:'gf', felder:['gf','recht','ticket'], generator:true, launch_std_woche:null, verfuegbar_ab:null, briefing_std:0, stundensatz:null, hat_asana:true, active:true, assignable:true, sort_order:2 },
+  { id:'m', name:'Merle', typ:'team', felder:['fv','partner'], generator:true, launch_std_woche:10, verfuegbar_ab:null, briefing_std:0, stundensatz:null, hat_asana:true, active:true, assignable:true, sort_order:3 },
+  { id:'t', name:'Tim', typ:'team', felder:['komm','content'], generator:true, launch_std_woche:4, verfuegbar_ab:null, briefing_std:0, stundensatz:null, hat_asana:true, active:true, assignable:true, sort_order:4 },
+  { id:'c', name:'Christoph', typ:'extern', felder:['komm','sys'], generator:true, launch_std_woche:null, verfuegbar_ab:null, briefing_std:2, stundensatz:null, hat_asana:true, active:true, assignable:true, sort_order:5 },
+  { id:'n', name:'Nora', typ:'minijob', felder:['content'], generator:true, launch_std_woche:5, verfuegbar_ab:tag(9), briefing_std:2, stundensatz:null, hat_asana:false, active:true, assignable:true, sort_order:6 },
+  { id:'g', name:'Agentur Nord', typ:'agentur', felder:['content'], generator:true, launch_std_woche:null, verfuegbar_ab:null, briefing_std:3, stundensatz:60, hat_asana:false, active:true, assignable:true, sort_order:7 },
+  { id:'k', name:'Kollektiv Ost', typ:'partner', felder:['partner','fv'], generator:false, launch_std_woche:null, verfuegbar_ab:null, briefing_std:3, stundensatz:null, hat_asana:false, active:true, assignable:true, sort_order:8 },
 ];
 export const LAUNCH_FESTIVALS = [
   { plan_id:'pl-fl', event_id:'ev-fl', name:'Fluidity 2027', kurzname:'Fluidity', short_name:'FLRD27', sales_start_on:tag(-60), launch_type:'campaign_boost', plan_status:'active', hinweise:[] },

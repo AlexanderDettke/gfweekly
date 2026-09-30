@@ -81,7 +81,7 @@ details[open]>summary .chev{transform:rotate(90deg)}
 
 /* Zeit je Person */
 .ln-zeit{display:grid;gap:6px}
-.ln-p{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr);gap:6px 12px;align-items:center;padding:9px 12px;background:var(--surface-2);border-radius:var(--radius-m);font-size:var(--stufe-2)}
+.ln-p{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,2.4fr) minmax(0,1fr) minmax(0,1.1fr);gap:6px 12px;align-items:center;padding:9px 12px;background:var(--surface-2);border-radius:var(--radius-m);font-size:var(--stufe-2)}
 .ln-p .name{font-weight:600}
 .ln-p .typ{display:block;font-size:var(--stufe-1);color:var(--text-2)}
 .ln-p .bar{height:8px;background:var(--fill);border-radius:var(--radius-s);overflow:hidden}
@@ -189,7 +189,7 @@ details[open]>summary .chev{transform:rotate(90deg)}
       <div id="lnBest"></div>
     </section>
 
-    <p class="ln-foot">Daten aus dem Launch-Cockpit der Plattform (Pläne, Meilensteine, VVK-Starts), dem Personenpool und den Richtwerten aus Phase A. Bestätigungen und Versand stehen im Protokoll der Saison. Keine Personal- oder Vertragsdetails; Kosten erscheinen nur, wenn ein Stundensatz eingetragen ist.</p>
+    <p class="ln-foot">Daten aus dem Launch-Cockpit der Plattform (Pläne, Meilensteine, VVK-Starts), dem Personenpool und den Richtwerten aus Phase A. Bestätigungen und Versand stehen im Protokoll der Saison. Die Seite zeigt keine Pool-Notizen, Stundensätze oder anderen Personal- und Vertragsdetails; Kosten erscheinen nur als Summe und nur, wenn ein Stundensatz eingetragen ist.</p>
   </main>
 </div>
 
@@ -354,7 +354,6 @@ function renderZeit(R){
       <div class="bw"><div class="bar" role="img" aria-label="${gfEsc(l.wort)}"><i style="width:${breite}%"></i></div><span><b>${gfEsc(l.wort)}</b>${l.prozent!==null?" · "+l.prozent+" Prozent":""} · ${LL.spanne(l.proWoche.lo,l.proWoche.hi,"Std.")} je Woche über ${l.wochen} ${l.wochen===1?"Woche":"Wochen"}${l.ende?" bis "+fmtK(l.ende):""}</span></div>
       <div><span class="k">Std. je Woche</span>${gfStepper("std_"+l.person_id, l.std===null?"":l.std, {min:0,max:80,attr:`data-f="launch_std_woche" data-p="${l.person_id}"`,label:"Stunden je Woche"})}</div>
       <div><span class="k">Verfügbar ab</span><input type="date" data-f="verfuegbar_ab" data-p="${l.person_id}" value="${gfEsc(p&&p.verfuegbar_ab||"")}" aria-label="Verfügbar ab für ${gfEsc(l.name)}"></div>
-      <div class="zu ln-muted">${gfEsc(p&&p.pool_notiz||"")}</div>
     </div>`; }).join("")||`<p class="ln-muted">Niemand hat Aufgaben.</p>`;
 }
 $("#lnNurBeteiligte").addEventListener("change",()=>renderZeit(rechne()));
@@ -367,7 +366,7 @@ function renderBest(R){
   const ohne=liste.filter(m=>!m.person_id).length;
   const sendbar=liste.filter(m=>m.person_id&&(m.zuordnung_status==="bestaetigt"||m.zuordnung_status==="gesendet"));
   const fv=bes(f).find(b=>b.bereich==="fv"&&b.person_id); const fvP=fv?person(fv.person_id):null;
-  const ueber=fvP&&!LL.istExtern(fvP)&&fvP.hat_asana?fvP:(D.pool.find(p=>p.typ==="gf"&&gfWhoNorm(p.name)==="Alex")||null);
+  const ueber=fvP&&!LL.istExtern(fvP)&&LL.hatKonto(fvP)?fvP:(D.pool.find(p=>p.typ==="gf"&&gfWhoNorm(p.name)==="Alex")||null);
   const vorschau=(D.bereiche||[]).map(b=>{ const l=sendbar.filter(m=>m.bereich===b.key); if(!l.length) return "";
     return `<div><h4>${gfEsc(b.name)}</h4><ul>${l.map(m=>{ const p=person(m.person_id); const weg=LL.versandWeg(p); const h=m.hilfe_person_id?person(m.hilfe_person_id):null; const g=Number(m.generator_anteil||0);
       const wer=weg.weg==="aufgabe"?gfEsc(p.name):weg.weg==="angebot"?`Angebot einholen und beauftragen, bei ${gfEsc(ueber?ueber.name:"niemandem mit Konto")}`:weg.weg==="notiz"?`${gfEsc(p.name)} ohne Asana-Konto, bleibt als Notiz`:"niemand";
@@ -377,7 +376,7 @@ function renderBest(R){
     <div class="ln-row">${gfChips("bestVon",["Alex","Lea"],UI.best.von||gfWho(),{label:"Wer bestätigt"})}<button class="btn btn-primary" data-act="confirm" ${vorschlaege?"":"disabled"}>${vorschlaege?`${vorschlaege} ${vorschlaege===1?"Zuordnung":"Zuordnungen"} bestätigen`:"nichts zu bestätigen"}</button></div>
     <p class="ln-muted">Bestätigt heißt: die Person steht als Zuständige am Meilenstein, die Besetzung des Bereichs ist fest. Eine Bestätigung von Alex oder Lea reicht.</p>
     <div class="ln-vorschau"><h3>Vorschau Asana-Projekt „Launch ${gfEsc(f.kurzname)} 2027“</h3>
-      <p class="ln-muted">Je Bereich ein Abschnitt, je bestätigtem Meilenstein eine Aufgabe beim Zuständigen mit Termin, Aufwand, Dauer, Vorgängern und Link ins Hohe Haus. Externe bekommen keine Aufgabe; stattdessen entsteht beim Übergebenden (${gfEsc(ueber?ueber.name:"Festivalverantwortung, sonst Alex")}) die Aufgabe „Angebot einholen und beauftragen“. Wer kein Asana-Konto hat, bleibt als Notiz hier auf der Seite.</p>
+      <p class="ln-muted">Je Bereich ein Abschnitt, je bestätigtem Meilenstein eine Aufgabe beim Zuständigen mit Termin, Aufwand, Dauer, Vorgängern und Link ins Hohe Haus. Externe ohne Asana-Konto bekommen keine Aufgabe; stattdessen entsteht beim Übergebenden (${gfEsc(ueber?ueber.name:"Festivalverantwortung, sonst Alex")}) die Aufgabe „Angebot einholen und beauftragen“. Wer kein Asana-Konto hat, bleibt als Notiz hier auf der Seite.</p>
       ${vorschau||`<p class="ln-muted">Noch nichts bestätigt, darum noch nichts zu senden.</p>`}
       <div class="ln-row"><button class="btn ${sendbar.length?"btn-primary":"btn-brand"}" data-act="send" ${sendbar.length&&D.asanaConfigured?"":"disabled"}>${sendbar.length?`${sendbar.length} ${sendbar.length===1?"Aufgabe":"Aufgaben"} nach Asana senden`:"nach Asana senden"}</button>${D.asanaConfigured?"":`<span class="ln-muted">Das Asana-Token fehlt in den Secrets; senden geht erst danach.</span>`}</div>
       <div id="lnSendErgebnis"></div>
