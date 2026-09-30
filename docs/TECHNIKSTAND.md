@@ -480,7 +480,7 @@ Grundlage: Auftrag „Phase B der Saisonplanung“ vom 30.09.2026 auf dem Datenm
 
 **Verbleibende Entscheidungen.**
 - `launch_std_woche` ist bei allen 32 Personen leer; die Seite zeigt deshalb überall „keine Zeit eingetragen“ und zählt niemanden als überlastet. Erst mit Einträgen wird die Kennzahl „Personen über ihrer Zeit“ aussagekräftig.
-- Versandregel für Externe mit Asana-Konto (Christian Linck, Annie Oelmann, Slawik Snitkowski, Kevin Twarz, Robin Benad): nach Auftrag bekommen Externe keine Aufgabe, sondern der Übergebende die Angebotsaufgabe. Wenn Externe mit Konto direkt Aufgaben bekommen sollen, ist `LAUNCH_EXTERN_TYPEN` in der Edge Function auf die Fälle ohne Konto zu verengen.
+- Versandregel für Externe, geändert in v34 (30.09., aus Cowork): Externe mit Asana-Konto (Christian Linck, Annie Oelmann, Slawik Snitkowski, Kevin Twarz, Robin Benad) bekommen ihre Aufgaben direkt wie das Team. Nur Externe ohne Konto (Manja, Markus (Design), Mitch, Subardo, Novo-Kollektiv) lösen die Angebotsaufgabe beim Übergebenden aus (`launchIstExtern` prüft Typ und fehlendes Konto). Grund: Entscheidung Alex, keine Einschränkungen ohne Auftrag. `ping` meldet `version: 34`; Deploy durch Alex.
 - Draußenbande: die Termine rechnen mit dem 01.10. aus der Plattform; 11.10. und 01.12. stehen als Hinweis. by nature 2027 bleibt als Vorhaben offen.
 - Der Stand aller 122 offenen Meilensteine ist `not_started`, auch für Vergangenes (Fluidity, Wilde Möhre); Erledigtes muss von Hand auf „erledigt“ gesetzt werden, sonst zählt es in die Last.
 - Der Übergebende für Angebotsaufgaben ist die Festivalverantwortung des Festivals, sonst Alex. Bei Fluidity (Festivalverantwortung extern) und der Draußenbande (offen) landet die Aufgabe bei Alex.

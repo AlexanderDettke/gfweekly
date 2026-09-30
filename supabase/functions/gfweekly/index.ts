@@ -857,9 +857,11 @@ async function asanaArchivieren(absence: any){
 const LAUNCH_STATUS = ['not_started','in_progress','blocked','under_review','complete','not_required'];
 const LAUNCH_STATUS_WORT: Record<string,string> = { offen:'not_started', 'läuft':'in_progress', laeuft:'in_progress', erledigt:'complete' };
 const LAUNCH_ZUORDNUNG = ['offen','vorschlag','bestaetigt','gesendet'];
-/* Externe im Sinn des Versands (Typ extern, agentur, partner): sie bekommen keine Asana-Aufgabe, sondern beim
-   übergebenden Zuständigen entsteht „Angebot einholen und beauftragen: <Titel>“. Wer intern ist und kein Konto
-   hat, bekommt ebenfalls keine Aufgabe; das steht als Notiz in der Antwort und auf der Seite. */
+/* Externe im Sinn des Versands: Typ extern, agentur oder partner UND ohne Asana-Konto. Sie bekommen keine
+   Asana-Aufgabe, sondern beim übergebenden Zuständigen entsteht „Angebot einholen und beauftragen: <Titel>“.
+   Externe mit Konto (Christian, Annie, Slawik, Robin, Kevin) bekommen ihre Aufgaben direkt, wie das Team
+   (Entscheidung Alex 30.09.: keine Einschränkungen ohne Auftrag). Wer intern ist und kein Konto hat, bekommt
+   ebenfalls keine Aufgabe; das steht als Notiz in der Antwort und auf der Seite. */
 const LAUNCH_EXTERN_TYPEN = ['extern','agentur','partner'];
 /* Widersprüche, die in den Daten stehen (Technikstand V27 Phase A). Hinweiszeile am Festival, keine Blockade. */
 const LAUNCH_HINWEISE: Record<string,string[]> = {
@@ -873,7 +875,7 @@ function launchPersonAussen(p: any){
     launch_std_woche:p.launch_std_woche, verfuegbar_ab:p.verfuegbar_ab, briefing_std:p.briefing_std ?? 0, stundensatz:p.stundensatz,
     pool_notiz:p.pool_notiz, hat_asana:!!p.asana_gid, active:p.active !== false, assignable:p.assignable !== false, sort_order:p.sort_order ?? 0 };
 }
-function launchIstExtern(p: any){ return !!p && LAUNCH_EXTERN_TYPEN.includes(p.typ); }
+function launchIstExtern(p: any){ return !!p && LAUNCH_EXTERN_TYPEN.includes(p.typ) && !p.asana_gid; }
 function launchFestivalKurz(name: unknown){ return String(name ?? '').replace(/\s+20\d\d$/, ''); }
 async function launchLog(who: string, what: string, row_id: string | null, item_id: string | null, detail: unknown){
   const { error } = await admin.from('gfweekly_saison_log').insert({ who, what, row_id, item_id, detail });
@@ -939,7 +941,7 @@ Deno.serve(async (req: Request) => {
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:33, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
+    if (action === 'ping') return json({ ok:true, version:34, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
