@@ -191,8 +191,21 @@ export const LAUNCH_MEILENSTEINE = LAUNCH_FESTIVALS.flatMap(f => LAUNCH_RICHTWER
     aufwand_lo:r.aufwand_lo, aufwand_hi:r.aufwand_hi, dauer_tage:r.dauer_tage, generator_anteil:r.generator_anteil, responsible: zu === 'gesendet' && b ? LAUNCH_POOL.find(p => p.id === b.person_id)?.name : null,
     asana_task_gid: zu === 'gesendet' ? '120000000000' + i : null, ist_stunden:null, completed_on: status === 'complete' ? (due || tag(-20)) : null, sort_order:i, notes: r.title === 'Launch durchgeführt' ? 'Launchtag' : null, depends_on:null };
 }));
+/* V28 · Saison: Besetzung „bisher“ (Stand Sommer 2026), Launch-Protokoll und created_at im Pool (Nora und die Agentur sind neu). */
+export const LAUNCH_VORHER = [
+  ['fv','faktisch die GF'],['komm','Antonia (Newsletter, Social)'],['content','Antonia allein'],['ticket','je Festival verschieden, Annie nur Fluidity'],
+  ['partner','Lea (Kollektiv-Thread)'],['sys','verteilt, Tracking bei niemandem'],['recht','Legal'],['gf','GF'],
+].map(([bereich, text], i) => ({ bereich, text, quelle:'Rollen in Pool, TPA und Coda, Stand Sommer 2026', sort_order:i + 1 }));
+export const LAUNCH_LOG = [
+  { at:zeit(-0.2), who:'Alex', what:'launch_confirm', row_id:'WMRD27', item_id:null, detail:{ bestaetigt:8, besetzung:7, offen:0, fehler:[] } },
+  { at:zeit(-0.5), who:'Lea', what:'launch_set', row_id:'LUSRD27', item_id:null, detail:{ bereich:'content', person_id:'t', meilensteine:4 } },
+  { at:zeit(-1), who:'Alex', what:'launch_set', row_id:null, item_id:'m-LUSRD27-2', detail:{ titel:'Ticketmodell vollständig', geaendert:['status'], patch:{ status:'in_progress' } } },
+  { at:zeit(-1.2), who:'Alex', what:'launch_set', row_id:null, item_id:null, detail:{ person:'Merle', patch:{ launch_std_woche:10 } } },
+  { at:zeit(-2), who:'Alex', what:'launch_send', row_id:'WMRD27', item_id:null, detail:{ projekt:'1200000000000001', url:'https://app.asana.com/0/1200000000000001', neu:8, aktualisiert:0, unteraufgaben:1, angebot:[], ohne_konto:[], fehler:[] } },
+];
+for (const p of LAUNCH_POOL) p.created_at = (p.id === 'n' || p.id === 'g') ? zeit(-1) : zeit(-100);
 export const LAUNCH_LIST = { festivals: LAUNCH_FESTIVALS, meilensteine: LAUNCH_MEILENSTEINE, besetzung: LAUNCH_BESETZUNG, pool: LAUNCH_POOL,
-  richtwerte: LAUNCH_RICHTWERTE, bereiche: LAUNCH_BEREICHE, last: [], asanaConfigured: true, heute };
+  richtwerte: LAUNCH_RICHTWERTE, bereiche: LAUNCH_BEREICHE, last: [], vorher: LAUNCH_VORHER, log: LAUNCH_LOG, asanaConfigured: true, heute };
 
 export const ANTWORT = {
   ping: { ok:true, version:28 },

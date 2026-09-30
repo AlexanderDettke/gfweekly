@@ -59,7 +59,7 @@ const SEITEN = [
   ['seiten.html', '#groups'], ['bearbeiten.html', '#itemsView'], ['aufraeumen.html', '#list'], ['checkin.html', '#agenda'],
   ['inbox.html', '#list'],
   ['vertretung.html', '#absList'], ['uebergabe.html', '#list'], ['rueckkehr.html', '#entList'],
-  ['saison.html', '#spDates'], ['launch.html', '#lnAufgaben'],
+  ['saison.html', '#saLage'], ['launch.html', '#lnAufgaben'],
 ];
 const SCHIRME = [ { name:'1440', w:1440, h:900 }, { name:'390', w:390, h:844 } ];
 const THEMES = ['dark','light'];

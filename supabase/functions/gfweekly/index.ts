@@ -868,12 +868,12 @@ const LAUNCH_HINWEISE: Record<string,string[]> = {
   FAMRD27: ['Für die Draußenbande kursieren drei VVK-Termine: 01.10. (Plattform), 11.10. (Saisonabstimmung) und 01.12. Welcher gilt, ist nicht entschieden; die Termine unten rechnen mit dem Wert der Plattform.'],
   BYNRD27: ['Ob by nature 2027 stattfindet, ist als Vorhaben offen (Klärungsaufgabe 10). Die Zuordnung kann trotzdem vorbereitet werden.'],
 };
-const LAUNCH_PERSON_SPALTEN = 'id,name,typ,felder,generator,launch_std_woche,verfuegbar_ab,briefing_std,stundensatz,asana_gid,active,assignable,sort_order,email';
+const LAUNCH_PERSON_SPALTEN = 'id,name,typ,felder,generator,launch_std_woche,verfuegbar_ab,briefing_std,stundensatz,asana_gid,active,assignable,sort_order,email,created_at';
 /* Nach außen ohne E-Mail, ohne Asana-Kennung und ohne Pool-Notiz (sie kann Vertragsdetails tragen); ob ein Konto besteht, genügt der Seite. */
 function launchPersonAussen(p: any){
   return { id:p.id, name:p.name, typ:p.typ || 'team', felder:p.felder || [], generator:p.generator !== false,
     launch_std_woche:p.launch_std_woche, verfuegbar_ab:p.verfuegbar_ab, briefing_std:p.briefing_std ?? 0, stundensatz:p.stundensatz,
-    hat_asana:!!p.asana_gid, active:p.active !== false, assignable:p.assignable !== false, sort_order:p.sort_order ?? 0 };
+    hat_asana:!!p.asana_gid, active:p.active !== false, assignable:p.assignable !== false, sort_order:p.sort_order ?? 0, created_at:p.created_at ?? null };
 }
 function launchIstExtern(p: any){ return !!p && LAUNCH_EXTERN_TYPEN.includes(p.typ) && !p.asana_gid; }
 function launchFestivalKurz(name: unknown){ return String(name ?? '').replace(/\s+20\d\d$/, ''); }
@@ -941,7 +941,7 @@ Deno.serve(async (req: Request) => {
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:35, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
+    if (action === 'ping') return json({ ok:true, version:36, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -1925,17 +1925,22 @@ Deno.serve(async (req: Request) => {
       const festivals = await launchFestivals();
       const planIds = festivals.map(f => f.plan_id);
       const eventIds = festivals.map(f => f.event_id);
-      const [ms, bes, leute, rw, ber] = await Promise.all([
+      /* v36 (V28): dazu die Besetzung „bisher“ (Stand Sommer 2026) und das Launch-Protokoll für saison.html. */
+      const [ms, bes, leute, rw, ber, vorher, log] = await Promise.all([
         planIds.length ? admin.from('vvp_launch_milestones').select('id,plan_id,title,category,status,due_on,due_on_vorher,bereich,person_id,hilfe_person_id,zuordnung_status,aufwand_lo,aufwand_hi,dauer_tage,generator_anteil,responsible,asana_task_gid,ist_stunden,completed_on,sort_order,notes,depends_on').in('plan_id', planIds).order('sort_order',{ascending:true}).order('title',{ascending:true}) : Promise.resolve({ data: [], error: null }),
         eventIds.length ? admin.from('gfweekly_launch_besetzung').select('*').in('event_id', eventIds) : Promise.resolve({ data: [], error: null }),
         launchPersonen(),
         admin.from('gfweekly_launch_richtwerte').select('*'),
         admin.from('gfweekly_launch_bereiche').select('*').order('sort_order',{ascending:true}),
+        admin.from('gfweekly_launch_besetzung_vorher').select('bereich,text,quelle,sort_order').order('sort_order',{ascending:true}),
+        admin.from('gfweekly_saison_log').select('at,who,what,row_id,item_id,detail').in('what', ['launch_set','launch_confirm','launch_send']).order('at',{ascending:false}).limit(60),
       ]);
       if ((ms as any).error) throw (ms as any).error;
       if ((bes as any).error) throw (bes as any).error;
       if ((rw as any).error) throw (rw as any).error;
       if ((ber as any).error) throw (ber as any).error;
+      if ((vorher as any).error) throw (vorher as any).error;
+      if ((log as any).error) throw (log as any).error;
       const planZuEvent = new Map(festivals.map(f => [f.plan_id, f]));
       const meilensteine = ((ms as any).data || []).map((m: any) => {
         const f = planZuEvent.get(m.plan_id);
@@ -1957,6 +1962,7 @@ Deno.serve(async (req: Request) => {
       }
       return json({ festivals, meilensteine, besetzung: (bes as any).data || [], pool: (leute as any[]).map(launchPersonAussen),
         richtwerte: (rw as any).data || [], bereiche: (ber as any).data || [], last: Object.values(last),
+        vorher: (vorher as any).data || [], log: (log as any).data || [],
         asanaConfigured: !!ASANA_TOKEN, heute: heuteBerlin() });
     }
     if (action === 'launch_set') {
@@ -2008,22 +2014,36 @@ Deno.serve(async (req: Request) => {
         await launchLog(by, 'launch_set', null, null, { person: data?.name, patch });
         return json({ ok:true, person: launchPersonAussen(data) });
       }
-      /* c) Besetzung je Bereich: die Zeile und alle noch nicht bestätigten Meilensteine des Bereichs folgen. */
+      /* c) Besetzung je Bereich: die Zeile und alle noch nicht bestätigten Meilensteine des Bereichs folgen.
+         v36 (V28): optional status = 'bestaetigt' (nur Alex oder Lea) setzt die Zeile und die Meilensteine des Bereichs
+         gleich fest; ohne person_id bleibt die eingetragene Person. Quelle und Notiz bleiben stehen, solange die Person
+         dieselbe ist; der Vorzustand steht im Protokoll, damit die Historie erhalten bleibt. */
       if (t.event_id && t.bereich) {
         const festival = await launchFestival(t.event_id);
         if (!festival) return json({ error:'Festival fehlt' },404);
-        const pid = t.person_id || null;
-        const zeile: Record<string, unknown> = { event_id: festival.event_id, bereich: String(t.bereich), person_id: pid,
-          status: pid ? 'vorschlag' : 'offen', quelle: `Hohes Haus, ${by}`, notiz: t.notiz !== undefined ? (t.notiz || null) : undefined,
-          bestaetigt_von: null, bestaetigt_am: null, updated_at: jetzt };
+        const bereich = String(t.bereich);
+        const { data: alt } = await admin.from('gfweekly_launch_besetzung').select('person_id,status,quelle,notiz').eq('event_id', festival.event_id).eq('bereich', bereich).maybeSingle();
+        const pid = t.person_id !== undefined ? (t.person_id || null) : (alt?.person_id || null);
+        const bestaetigen = t.status === 'bestaetigt';
+        const von = whoNorm(by);
+        if (bestaetigen && von !== 'Alex' && von !== 'Lea') return json({ error:'Bestätigen können nur Alex oder Lea' },403);
+        if (bestaetigen && !pid) return json({ error:'Ohne Person lässt sich nichts bestätigen' },400);
+        const gleichePerson = !!alt && (alt.person_id || null) === pid;
+        const zeile: Record<string, unknown> = { event_id: festival.event_id, bereich, person_id: pid,
+          status: bestaetigen ? 'bestaetigt' : (pid ? 'vorschlag' : 'offen'),
+          quelle: gleichePerson && alt?.quelle ? alt.quelle : `Hohes Haus, ${by}`,
+          notiz: t.notiz !== undefined ? (t.notiz || null) : (gleichePerson ? alt?.notiz ?? null : undefined),
+          bestaetigt_von: bestaetigen ? von : null, bestaetigt_am: bestaetigen ? jetzt : null, updated_at: jetzt };
         if (zeile.notiz === undefined) delete zeile.notiz;
         const { data: b, error: be } = await admin.from('gfweekly_launch_besetzung').upsert(zeile, { onConflict:'event_id,bereich' }).select().single();
         if (be) throw be;
+        let name: string | null = null;
+        if (bestaetigen) { const leute = await launchPersonen(); name = (leute as any[]).find(p => p.id === pid)?.name || null; }
         const { data: ms, error: me } = await admin.from('vvp_launch_milestones')
-          .update({ person_id: pid, zuordnung_status: pid ? 'vorschlag' : 'offen', responsible: null, updated_at: jetzt })
-          .eq('plan_id', festival.plan_id).eq('bereich', String(t.bereich)).in('zuordnung_status', ['offen','vorschlag']).select('id,title');
+          .update({ person_id: pid, zuordnung_status: bestaetigen ? 'bestaetigt' : (pid ? 'vorschlag' : 'offen'), responsible: bestaetigen ? name : null, updated_at: jetzt })
+          .eq('plan_id', festival.plan_id).eq('bereich', bereich).in('zuordnung_status', ['offen','vorschlag']).select('id,title');
         if (me) throw me;
-        await launchLog(by, 'launch_set', festival.short_name, null, { bereich: t.bereich, person_id: pid, meilensteine: (ms || []).length });
+        await launchLog(by, 'launch_set', festival.short_name, null, { bereich, person_id: pid, meilensteine: (ms || []).length, status: bestaetigen ? 'bestaetigt' : undefined, vorher: alt || null });
         return json({ ok:true, besetzung: b, meilensteine: (ms || []).length });
       }
       /* d) VVK-Start: vvp_events.sales_start_on, dazu alle offenen Zieltermine neu aus den Richtwerten,

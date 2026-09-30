@@ -2,6 +2,8 @@
    Aufruf: node pruefung/launch-test.mjs
    Vier Fälle aus dem Auftrag: die Kette Lusatia, die Last einer Person über zwei Festivals,
    Hilfe mit Briefing, VVK verschieben. Dazu Reihenfolge, Kandidaten und Wörter.
+   V28 (Saison, vier Fragen): drei Launches in sechs Wochen, Draußenbande nicht haltbar, Lusatia haltbar mit Puffer,
+   Phase heute, Entscheidungen, Hebel, Bisher und Jetzt, Änderungen, Wochenplan.
    Fester Stichtag, damit der Test nicht durch Zeitablauf falsch wird. */
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
@@ -220,6 +222,169 @@ console.log('\n== 5. Reihenfolge, Kandidaten, Wörter ==');
   const vorher = JSON.stringify(LUS);
   const a = L.kette(LUS, RW, { heute: STICHTAG }), b = L.kette(LUS, RW, { heute: STICHTAG });
   gleich('Reine Funktion: zweimal gleich, Eingabe unverändert', [JSON.stringify(a) === JSON.stringify(b), JSON.stringify(LUS) === vorher], [true, true]);
+}
+
+console.log('\n== 6. Saison: Phase, Lage, Entscheidungen (V28) ==');
+const PHASEN = [
+  { key: 'p1', name: 'Abbau und Analyse', von: '2026-09-01', bis: '2026-10-15', herausforderung: 'Auswerten, ohne den Launch zu vergessen.' },
+  { key: 'p2', name: 'Systembau, Launch und Formatpartner', von: '2026-10-01', bis: '2026-12-31', herausforderung: 'Drei Launches, Systembau und Kollektivsuche fallen in denselben Oktober.' },
+  { key: 'p3', name: 'Kernteam-Planung', von: '2027-01-01', bis: '2027-03-31', herausforderung: 'x' },
+  { key: 'p4', name: 'Onboarding', von: '2027-04-01', bis: '2027-06-30', herausforderung: 'x' },
+  { key: 'p5', name: 'Aufbau und Produktion', von: '2027-07-01', bis: '2027-09-30', herausforderung: 'x' },
+];
+const FEST5 = [
+  { plan_id: 'pl-fl', event_id: 'e-fl', short_name: 'FLRD27', name: 'Fluidity 2027', kurzname: 'Fluidity', sales_start_on: '2026-08-01', launch_type: 'campaign_boost', hinweise: [] },
+  { plan_id: 'pl-wm', event_id: 'e-wm', short_name: 'WMRD27', name: 'Wilde Möhre Freude Edition 2027', kurzname: 'Wilde Möhre Freude Edition', sales_start_on: '2026-09-01', hinweise: [] },
+  { plan_id: 'pl-fam', event_id: 'e-fam', short_name: 'FAMRD27', name: 'Malina, Morio & die Draußenbande 2027', kurzname: 'Draußenbande', sales_start_on: '2026-10-01', hinweise: ['Drei VVK-Termine kursieren: 01.10., 11.10., 01.12.'] },
+  { plan_id: 'pl-lus', event_id: 'e-lus', short_name: 'LUSRD27', name: 'Lusatia 2027', kurzname: 'Lusatia', sales_start_on: '2026-10-15', hinweise: [] },
+  { plan_id: 'pl-byn', event_id: 'e-byn', short_name: 'BYNRD27', name: 'by nature 2027', kurzname: 'by nature', sales_start_on: '2026-11-01', hinweise: ['Ob by nature 2027 stattfindet, ist offen.'] },
+];
+const BEREICHE = [['fv', 'Festivalverantwortung'], ['komm', 'Kommunikation'], ['content', 'Content'], ['ticket', 'Ticketing'], ['partner', 'Partner'], ['sys', 'Systeme'], ['recht', 'Recht'], ['gf', 'Geschäftsführung']].map(([key, name]) => ({ key, name }));
+const bName = k => (BEREICHE.find(b => b.key === k) || {}).name || k;
+const pName = id => (POOL.find(p => p.id === id) || {}).name || id;
+/* Besetzung: Draußenbande ohne Festivalverantwortung, sonst Vorschlag; Wilde Möhre bestätigt. */
+const BES = FEST5.flatMap(f => BEREICHE.map(b => { const pid = f.short_name === 'FAMRD27' && b.key === 'fv' ? null : wer({ bereich: b.key });
+  return { event_id: f.event_id, bereich: b.key, person_id: pid, status: !pid ? 'offen' : f.short_name === 'WMRD27' ? 'bestaetigt' : 'vorschlag', quelle: 'Vorsortierung', notiz: !pid ? 'keine tragfähige Besetzung' : null }; }));
+/* Meilensteine: Draußenbande ohne fv-Person, sonst wie oben; Fluidity und Möhre liegen zurück. */
+const MS = {};
+for (const f of FEST5) MS[f.short_name] = festival(f.short_name, f.sales_start_on, r => f.short_name === 'FAMRD27' && r.bereich === 'fv' ? null : wer(r)).map(m => Object.assign(m, { festival: f.short_name, event_id: f.event_id, plan_id: f.plan_id }));
+const ALLE = Object.values(MS).flat();
+const KETTEN = {}; for (const f of FEST5) KETTEN[f.short_name] = L.kette(MS[f.short_name], RW, { heute: STICHTAG });
+{
+  const ph = L.phaseHeute(PHASEN, STICHTAG);
+  gleich('Am 01.10. laufen zwei Phasen, die jüngere ist die Phase der Lage', [ph.laufend.map(p => p.key), ph.aktuell.key, ph.naechste.key], [['p1', 'p2'], 'p2', 'p3']);
+  gleich('Stand je Phase als Wort', ['p1', 'p2', 'p3', 'p5'].map(k => ph.je[k].stand), ['läuft aus', 'läuft', 'als Nächstes', 'später']);
+  gleich('Analyse hat am 01.10. noch 14 Tage', ph.je.p1.tageBisEnde, 14);
+  gleich('Am 30.09. läuft nur die Analyse, Systembau ist als Nächstes', [L.phaseHeute(PHASEN, '2026-09-30').aktuell.key, L.phaseHeute(PHASEN, '2026-09-30').naechste.key], ['p1', 'p2']);
+  gleich('Im Februar läuft die Kernteam-Planung, Analyse ist vorbei', [L.phaseHeute(PHASEN, '2027-02-10').aktuell.key, L.phaseHeute(PHASEN, '2027-02-10').je.p1.stand], ['p3', 'vorbei']);
+
+  gleich('Drei Launches in sechs Wochen ab 01.10.: Draußenbande, Lusatia, by nature', L.launchesBis(FEST5, STICHTAG, 42).map(f => f.short_name), ['FAMRD27', 'LUSRD27', 'BYNRD27']);
+  gleich('Ab 02.10. sind es noch zwei', L.launchesBis(FEST5, '2026-10-02', 42).map(f => f.short_name), ['LUSRD27', 'BYNRD27']);
+  const lage = L.saisonLage(FEST5, ALLE, BES, POOL, { heute: STICHTAG });
+  gleich('Lage: drei Launches, Draußenbande ohne Festivalverantwortung, zwei nur Vorschlag', [lage.bald.length, lage.baldOhneFv.map(f => f.short_name), lage.baldNurVorschlag.map(f => f.short_name), lage.ohneFv.length], [3, ['FAMRD27'], ['LUSRD27', 'BYNRD27'], 1]);
+  gleich('Offene Aufgaben bis Jahresende: alle mit Termin bis 31.12. (Abschluss-Auswertung der späten Festivals fällt raus)', lage.offeneBisJahresende, ALLE.filter(m => m.due_on <= '2026-12-31').length);
+  gleich('Personen mit Zeit von allen im Pool: 4 von 7 (Christian, Agentur, Lea ohne Eintrag)', [lage.personenMitZeit, lage.poolGesamt], [4, 7]);
+  const s = L.saisonLageSatz(lage, PHASEN[1]);
+  gleich('Lagesatz nennt Launches mit Termin und die Festivalverantwortung', s.satz1,
+    'In den nächsten sechs Wochen starten 3 Launches: Draußenbande (01.10.), Lusatia (15.10.) und by nature (01.11.). Bei Draußenbande ist die Festivalverantwortung nicht besetzt, bei Lusatia und by nature ist sie nur ein Vorschlag.');
+  gleich('Zweiter Satz: die Herausforderung der Phase', s.satz2, 'Die Herausforderung der Phase „Systembau, Launch und Formatpartner“: Drei Launches, Systembau und Kollektivsuche fallen in denselben Oktober.');
+  gleich('Ohne Launches im Fenster ein klarer Satz', L.saisonLageSatz(L.saisonLage(FEST5, ALLE, BES, POOL, { heute: '2027-01-10' }), null).satz1, 'In den nächsten sechs Wochen startet kein Launch.');
+
+  const ent = L.entscheidungen(FEST5, BES, KETTEN, { heute: STICHTAG, bereich: bName });
+  gleich('Entscheiden je Festival: Draußenbande offen, Termin, Daten; Lusatia Termin; by nature Daten', ent.map(e => e.festival + ':' + e.art), ['FAMRD27:besetzung', 'FAMRD27:termin', 'FAMRD27:daten', 'LUSRD27:termin', 'BYNRD27:daten']);
+  gleich('Draußenbande: Festivalverantwortung offen mit Notiz', ent.find(e => e.art === 'besetzung').text, 'Draußenbande: Festivalverantwortung ist offen (keine tragfähige Besetzung).');
+  gleich('Lusatia 15.10. ist nicht zu halten, machbar 21.10.', ent.filter(e => e.art === 'termin')[1].text, 'Lusatia: VVK-Start 15.10.2026 ist nach den Richtwerten nicht zu halten, machbar ist frühestens der 21.10.2026.');
+  gleich('by nature (01.11.) liegt außerhalb der drei Wochen: kein Terminpunkt', ent.some(e => e.art === 'termin' && e.festival === 'BYNRD27'), false);
+  /* Review-Runde 2, Befund 4: ein Festival ohne Besetzungszeilen ist in allen Bereichen offen. */
+  const OHNE = [{ event_id: 'e-neu', short_name: 'NEU', kurzname: 'Neu', sales_start_on: '2027-03-01', hinweise: [] }];
+  const entOhne = L.entscheidungen(OHNE, BES, {}, { heute: STICHTAG, bereich: bName, bereiche: BEREICHE.map(b => b.key) });
+  gleich('Ohne Zeilen: acht offene Bereiche mit Hinweis „keine Besetzung eingetragen“', [entOhne.length, entOhne[0].text], [8, 'Neu: Festivalverantwortung ist offen (keine Besetzung eingetragen).']);
+  gleich('Ohne opt.bereiche gelten die Bereiche aus der Besetzung', L.entscheidungen(OHNE, BES, {}, { heute: STICHTAG }).length, 8);
+}
+
+console.log('\n== 7. Saison: Kette, haltbar, Hebel, nächste Termine ==');
+{
+  const kk = L.kritischeKette(MS.LUSRD27, KETTEN.LUSRD27);
+  gleich('Kritische Kette Lusatia: vier Meilensteine mit fertig-am', kk.map(k => [k.title, k.fertig]), [['Content produziert', '2026-10-14'], ['Hauptfilm freigegeben', '2026-10-19'], ['Launch-Checkliste vollständig', '2026-10-20'], ['Launch durchgeführt', '2026-10-21']]);
+  gleich('Längste Kette rückwärts vom Launchtag', L.laengsteKette(MS.LUSRD27, RW, KETTEN.LUSRD27), ['Produktions-Briefing bereit', 'Shotliste bereit', 'Content produziert', 'Hauptfilm freigegeben', 'Launch-Checkliste vollständig', 'Launch durchgeführt']);
+
+  const hFam = L.haltbar(FEST5[2], MS.FAMRD27, RW, KETTEN.FAMRD27, BES, { heute: STICHTAG });
+  gleich('Draußenbande 01.10. nicht haltbar, frühestens 21.10., 20 Tage später', [hFam.haltbar, hFam.fruehester, hFam.puffer], [false, '2026-10-21', -20]);
+  gleich('Ursachen: längste Kette, Festivalverantwortung, Aufgaben ohne Person, Überfälliges', hFam.ursachen, [
+    'längste Kette über Produktions-Briefing bereit, Shotliste bereit, Content produziert, Hauptfilm freigegeben und Launch-Checkliste vollständig',
+    'Festivalverantwortung nicht besetzt', '8 Aufgaben ohne Person', '19 überfällige Aufgaben']);
+  gleich('Satz dazu, Termin unter Besetzungsvorbehalt', L.haltbarSatz(hFam), 'Launchziel 01.10.2026 ist nicht haltbar. Frühester machbarer Termin ist der 21.10.2026 (rechnerisch, unter Besetzungsvorbehalt), 20 Tage später. Ursache: längste Kette über Produktions-Briefing bereit, Shotliste bereit, Content produziert, Hauptfilm freigegeben und Launch-Checkliste vollständig, Festivalverantwortung nicht besetzt, 8 Aufgaben ohne Person und 19 überfällige Aufgaben.');
+  const LUS_SPAET = Object.assign({}, FEST5[3], { sales_start_on: '2026-11-15' });
+  const msSpaet = festival('lusx', '2026-11-15', wer);
+  const kSpaet = L.kette(msSpaet, RW, { heute: STICHTAG });
+  const hLus = L.haltbar(LUS_SPAET, msSpaet, RW, kSpaet, BES, { heute: STICHTAG });
+  gleich('Lusatia mit VVK 15.11. haltbar, 25 Tage Puffer', [hLus.haltbar, hLus.fruehester, hLus.puffer], [true, '2026-10-21', 25]);
+  gleich('Satz: rechnerisch haltbar mit Puffer, ohne Vorbehalt (alles besetzt)', [L.haltbarSatz(hLus), hLus.vorbehalte], ['Launchziel 15.11.2026 ist rechnerisch haltbar, mit 25 Tage Puffer.', []]);
+  /* Review-Runde 1, Befund 4: haltbar darf nichts versprechen, wenn Verantwortung oder Aufgaben unbesetzt sind. */
+  const msOffen = festival('lusy', '2026-11-15', r => r.bereich === 'fv' ? null : wer(r));
+  const hOffen = L.haltbar(Object.assign({}, FEST5[2], { sales_start_on: '2026-11-15' }), msOffen, RW, L.kette(msOffen, RW, { heute: STICHTAG }), BES, { heute: STICHTAG });
+  gleich('Rechnerisch haltbar, aber Festivalverantwortung und Aufgaben ohne Person als Vorbehalt', [hOffen.haltbar, hOffen.vorbehalte], [true, ['Festivalverantwortung nicht besetzt', '8 Aufgaben ohne Person']]);
+  gleich('Satz nennt den Vorbehalt', L.haltbarSatz(hOffen), 'Launchziel 15.11.2026 ist rechnerisch haltbar, mit 25 Tage Puffer, aber Festivalverantwortung nicht besetzt und 8 Aufgaben ohne Person.');
+  gleich('Ohne offenen Launchtag kein Urteil', L.haltbar(FEST5[3], [], RW, { je: {}, fruehesterVVK: null }, BES).haltbar, null);
+  gleich('Satz ohne Ziel', L.haltbarSatz(L.haltbar({ event_id: 'x' }, [], RW, { je: {}, fruehesterVVK: null }, [])), 'Kein Launchziel eingetragen.');
+
+  const hb = L.hebel(FEST5[3], MS.LUSRD27, POOL, FEST5, KETTEN.LUSRD27, { heute: STICHTAG, name: pName });
+  gleich('Parallel: größter Generator-Anteil zuerst, an passende Felder ohne die Zuständige', [hb.parallel.liste[0].title, hb.parallel.liste[0].prozent, hb.parallel.liste[0].an.map(pName)], ['Content produziert', 50, ['Nina', 'Agentur']]);
+  gleich('Parallel-Text nennt Anteil und Personen', hb.parallel.text.startsWith('Content produziert: 50 Prozent (8 bis 16 Std.) an Nina und Agentur'), true);
+  gleich('Verschieben: 21.10., sechs Tage nach dem Ziel, by nature 11 Tage danach', hb.verschieben.text, 'Frühester machbarer Termin 21.10.2026, 6 Tage nach dem Ziel; der nächste Launch ist by nature (01.11.), 11 Tage später.');
+  const hbFam = L.hebel(FEST5[2], MS.FAMRD27, POOL, FEST5, KETTEN.FAMRD27, { heute: STICHTAG, name: pName });
+  gleich('Verschieben bei unbesetzten Aufgaben: Termin unter Besetzungsvorbehalt', hbFam.verschieben.text.startsWith('Rechnerisch frühester Termin (unter Besetzungsvorbehalt) 21.10.2026, 20 Tage nach dem Ziel'), true);
+  gleich('Hilfe: niemand angehakt, Verfügbare mit „ab“', [hb.hilfe.angehakt, hb.hilfe.text], [[], 'Verfügbar: Christian, Nina (ab 10.10.) und Agentur.']);
+  gleich('Entscheiden nur mit Auftrag', [hb.entscheiden, L.hebel(FEST5[4], MS.BYNRD27, POOL, FEST5, KETTEN.BYNRD27, { heute: STICHTAG, entscheiden: 'stattfindet oder 2027/28' }).entscheiden.text], [undefined, 'stattfindet oder 2027/28']);
+  const mitHilfe = MS.LUSRD27.map(m => m.title === 'Content produziert' ? Object.assign({}, m, { hilfe_person_id: 'p-nina' }) : m);
+  const hb2 = L.hebel(FEST5[3], mitHilfe, POOL, FEST5, KETTEN.LUSRD27, { heute: STICHTAG, name: pName });
+  gleich('Angehakte Hilfe erscheint zuerst und fällt aus „verfügbar“', hb2.hilfe.text, 'Angehakt: Nina. Verfügbar: Christian und Agentur.');
+
+  const nf = L.naechsteFaellig(MS.WMRD27, STICHTAG, 3);
+  gleich('Wilde Möhre (VVK 01.09.): drei nächste fällige, kommende zuerst, dann das jüngste Überfällige', nf.liste.map(m => [m.title, m.due_on]), [['Kampagnen-Optimierung abgeschlossen', '2026-10-13'], ['Abschluss-Auswertung abgeschlossen', '2026-11-30'], ['7-Tage-Rückblick', '2026-09-08']]);
+  gleich('… dazu die Zahl der überfälligen', [nf.ueberfaellig, nf.offen], [22, 24]);
+}
+
+console.log('\n== 8. Saison: Bisher und Jetzt, Änderungen, Wochenplan ==');
+{
+  const VORHER = [
+    { bereich: 'fv', text: 'faktisch die GF', quelle: 'Rollen, Sommer 2026' }, { bereich: 'komm', text: 'Antonia (Newsletter, Social)', quelle: 'Rollen, Sommer 2026' },
+    { bereich: 'content', text: 'Antonia allein', quelle: 'Rollen, Sommer 2026' }, { bereich: 'ticket', text: 'je Festival verschieden, Annie nur Fluidity', quelle: 'Rollen, Sommer 2026' },
+    { bereich: 'partner', text: 'Lea (Kollektiv-Thread)', quelle: 'Rollen, Sommer 2026' }, { bereich: 'sys', text: 'verteilt, Tracking bei niemandem', quelle: 'Rollen, Sommer 2026' },
+    { bereich: 'recht', text: 'Legal', quelle: 'Rollen, Sommer 2026' }, { bereich: 'gf', text: 'GF', quelle: 'Rollen, Sommer 2026' } ];
+  const bj = L.bisherJetzt(VORHER, BES, FEST5, POOL, BEREICHE, { alias: { Legal: 'Lea Luce' } });
+  const z = k => bj.find(x => x.key === k);
+  gleich('Reihenfolge der Bereiche wie übergeben', bj.map(x => x.key), ['fv', 'komm', 'content', 'ticket', 'partner', 'sys', 'recht', 'gf']);
+  gleich('Festivalverantwortung: je Festival, teils offen, Änderung „neu“ (bisher faktisch die GF)', [z('fv').jetztText, z('fv').statusWort, z('fv').aenderung], ['Fluidity: Jessica · Wilde Möhre Freude Edition: Jessica · Draußenbande: offen · Lusatia: Jessica · by nature: Jessica', 'teils offen', 'neu']);
+  gleich('Content: überall Antonia, unverändert, Status teils bestätigt', [z('content').jetztText, z('content').statusWort, z('content').aenderung], ['Antonia', 'teils bestätigt', 'unverändert']);
+  gleich('Kommunikation: jetzt Christian statt Antonia, geändert', [z('komm').jetztText, z('komm').aenderung], ['Christian', 'geändert']);
+  gleich('Systeme: bisher verteilt, jetzt Christian, neu', z('sys').aenderung, 'neu');
+  gleich('Recht: Legal ist per Alias Lea, unverändert', z('recht').aenderung, 'unverändert');
+  gleich('GF: Alexander ist Typ gf, „GF“ im Bisher-Text passt', z('gf').aenderung, 'unverändert');
+  gleich('Jedes Feld trägt Quelle und Notiz der Besetzung', [z('fv').jetzt[2].quelle, z('fv').jetzt[2].notiz], ['Vorsortierung', 'keine tragfähige Besetzung']);
+
+  const LOG = [
+    { at: '2026-10-01T09:00:00Z', who: 'Alex', what: 'launch_confirm', row_id: 'LUSRD27', detail: { bestaetigt: 12, besetzung: 7 } },
+    { at: '2026-09-30T18:00:00Z', who: 'Lea', what: 'launch_set', row_id: 'FAMRD27', detail: { bereich: 'fv', person_id: 'p-jessica', meilensteine: 8 } },
+    { at: '2026-09-30T17:00:00Z', who: 'Alex', what: 'launch_set', row_id: null, detail: { titel: 'Zielgruppen definiert', geaendert: ['status'] } },
+    { at: '2026-09-30T16:00:00Z', who: 'Alex', what: 'launch_set', row_id: null, detail: { person: 'Antonia', patch: { launch_std_woche: 8 } } },
+    { at: '2026-09-30T15:00:00Z', who: 'Alex', what: 'launch_set', row_id: 'LUSRD27', detail: { sales_start_on: { alt: '2026-10-15', neu: '2026-10-29' }, verschoben: 23 } },
+    { at: '2026-09-30T14:00:00Z', who: 'Alex', what: 'launch_send', row_id: 'LUSRD27', detail: { projekt: '1', schritt: 'Projekt angelegt' } },
+    { at: '2026-09-30T14:01:00Z', who: 'Alex', what: 'launch_send', row_id: 'LUSRD27', detail: { projekt: '1', neu: 12, aktualisiert: 0 } },
+  ];
+  const POOL2 = POOL.map(p => Object.assign({}, p, { created_at: p.id === 'p-nina' || p.id === 'p-agentur' ? '2026-09-30T12:00:00Z' : '2026-06-22T00:00:00Z' }));
+  const ae = L.aenderungen(LOG, POOL2, { seit: '2026-09-30', name: pName, festival: s => (FEST5.find(f => f.short_name === s) || {}).kurzname, bereich: bName });
+  gleich('Neueste zuerst, Protokoll und Pool gemischt', ae.map(a => a.datum + ' ' + a.art), ['2026-10-01 launch_confirm', '2026-09-30 launch_set', '2026-09-30 launch_set', '2026-09-30 launch_set', '2026-09-30 launch_set', '2026-09-30 launch_send', '2026-09-30 launch_send', '2026-09-30 pool', '2026-09-30 pool']);
+  gleich('Sätze aus dem Protokoll', ae.slice(0, 7).map(a => a.text), [
+    'Lusatia: 12 Zuordnungen und 7 Besetzungen bestätigt',
+    'Draußenbande: Festivalverantwortung an Jessica, 8 Aufgaben nachgezogen',
+    'Meilenstein „Zielgruppen definiert“: Stand geändert',
+    'Antonia: Stunden je Woche auf 8',
+    'Lusatia: VVK-Start von 15.10.2026 auf 29.10.2026, 23 Termine verschoben',
+    'Lusatia: nach Asana gesendet, 12 neu, 0 aktualisiert',
+    'Lusatia: Asana-Projekt angelegt']);
+  gleich('Pool: neu mit Typ und „ab“', ae.slice(7).map(a => a.text).sort(), ['Agentur neu im Pool (Agentur)', 'Nina neu im Pool (Minijob), ab 10.10.2026']);
+  /* Review-Runde 1, Befund 6: ein „ab“-Datum vor dem Stichtag gehört nicht in „seit dem Sommer“. */
+  const POOL3 = POOL2.map(p => p.id === 'p-jessica' ? Object.assign({}, p, { verfuegbar_ab: '2026-02-01' }) : p.id === 'p-antonia' ? Object.assign({}, p, { verfuegbar_ab: '2026-10-20' }) : p);
+  const ae3 = L.aenderungen([], POOL3, { seit: '2026-09-30', name: pName });
+  gleich('„ab“ nur ab dem Stichtag: Antonia ja, Jessica (Februar) nein', ae3.map(a => a.text).sort(), ['Agentur neu im Pool (Agentur)', 'Antonia: ab 20.10.2026', 'Nina neu im Pool (Minijob), ab 10.10.2026']);
+  gleich('Höchstens 30 Zeilen', L.aenderungen(Array.from({ length: 40 }, (_, i) => ({ at: '2026-09-30T00:00:' + String(i).padStart(2, '0') + 'Z', who: 'Alex', what: 'launch_confirm', row_id: 'LUSRD27', detail: {} })), [], {}).length, 30);
+
+  const wp = L.wochenplan(ALLE, FEST5, { heute: STICHTAG, bis: '2026-12-31' });
+  gleich('Wochen ab dem Montag der laufenden Woche, aufsteigend', [wp[0].montag, wp[0].sonntag, wp.every((w, i) => !i || w.montag > wp[i - 1].montag)], ['2026-09-28', '2026-10-04', true]);
+  const w1 = wp[0];
+  gleich('Erste Woche: Draußenbande (Launch, Rückblick), Lusatia (Content) und by nature (Briefing, Shotliste u. a.): drei Launches', [w1.festivals.map(f => f.short_name), w1.dreiLaunches], [['FAMRD27', 'LUSRD27', 'BYNRD27'], true]);
+  gleich('Stunden als Mitte der Spanne, Summe je Woche', [w1.festivals.find(f => f.short_name === 'FAMRD27').anzahl, w1.stunden === Math.round(w1.festivals.reduce((a, f) => a + f.stunden, 0) * 10) / 10], [6, true]);
+  gleich('Nichts nach dem 31.12. und nichts Erledigtes', wp.every(w => w.montag <= '2026-12-31'), true);
+  gleich('Montag rechnet richtig (01.10.2026 ist ein Donnerstag)', [L.montag('2026-10-01'), L.montag('2026-10-05'), L.montag('2026-10-04')], ['2026-09-28', '2026-10-05', '2026-09-28']);
+
+  /* Fenster nach Launches (Review-Runde 1, Befund 3): laufende und in 60 Tagen startende Launches ganz, spätere gar nicht. */
+  const FEST6 = FEST5.concat([{ plan_id: 'pl-eg', event_id: 'e-eg', short_name: 'EGRD27', name: 'mit Freude eG 2027', kurzname: 'mit Freude eG', sales_start_on: '2026-12-15', hinweise: [] }]);
+  const spaet = festival('eg', '2026-12-15', wer).map(m => Object.assign(m, { festival: 'EGRD27' }));
+  const fenster = L.imFenster(ALLE.concat(spaet), STICHTAG, 60, FEST6);
+  gleich('Fenster 60 Tage: Möhre (läuft) und by nature (01.11.) ganz drin, auch spätere Termine', [fenster.some(m => m.festival === 'WMRD27' && m.due_on < STICHTAG), fenster.some(m => m.festival === 'BYNRD27' && m.title === 'Abschluss-Auswertung abgeschlossen')], [true, true]);
+  gleich('… ein Launch am 15.12. bleibt draußen, Erledigtes auch', [fenster.some(m => m.festival === 'EGRD27'), fenster.some(m => L.FERTIG.has(m.status))], [false, false]);
+  gleich('Wörter: Liste, Tage, Anzahl', [L.listeWorte(['a']), L.listeWorte(['a', 'b']), L.listeWorte(['a', 'b', 'c']), L.tageWort(1), L.tageWort(-3), L.anzahlWort(1, 'Tag', 'Tage')], ['a', 'a und b', 'a, b und c', '1 Tag', '3 Tage', '1 Tag']);
 }
 
 console.log(`\nLaunch-Logik: ${ok} in Ordnung, ${fehler} Befunde.`);

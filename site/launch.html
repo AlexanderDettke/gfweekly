@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Das Hohe Haus · Launch verteilen</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=26" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=26" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=26" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=26" />
-<link rel="stylesheet" href="/assets/styles.css?v=26" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=27" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=27" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=27" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=27" />
+<link rel="stylesheet" href="/assets/styles.css?v=27" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 <style>
 /* Launch verteilen (V27 Phase B, 30.09.2026): Festivalwahl, Lage, vier Wege, Aufgaben je Bereich, Zeit je Person,
@@ -194,10 +194,10 @@ details[open]>summary .chev{transform:rotate(90deg)}
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=26"></script>
-<script src="/assets/launch-logik.js?v=26"></script>
-<script src="/assets/game.js?v=26"></script>
-<script src="/assets/eggs.js?v=26" defer></script>
+<script src="/assets/core.js?v=27"></script>
+<script src="/assets/launch-logik.js?v=27"></script>
+<script src="/assets/game.js?v=27"></script>
+<script src="/assets/eggs.js?v=27" defer></script>
 <script>
 /* V27 Phase B · Launch verteilen. Die Seite hält alle Daten aus launch_list, rechnet mit LaunchLogik
    und schreibt über launch_set, launch_confirm, launch_send. Nach jedem Schreiben wird neu geladen. */
@@ -235,7 +235,7 @@ function optionen(cur, opts={}){
 function renderFest(){
   $("#lnFest").innerHTML=D.festivals.map(f=>`<li><button type="button" data-f="${gfEsc(f.short_name)}" aria-pressed="${f.short_name===CUR}"><b>${gfEsc(f.kurzname)}</b><span>VVK ${f.sales_start_on?fmtK(f.sales_start_on):"offen"}${f.launch_type==="campaign_boost"?" · Kampagnen-Boost":""}</span></button></li>`).join("");
 }
-$("#lnFest").addEventListener("click",e=>{ const b=e.target.closest("button[data-f]"); if(!b) return; CUR=b.dataset.f; history.replaceState(null,"","?event="+encodeURIComponent(CUR)); UI.wegB.bereich=null; UI.wegD.milestone=null; renderAll(); });
+$("#lnFest").addEventListener("click",e=>{ const b=e.target.closest("button[data-f]"); if(!b) return; CUR=b.dataset.f; history.replaceState(null,"","?festival="+encodeURIComponent(CUR)); UI.wegB.bereich=null; UI.wegD.milestone=null; renderAll(); });
 
 /* ---- Lage ---- */
 function renderLage(R){
@@ -456,10 +456,15 @@ async function load(erstes){
   const d=await gfApi("launch_list",{});
   D=d; HEUTE=d.heute||new Date().toISOString().slice(0,10);
   if(!D.festivals||!D.festivals.length){ $("#lnSatz").textContent="Im Cockpit liegen keine Launch-Pläne für 2027."; $("#lnAufgaben").innerHTML=""; return; }
-  const wunsch=new URLSearchParams(location.search).get("event");
+  /* V28: saison.html öffnet die Seite mit ?festival=<short_name>&weg=1..4 (1 Vorschlag übernehmen, 2 Umverteilen,
+     3 VVK-Start verschieben, 4 Hilfe dazuholen); ?event= aus V27 gilt weiter. Der Weg wird aufgeklappt, die anderen zu. */
+  const qs=new URLSearchParams(location.search);
+  const wunsch=qs.get("festival")||qs.get("event");
   if(erstes||!CUR) CUR=(D.festivals.find(f=>f.short_name===wunsch)||D.festivals.find(f=>f.sales_start_on>=HEUTE)||D.festivals[0]).short_name;
   if(!D.festivals.some(f=>f.short_name===CUR)) CUR=D.festivals[0].short_name;
   renderAll();
+  if(erstes){ const weg=Number(qs.get("weg")); const ids=["wegA","wegB","wegC","wegD"];
+    if(weg>=1&&weg<=4){ ids.forEach((id,i)=>{ const d=document.getElementById(id); if(d) d.open=(i===weg-1); }); const ziel=document.getElementById(ids[weg-1]); if(ziel) ziel.scrollIntoView({block:"start"}); } }
 }
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("launch");

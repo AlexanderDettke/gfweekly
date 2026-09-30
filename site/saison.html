@@ -6,100 +6,138 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Das Hohe Haus · Saison</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=26" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=26" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=26" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=26" />
-<link rel="stylesheet" href="/assets/styles.css?v=26" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=27" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=27" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=27" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=27" />
+<link rel="stylesheet" href="/assets/styles.css?v=27" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 <style>
-/* Saison (V25, 30.09.2026): die fünf Metaphasen als Steckbriefe in Worten, ohne Farbcode.
-   30.09.2026, Phase B: Beschriftungen in Teilen auf --surface-2 von --text-3 auf --text-2, weil die Schirmprüfung 4,19:1 gemessen hat.
-   Status, Fristen und Abstände rechnet die Seite aus dem heutigen Datum; die Inhalte stehen im HTML. */
-#sp{max-width:880px;display:grid;gap:22px;margin-top:6px}
-#sp .sp-lead{color:var(--text-2);max-width:66ch;margin:0;line-height:var(--leading-text)}
-#sp .sp-key{font-size:var(--stufe-2);color:var(--text-3);margin:6px 0 0}
-.sp-eb{font-size:var(--stufe-1);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-2)}
+/* Saison (V28, 30.09.2026): vier Antworten in fester Reihenfolge, aus den Daten von launch_list.
+   Status und Last stehen als Wort, Farbe trägt keine Bedeutung, Hervorhebung durch Rahmen.
+   Die fünf Metaphasen stehen als Konstante im Skript; alles andere kommt aus dem System. */
+#sa{max-width:1040px;display:grid;gap:22px;margin-top:6px}
+.sa-lead{color:var(--text-2);max-width:70ch;margin:0;line-height:var(--leading-text)}
+.sa-eb{font-size:var(--stufe-1);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-2)}
+.sa-sec{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);padding:16px 18px;display:grid;gap:14px}
+.sa-sec>h2{font-size:var(--stufe-4);margin:0;text-wrap:balance}
+.sa-sec h3{font-size:var(--stufe-3);margin:0}
+.sa-muted{color:var(--text-2);font-size:var(--stufe-2);line-height:var(--leading-text);margin:0}
+.sa-satz{margin:0;font-size:var(--stufe-3);line-height:var(--leading-text);max-width:76ch}
+.sa-note{background:var(--warn-bg);color:var(--text);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:var(--leading-text)}
+.sa-note b{color:var(--text)}
+.sa-mark{display:inline-block;font-size:.66rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:var(--radius-s);padding:0 5px;margin-left:6px;vertical-align:1px;white-space:nowrap;color:var(--text);border:var(--rahmen) solid var(--border-strong)}
+.sa-mark.leer{color:var(--text-2);border-style:dashed}
+.sa-rahmen{border:2px solid var(--text);border-radius:var(--radius-m);padding:6px 10px;display:inline-block;font-weight:700;font-variant-numeric:tabular-nums}
 
-/* Phasen als Wortkette */
-.sp-chain{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:0;padding:0;list-style:none}
-.sp-chain li{display:flex;min-width:0}
-.sp-chain a{display:block;width:100%;text-decoration:none;color:var(--text);background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:9px 12px;min-height:44px}
-.sp-chain a:hover{border-color:var(--border-strong)}
-.sp-chain a:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-.sp-chain b{display:block;font-size:var(--stufe-2);font-weight:600;line-height:1.3}
-.sp-chain span{display:block;font-size:var(--stufe-1);color:var(--text-2);margin-top:2px}
-.sp-chain .ist-jetzt a{background:var(--accent-soft);border-color:var(--accent)}
-.sp-chain .ist-naechste a{border-color:var(--action)}
-.sp-chain .ist-vorbei a{opacity:.85}
+/* Phasenleiste: schmal, Breite nach Tagen, Marker heute, laufende Phase mit Rahmen */
+.sa-leiste{position:relative;margin:4px 0 0}
+.sa-leiste .bar{position:relative;height:20px}
+.sa-leiste .bar span{position:absolute;top:0;height:12px;box-sizing:border-box;background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-s)}
+.sa-leiste .bar span.ob{top:8px}
+.sa-leiste .bar span.ist-jetzt{border:2px solid var(--text);z-index:1}
+.sa-leiste .heute{position:absolute;top:-6px;width:0;height:32px;border-left:2px solid var(--text);z-index:2}
+.sa-leiste .heute b{position:absolute;top:32px;left:-2.6rem;width:5.4rem;text-align:center;font-size:var(--stufe-1);font-weight:700;white-space:nowrap}
+.sa-phasen{list-style:none;margin:30px 0 0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.sa-phasen li{background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:8px 10px;min-width:0}
+.sa-phasen li.ist-jetzt{border:2px solid var(--text)}
+.sa-phasen b{display:block;font-size:var(--stufe-2);font-weight:600;line-height:1.3}
+.sa-phasen span{display:block;font-size:var(--stufe-1);color:var(--text-2);margin-top:2px}
+.sa-lage .kk-row{grid-template-columns:repeat(4,minmax(0,1fr))}
+.sa-liste{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.sa-liste li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:baseline;padding:8px 10px;background:var(--surface-2);border-radius:var(--radius-m);font-size:var(--stufe-2);line-height:var(--leading-text)}
+.sa-liste li .w{font-weight:700;white-space:nowrap}
+.sa-liste li .d{font-variant-numeric:tabular-nums;color:var(--text-2);white-space:nowrap}
 
-/* Die nächsten Termine */
-.sp-jetzt{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);padding:16px 18px}
-.sp-jetzt h2{font-size:var(--stufe-4);margin:4px 0 10px}
-.sp-dates{list-style:none;margin:0;padding:0;display:grid;gap:7px}
-.sp-dates li{display:grid;grid-template-columns:4.4rem 6.6rem minmax(0,1fr);gap:10px;align-items:baseline}
-.sp-dates .d{font-weight:700;font-variant-numeric:tabular-nums}
-.sp-dates .rel{font-size:var(--stufe-2);color:var(--text-2)}
-.sp-dates .rel.bald{color:var(--text);font-weight:600}
-.sp-dates .wo{color:var(--text-3);font-size:var(--stufe-2)}
-.sp-hint{margin-top:12px;background:var(--warn-bg);color:var(--text);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:var(--leading-text)}
-.sp-hint b{color:var(--warn)}
+/* Aufklappbare Blöcke */
+details.sa-auf{background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m)}
+details.sa-auf[open]{border-color:var(--border-strong)}
+.sa-auf>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;align-items:center;gap:8px;font-weight:600;border-radius:var(--radius-m)}
+.sa-auf>summary::-webkit-details-marker{display:none}
+.sa-auf>summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.sa-auf .chev{display:inline-block;margin-left:auto;color:var(--text-2);transition:transform var(--motion-fast,.15s)}
+details[open]>summary .chev{transform:rotate(90deg)}
+.sa-auf .body{padding:0 14px 14px;display:grid;gap:12px}
+.sa-auf .body p{margin:0;line-height:var(--leading-text);max-width:70ch}
+.sa-auf .body ul.ok{margin:0;padding-left:1.1em;line-height:var(--leading-text)}
+.sa-two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.sa-two>div{min-width:0}
+.sa-kurz{display:grid;gap:6px}
+.sa-kurz div{padding:8px 10px;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);font-size:var(--stufe-2);line-height:var(--leading-text)}
 
-/* Phasen-Steckbriefe */
-.sp-phases{display:grid;gap:14px}
-details.sp-ph{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);scroll-margin-top:80px}
-details.sp-ph[open]{border-color:var(--border-strong)}
-details.sp-ph.ist-jetzt{border-color:var(--accent)}
-.sp-ph > summary,.sp-part > summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;align-items:start;border-radius:var(--radius-l)}
-.sp-ph > summary{padding:16px 18px}
-.sp-ph > summary::-webkit-details-marker,.sp-part > summary::-webkit-details-marker{display:none}
-.sp-ph > summary:focus-visible,.sp-part > summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-.sp-ph h3{margin:0;font-size:var(--stufe-4);line-height:1.3;text-wrap:balance}
-.sp-when{font-size:var(--stufe-2);color:var(--text-2);margin-top:2px}
-.sp-what{grid-column:1/-1;color:var(--text-2);margin-top:6px;max-width:66ch;line-height:var(--leading-text)}
-.sp-chev{display:inline-block;margin-left:6px;color:var(--text-3);transition:transform var(--motion-fast,.15s)}
-details[open] > summary .sp-chev{transform:rotate(90deg)}
-.sp-tag{font-size:var(--stufe-1);font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;border:var(--rahmen) solid var(--border-strong);color:var(--text-2)}
-.sp-tag.jetzt{background:var(--accent-soft);border-color:var(--accent);color:var(--text)}
-.sp-tag.naechste{border-color:var(--action);color:var(--text)}
-.sp-body{padding:0 18px 18px;display:grid;gap:18px}
-.sp-two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.sp-two > div{min-width:0}
-.sp-body h4{margin:0 0 6px}
-.sp-body p{margin:0;max-width:66ch;line-height:var(--leading-text)}
-.sp-ok{margin:0;padding-left:1.1em;line-height:var(--leading-text)}
-.sp-steps{list-style:none;margin:0;padding:0;border-top:var(--rahmen) solid var(--border)}
-.sp-steps li{display:grid;grid-template-columns:7.4rem minmax(0,1fr) auto;gap:3px 14px;padding:9px 0;border-bottom:var(--rahmen) solid var(--border);align-items:baseline}
-.sp-steps .d{font-size:var(--stufe-2);font-weight:700;font-variant-numeric:tabular-nums}
-.sp-steps .who{font-size:var(--stufe-2);color:var(--text-2);text-align:right}
-.sp-steps .x{grid-column:2/-1;font-size:var(--stufe-2);color:var(--text-2);line-height:var(--leading-text)}
-.sp-vs,.sp-offen{font-size:.66rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:var(--radius-s);padding:0 5px;margin-left:6px;vertical-align:1px;white-space:nowrap}
-.sp-vs{color:var(--text);border:var(--rahmen) solid var(--action)}
-.sp-offen{color:var(--text-2);border:var(--rahmen) dashed var(--border-strong)}
-.sp-parts{display:grid;gap:10px}
-details.sp-part{background:var(--surface-2);border-radius:var(--radius-m)}
-.sp-part > summary{padding:12px 14px}
-.sp-part h3{font-size:var(--stufe-3)}
-.sp-part .sp-body{padding:0 14px 14px;gap:14px}
-.sp-tbl{overflow-x:auto}
-.sp-tbl table{width:100%;border-collapse:collapse;font-size:var(--stufe-2)}
-.sp-tbl th,.sp-tbl td{text-align:left;padding:8px 12px 8px 0;border-bottom:var(--rahmen) solid var(--border);vertical-align:top}
-.sp-tbl th{font-size:var(--stufe-1);letter-spacing:.06em;text-transform:uppercase;color:var(--text-2);font-weight:700}
-.sp-tbl td{font-variant-numeric:tabular-nums}
-.sp-tbl td.bald{font-weight:600}
-.sp-hand{border-left:3px solid var(--action);padding:2px 0 2px 12px;color:var(--text-2);line-height:var(--leading-text)}
-.sp-foot{color:var(--text-3);font-size:var(--stufe-2);max-width:66ch;line-height:var(--leading-text)}
-@media (max-width:760px){
-  .sp-two{grid-template-columns:1fr}
-  .sp-chain{grid-template-columns:1fr 1fr}
-  .sp-chain li:last-child{grid-column:1/-1}
-  .sp-steps li{grid-template-columns:5.8rem minmax(0,1fr)}
-  .sp-steps .who{grid-column:2;text-align:left}
-  .sp-dates li{grid-template-columns:4rem minmax(0,1fr)}
-  .sp-dates .rel{grid-column:1;grid-row:2;font-size:var(--stufe-1)}
-  .sp-dates li > span:last-child{grid-column:2;grid-row:1/3}
+/* Besetzungstafel als Raster: Kopf, je Bereich eine Zeile mit fünf Feldern */
+.sa-tafel{display:grid;grid-template-columns:9.5rem repeat(5,minmax(0,1fr));gap:6px 8px;align-items:start}
+.sa-tafel .kopf{font-size:var(--stufe-1);letter-spacing:.06em;text-transform:uppercase;color:var(--text-2);font-weight:700;padding:4px 0;border-bottom:var(--rahmen) solid var(--border);min-width:0}
+.sa-tafel .kopf small{display:block;text-transform:none;letter-spacing:0;font-weight:500;font-variant-numeric:tabular-nums}
+.sa-tafel .zeile{font-weight:600;font-size:var(--stufe-2);padding:8px 0;align-self:center}
+.sa-tafel .feld{min-width:0;padding:6px;background:var(--surface-2);border-radius:var(--radius-m)}
+.sa-tafel .feld select{width:100%;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-s);color:var(--text);padding:6px 6px;min-height:36px;font-size:var(--stufe-2)}
+.sa-tafel .feld .st{display:block;font-size:var(--stufe-1);color:var(--text-2);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sa-tafel .feld .st b{color:var(--text)}
+.sa-tafel .feld .fest{display:none}
+.sa-tafel .fuss{padding-top:6px;min-width:0}
+.sa-tafel .fuss .btn{width:100%;justify-content:center;white-space:normal;text-align:center}
+.sa-last{display:grid;gap:6px}
+.sa-p{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,2fr) minmax(0,1.3fr);gap:6px 12px;align-items:center;padding:9px 12px;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);font-size:var(--stufe-2)}
+.sa-p .name{font-weight:600}
+.sa-p .typ{display:block;font-size:var(--stufe-1);color:var(--text-2)}
+.sa-p .bar{height:8px;background:var(--fill);border-radius:var(--radius-s);overflow:hidden}
+.sa-p .bar i{display:block;height:100%;background:var(--accent)}
+.sa-p .bw{display:grid;gap:4px}
+.sa-p .bw span{font-size:var(--stufe-1);color:var(--text-2)}
+.sa-p .stepper{max-width:150px}
+.sa-p .stepper input{width:54px}
+.sa-p .k{display:block;font-size:var(--stufe-1);color:var(--text-2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+
+/* Bisher und jetzt */
+.sa-vj{display:grid;grid-template-columns:9.5rem minmax(0,1.2fr) minmax(0,2fr);gap:6px 12px;align-items:start}
+.sa-vj .kopf{font-size:var(--stufe-1);letter-spacing:.06em;text-transform:uppercase;color:var(--text-2);font-weight:700;padding:4px 0;border-bottom:var(--rahmen) solid var(--border)}
+.sa-vj .zeile{font-weight:600;font-size:var(--stufe-2);padding:8px 0}
+.sa-vj .zelle{font-size:var(--stufe-2);line-height:var(--leading-text);padding:8px 10px;background:var(--surface-2);border-radius:var(--radius-m);min-width:0}
+.sa-vj .zelle .q{display:block;color:var(--text-2);font-size:var(--stufe-1);margin-top:4px}
+.sa-vj .zelle.geaendert{border:2px solid var(--text)}
+.sa-vj .zelle .fest{display:block}
+
+/* Je Festival ein Block */
+.sa-fest{display:grid;gap:10px;padding:14px;background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m)}
+.sa-fest .kopf{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px}
+.sa-fest .kopf .vvk{color:var(--text-2);font-size:var(--stufe-2);font-variant-numeric:tabular-nums}
+.sa-kette{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.sa-kette li{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:8px 10px;font-size:var(--stufe-2);min-width:0;line-height:1.35}
+.sa-kette li b{display:block;font-weight:600}
+.sa-kette li .d{font-variant-numeric:tabular-nums}
+.sa-kette li .x{display:block;color:var(--text-2);font-size:var(--stufe-1);margin-top:2px}
+.sa-hebel{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.sa-hebel div{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.sa-hebel .btn{justify-content:center;width:100%}
+.sa-hebel p{margin:0;font-size:var(--stufe-1);color:var(--text-2);line-height:var(--leading-text)}
+.sa-wochen{display:grid;gap:6px}
+.sa-w{display:grid;grid-template-columns:8.5rem minmax(0,1fr) auto;gap:4px 12px;align-items:baseline;padding:8px 10px;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);font-size:var(--stufe-2)}
+.sa-w .d{font-variant-numeric:tabular-nums;font-weight:600}
+.sa-w .f{color:var(--text-2);line-height:var(--leading-text)}
+.sa-w .s{font-variant-numeric:tabular-nums;white-space:nowrap}
+.sa-w.drei{border:2px solid var(--text)}
+.sa-foot{color:var(--text-3);font-size:var(--stufe-2);max-width:70ch;line-height:var(--leading-text)}
+
+@media (max-width:900px){
+  .sa-lage .kk-row{grid-template-columns:1fr 1fr}
+  .sa-kette{grid-template-columns:1fr 1fr}
+  .sa-p{grid-template-columns:1fr 1fr} .sa-p .bw{grid-column:1/-1}
+  .sa-vj{grid-template-columns:1fr} .sa-vj .kopf{display:none} .sa-vj .zeile{padding-top:12px;border-top:var(--rahmen) solid var(--border)}
+  .sa-vj .zelle::before{content:attr(data-l);display:block;font-size:var(--stufe-1);letter-spacing:.06em;text-transform:uppercase;color:var(--text-2);font-weight:700;margin-bottom:3px}
 }
-@media (prefers-reduced-motion:reduce){.sp-chev{transition:none}}
+@media (max-width:760px){
+  .sa-phasen{grid-template-columns:1fr 1fr} .sa-phasen li:last-child{grid-column:1/-1}
+  .sa-leiste .heute b{left:auto;right:-2px;text-align:right;width:auto}
+  .sa-two{grid-template-columns:1fr}
+  .sa-tafel{grid-template-columns:1fr} .sa-tafel .kopf{display:none} .sa-tafel .zeile{padding-top:12px;border-top:var(--rahmen) solid var(--border)}
+  .sa-tafel .feld .fest{display:block;font-size:var(--stufe-1);color:var(--text-2);margin-bottom:3px}
+  .sa-tafel .fuss{padding-top:12px;border-top:var(--rahmen) solid var(--border)}
+  .sa-tafel .fuss .btn{justify-content:flex-start;text-align:left}
+  .sa-w{grid-template-columns:1fr} .sa-w .s{white-space:normal}
+}
+@media (max-width:480px){ .sa-kette{grid-template-columns:1fr} .sa-p{grid-template-columns:1fr} .sa-lage .kk-row{grid-template-columns:1fr 1fr} }
+@media (prefers-reduced-motion:reduce){.sa-auf .chev{transition:none}}
 </style>
 </head>
 <body>
@@ -120,267 +158,260 @@ details.sp-part{background:var(--surface-2);border-radius:var(--radius-m)}
   <header id="topbar"></header>
   <div id="hero"></div>
 
-  <main id="sp">
-    <div>
-      <p class="sp-lead">Fünf Phasen im Jahr, jede mit ihrer eigenen Arbeitsweise. Tippe auf eine Phase, um zu sehen, was bis wann passieren muss und wer es trägt.</p>
-      <p class="sp-key"><span class="sp-vs">Vorschlag</span> heißt noch nicht entschieden, <span class="sp-offen">offen</span> heißt, es fehlt noch.</p>
-    </div>
+  <main id="sa">
+    <p class="sa-lead">Alle Zahlen aus dem System, Stand jetzt; Aufwand als Richtwert, Kalibrierung über Ist-Stunden.</p>
 
-    <ol class="sp-chain" id="spChain" aria-label="Phasen der Saison">
-      <li data-p="p1"><a href="#p1"><b>Abbau und Analyse</b><span>Sep bis Mitte Okt</span></a></li>
-      <li data-p="p2"><a href="#p2"><b>Systembau, Launch und Formatpartner</b><span>Okt bis Dez</span></a></li>
-      <li data-p="p3"><a href="#p3"><b>Kernteam-Planung</b><span>Jan bis Mär</span></a></li>
-      <li data-p="p4"><a href="#p4"><b>Onboarding</b><span>Apr bis Jun</span></a></li>
-      <li data-p="p5"><a href="#p5"><b>Aufbau und Produktion</b><span>Jul bis Sep</span></a></li>
-    </ol>
-
-    <section class="sp-jetzt" aria-labelledby="spJetztH">
-      <div class="sp-eb" id="spStand">Stand heute</div>
-      <h2 id="spJetztH">Die nächsten Termine</h2>
-      <ul class="sp-dates" id="spDates"></ul>
-      <div class="sp-hint" id="spEng" hidden><b>Engpass Oktober:</b> Analyse, Systembau und drei Launches fallen zusammen. Ob wir parallel arbeiten oder verschieben, ist noch nicht entschieden.</div>
+    <section class="sa-sec sa-lage" aria-labelledby="saF1">
+      <div class="sa-eb" id="saStand">Stand heute</div>
+      <h2 id="saF1">Was ist unsere Phase, und was ist die Herausforderung?</h2>
+      <div class="sa-leiste" id="saLeiste"></div>
+      <ol class="sa-phasen" id="saPhasen" aria-label="Die fünf Phasen der Saison"></ol>
+      <div id="saLage"><p class="sa-satz">lädt …</p></div>
+      <div class="kk-row" id="saKpi"></div>
+      <div>
+        <h3>Diese Woche entscheiden</h3>
+        <ul class="sa-liste" id="saEntscheiden" style="margin-top:8px"></ul>
+      </div>
+      <details class="sa-auf" id="saPhaseDetail">
+        <summary>Die Phase im Detail<span class="chev" aria-hidden="true">›</span></summary>
+        <div class="body" id="saPhaseBody"></div>
+      </details>
     </section>
 
-    <div class="sp-phases">
-
-      <details class="sp-ph" id="p1" data-von="2026-09-01" data-bis="2026-10-15">
-        <summary>
-          <div><h3>Abbau und Analyse<span class="sp-chev" aria-hidden="true">›</span></h3><div class="sp-when">September bis Mitte Oktober 2026</div></div>
-          <span class="sp-tag" data-tag></span>
-          <div class="sp-what">Das Gelände zurückbauen, auswerten, was gut und was schlecht lief, und erholen.</div>
-        </summary>
-        <div class="sp-body">
-          <div class="sp-two">
-            <div><h4 class="sp-eb">So arbeitet das Team</h4><p>Kleinere Crew, wenige Aufgaben gleichzeitig. Erholung ist eingeplante Zeit. Feedback wird nach Wirkung und Umsetzbarkeit sortiert: Nicht jeder Kommentar wird ein Projekt.</p></div>
-            <div><h4 class="sp-eb">Fertig, wenn</h4><ul class="sp-ok"><li>das Gelände zurückgebaut ist</li><li>jedes Department seine Auswertung gemacht hat</li><li>eine priorisierte Lernliste an den Systembau übergeben ist</li></ul></div>
-          </div>
-          <div>
-            <h4 class="sp-eb">Was bis wann passieren muss</h4>
-            <ul class="sp-steps">
-              <li><span class="d">bis Ende Sep</span><span>Abbau abschließen</span><span class="who">Produktion</span></li>
-              <li><span class="d">bis 15.10.</span><span>Auswertung je Department<span class="sp-vs">Vorschlag</span></span><span class="who">alle</span><span class="x">Kurzes festes Fenster, reicht in die neue Saison hinein.</span></li>
-              <li><span class="d">bis 15.10.</span><span>Feedback einordnen</span><span class="who">alle</span><span class="x">Je Punkt: Verbesserung, Experiment oder bewusste Entscheidung.</span></li>
-            </ul>
-          </div>
-          <div class="sp-hand">Übergang: Produktion, Kommunikation und Booking wechseln nach der Saison ihren Modus und gehen in die Kollektivsuche und den Launch.</div>
+    <section class="sa-sec" aria-labelledby="saF2">
+      <h2 id="saF2">Wen haben wir?</h2>
+      <p class="sa-muted">Je Bereich und Festival eine Person aus dem ganzen Pool. Ein leeres Feld heißt offen. Wer ein Feld ändert, setzt die Besetzung auf Vorschlag; die noch nicht bestätigten Aufgaben des Bereichs folgen. „Besetzung bestätigen“ macht alle Vorschläge des Festivals fest, als Alex oder Lea.</p>
+      <div class="sa-tafel" id="saTafel"></div>
+      <details class="sa-auf" id="saLastDetail">
+        <summary>Wer trägt wie viel<span class="chev" aria-hidden="true">›</span></summary>
+        <div class="body">
+          <p class="sa-muted">Personen mit zugeordneten Aufgaben über alle Launches, die laufen oder bis in 60 Tagen starten. Stunden als Mitte der Spannen, Balken relativ zur größten Last. Das Wort passt, knapp oder zu viel gibt es nur mit eingetragenen Stunden je Woche; sonst steht hier „Zeit nicht eingetragen“ und das Feld zum Eintragen.</p>
+          <div class="sa-last" id="saLast"></div>
         </div>
       </details>
+    </section>
 
-      <details class="sp-ph" id="p2" data-von="2026-10-01" data-bis="2026-12-31">
-        <summary>
-          <div><h3>Systembau, Launch und Formatpartner<span class="sp-chev" aria-hidden="true">›</span></h3><div class="sp-when">1. Oktober bis 31. Dezember 2026, Januar als Puffer</div></div>
-          <span class="sp-tag" data-tag></span>
-          <div class="sp-what">Die Werkzeuge für die Saison bauen, die Festivals nacheinander in den Verkauf bringen und die Kollektive und Partner gewinnen, die den Launch mittragen. Drei Teile laufen gleichzeitig, jeder nach eigener Logik.</div>
-        </summary>
-        <div class="sp-body">
-          <div class="sp-two">
-            <div><h4 class="sp-eb">Fertig, wenn</h4><ul class="sp-ok"><li>Welle 1 der Werkzeuge im Einsatz ist</li><li>alle Festivals im Verkauf sind</li><li>alle Plätze im Gesamthabitat belegt sind (31.12.)</li></ul></div>
-            <div><h4 class="sp-eb">Offen</h4><p>Wer für welches Festival das Ergebnis verantwortet. Welches Festival die neuen Werkzeuge zuerst erprobt.</p></div>
-          </div>
+    <section class="sa-sec" aria-labelledby="saF3">
+      <h2 id="saF3">Was hat sich geändert, und wer ist wofür geeignet?</h2>
+      <p class="sa-muted">Bisher aus den Rollen in Pool, TPA und Coda (Stand Sommer 2026), jetzt aus der Besetzung über alle fünf Festivals. Eignung steht nur als Begründung neben einem Vorschlag: Quelle und Notiz der Besetzung.</p>
+      <div class="sa-vj" id="saVorher"></div>
+      <details class="sa-auf" id="saAendDetail">
+        <summary>Änderungen seit dem Sommer<span class="chev" aria-hidden="true">›</span></summary>
+        <div class="body"><ul class="sa-liste" id="saAenderungen"></ul></div>
+      </details>
+    </section>
 
-          <div class="sp-parts">
-            <details class="sp-part" open>
-              <summary><div><h3>Systembau<span class="sp-chev" aria-hidden="true">›</span></h3><div class="sp-when">Einmal bauen, an echter Festivalarbeit testen, dann für alle übernehmen</div></div><span class="sp-tag">Okt bis Dez</span></summary>
-              <div class="sp-body">
-                <p>Fertig ist ein Werkzeug, wenn ein echtes Arbeitspaket damit einfacher, verlässlicher oder selbstständiger erledigt wird.</p>
-                <ul class="sp-steps">
-                  <li><span class="d">ab 01.10.</span><span>Habitat Hub als zentrale Stelle für Mitarbeitende</span><span class="who">Alex</span><span class="x">Coda-Stammdaten werden eigene Tabellen und Seiten.</span></li>
-                  <li><span class="d">bis 31.12.</span><span>Welle 1</span><span class="who">Alex</span><span class="x">Hub-Kern, Orte und Kollektive, CRM, Aufgaben und Meilensteine, Personal, Booking, Finanzen, Lager, Bestellwesen, Wiki, Datenübernahme.</span></li>
-                  <li><span class="d">offen</span><span>Pilotfestival je Werkzeug<span class="sp-offen">offen</span></span><span class="who">—</span></li>
-                </ul>
-              </div>
-            </details>
-
-            <details class="sp-part" open>
-              <summary><div><h3>Launch<span class="sp-chev" aria-hidden="true">›</span></h3><div class="sp-when">Im Takt der VVK-Starts, ein Festival nach dem anderen</div></div><span class="sp-tag">01.10. bis 15.11.</span></summary>
-              <div class="sp-body">
-                <p>Höchstens zwei Festivals gleichzeitig in intensiver Launcharbeit<span class="sp-vs">Vorschlag</span>. Bereits gestartete Festivals behalten feste Zeit für Kommunikation und Betreuung.</p>
-                <div class="sp-tbl"><table>
-                  <thead><tr><th>Festival</th><th>VVK-Start</th><th>Stand</th><th>Nächster Schritt</th></tr></thead>
-                  <tbody id="spLaunch">
-                    <tr data-vvk="2026-08-01"><td>Fluidity</td><td>01.08.</td><td class="st"></td><td>Boost-Plan mit Termin</td></tr>
-                    <tr data-vvk="2026-09-01"><td>Wilde Möhre</td><td>01.09.</td><td class="st"></td><td>Kampagne bis Jahresende, Community-Fenster 1.000 Tickets</td></tr>
-                    <tr data-vvk="2026-10-01"><td>Draußenbande</td><td>01.10.</td><td class="st"></td><td>Rückblick nach 24 Stunden und nach 7 Tagen</td></tr>
-                    <tr data-vvk="2026-10-15"><td>Lusatia</td><td>15.10.</td><td class="st"></td><td>Launch-Checkliste und Partnerpaket</td></tr>
-                    <tr data-vvk="2026-11-01"><td>by nature</td><td>01.11.</td><td class="st"></td><td>Preisbasis bestätigen</td></tr>
-                    <tr data-vvk="2026-11-15"><td>mit Freude eG</td><td>15.11.</td><td class="st"></td><td>Pakete und Flex-Tickets für alle Festivals, Verrechnung klären</td></tr>
-                  </tbody>
-                </table></div>
-                <div>
-                  <h4 class="sp-eb">Jeder Launch hat dieselben Schritte</h4>
-                  <p>Positionierung und Kernbotschaft · Ticketmodell und Preislogik · Landingpage und Tracking · Content und Hauptfilm · Newsletter · Partnerpaket · Rechte · Launch-Checkliste · Launchtag · Rückblick nach 24 Stunden und nach 7 Tagen</p>
-                </div>
-              </div>
-            </details>
-
-            <details class="sp-part" open>
-              <summary><div><h3>Formatpartner<span class="sp-chev" aria-hidden="true">›</span></h3><div class="sp-when">Kollektive und andere Partner, die im Launch als Multiplikatoren wirken</div></div><span class="sp-tag">Okt bis Dez</span></summary>
-              <div class="sp-body">
-                <p>Gesucht wird für alle Festivals zugleich, in der Reihenfolge der Launches. Erst wenn alle Plätze im Gesamthabitat vergeben sind, wird das Programm gebucht.</p>
-                <ul class="sp-steps">
-                  <li><span class="d">31.10.</span><span>Soll: Kollektive für alle Festivals gefunden</span><span class="who">Booking, Produktion</span></li>
-                  <li><span class="d">Nov bis Dez</span><span>Winterverkauf: Sonderaktionen mit und für die Kollektive</span><span class="who">Kommunikation</span></li>
-                  <li><span class="d">31.12.</span><span>Muss: alle Plätze belegt, danach Programm buchen</span><span class="who">Booking</span></li>
-                  <li><span class="d">vor jedem Launch</span><span>Zwei bis drei Ankerpartner je Festival<span class="sp-vs">Vorschlag</span></span><span class="who">—</span><span class="x">Damit sie im Launch schon mittragen können.</span></li>
-                </ul>
-                <div class="sp-tbl"><table>
-                  <thead><tr><th>Festival</th><th>Gespräche im System</th></tr></thead>
-                  <tbody>
-                    <tr><td>Fluidity</td><td>Fluidity-Kollektiv</td></tr>
-                    <tr><td>Draußenbande</td><td>Björn Oesingmann, NDA und Absichtserklärung offen</td></tr>
-                    <tr><td>Lusatia</td><td>Subardo, in Qualifizierung</td></tr>
-                    <tr><td>by nature</td><td>Natural High, Antwort offen</td></tr>
-                    <tr><td>Wilde Möhre</td><td>noch keiner eingetragen</td></tr>
-                  </tbody>
-                </table></div>
-              </div>
-            </details>
-          </div>
-          <div class="sp-hand">Übergang: Im Januar werden die neuen Werkzeuge eingeführt, bevor die Planung richtig beginnt.</div>
+    <section class="sa-sec" aria-labelledby="saF4">
+      <h2 id="saF4">Wann kann was wie passieren?</h2>
+      <p class="sa-muted">Je Festival nach VVK-Start. Fertig-am ist vorwärts gerechnet: Beginn heute oder nach dem letzten Vorgänger, eine spätere Verfügbarkeit schiebt. Die Hebel öffnen „Launch verteilen“ mit dem passenden Weg.</p>
+      <div id="saFestivals" style="display:grid;gap:12px"></div>
+      <details class="sa-auf" id="saWochenDetail">
+        <summary>Wochenplan bis Jahresende<span class="chev" aria-hidden="true">›</span></summary>
+        <div class="body">
+          <p class="sa-muted">Wochen mit fälligen offenen Meilensteinen je Festival, Anzahl und Stunden als Mitte der Spanne, Summe je Woche. Wochen mit drei oder mehr Festivals tragen das Wort „drei Launches“ und einen Rahmen.</p>
+          <div class="sa-wochen" id="saWochen"></div>
         </div>
       </details>
+    </section>
 
-      <details class="sp-ph" id="p3" data-von="2027-01-01" data-bis="2027-03-31">
-        <summary>
-          <div><h3>Kernteam-Planung<span class="sp-chev" aria-hidden="true">›</span></h3><div class="sp-when">Januar bis März 2027</div></div>
-          <span class="sp-tag" data-tag></span>
-          <div class="sp-what">Das Kernteam plant die Festivals im Detail, bevor weitere Leute dazukommen.</div>
-        </summary>
-        <div class="sp-body">
-          <div class="sp-two">
-            <div><h4 class="sp-eb">So arbeitet das Team</h4><p>Kleines Kernteam, geplant wird rückwärts vom jeweiligen Festivaltermin.</p></div>
-            <div><h4 class="sp-eb">Fertig, wenn</h4><p>Noch nicht festgelegt.<span class="sp-offen">offen</span></p></div>
-          </div>
-          <ul class="sp-steps">
-            <li><span class="d">Januar</span><span>Neue Werkzeuge einführen</span><span class="who">alle</span></li>
-            <li><span class="d">ab 01.01.</span><span>Programm buchen, bis 30.04.</span><span class="who">Booking</span><span class="x">Erst wenn die Plätze vergeben sind.</span></li>
-            <li><span class="d">ab 01.01.</span><span>Lineups und Inhalte je Festival kommunizieren</span><span class="who">Kommunikation</span></li>
-            <li><span class="d">Jan bis Mär</span><span>Bedarfe und Systeme</span><span class="who">Produktion</span><span class="x">Baubedarfe, Material, Dienstleister vorbereiten.</span></li>
-            <li><span class="d">Jan bis Apr</span><span>Systembau Welle 2</span><span class="who">Alex</span><span class="x">Aufbauplanung, Fuhrpark, Schichten und Check-in, Vergabe am Tresen, Telefonposten und Protokolle, Festival-Handbuch, Gastronomie.</span></li>
-          </ul>
-        </div>
-      </details>
-
-      <details class="sp-ph" id="p4" data-von="2027-04-01" data-bis="2027-06-30">
-        <summary>
-          <div><h3>Onboarding<span class="sp-chev" aria-hidden="true">›</span></h3><div class="sp-when">April bis Juni 2027</div></div>
-          <span class="sp-tag" data-tag></span>
-          <div class="sp-what">Weitere Leute kommen dazu und übernehmen ihre Bereiche.</div>
-        </summary>
-        <div class="sp-body">
-          <div class="sp-two">
-            <div><h4 class="sp-eb">So arbeitet das Team</h4><p>Rollen besetzen und einarbeiten. Jeder Aufgabenbereich bekommt seine vier Verantwortungen: System, Planung, Betreuung, Ausführung.</p></div>
-            <div><h4 class="sp-eb">Fertig, wenn</h4><p>Noch nicht festgelegt.<span class="sp-offen">offen</span></p></div>
-          </div>
-          <ul class="sp-steps">
-            <li><span class="d">Apr bis Jun</span><span>Dienstleister akquirieren</span><span class="who">Produktion</span><span class="x">Nach oder parallel zu Lineup und Inhalten.</span></li>
-            <li><span class="d">30.04.</span><span>Programm gebucht</span><span class="who">Booking</span></li>
-            <li><span class="d">Mai bis Jun</span><span>Artist-Planung: Riders, Anreise, Logistik</span><span class="who">Booking</span></li>
-          </ul>
-        </div>
-      </details>
-
-      <details class="sp-ph" id="p5" data-von="2027-07-01" data-bis="2027-09-30">
-        <summary>
-          <div><h3>Aufbau und Produktion<span class="sp-chev" aria-hidden="true">›</span></h3><div class="sp-when">Juli bis August 2027, Abbau bis Ende September</div></div>
-          <span class="sp-tag" data-tag></span>
-          <div class="sp-what">Fünf Festivals in 38 Tagen, mit kurzen Umbaufenstern dazwischen.</div>
-        </summary>
-        <div class="sp-body">
-          <div class="sp-two">
-            <div><h4 class="sp-eb">So arbeitet das Team</h4><p>Täglich nach Produktionsplan. Zwischen den Festivals wird umgebaut, gewartet und Personal gewechselt.</p></div>
-            <div><h4 class="sp-eb">Fertig, wenn</h4><p>Alle fünf Festivals durchgeführt sind und der Abbau geplant ist.</p></div>
-          </div>
-          <ul class="sp-steps">
-            <li><span class="d">ab 01.07.</span><span>Aufbau</span><span class="who">Produktion</span></li>
-            <li><span class="d">23.–25.07.</span><span>Lusatia</span><span class="who"></span><span class="x">danach 4 Tage Umbau</span></li>
-            <li><span class="d">30.07.–01.08.</span><span>Malina, Morio &amp; die Draußenbande</span><span class="who"></span><span class="x">danach 4 Tage Umbau</span></li>
-            <li><span class="d">06.–08.08.</span><span>by nature</span><span class="who"></span><span class="x">danach 11 Tage Umbau</span></li>
-            <li><span class="d">20.–23.08.</span><span>Wilde Möhre Freude Edition</span><span class="who"></span><span class="x">danach 3 Tage Umbau</span></li>
-            <li><span class="d">27.–29.08.</span><span>Fluidity</span><span class="who"></span></li>
-            <li><span class="d">bis Ende Sep</span><span>Abbau, dann beginnt der Kreislauf von vorn</span><span class="who">Produktion</span></li>
-          </ul>
-        </div>
-      </details>
-
-    </div>
-
-    <p class="sp-foot">Termine aus der Plattform Wilde Habitate und aus Alex' Angaben, Inhalte Stand 30.09.2026. Welche Phase läuft und wie weit ein Termin entfernt ist, rechnet die Seite jeden Tag neu. Das frühere Jahresrad liegt noch unter saison-rad.html.</p>
+    <p class="sa-foot">Daten aus dem Launch-Cockpit der Plattform (Pläne, Meilensteine, VVK-Starts), dem Personenpool, den Richtwerten, der Besetzung und dem Protokoll der Saison. Die Seite zeigt keine Pool-Notizen, Stundensätze oder anderen Personal- und Vertragsdetails. Die Steckbriefe der fünf Phasen (Stand V26) liegen unter saison-steckbriefe.html, das frühere Jahresrad unter saison-rad.html.</p>
   </main>
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=26"></script>
-<script src="/assets/game.js?v=26"></script>
-<script src="/assets/eggs.js?v=26" defer></script>
+<script src="/assets/core.js?v=27"></script>
+<script src="/assets/launch-logik.js?v=27"></script>
+<script src="/assets/game.js?v=27"></script>
+<script src="/assets/eggs.js?v=27" defer></script>
 <script>
-/* Termine, die in „Die nächsten Termine“ erscheinen. Bereiche als Wort, keine Farbe. */
-const SP_TERMINE=[
-  ["2026-10-01","Neue Saison beginnt, VVK-Start Draußenbande","Launch"],
-  ["2026-10-15","VVK-Start Lusatia","Launch"],
-  ["2026-10-15","Analyse abgeschlossen","alle Departments"],
-  ["2026-10-31","Soll: Kollektive für alle Festivals gefunden","Formatpartner"],
-  ["2026-11-01","VVK-Start by nature","Launch"],
-  ["2026-11-15","eG-Pakete und Flex-Tickets für alle Festivals","Launch"],
-  ["2026-12-31","Muss: alle Plätze belegt, Welle 1 fertig","Formatpartner, Systembau"],
-  ["2027-01-01","Programm buchen beginnt, Lineups kommunizieren","Kernteam-Planung"],
-  ["2027-04-30","Programm gebucht","Booking"],
-  ["2027-07-01","Aufbau beginnt","Produktion"],
-  ["2027-07-23","Lusatia","Festival"],
-  ["2027-07-30","Malina, Morio & die Draußenbande","Festival"],
-  ["2027-08-06","by nature","Festival"],
-  ["2027-08-20","Wilde Möhre Freude Edition","Festival"],
-  ["2027-08-27","Fluidity","Festival"]
-];
+/* V28 · Saison in vier Fragen. Daten aus launch_list, Rechenlogik aus LaunchLogik, Schreiben über launch_set und launch_confirm. */
 const $=s=>document.querySelector(s);
-const SP_DAY=864e5;
-function spHeute(){ const d=new Date(); return new Date(d.getFullYear(),d.getMonth(),d.getDate()); }
-function spDatum(iso){ const [y,m,t]=iso.split("-").map(Number); return new Date(y,m-1,t); }
-function spTage(iso){ return Math.round((spDatum(iso)-spHeute())/SP_DAY); }
-function spKurz(iso){ const [y,m,t]=iso.split("-"); return `${t}.${m}.`; }
-function spRel(n){ if(n===0) return "heute"; if(n===1) return "morgen"; if(n===2) return "übermorgen"; if(n<0) return n===-1?"gestern":`vor ${-n} Tagen`; if(n<=20) return `in ${n} Tagen`; if(n<=62) return `in ${Math.round(n/7)} Wochen`; return `in ${Math.round(n/30.4)} Monaten`; }
+const LL=LaunchLogik;
+let D=null, HEUTE=null, R=null; const saveTimer={};
 
-function spRender(){
-  const h=spHeute();
-  $("#spStand").textContent="Stand heute, "+h.toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
-  /* Phasen: läuft jetzt, als Nächstes, später, vorbei */
-  const ph=[...document.querySelectorAll(".sp-ph")];
-  const laeuft=ph.filter(p=>spTage(p.dataset.von)<=0 && spTage(p.dataset.bis)>=0);
-  const naechste=ph.find(p=>spTage(p.dataset.von)>0);
-  ph.forEach(p=>{
-    const tag=p.querySelector("[data-tag]"), li=document.querySelector(`.sp-chain li[data-p="${p.id}"]`);
-    const an=spTage(p.dataset.von), bis=spTage(p.dataset.bis);
-    let wort="später", cls="", licls="";
-    if(laeuft.includes(p)){ wort=bis<=14?`läuft, noch ${bis+1} ${bis===0?"Tag":"Tage"}`:"läuft jetzt"; cls="jetzt"; licls="ist-jetzt"; }
-    else if(p===naechste){ wort="beginnt "+spRel(an); cls="naechste"; licls="ist-naechste"; }
-    else if(bis<0){ wort="vorbei"; licls="ist-vorbei"; }
-    tag.textContent=wort; tag.className="sp-tag"+(cls?" "+cls:"");
-    p.classList.toggle("ist-jetzt",laeuft.includes(p));
-    if(li){ li.className=licls; const s=li.querySelector("span"); if(s && !s.dataset.orig) s.dataset.orig=s.textContent; if(s) s.textContent=s.dataset.orig+(licls==="ist-jetzt"?" · läuft":licls==="ist-naechste"?" · als Nächstes":""); }
-    if(laeuft.includes(p)||(p===naechste&&laeuft.length<2)) p.open=true;
-  });
-  /* Die nächsten fünf Termine */
-  const kommend=SP_TERMINE.filter(t=>spTage(t[0])>=0).slice(0,5);
-  $("#spDates").innerHTML=kommend.length?kommend.map(([d,t,w])=>{ const n=spTage(d); return `<li><span class="d">${spKurz(d)}</span><span class="rel${n<=7?" bald":""}">${spRel(n)}</span><span>${gfEsc(t)} <span class="wo">· ${gfEsc(w)}</span></span></li>`; }).join(""):`<li><span></span><span></span><span>Die Saison 2026/27 ist abgeschlossen.</span></li>`;
-  $("#spEng").hidden=!(spTage("2026-11-01")>=0);
-  /* Launch-Stand je Festival */
-  document.querySelectorAll("#spLaunch tr").forEach(tr=>{
-    const n=spTage(tr.dataset.vvk), td=tr.querySelector(".st");
-    let s;
-    if(n<0) s="im Verkauf seit "+spKurz(tr.dataset.vvk);
-    else if(n<=2) s="Launch "+spRel(n);
-    else if(n<=28) s="Launchvorbereitung, Start "+spRel(n);
-    else { const v=spDatum(tr.dataset.vvk); v.setDate(v.getDate()-28); s="Vorbereitung ab "+v.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}); }
-    td.textContent=s; td.classList.toggle("bald",n>=0&&n<=7);
-  });
+/* Die fünf Metaphasen (Texte aus den Steckbriefen V26, je Phase ergänzt um „So arbeitet das Team jetzt“ und die Herausforderung).
+   Die Analyse reicht bis 15.10. in den Systembau hinein; auf der Leiste liegen beide Segmente nach Tagen, die Überlappung ist sichtbar. */
+const SA_PHASEN=[
+  { key:"p1", name:"Abbau und Analyse", zeitraum:"01.09. bis 15.10.2026", von:"2026-09-01", bis:"2026-10-15",
+    ziel:"Das Gelände zurückbauen, auswerten, was gut und was schlecht lief, und erholen.",
+    team:"Kleinere Crew, wenige Aufgaben gleichzeitig. Erholung ist eingeplante Zeit. Feedback wird nach Wirkung und Umsetzbarkeit sortiert: Nicht jeder Kommentar wird ein Projekt. Übergang: Produktion, Kommunikation und Booking wechseln nach der Saison ihren Modus und gehen in die Kollektivsuche und den Launch.",
+    herausforderung:"Die Auswertung endet erst am 15.10., während die ersten Launches schon laufen. Wer beides trägt, braucht ein festes Fenster für die Analyse, sonst gewinnt der Launch.",
+    fertig:["das Gelände zurückgebaut ist","jedes Department seine Auswertung gemacht hat","eine priorisierte Lernliste an den Systembau übergeben ist"] },
+  { key:"p2", name:"Systembau, Launch und Formatpartner", zeitraum:"01.10. bis 31.12.2026, Januar als Puffer", von:"2026-10-01", bis:"2026-12-31",
+    ziel:"Die Werkzeuge für die Saison bauen, die Festivals nacheinander in den Verkauf bringen und die Kollektive und Partner gewinnen, die den Launch mittragen. Drei Teile laufen gleichzeitig, jeder nach eigener Logik.",
+    team:"Höchstens zwei Festivals gleichzeitig in intensiver Launcharbeit; bereits gestartete Festivals behalten feste Zeit für Kommunikation und Betreuung. Systembau baut einmal, testet an echter Festivalarbeit und übernimmt dann für alle (Welle 1 bis 31.12.). Formatpartner werden für alle Festivals zugleich gesucht, in der Reihenfolge der Launches; Soll 31.10., Muss 31.12., erst danach wird das Programm gebucht.",
+    herausforderung:"Drei Launches, Systembau und Kollektivsuche fallen in denselben Oktober, und für kein Festival ist die Ergebnisverantwortung bestätigt.",
+    fertig:["Welle 1 der Werkzeuge im Einsatz ist","alle Festivals im Verkauf sind","alle Plätze im Gesamthabitat belegt sind (31.12.)"] },
+  { key:"p3", name:"Kernteam-Planung", zeitraum:"Januar bis März 2027", von:"2027-01-01", bis:"2027-03-31",
+    ziel:"Das Kernteam plant die Festivals im Detail, bevor weitere Leute dazukommen.",
+    team:"Kleines Kernteam, geplant wird rückwärts vom jeweiligen Festivaltermin. Im Januar werden die neuen Werkzeuge eingeführt; ab Januar wird das Programm gebucht (bis 30.04.) und je Festival kommuniziert; Produktion bereitet Bedarfe, Material und Dienstleister vor; Systembau Welle 2 läuft bis April.",
+    herausforderung:"Die neuen Werkzeuge müssen im Januar sitzen, sonst plant das Kernteam mit alten Mitteln. Programm buchen darf erst beginnen, wenn die Plätze vergeben sind.",
+    fertig:["noch nicht festgelegt (offen)"] },
+  { key:"p4", name:"Onboarding", zeitraum:"April bis Juni 2027", von:"2027-04-01", bis:"2027-06-30",
+    ziel:"Weitere Leute kommen dazu und übernehmen ihre Bereiche.",
+    team:"Rollen besetzen und einarbeiten. Jeder Aufgabenbereich bekommt seine vier Verantwortungen: System, Planung, Betreuung, Ausführung. Produktion akquiriert Dienstleister, Booking schließt das Programm ab (30.04.) und plant die Artists (Riders, Anreise, Logistik).",
+    herausforderung:"Programm, Dienstleister und Artist-Planung laufen parallel zum Einarbeiten neuer Leute; wer einarbeitet, hat in diesen Wochen weniger Zeit für das eigene Festival.",
+    fertig:["noch nicht festgelegt (offen)"] },
+  { key:"p5", name:"Aufbau und Produktion", zeitraum:"Juli bis August 2027, Abbau bis Ende September", von:"2027-07-01", bis:"2027-09-30",
+    ziel:"Fünf Festivals in 38 Tagen, mit kurzen Umbaufenstern dazwischen.",
+    team:"Täglich nach Produktionsplan. Zwischen den Festivals wird umgebaut, gewartet und Personal gewechselt: Lusatia 23. bis 25.07., Draußenbande 30.07. bis 01.08., by nature 06. bis 08.08., Wilde Möhre 20. bis 23.08., Fluidity 27. bis 29.08.",
+    herausforderung:"Umbaufenster von drei bis elf Tagen zwischen fünf Festivals; jede Verzögerung trifft das nächste Festival.",
+    fertig:["alle fünf Festivals durchgeführt sind und der Abbau geplant ist"] },
+];
+/* Bereiche der Tafel in fester Reihenfolge; Alias für „bisher“: Legal war Lea. Entscheiden-Hebel nur für by nature. */
+const SA_BEREICHE=["fv","komm","content","ticket","partner","sys","recht","gf"];
+const SA_ALIAS={ Legal:"Lea Luce" };
+const SA_ENTSCHEIDEN={ BYNRD27:"Ob by nature 2027 stattfindet oder auf 2027/28 verschoben wird. Stattfindet: Vorschlag übernehmen und bestätigen; sonst den VVK-Start verschieben." };
+const SA_HEBEL_WEG={ parallel:2, verschieben:3, hilfe:4, entscheiden:1 };
+
+const fmtD=iso=>LL.kurz(iso), fmtK=iso=>LL.kurzOhneJahr(iso);
+function person(id){ return (D.pool||[]).find(p=>p.id===id)||null; }
+function pname(id){ const p=person(id); return p?p.name:(id?"unbekannt":"offen"); }
+function bereichName(k){ const b=(D.bereiche||[]).find(x=>x.key===k); return b?b.name:(k||"ohne Bereich"); }
+function festName(s){ const f=(D.festivals||[]).find(x=>x.short_name===s); return f?f.kurzname:s; }
+function ms(f){ return (D.meilensteine||[]).filter(m=>m.plan_id===f.plan_id); }
+function verfMap(){ const o={}; for(const p of D.pool||[]) if(p.verfuegbar_ab) o[p.id]=p.verfuegbar_ab; return o; }
+function bereicheSortiert(){ return SA_BEREICHE.map(k=>(D.bereiche||[]).find(b=>b.key===k)||{key:k,name:bereichName(k)}); }
+function rechne(){
+  const ketten={}, fertigJe={};
+  for(const f of D.festivals){ ketten[f.short_name]=LL.kette(ms(f), D.richtwerte, { heute:HEUTE, verfuegbarAb:verfMap() }); Object.assign(fertigJe, ketten[f.short_name].je); }
+  const ph=LL.phaseHeute(SA_PHASEN, HEUTE);
+  const lage=LL.saisonLage(D.festivals, D.meilensteine, D.besetzung, D.pool, { heute:HEUTE });
+  const last=LL.last(LL.imFenster(D.meilensteine, HEUTE, LL.FENSTER_LAST, D.festivals), LL.zuweisbar(D.pool), { heute:HEUTE, fertigJe });
+  return { ketten, fertigJe, ph, lage, last };
 }
-/* Sprung aus der Wortkette öffnet die Phase */
-document.getElementById("spChain").addEventListener("click",e=>{ const a=e.target.closest("a[href^='#']"); if(!a) return; const d=document.querySelector(a.getAttribute("href")); if(d) d.open=true; });
+function optionen(cur, quelle, notiz){
+  const pool=LL.reihenfolge(LL.zuweisbar(D.pool));
+  const gruppe=(titel, liste)=>liste.length?`<optgroup label="${titel}">${liste.map(p=>`<option value="${p.id}"${p.id===cur?" selected":""}>${gfEsc(p.name)} · ${gfEsc(LL.typWort(p.typ))}${p.hat_asana?"":" · ohne Asana"}</option>`).join("")}</optgroup>`:"";
+  const hinweis=[quelle?"Quelle: "+quelle:"", notiz||""].filter(Boolean).join(" · ");
+  return (hinweis?`<option disabled>${gfEsc(hinweis)}</option>`:"")+`<option value=""${!cur?" selected":""}>offen</option>`
+    + gruppe("Team", pool.filter(p=>p.typ==="team")) + gruppe("Hilfe: Externe, Minijobs, Agenturen, Partner", pool.filter(p=>LL.istHilfeTyp(p))) + gruppe("Geschäftsführung", pool.filter(p=>p.typ==="gf"));
+}
 
+/* ---- 1. Phase und Herausforderung ---- */
+function renderPhase(){
+  const { ph, lage }=R;
+  $("#saStand").textContent="Stand heute, "+new Date(HEUTE+"T00:00:00").toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  const von=SA_PHASEN[0].von, bis=SA_PHASEN[SA_PHASEN.length-1].bis, gesamt=LL.tageZwischen(von,bis);
+  const pos=Math.min(100,Math.max(0,LL.tageZwischen(von,HEUTE)/gesamt*100));
+  const proz=iso=>(LL.tageZwischen(von,iso)/gesamt*100).toFixed(2);
+  $("#saLeiste").innerHTML=`<div class="bar" role="img" aria-label="Phasenleiste, heute ${fmtD(HEUTE)}">${SA_PHASEN.map((p,i)=>{ const st=ph.je[p.key].stand;
+      return `<span class="${st==="läuft"?"ist-jetzt":""}${i%2?" ob":""}" style="left:${proz(p.von)}%;width:${(LL.tageZwischen(p.von,p.bis)/gesamt*100).toFixed(2)}%" title="${gfEsc(p.name)} ${gfEsc(p.zeitraum)}"></span>`; }).join("")}</div>
+    <div class="heute" style="left:${pos.toFixed(2)}%"><b>heute ${fmtK(HEUTE)}</b></div>`;
+  $("#saPhasen").innerHTML=SA_PHASEN.map(p=>{ const j=ph.je[p.key]; let stand=j.stand;
+    if(stand==="läuft aus") stand=`läuft aus, noch ${LL.tageWort(j.tageBisEnde)}`; else if(stand==="als Nächstes") stand=`als Nächstes, in ${LL.tageWort(j.tageBisBeginn)}`;
+    return `<li class="${j.stand==="läuft"?"ist-jetzt":""}"><b>${gfEsc(p.name)}</b><span>${gfEsc(p.zeitraum)}</span><span>${gfEsc(stand)}</span></li>`; }).join("");
+  const s=LL.saisonLageSatz(lage, ph.aktuell);
+  $("#saLage").innerHTML=`<p class="sa-satz">${gfEsc(s.satz1)}</p>${s.satz2?`<p class="sa-satz" style="margin-top:6px">${gfEsc(s.satz2)}</p>`:""}`;
+  $("#saKpi").innerHTML=[
+    gfKachel({ icon:"frist", value:lage.bald.length, label:"Launches bis in sechs Wochen", title:lage.bald.map(f=>f.kurzname+" "+fmtK(f.sales_start_on)).join(", ") }),
+    gfKachel({ icon:"meilenstein", value:lage.offeneBisJahresende, label:"offene Launch-Aufgaben bis Jahresende", title:lage.ohneTermin?`dazu ${lage.ohneTermin} ohne Termin`:"" }),
+    gfKachel({ icon:"partner", value:lage.ohneFv.length, label:lage.ohneFv.length===1?"Festival ohne Festivalverantwortung":"Festivals ohne Festivalverantwortung", title:lage.ohneFv.map(f=>f.kurzname).join(", ") }),
+    gfKachel({ icon:"zahl", value:`${lage.personenMitZeit} von ${lage.poolGesamt}`, label:"Personen mit eingetragener Zeit, von allen im Pool" }),
+  ].join("");
+  const ent=LL.entscheidungen(D.festivals, D.besetzung, R.ketten, { heute:HEUTE, bereich:bereichName, bereiche:SA_BEREICHE });
+  const wort={ besetzung:"Besetzung", termin:"Termin", daten:"Daten" };
+  $("#saEntscheiden").innerHTML=ent.length?ent.map(e=>`<li><span class="w">${wort[e.art]||e.art}</span><span>${gfEsc(e.text)}</span></li>`).join(""):`<li><span class="w">nichts</span><span>Keine offene Besetzung, kein unhaltbarer VVK-Start in drei Wochen, kein Datenwiderspruch.</span></li>`;
+  const a=ph.aktuell||ph.naechste||SA_PHASEN[0];
+  const andere=SA_PHASEN.filter(p=>p!==a);
+  $("#saPhaseBody").innerHTML=`<h3>${gfEsc(a.name)} <span class="sa-mark">${gfEsc(ph.je[a.key].stand)}</span></h3><p class="sa-muted">${gfEsc(a.zeitraum)}</p>
+    <div class="sa-two"><div><h4 class="sa-eb">Ziel</h4><p>${gfEsc(a.ziel)}</p></div><div><h4 class="sa-eb">Herausforderung</h4><p>${gfEsc(a.herausforderung)}</p></div></div>
+    <div class="sa-two"><div><h4 class="sa-eb">So arbeitet das Team jetzt</h4><p>${gfEsc(a.team)}</p></div><div><h4 class="sa-eb">Fertig, wenn</h4><ul class="ok">${a.fertig.map(x=>`<li>${gfEsc(x)}</li>`).join("")}</ul></div></div>
+    <h4 class="sa-eb">Die vier anderen Phasen</h4>
+    <div class="sa-kurz">${andere.map(p=>`<div><b>${gfEsc(p.name)}</b> <span class="sa-mark${ph.je[p.key].stand==="vorbei"?" leer":""}">${gfEsc(ph.je[p.key].stand)}</span><br>${gfEsc(p.zeitraum)}. ${gfEsc(p.ziel)} Herausforderung: ${gfEsc(p.herausforderung)}</div>`).join("")}</div>`;
+}
+
+/* ---- 2. Wen haben wir ---- */
+function renderTafel(){
+  const fest=D.festivals; const bereiche=bereicheSortiert();
+  const kopf=`<div class="kopf">Bereich</div>`+fest.map(f=>`<div class="kopf">${gfEsc(f.kurzname)}<small>${f.sales_start_on?(f.sales_start_on<HEUTE?"läuft seit "+fmtK(f.sales_start_on):"VVK "+fmtK(f.sales_start_on)):"VVK offen"}</small></div>`).join("");
+  const zeilen=bereiche.map(b=>`<div class="zeile">${gfEsc(b.name)}</div>`+fest.map(f=>{ const z=LL.besetzungVon(D.besetzung, f.event_id, b.key); const q=z.zeile&&z.zeile.quelle||"", n=z.zeile&&z.zeile.notiz||"";
+      const titel=[q?"Quelle: "+q:"", n?"Notiz: "+n:""].filter(Boolean).join(" · ");
+      return `<div class="feld"${titel?` title="${gfEsc(titel)}"`:""}><span class="fest">${gfEsc(f.kurzname)}</span><select data-f="besetzung" data-e="${f.event_id}" data-b="${b.key}" aria-label="${gfEsc(b.name)} für ${gfEsc(f.kurzname)}"${titel?` title="${gfEsc(titel)}"`:""}>${optionen(z.person_id, q, n)}</select><span class="st"><b>${gfEsc(z.wort)}</b>${z.person_id&&person(z.person_id)?" · "+gfEsc(LL.typWort(person(z.person_id).typ)):""}${n?" · "+gfEsc(n):""}</span></div>`; }).join("")).join("");
+  const fuss=`<div class="fuss"></div>`+fest.map(f=>{ const st=bereiche.map(b=>LL.besetzungVon(D.besetzung, f.event_id, b.key).status); const offen=st.filter(x=>x==="vorschlag").length, ohne=st.filter(x=>x==="offen").length;
+      return `<div class="fuss"><button class="btn btn-primary btn-sm" data-act="confirm" data-e="${f.event_id}" ${offen?"":"disabled"} title="${offen?`${offen} ${offen===1?"Vorschlag":"Vorschläge"} werden fest${ohne?", "+ohne+" offen bleibt":""}`:"nichts zu bestätigen"}">${offen?`Besetzung bestätigen als ${gfEsc(gfWho())}`:"alles bestätigt"}</button>${ohne?`<p class="sa-muted" style="margin-top:4px">${ohne} ${ohne===1?"Bereich":"Bereiche"} offen</p>`:""}</div>`; }).join("");
+  $("#saTafel").innerHTML=kopf+zeilen+fuss;
+}
+function renderLast(){
+  const liste=R.last.filter(l=>l.aufgaben>0).map(l=>Object.assign({}, l, { mitte:(l.stunden.lo+l.stunden.hi)/2 })).sort((a,b)=>b.mitte-a.mitte);
+  const max=liste.length?Math.max(...liste.map(l=>l.mitte)):0;
+  $("#saLast").innerHTML=liste.map(l=>{ const p=person(l.person_id); const wort=l.ohneZeit?"Zeit nicht eingetragen":l.wort; const breite=max?Math.round(l.mitte/max*100):0;
+    return `<div class="sa-p" data-p="${l.person_id}">
+      <div><div class="name">${gfEsc(l.name)}</div><span class="typ">${gfEsc(LL.typWort(l.typ))} · ${l.aufgaben} ${l.aufgaben===1?"Aufgabe":"Aufgaben"}</span></div>
+      <div><span class="k">Stunden, Mitte</span>${LL.fmt(l.mitte)} Std.<span class="typ">${gfEsc(l.festivals.map(festName).join(", "))||"ohne Festival"}</span></div>
+      <div class="bw"><div class="bar" role="img" aria-label="${gfEsc(wort)}"><i style="width:${breite}%"></i></div><span><b>${gfEsc(wort)}</b>${l.prozent!==null?" · "+l.prozent+" Prozent der eingetragenen Zeit":""}${l.ende?" · bis "+fmtK(l.ende):""}</span></div>
+      <div><span class="k">Std. je Woche</span>${gfStepper("std_"+l.person_id, l.std===null?"":l.std, {min:0,max:80,attr:`data-f="launch_std_woche" data-p="${l.person_id}"`,label:"Stunden je Woche für "+(p?p.name:"")})}</div>
+    </div>`; }).join("")||`<p class="sa-muted">Niemand hat Aufgaben bis in 60 Tagen.</p>`;
+}
+
+/* ---- 3. Bisher und jetzt, Änderungen ---- */
+function renderVorher(){
+  const zeilen=LL.bisherJetzt(D.vorher||[], D.besetzung, D.festivals, D.pool, bereicheSortiert(), { alias:SA_ALIAS });
+  $("#saVorher").innerHTML=`<div class="kopf">Bereich</div><div class="kopf">Bisher</div><div class="kopf">Jetzt</div>`+zeilen.map(z=>{
+    const quellen=[...new Set(z.jetzt.map(j=>j.quelle).filter(Boolean))], notizen=[...new Set(z.jetzt.map(j=>j.notiz).filter(Boolean))];
+    const geaendert=z.aenderung==="geändert"||z.aenderung==="neu";
+    const jetzt=z.jetzt.every(j=>j.name===z.jetzt[0].name)?gfEsc(z.jetztText):z.jetzt.map(j=>`<span class="fest" title="${gfEsc([j.quelle?"Quelle: "+j.quelle:"", j.notiz||""].filter(Boolean).join(" · "))}">${gfEsc(j.kurzname)}: ${gfEsc(j.name)}${j.typ?" · "+gfEsc(LL.typWort(j.typ)):""} · ${gfEsc(j.wort)}</span>`).join("");
+    return `<div class="zeile">${gfEsc(z.name)}</div>
+      <div class="zelle" data-l="Bisher">${gfEsc(z.bisher)}${z.quelle?`<span class="q">Quelle: ${gfEsc(z.quelle)}</span>`:""}</div>
+      <div class="zelle${geaendert?" geaendert":""}" data-l="Jetzt">${jetzt}<span class="sa-mark${z.aenderung==="offen"?" leer":""}">${gfEsc(z.aenderung)}</span>${z.jetzt.every(j=>j.name===z.jetzt[0].name)?` <span class="sa-mark">${gfEsc(z.statusWort)}</span>`:""}${quellen.length||notizen.length?`<span class="q">Begründung: ${gfEsc([...quellen, ...notizen].join(" · "))}</span>`:""}</div>`; }).join("");
+  const ae=LL.aenderungen(D.log||[], D.pool, { seit:"2026-09-30", max:30, name:pname, festival:festName, bereich:bereichName });
+  $("#saAenderungen").innerHTML=ae.length?ae.map(a=>`<li><span class="d">${fmtD(a.datum)}</span><span>${gfEsc(a.text)}${a.wer?` <span class="sa-muted" style="display:inline">· ${gfEsc(a.wer)}</span>`:""}</span></li>`).join(""):`<li><span class="d">—</span><span>Noch keine Änderungen im Protokoll und niemand neu im Pool seit dem 30.09.2026.</span></li>`;
+}
+
+/* ---- 4. Wann kann was wie passieren ---- */
+function renderFestivals(){
+  $("#saFestivals").innerHTML=D.festivals.map(f=>{ const liste=ms(f), k=R.ketten[f.short_name]; const laeuft=f.sales_start_on&&f.sales_start_on<HEUTE;
+    const hin=(f.hinweise||[]).map(h=>`<div class="sa-note"><b>Hinweis:</b> ${gfEsc(h)}</div>`).join("");
+    if(laeuft||!f.sales_start_on){
+      const nf=LL.naechsteFaellig(liste, HEUTE, 3);
+      return `<div class="sa-fest"><div class="kopf"><h3>${gfEsc(f.kurzname)}</h3><span class="vvk">${f.sales_start_on?"im Verkauf seit "+fmtD(f.sales_start_on):"VVK offen"}${f.launch_type==="campaign_boost"?" · Kampagnen-Boost":""}</span></div>
+        <ul class="sa-liste">${nf.liste.map(m=>`<li><span class="d">${m.due_on?fmtK(m.due_on):"ohne Termin"}</span><span>${gfEsc(m.title)} · ${gfEsc(pname(m.person_id))}${m.due_on&&m.due_on<HEUTE?" · überfällig":""}</span></li>`).join("")||`<li><span class="d">—</span><span>Keine offene Aufgabe mit Termin.</span></li>`}</ul>
+        <p class="sa-muted">${nf.offen} offene ${nf.offen===1?"Aufgabe":"Aufgaben"}${nf.ueberfaellig?", "+nf.ueberfaellig+" überfällig":""}${nf.ohneTermin?", "+nf.ohneTermin+" ohne Termin":""}. <a class="linkish" href="launch.html?festival=${encodeURIComponent(f.short_name)}">Im Launch verteilen öffnen</a></p>${hin}</div>`;
+    }
+    const kk=LL.kritischeKette(liste, k);
+    const h=LL.haltbar(f, liste, D.richtwerte, k, D.besetzung, { heute:HEUTE });
+    const hb=LL.hebel(f, liste, D.pool, D.festivals, k, { heute:HEUTE, name:pname, entscheiden:SA_ENTSCHEIDEN[f.short_name]||null });
+    const knopf=(key, titel, text)=>`<div><a class="btn btn-brand btn-sm" href="launch.html?festival=${encodeURIComponent(f.short_name)}&weg=${SA_HEBEL_WEG[key]}">${titel}</a><p>${gfEsc(text)}</p></div>`;
+    return `<div class="sa-fest"><div class="kopf"><h3>${gfEsc(f.kurzname)}</h3><span class="vvk">VVK ${fmtD(f.sales_start_on)}</span><span class="sa-rahmen">Launchziel ${fmtK(f.sales_start_on)}</span></div>
+      <ul class="sa-kette" aria-label="Kritische Kette">${kk.map(x=>`<li><b>${gfEsc(x.title)}</b><span class="d">fertig ${x.fertig?fmtK(x.fertig):"offen"}</span><span class="x">${x.due_on?"Ziel "+fmtK(x.due_on)+" · ":""}${gfEsc(x.wort)}${x.person_id?" · "+gfEsc(pname(x.person_id)):" · niemand"}</span></li>`).join("")||`<li>Keine der vier kritischen Aufgaben liegt im Cockpit.</li>`}</ul>
+      <p class="sa-satz" style="font-size:var(--stufe-2)">${gfEsc(LL.haltbarSatz(h))}</p>
+      <div class="sa-hebel">${knopf("parallel","Parallel",hb.parallel.text)}${knopf("verschieben","Verschieben",hb.verschieben.text)}${knopf("hilfe","Hilfe",hb.hilfe.text)}${hb.entscheiden?knopf("entscheiden","Entscheiden",hb.entscheiden.text):""}</div>${hin}</div>`;
+  }).join("");
+  const wp=LL.wochenplan(D.meilensteine, D.festivals, { heute:HEUTE });
+  $("#saWochen").innerHTML=wp.map(w=>`<div class="sa-w${w.dreiLaunches?" drei":""}"><span class="d">${fmtK(w.montag)} bis ${fmtK(w.sonntag)}${w.dreiLaunches?`<span class="sa-mark">drei Launches</span>`:""}</span><span class="f">${w.festivals.map(x=>`${gfEsc(x.kurzname)} ${x.anzahl} · ${LL.fmt(x.stunden)} Std.`).join(" · ")}</span><span class="s">Summe ${w.anzahl} · ${LL.fmt(w.stunden)} Std.</span></div>`).join("")||`<p class="sa-muted">Bis Jahresende ist kein offener Meilenstein fällig.</p>`;
+}
+
+function renderAll(){ R=rechne(); renderPhase(); renderTafel(); renderLast(); renderVorher(); renderFestivals(); }
+
+/* ---- Schreiben ---- */
+async function schreibe(payload, meldung){
+  try{ const r=await gfApi("launch_set", Object.assign({ by:gfWho() }, payload)); if(meldung) gfToast(meldung); await load(); return r; }
+  catch(e){ gfToast("Fehler: "+(e.message||"speichern")); await load(); return null; }
+}
+document.addEventListener("click", async e=>{
+  const b=e.target.closest("[data-act=confirm]"); if(!b||b.disabled) return;
+  const f=D.festivals.find(x=>x.event_id===b.dataset.e); if(!f) return;
+  if(!confirm(`Besetzung von ${f.kurzname} als ${gfWho()} bestätigen? Alle Vorschläge des Festivals werden fest, die noch nicht bestätigten Aufgaben folgen.`)) return;
+  try{ const r=await gfApi("launch_confirm",{ event_id:f.event_id, by:gfWho() }); gfToast(`${r.besetzung} Besetzungen und ${r.bestaetigt} Aufgaben bestätigt als ${r.von}${r.fehler&&r.fehler.length?", "+r.fehler.length+" Fehler":""}`); await load(); }
+  catch(err){ gfToast("Fehler: "+err.message); }
+});
+document.addEventListener("change", async e=>{
+  const t=e.target; const f=t.dataset.f; if(!f) return;
+  if(f==="besetzung"){ await schreibe({ event_id:t.dataset.e, bereich:t.dataset.b, person_id:t.value||null }, t.value?`${bereichName(t.dataset.b)}: ${pname(t.value)}, Vorschlag`:`${bereichName(t.dataset.b)} offen`); return; }
+  if(f==="launch_std_woche"&&t.dataset.p){ const pid=t.dataset.p; clearTimeout(saveTimer[pid]);
+    saveTimer[pid]=setTimeout(()=>{ schreibe({ person_id:pid, launch_std_woche:t.value===""?null:t.value }, "Stunden je Woche gespeichert"); }, 700); }
+});
+
+async function load(){
+  const d=await gfApi("launch_list",{});
+  D=d; HEUTE=d.heute||new Date().toISOString().slice(0,10);
+  if(!D.festivals||!D.festivals.length){ $("#saLage").innerHTML=`<p class="sa-satz">Im Cockpit liegen keine Launch-Pläne für 2027.</p>`; return; }
+  renderAll();
+}
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("saison");
-  gfMountHero("karten","Saison 2026/27","Was in welcher Phase bis wann passieren muss, und wer es trägt.",{slim:true});
-  spRender();
+  gfMountHero("karten","Saison 2026/27","Vier Fragen, eine Reihenfolge: Phase und Herausforderung, wen wir haben, was sich geändert hat, wann was wie passieren kann.",{slim:true});
+  try{ await load(); }catch(e){ $("#saLage").innerHTML=`<p class="sa-satz">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</p>`; }
 });
 </script>
 </body>
