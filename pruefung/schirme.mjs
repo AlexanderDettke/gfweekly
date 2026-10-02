@@ -222,7 +222,7 @@ for (const thema of THEMES) {
       }, kern);
       if (befund.tor) meldungen.push('Tor blieb zu');
       if (!befund.app) meldungen.push('Seiteninhalt blieb verborgen');
-      if (befund.nav !== 14) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 14 Haupteinträgen)');
+      if (befund.nav !== 15) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 15 Haupteinträgen)');   // 15 seit Besetzung B1 (02.10.2026)
       if (befund.unternav !== 4) meldungen.push('Unternavigation unvollständig (' + befund.unternav + ' von 4 Einträgen)');
       if (befund.fehltext.length) meldungen.push('Fehlermeldung auf der Seite: ' + befund.fehltext.join(', '));
       if (befund.kern < 0) meldungen.push('Kerninhalt ' + kern + ' fehlt im Aufbau');
