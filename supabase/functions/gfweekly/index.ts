@@ -908,6 +908,92 @@ async function launchPersonen(){
   const { data, error } = await admin.from('gfweekly_people').select(LAUNCH_PERSON_SPALTEN).order('sort_order',{ascending:true}).order('name',{ascending:true});
   if (error) throw error; return data || [];
 }
+/* V29: Satz in jeder Aufgabe, damit in Asana klar ist, was zurückfließt. */
+const LAUNCH_SICHTBAR = 'Stand und Fälligkeit werden stündlich ins Hohe Haus übernommen; erledigt in Asana heißt erledigt im Haus.';
+const LAUNCH_SYNC_MINUTEN = 60;
+/* Projektbeschreibung: VVK-Start, Festivalverantwortung, Link auf die Saisonseite. */
+function launchProjektNotiz(festival: any, fvName: string | null){
+  return [`Launch ${festival.kurzname} 2027 · VVK-Start ${festival.sales_start_on || 'offen'} · Festivalverantwortung ${fvName || 'offen'}.`,
+    'Launch-Aufgaben aus dem Hohen Haus, je Bereich ein Abschnitt. Aufwände sind Richtwerte und werden über Ist-Stunden kalibriert.',
+    LAUNCH_SICHTBAR, '', `Saison im Hohen Haus: ${HH_BASIS}/saison.html`, `Launch verteilen: ${HH_BASIS}/launch.html?festival=${encodeURIComponent(festival.short_name || '')}`].join('\n');
+}
+/* ===== V29 · Rückweg aus Asana, nach dem Muster asanaSync der Vertretung =====
+   Für alle Meilensteine mit asana_task_gid: completed setzt status complete und completed_on; eine geänderte
+   Fälligkeit setzt due_on und sichert den alten Wert in due_on_vorher; neue Kommentare (story vom Typ comment)
+   kommen als Zeile what = launch_sync in gfweekly_saison_log, mit [asana:<gid>] im Text zur Entdopplung.
+   Keine Löschungen. Der Zeitstempel je Plan steht in gfweekly_launch_sync und wandert nur weiter, wenn der
+   Lauf des Plans fehlerfrei war. Ohne Token oder ohne gesendete Aufgaben läuft die Funktion leer durch. ===== */
+async function launchSync(festivals: any[], who: string){
+  const laufBeginn = new Date().toISOString();
+  const aus = { laeufe:0, geprueft:0, erledigt:0, faelligkeit:0, kommentare:0, fehler:0, plaene:[] as any[], synced_at: laufBeginn, uebersprungen: '' };
+  if (!ASANA_TOKEN) { aus.uebersprungen = 'ASANA_TOKEN fehlt'; return aus; }
+  const planIds = (festivals || []).map(f => f.plan_id).filter(Boolean);
+  if (!planIds.length) return aus;
+  const [{ data: ms, error: me }, { data: st, error: se }, { data: schon, error: le }] = await Promise.all([
+    admin.from('vvp_launch_milestones').select('id,plan_id,title,status,due_on,due_on_vorher,asana_task_gid,completed_on').in('plan_id', planIds).not('asana_task_gid','is',null),
+    admin.from('gfweekly_launch_sync').select('plan_id,synced_at').in('plan_id', planIds),
+    admin.from('gfweekly_saison_log').select('detail').eq('what','launch_sync').not('detail->>asana_gid','is',null).order('at',{ascending:false}).limit(2000),
+  ]);
+  if (me || se || le) { aus.fehler++; aus.uebersprungen = 'Daten nicht lesbar: ' + String((me || se || le)!.message); return aus; }
+  const bekannt = new Set((schon || []).map((l: any) => String(l.detail?.asana_gid || '')).filter(Boolean));
+  const seitJe = new Map((st || []).map((x: any) => [x.plan_id, x.synced_at]));
+  const jetzt = new Date().toISOString();
+  for (const f of festivals) {
+    const meine = (ms || []).filter((m: any) => m.plan_id === f.plan_id);
+    /* Erster Lauf eines Plans: alle Kommentare, die Entdopplung läuft über die Kennung der Story (Review V29, Runde 2, Befund 5). */
+    const seit = seitJe.get(f.plan_id) || '1970-01-01T00:00:00Z';
+    let fehler = 0, erledigt = 0, faelligkeit = 0, kommentare = 0;
+    for (const m of meine) {
+      aus.geprueft++;
+      let aufgabe: any = null;
+      try { aufgabe = await asana(`/tasks/${m.asana_task_gid}?opt_fields=completed,completed_at,due_on,name`); } catch (_e) { fehler++; continue; }
+      const patch: Record<string, unknown> = {};
+      if (aufgabe?.completed && m.status !== 'complete' && m.status !== 'not_required') {
+        patch.status = 'complete'; patch.completed_on = String(aufgabe.completed_at || jetzt).slice(0, 10);
+      }
+      /* Fälligkeit: ein anderes Datum oder eine entfernte Fälligkeit (null) in Asana gilt; der alte Wert geht nach due_on_vorher. */
+      if (aufgabe && aufgabe.due_on !== undefined) {
+        const neuDue = aufgabe.due_on === null ? null : (/^\d{4}-\d{2}-\d{2}$/.test(String(aufgabe.due_on)) ? String(aufgabe.due_on) : undefined);
+        if (neuDue !== undefined && neuDue !== (m.due_on || null)) { patch.due_on_vorher = m.due_on; patch.due_on = neuDue; }
+      }
+      if (Object.keys(patch).length) {
+        patch.updated_at = jetzt;
+        /* Erst das Protokoll, dann die Änderung: scheitert das Protokoll, bleibt die Änderung aus und der nächste Lauf
+           erkennt sie wieder (Muster asanaSync; Review V29, Befund 5). */
+        const ok = await launchLog(who, 'launch_sync', f.short_name, m.id, { titel: m.title, asana_task_gid: m.asana_task_gid, patch });
+        if (!ok) { fehler++; continue; }
+        const { error } = await admin.from('vvp_launch_milestones').update(patch).eq('id', m.id);
+        if (error) { fehler++; continue; }
+        if (patch.status) erledigt++;
+        if ('due_on' in patch) faelligkeit++;
+      }
+      /* Kommentare seitenweise, genau das Fenster dieses Laufs, Entdopplung über die Asana-Kennung der Story. */
+      let stories: any[] = []; let seitenRest = false;
+      try {
+        let pfad = `/tasks/${m.asana_task_gid}/stories?opt_fields=gid,text,created_at,type,created_by.name&limit=100`;
+        for (let seite = 0; seite < 50 && pfad; seite++) { const antwort = await asanaSeite(pfad); stories = stories.concat(antwort.data || []); pfad = antwort.next_page?.path || ''; }
+        seitenRest = !!pfad;
+      } catch (_e) { fehler++; continue; }
+      if (seitenRest) fehler++;
+      for (const s of stories) {
+        if (s.type !== 'comment' || !s.created_at) continue;
+        if (s.created_at <= seit || s.created_at > laufBeginn) continue;
+        if (s.gid && bekannt.has(String(s.gid))) continue;
+        const ok = await launchLog(who, 'launch_sync', f.short_name, m.id, { titel: m.title, asana_gid: String(s.gid || '0'), asana_task_gid: m.asana_task_gid,
+          text: `[asana:${s.gid || '0'}] ${m.title}: ${(s.created_by?.name || 'Asana')} schreibt „${(s.text || '').slice(0, 400)}“.` });
+        if (!ok) { fehler++; continue; }
+        if (s.gid) bekannt.add(String(s.gid));
+        kommentare++;
+      }
+    }
+    const ergebnis = { geprueft: meine.length, erledigt, faelligkeit, kommentare, fehler, at: laufBeginn };
+    /* Zeitstempel nur bei sauberem Lauf; ohne gesendete Aufgaben ist der Lauf trivial sauber. */
+    if (!fehler) { const { error } = await admin.from('gfweekly_launch_sync').upsert({ plan_id: f.plan_id, synced_at: laufBeginn, ergebnis, updated_at: jetzt }, { onConflict: 'plan_id' }); if (error) fehler++; }
+    aus.laeufe++; aus.erledigt += erledigt; aus.faelligkeit += faelligkeit; aus.kommentare += kommentare; aus.fehler += fehler;
+    aus.plaene.push(Object.assign({ plan_id: f.plan_id, short_name: f.short_name }, ergebnis, { fehler }));
+  }
+  return aus;
+}
 /* Der Text einer Asana-Aufgabe: Aufwand als Spanne, Dauer, Vorgänger, Generator-Anteil, Link ins Haus. */
 function launchAsanaNotiz(m: any, r: any, festival: any, zust: any, helfer: any, zusatz = ''){
   const lo = Number(m.aufwand_lo ?? r?.aufwand_lo ?? 0), hi = Number(m.aufwand_hi ?? r?.aufwand_hi ?? lo);
@@ -923,7 +1009,8 @@ function launchAsanaNotiz(m: any, r: any, festival: any, zust: any, helfer: any,
     zust ? `Zuständig: ${zust.name}.` : 'Zuständig: noch offen.',
     r?.hinweis ? `Hinweis: ${r.hinweis}` : '',
     '',
-    `Im Hohen Haus: ${HH_BASIS}/launch.html?event=${encodeURIComponent(festival.short_name || '')}`,
+    `Im Hohen Haus: ${HH_BASIS}/launch.html?festival=${encodeURIComponent(festival.short_name || '')}`,
+    LAUNCH_SICHTBAR,
     zusatz ? '\n' + zusatz : '',
   ];
   return zeilen.filter(z => z !== null && z !== undefined).join('\n').replace(/\n{3,}/g, '\n\n').trim();
@@ -941,7 +1028,7 @@ Deno.serve(async (req: Request) => {
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:36, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
+    if (action === 'ping') return json({ ok:true, version:37, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -1924,17 +2011,32 @@ Deno.serve(async (req: Request) => {
     if (action === 'launch_list') {
       const festivals = await launchFestivals();
       const planIds = festivals.map(f => f.plan_id);
+      /* V29: Rückweg aus Asana, wenn der letzte Lauf älter als 60 Minuten ist. Ein Fehler darin bricht die Liste nicht ab. */
+      let sync: any = null;
+      try {
+        const { data: st } = planIds.length ? await admin.from('gfweekly_launch_sync').select('plan_id,synced_at,ergebnis').in('plan_id', planIds) : { data: [] } as any;
+        /* Der älteste Zeitstempel entscheidet: bleibt ein Plan nach einem Fehler zurück, wird er beim nächsten Aufruf wieder versucht (Review V29, Befund 1). */
+        const zeiten = (st || []).map((x: any) => x.synced_at).sort();
+        const letzter = zeiten[zeiten.length - 1] || null, aeltester = zeiten[0] || null;
+        const alt = !aeltester || (Date.now() - Date.parse(aeltester)) > LAUNCH_SYNC_MINUTEN * 60000 || (st || []).length < planIds.length;
+        if (alt && ASANA_TOKEN) sync = Object.assign({ automatisch: true }, await launchSync(festivals, 'System'));
+        else sync = { automatisch: false, synced_at: letzter, plaene: st || [], uebersprungen: ASANA_TOKEN ? '' : 'ASANA_TOKEN fehlt' };
+      } catch (e) { sync = { automatisch: true, fehler: 1, uebersprungen: String((e as Error).message).slice(0, 200) }; }
       const eventIds = festivals.map(f => f.event_id);
       /* v36 (V28): dazu die Besetzung „bisher“ (Stand Sommer 2026) und das Launch-Protokoll für saison.html. */
-      const [ms, bes, leute, rw, ber, vorher, log] = await Promise.all([
+      const [ms, bes, leute, rw, ber, vorher, log, sendLog] = await Promise.all([
         planIds.length ? admin.from('vvp_launch_milestones').select('id,plan_id,title,category,status,due_on,due_on_vorher,bereich,person_id,hilfe_person_id,zuordnung_status,aufwand_lo,aufwand_hi,dauer_tage,generator_anteil,responsible,asana_task_gid,ist_stunden,completed_on,sort_order,notes,depends_on').in('plan_id', planIds).order('sort_order',{ascending:true}).order('title',{ascending:true}) : Promise.resolve({ data: [], error: null }),
         eventIds.length ? admin.from('gfweekly_launch_besetzung').select('*').in('event_id', eventIds) : Promise.resolve({ data: [], error: null }),
         launchPersonen(),
         admin.from('gfweekly_launch_richtwerte').select('*'),
         admin.from('gfweekly_launch_bereiche').select('*').order('sort_order',{ascending:true}),
         admin.from('gfweekly_launch_besetzung_vorher').select('bereich,text,quelle,sort_order').order('sort_order',{ascending:true}),
-        admin.from('gfweekly_saison_log').select('at,who,what,row_id,item_id,detail').in('what', ['launch_set','launch_confirm','launch_send']).order('at',{ascending:false}).limit(60),
+        admin.from('gfweekly_saison_log').select('at,who,what,row_id,item_id,detail').in('what', ['launch_set','launch_confirm','launch_send','launch_sync']).order('at',{ascending:false}).limit(120),
+        /* Versandzeilen getrennt, damit viele Sync-Kommentare den Projektlink und das Startdatum nicht verdrängen (Review V29, Befund 7). */
+        admin.from('gfweekly_saison_log').select('at,who,what,row_id,item_id,detail').eq('what','launch_send').order('at',{ascending:false}).limit(100),
       ]);
+      if ((sendLog as any).error) throw (sendLog as any).error;
+      const logZeilen = (() => { const alle = ((log as any).data || []).concat((sendLog as any).data || []); const seen = new Set<string>(); return alle.filter((z: any) => { const k = z.at + '|' + z.what + '|' + (z.row_id || '') + '|' + (z.item_id || ''); if (seen.has(k)) return false; seen.add(k); return true; }).sort((a: any, b: any) => String(b.at).localeCompare(String(a.at))); })();
       if ((ms as any).error) throw (ms as any).error;
       if ((bes as any).error) throw (bes as any).error;
       if ((rw as any).error) throw (rw as any).error;
@@ -1962,7 +2064,7 @@ Deno.serve(async (req: Request) => {
       }
       return json({ festivals, meilensteine, besetzung: (bes as any).data || [], pool: (leute as any[]).map(launchPersonAussen),
         richtwerte: (rw as any).data || [], bereiche: (ber as any).data || [], last: Object.values(last),
-        vorher: (vorher as any).data || [], log: (log as any).data || [],
+        vorher: (vorher as any).data || [], log: logZeilen, sync,
         asanaConfigured: !!ASANA_TOKEN, heute: heuteBerlin() });
     }
     if (action === 'launch_set') {
@@ -1989,6 +2091,12 @@ Deno.serve(async (req: Request) => {
           if (!LAUNCH_STATUS.includes(s)) return json({ error:'status unbekannt' },400);
           patch.status = s; geaendert.push('status');
           patch.completed_on = s === 'complete' ? (m.completed_on || heuteBerlin()) : null;
+        }
+        /* V29: Ist-Stunden am erledigten Meilenstein, Grundlage der Kalibrierung. Nur diese Spalte. */
+        if (t.ist_stunden !== undefined) {
+          const v = t.ist_stunden === null || t.ist_stunden === '' ? null : Number(t.ist_stunden);
+          if (v !== null && (!Number.isFinite(v) || v < 0 || v > 1000)) return json({ error:'ist_stunden muss zwischen 0 und 1000 liegen oder leer sein' },400);
+          patch.ist_stunden = v; geaendert.push('ist_stunden');
         }
         if (!geaendert.length) return json({ error:'nichts zu ändern' },400);
         const { data, error } = await admin.from('vvp_launch_milestones').update(patch).eq('id', m.id).select().single();
@@ -2139,6 +2247,7 @@ Deno.serve(async (req: Request) => {
       const fv = (bes || []).find((b: any) => b.bereich === 'fv' && b.person_id);
       const fvPerson = fv ? personJe.get(fv.person_id) : null;
       const uebergebender = (fvPerson && !launchIstExtern(fvPerson) && fvPerson.asana_gid) ? fvPerson : alex;
+      const projektNotiz = launchProjektNotiz(festival, fvPerson?.name || null);
 
       /* Projekt: zuerst die Kennung aus dem letzten Versand, dann die Suche nach dem Namen, sonst neu anlegen. */
       const name = `Launch ${festival.kurzname} 2027`;
@@ -2166,8 +2275,7 @@ Deno.serve(async (req: Request) => {
           try { const liste = await asana(`/projects?workspace=${ASANA_WORKSPACE}&limit=20&opt_fields=team,name,archived`); team = (liste || []).find((p: any) => p?.team?.gid && !p.archived)?.team?.gid || ''; }
           catch (_e) { team = ''; }
         }
-        const daten: Record<string, unknown> = { name, workspace: ASANA_WORKSPACE,
-          notes:`Launch-Aufgaben aus dem Hohen Haus, je Bereich ein Abschnitt. Aufwände sind Richtwerte und werden über Ist-Stunden kalibriert.\n${HH_BASIS}/launch.html?event=${encodeURIComponent(festival.short_name || '')}` };
+        const daten: Record<string, unknown> = { name, workspace: ASANA_WORKSPACE, notes: projektNotiz };
         if (team) daten.team = team;
         try { projekt = String((await asana('/projects', 'POST', daten)).gid); }
         catch (e) { return json({ error:String((e as Error).message), hinweis:'Braucht der Arbeitsbereich ein Team, ASANA_TEAM setzen oder team in der Nutzlast mitgeben.' },400); }
@@ -2177,6 +2285,9 @@ Deno.serve(async (req: Request) => {
         const gemerktOk = await launchLog(von, 'launch_send', festival.short_name, null, { projekt, schritt:'Projekt angelegt', neu:0, aktualisiert:0 });
         if (!gemerktOk) return json({ error:'Das Projekt steht in Asana, ließ sich aber nicht protokollieren.', projekt, hinweis:'Noch keine Aufgabe angelegt. Später erneut senden; das Projekt wird über den Namen gefunden.' },500);
       }
+      /* V29: Beschreibung bei jedem Versand nachziehen (VVK-Start und Festivalverantwortung können sich ändern). */
+      const fruehFehler: string[] = [];
+      try { await asana(`/projects/${projekt}`, 'PUT', { notes: projektNotiz }); } catch (e) { fruehFehler.push('Projektbeschreibung nicht aktualisiert: ' + String((e as Error).message).slice(0, 160)); }
       /* Abschnitte je Bereich, in der Reihenfolge der Bereiche. */
       const vorhanden = await asana(`/projects/${projekt}/sections?opt_fields=name`);
       const abschnitt: Record<string,string> = {};
@@ -2201,7 +2312,8 @@ Deno.serve(async (req: Request) => {
         }
       } catch (e) { return json({ error:'Aufgabenliste des Projekts nicht lesbar: ' + String((e as Error).message).slice(0,160), projekt, hinweis:'Nichts geändert, sonst könnten Aufgaben doppelt entstehen.' },502); }
       let neu = 0, aktualisiert = 0, unteraufgaben = 0;
-      const angebot: string[] = [], ohneKonto: string[] = [], fehler: string[] = [];
+      const angebot: string[] = [], ohneKonto: string[] = [], fehler: string[] = fruehFehler.slice();
+      const empfaenger: Record<string, number> = {};   // tatsächliche Asana-Empfänger je Name (Review V29, Runde 2, Befund 3)
       const jetzt = new Date().toISOString();
       for (const m of zuSenden) {
         const zust = personJe.get(m.person_id); const helfer = m.hilfe_person_id ? personJe.get(m.hilfe_person_id) : null;
@@ -2232,6 +2344,7 @@ Deno.serve(async (req: Request) => {
           }
           const { error } = await admin.from('vvp_launch_milestones').update({ asana_task_gid: gid, zuordnung_status: 'gesendet', updated_at: jetzt }).eq('id', m.id);
           if (error) { fehler.push(`${m.title}: Aufgabe ${gid} steht in Asana, ließ sich aber nicht merken: ${error.message}`); continue; }
+          const empfName = launchIstExtern(zust) ? uebergebender!.name : zust.name; empfaenger[empfName] = (empfaenger[empfName] || 0) + 1;
         } catch (e) { fehler.push(`${m.title}: ${String((e as Error).message).slice(0,160)}`); continue; }
         /* Generator-Anteil als Unteraufgabe beim Helfer; bestehende gleichnamige Unteraufgabe wird weiterverwendet. */
         const g = Number(m.generator_anteil ?? 0);
@@ -2246,9 +2359,11 @@ Deno.serve(async (req: Request) => {
           if (ziel) {
             try {
               const bestehend = await asana(`/tasks/${gid}/subtasks?opt_fields=name`);
-              const da = (bestehend || []).find((s: any) => norm(s.name) === norm(uname));
-              const udaten = { name: ziel === zust ? `Angebot einholen und beauftragen: ${uname}` : uname, assignee: ziel.asana_gid, due_on: m.due_on || null,
-                notes: `${Math.round(g * 100)} Prozent von ${m.title}, Richtwert ${Number(m.aufwand_lo ?? 0) * g} bis ${Number(m.aufwand_hi ?? 0) * g} Stunden.${unotiz ? '\n' + unotiz : ''}\n${HH_BASIS}/launch.html?event=${encodeURIComponent(festival.short_name || '')}` };
+              const uwirklich = ziel === zust ? `Angebot einholen und beauftragen: ${uname}` : uname;
+              /* Suche mit demselben Namen, der geschrieben wird; sonst entstünde bei jedem Versand eine weitere Angebots-Unteraufgabe (Review V29, Runde 2, Befund 1). */
+              const da = (bestehend || []).find((s: any) => norm(s.name) === norm(uwirklich) || norm(s.name) === norm(uname));
+              const udaten = { name: uwirklich, assignee: ziel.asana_gid, due_on: m.due_on || null,
+                notes: `${Math.round(g * 100)} Prozent von ${m.title}, Richtwert ${Number(m.aufwand_lo ?? 0) * g} bis ${Number(m.aufwand_hi ?? 0) * g} Stunden.${unotiz ? '\n' + unotiz : ''}\n${HH_BASIS}/launch.html?festival=${encodeURIComponent(festival.short_name || '')}\n${LAUNCH_SICHTBAR}` };
               if (da) await asana(`/tasks/${da.gid}`, 'PUT', udaten);
               else { await asana(`/tasks/${gid}/subtasks`, 'POST', udaten); unteraufgaben++; }
             } catch (e) { fehler.push(`Generator-Anteil ${m.title}: ${String((e as Error).message).slice(0,160)}`); }
@@ -2256,9 +2371,18 @@ Deno.serve(async (req: Request) => {
         }
       }
       const url = `https://app.asana.com/0/${projekt}`;
-      const protokoll = await launchLog(von, 'launch_send', festival.short_name, null, { projekt, url, neu, aktualisiert, unteraufgaben, angebot, ohne_konto: ohneKonto, fehler });
+      const protokoll = await launchLog(von, 'launch_send', festival.short_name, null, { projekt, url, neu, aktualisiert, unteraufgaben, angebot, ohne_konto: ohneKonto, fehler, empfaenger });
       if (!protokoll) fehler.push('Der Versand ließ sich nicht protokollieren (gfweekly_saison_log); die Projektkennung ' + projekt + ' steht nur in dieser Antwort.');
-      return json({ ok:true, projekt, url, neu, aktualisiert, unteraufgaben, angebot, ohne_konto: ohneKonto, fehler, protokoll });
+      return json({ ok:true, projekt, url, neu, aktualisiert, unteraufgaben, angebot, ohne_konto: ohneKonto, fehler, empfaenger, protokoll });
+    }
+
+    if (action === 'launch_sync') {
+      /* V29: Rückweg aus Asana auf Knopfdruck. event_id grenzt auf ein Festival ein, sonst alle. */
+      const festivals = await launchFestivals();
+      const liste = t.event_id ? festivals.filter(f => f.event_id === t.event_id) : festivals;
+      if (t.event_id && !liste.length) return json({ error:'Festival fehlt' },404);
+      const r = await launchSync(liste, (t.by ?? WHO).toString());
+      return json(Object.assign({ ok: true, automatisch: false }, r));
     }
 
     return json({ error:'unknown action' }, 400);

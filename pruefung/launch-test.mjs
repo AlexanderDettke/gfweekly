@@ -368,6 +368,12 @@ console.log('\n== 8. Saison: Bisher und Jetzt, Änderungen, Wochenplan ==');
   const POOL3 = POOL2.map(p => p.id === 'p-jessica' ? Object.assign({}, p, { verfuegbar_ab: '2026-02-01' }) : p.id === 'p-antonia' ? Object.assign({}, p, { verfuegbar_ab: '2026-10-20' }) : p);
   const ae3 = L.aenderungen([], POOL3, { seit: '2026-09-30', name: pName });
   gleich('„ab“ nur ab dem Stichtag: Antonia ja, Jessica (Februar) nein', ae3.map(a => a.text).sort(), ['Agentur neu im Pool (Agentur)', 'Antonia: ab 20.10.2026', 'Nina neu im Pool (Minijob), ab 10.10.2026']);
+  const aeSync = L.aenderungen([
+    { at: '2026-10-02T08:00:00Z', who: 'System', what: 'launch_sync', row_id: 'LUSRD27', detail: { titel: 'Shotliste bereit', patch: { status: 'complete', completed_on: '2026-10-02' } } },
+    { at: '2026-10-02T08:00:01Z', who: 'System', what: 'launch_sync', row_id: 'LUSRD27', detail: { titel: 'Landingpage bereit', patch: { due_on: '2026-10-12', due_on_vorher: '2026-10-05' } } },
+    { at: '2026-10-02T08:00:02Z', who: 'System', what: 'launch_sync', row_id: 'LUSRD27', detail: { titel: 'Content produziert', asana_gid: '77', text: '[asana:77] Content produziert: Antonia schreibt „Dreh verschoben“.' } },
+  ], [], { festival: s => 'Lusatia' });
+  gleich('Sync-Zeilen als Sätze: erledigt, Fälligkeit, Kommentar ohne Kennung', aeSync.map(a => a.text), ['Lusatia: Content produziert: Antonia schreibt „Dreh verschoben“.', 'Lusatia: „Landingpage bereit“ Fälligkeit in Asana auf 12.10.2026 (vorher 05.10.2026)', 'Lusatia: „Shotliste bereit“ in Asana erledigt am 02.10.2026']);
   gleich('Höchstens 30 Zeilen', L.aenderungen(Array.from({ length: 40 }, (_, i) => ({ at: '2026-09-30T00:00:' + String(i).padStart(2, '0') + 'Z', who: 'Alex', what: 'launch_confirm', row_id: 'LUSRD27', detail: {} })), [], {}).length, 30);
 
   const wp = L.wochenplan(ALLE, FEST5, { heute: STICHTAG, bis: '2026-12-31' });
@@ -385,6 +391,77 @@ console.log('\n== 8. Saison: Bisher und Jetzt, Änderungen, Wochenplan ==');
   gleich('Fenster 60 Tage: Möhre (läuft) und by nature (01.11.) ganz drin, auch spätere Termine', [fenster.some(m => m.festival === 'WMRD27' && m.due_on < STICHTAG), fenster.some(m => m.festival === 'BYNRD27' && m.title === 'Abschluss-Auswertung abgeschlossen')], [true, true]);
   gleich('… ein Launch am 15.12. bleibt draußen, Erledigtes auch', [fenster.some(m => m.festival === 'EGRD27'), fenster.some(m => L.FERTIG.has(m.status))], [false, false]);
   gleich('Wörter: Liste, Tage, Anzahl', [L.listeWorte(['a']), L.listeWorte(['a', 'b']), L.listeWorte(['a', 'b', 'c']), L.tageWort(1), L.tageWort(-3), L.anzahlWort(1, 'Tag', 'Tage')], ['a', 'a und b', 'a, b und c', '1 Tag', '3 Tage', '1 Tag']);
+}
+
+console.log('\n== 9. Verteilen und starten (V29): Vorschau und Kalibrierung ==');
+{
+  /* Pool mit Konten: Jessica, Antonia, Christian (extern mit Konto), Alex ja; Nina (Minijob) und Agentur (extern) ohne Konto; Lea mit Konto. */
+  const POOLK = POOL.map(p => Object.assign({}, p, { hat_asana: !['p-nina', 'p-agentur'].includes(p.id) }));
+  const LUS = festival('lus', '2026-10-15', wer).map(m => Object.assign(m, { festival: 'LUSRD27', event_id: 'e-lus' }));
+  byTitle(LUS, 'Content produziert').hilfe_person_id = 'p-nina';
+  byTitle(LUS, 'Shotliste bereit').person_id = 'p-agentur';          // extern ohne Konto: Angebot beim Übergebenden
+  byTitle(LUS, 'Social-Assets bereit').person_id = 'p-nina';         // Minijob ohne Konto: Notiz
+  byTitle(LUS, 'Zielgruppen definiert').person_id = null;             // ohne Person
+  Object.assign(byTitle(LUS, 'Launch-Termin bestätigt'), { status: 'complete' });
+  byTitle(LUS, 'Landingpage bereit').asana_task_gid = '1200000000000099';
+  const v = L.versandVorschau(LUS, POOLK, BES, FEST5[3]);
+  gleich('Offen 23 (eine erledigt), 1 ohne Person, 2 ohne Konto (Nina als Zuständige und als Hilfe), 1 Angebot', [v.offen, v.ohnePerson.map(m => m.title), v.ohneKonto.map(m => [m.title, m.name]), v.angebot.map(m => [m.title, m.name, m.bei])],
+    [23, ['Zielgruppen definiert'], [['Generator-Anteil (50 Prozent): Content produziert', 'Nina'], ['Social-Assets bereit', 'Nina']], [['Shotliste bereit', 'Agentur', 'Jessica']]]);
+  gleich('Übergebender ist die Festivalverantwortung Jessica (intern, mit Konto)', v.uebergebender, 'Jessica');
+  gleich('21 Aufgaben gehen an 4 Personen (die einzige Aufgabe von Alex ist erledigt), Jessica trägt die Angebotsaufgabe mit', [v.gesendet, v.personen.length, v.personen.find(p => p.name === 'Jessica').angebote], [21, 4, 1]);
+  gleich('Je Person Anzahl und Stunden als Mitte: Antonia 3 Aufgaben (Briefing 4, Content 24 abzüglich Generator-Hälfte 12, Hauptfilm 9) = 25', [v.personen.find(p => p.name === 'Antonia').anzahl, v.personen.find(p => p.name === 'Antonia').stunden], [3, 25]);
+  gleich('Nina ohne Konto bekommt keine Unteraufgabe; Unteraufgaben 0', [v.unteraufgaben, v.unteraufgabenListe.length], [0, 0]);
+  /* Hilfe mit Konto: Unteraufgabe und Stunden bei der Hilfe, Angebot bei externer Hilfe ohne Konto beim Zuständigen. */
+  const LUS2 = festival('lus2', '2026-10-15', wer).map(m => Object.assign(m, { festival: 'LUSRD27', event_id: 'e-lus' }));
+  byTitle(LUS2, 'Content produziert').hilfe_person_id = 'p-christian';   // extern mit Konto
+  byTitle(LUS2, 'Social-Assets bereit').hilfe_person_id = 'p-agentur';   // extern ohne Konto → Angebot bei Antonia
+  const v2 = L.versandVorschau(LUS2, POOLK, BES, FEST5[3]);
+  gleich('Christian bekommt eine Unteraufgabe mit 12 Std., Antonia ein Angebot für die Agentur (als Unteraufgabe gezählt)', [v2.personen.find(p => p.name === 'Christian').unteraufgaben, v2.personen.find(p => p.name === 'Christian').stunden - 12 >= 0, v2.unteraufgaben, v2.angebot.map(a => [a.name, a.bei]), v2.personen.find(p => p.name === 'Antonia').unteraufgaben], [1, true, 2, [['Agentur', 'Antonia']], 1]);
+  gleich('Angebotssatz nennt den Empfänger je Angebot (hier Antonia, nicht die Übergebende Jessica)', L.versandVorschauSaetze(v2, FEST5[3]).find(x => x.startsWith('Externe ohne Konto')), 'Externe ohne Konto: Agentur. Dafür entsteht eine Angebotsaufgabe bei Antonia.');
+  const LUS3 = festival('lus3', '2026-10-15', wer).map(m => Object.assign(m, { festival: 'LUSRD27', event_id: 'e-lus' }));
+  byTitle(LUS3, 'Shotliste bereit').person_id = 'p-agentur'; byTitle(LUS3, 'Social-Assets bereit').hilfe_person_id = 'p-agentur';
+  gleich('Zwei Empfänger von Angeboten mit Zahl', L.versandVorschauSaetze(L.versandVorschau(LUS3, POOLK, BES, FEST5[3]), FEST5[3]).find(x => x.startsWith('Externe ohne Konto')), 'Externe ohne Konto: Agentur. Dafür entstehen 2 Angebotsaufgaben bei Jessica (1) und Antonia (1).');
+  gleich('Satz: Christian hat auch Hauptaufgaben, also 5 Personen, dazu 2 Unteraufgaben', [L.versandVorschauSaetze(v2, FEST5[3])[0].includes(' an 5 Personen: '), L.versandVorschauSaetze(v2, FEST5[3])[0].endsWith(' Dazu 2 Unteraufgaben für Generator-Anteile.')], [true, true]);
+  /* Wer nur eine Unteraufgabe bekommt, zählt nicht bei „an m Personen“, sondern steht getrennt (Review V29, Runde 3, Befund 2). */
+  const POOLN = POOLK.map(p => p.id === 'p-nina' ? Object.assign({}, p, { hat_asana: true }) : p);
+  const LUS4 = festival('lus4', '2026-10-15', wer).map(m => Object.assign(m, { festival: 'LUSRD27', event_id: 'e-lus' }));
+  byTitle(LUS4, 'Content produziert').hilfe_person_id = 'p-nina';
+  const s4 = L.versandVorschauSaetze(L.versandVorschau(LUS4, POOLN, BES, FEST5[3]), FEST5[3])[0];
+  gleich('Nina nur als Unteraufgaben-Empfängerin: 5 Personen, getrennt genannt', [s4.includes(' an 5 Personen: '), s4.endsWith(' Dazu 1 Unteraufgabe für Generator-Anteile, nur als Unteraufgabe bei Nina (1, 12 Std.).')], [true, true]);
+  gleich('opt.alle zählt auch Erledigtes', L.versandVorschau(LUS, POOLK, BES, FEST5[3], { alle: true }).offen, 24);
+  gleich('Eine wird aktualisiert (hat asana_task_gid), der Rest ist neu', [v.aktualisiert, v.neu], [1, 20]);
+  gleich('Besetzung Lusatia ist Vorschlag, nicht bestätigt; 22 Zuordnungen würden mitbestätigt', [v.besetzungBestaetigt, v.zuBestaetigen], [false, 22]);
+  const saetze = L.versandVorschauSaetze(v, FEST5[3]);
+  gleich('Vorschau-Sätze: Personen, neu/aktualisiert, ohne Person, ohne Konto, Externe, Besetzung', saetze.length, 6);
+  gleich('Erster Satz beginnt mit der Zählung', saetze[0].startsWith('Lusatia: 21 Aufgaben gehen an 4 Personen: '), true);
+  gleich('Satz ohne Person nennt den Titel', saetze[2], '1 Aufgabe hat noch keine Person und wird nicht gesendet: Zielgruppen definiert.');
+  gleich('Satz ohne Konto', saetze[3], 'Ohne Asana-Konto, bleiben als Notiz im Haus: Nina (2 Aufgaben).');
+  gleich('Satz Externe', saetze[4], 'Externe ohne Konto: Agentur. Dafür entsteht eine Angebotsaufgabe bei Jessica.');
+  gleich('Satz Besetzung', saetze[5], 'Die Besetzung ist noch nicht bestätigt; der Start bestätigt sie mit (22 Zuordnungen).');
+  const WM = festival('wm', '2026-09-01', wer).map(m => Object.assign(m, { festival: 'WMRD27', event_id: 'e-wm', zuordnung_status: 'bestaetigt' }));
+  const vWm = L.versandVorschau(WM, POOLK, BES, FEST5[1]);
+  gleich('Wilde Möhre: Besetzung bestätigt, nichts mehr zu bestätigen', [vWm.besetzungBestaetigt, vWm.zuBestaetigen, L.versandVorschauSaetze(vWm, FEST5[1]).pop()], [true, 0, 'Die Besetzung des Festivals ist bestätigt.']);
+  gleich('Leere Liste: nichts zu senden', L.versandVorschauSaetze(L.versandVorschau([], POOLK, BES, FEST5[3]), FEST5[3])[0], 'Lusatia: keine Aufgabe mit Person und Asana-Konto, es gibt nichts zu senden.');
+  /* Fluidity: Festivalverantwortung extern (Slawik mit Konto) wäre kein Übergebender; ohne fv fällt es auf Alex. */
+  const vFam = L.versandVorschau(MS.FAMRD27, POOLK, BES, FEST5[2]);
+  gleich('Ohne Festivalverantwortung ist Alex der Übergebende', vFam.uebergebender, 'Alexander Dettke');
+
+  /* Kalibrierung: Ist gegen Mitte je Titel. */
+  const K = [
+    { title: 'Content produziert', aufwand_lo: 16, aufwand_hi: 32, ist_stunden: 30 },
+    { title: 'Content produziert', aufwand_lo: 16, aufwand_hi: 32, ist_stunden: 26 },
+    { title: 'Shotliste bereit', aufwand_lo: 2, aufwand_hi: 4, ist_stunden: 3 },
+    { title: 'Landingpage bereit', aufwand_lo: 8, aufwand_hi: 16, ist_stunden: 9.5 },
+    { title: 'Newsletter bereit', aufwand_lo: 3, aufwand_hi: 5, ist_stunden: null },
+    { title: 'Tracking getestet', aufwand_lo: 2, aufwand_hi: 4 },
+  ];
+  const k = L.kalibrierung(K);
+  gleich('4 von 6 mit Ist-Stunden, 3 Titel', [k.mitIst, k.gesamt, k.titel], [4, 6, 3]);
+  gleich('Content: Schnitt 28 gegen Mitte 24, 4 Std. über, 17 Prozent', [k.jeTitel['Content produziert'].n, k.jeTitel['Content produziert'].istSchnitt, k.jeTitel['Content produziert'].mitte, k.jeTitel['Content produziert'].abweichung, k.jeTitel['Content produziert'].prozent, k.jeTitel['Content produziert'].wort], [2, 28, 24, 4, 17, '4 Std. über dem Richtwert']);
+  gleich('Shotliste trifft den Richtwert', k.jeTitel['Shotliste bereit'].wort, 'wie der Richtwert');
+  gleich('Landingpage 2,5 unter', [k.jeTitel['Landingpage bereit'].abweichung, k.jeTitel['Landingpage bereit'].wort], [-2.5, '2,5 Std. unter dem Richtwert']);
+  gleich('Satz für die Aufgabenzeile', L.kalibrierungSatz(k, 'Content produziert'), 'bisher im Schnitt 28 Std. (2 Ist-Werte, 4 Std. über dem Richtwert)');
+  gleich('Ohne Ist-Werte kein Satz', [L.kalibrierungSatz(k, 'Newsletter bereit'), L.kalibrierung([]).mitIst], ['', 0]);
 }
 
 console.log(`\nLaunch-Logik: ${ok} in Ordnung, ${fehler} Befunde.`);

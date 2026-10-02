@@ -189,7 +189,7 @@ export const LAUNCH_MEILENSTEINE = LAUNCH_FESTIVALS.flatMap(f => LAUNCH_RICHTWER
   return { id:`m-${f.short_name}-${i}`, plan_id:f.plan_id, event_id:f.event_id, festival:f.short_name, title:r.title, category:r.category, status, due_on:due, due_on_vorher: f.short_name === 'LUSRD27' && due ? tag(-13 + r.vvk_offset_tage) : null,
     bereich:r.bereich, person_id: b ? b.person_id : null, hilfe_person_id: r.title === 'Content produziert' && f.short_name === 'LUSRD27' ? 'n' : null, zuordnung_status: zu,
     aufwand_lo:r.aufwand_lo, aufwand_hi:r.aufwand_hi, dauer_tage:r.dauer_tage, generator_anteil:r.generator_anteil, responsible: zu === 'gesendet' && b ? LAUNCH_POOL.find(p => p.id === b.person_id)?.name : null,
-    asana_task_gid: zu === 'gesendet' ? '120000000000' + i : null, ist_stunden:null, completed_on: status === 'complete' ? (due || tag(-20)) : null, sort_order:i, notes: r.title === 'Launch durchgeführt' ? 'Launchtag' : null, depends_on:null };
+    asana_task_gid: zu === 'gesendet' ? '120000000000' + i : null, ist_stunden: status === 'complete' && i % 2 === 0 ? r.aufwand_lo + i : null, completed_on: status === 'complete' ? (due || tag(-20)) : null, sort_order:i, notes: r.title === 'Launch durchgeführt' ? 'Launchtag' : null, depends_on:null };
 }));
 /* V28 · Saison: Besetzung „bisher“ (Stand Sommer 2026), Launch-Protokoll und created_at im Pool (Nora und die Agentur sind neu). */
 export const LAUNCH_VORHER = [
@@ -201,16 +201,20 @@ export const LAUNCH_LOG = [
   { at:zeit(-0.5), who:'Lea', what:'launch_set', row_id:'LUSRD27', item_id:null, detail:{ bereich:'content', person_id:'t', meilensteine:4 } },
   { at:zeit(-1), who:'Alex', what:'launch_set', row_id:null, item_id:'m-LUSRD27-2', detail:{ titel:'Ticketmodell vollständig', geaendert:['status'], patch:{ status:'in_progress' } } },
   { at:zeit(-1.2), who:'Alex', what:'launch_set', row_id:null, item_id:null, detail:{ person:'Merle', patch:{ launch_std_woche:10 } } },
-  { at:zeit(-2), who:'Alex', what:'launch_send', row_id:'WMRD27', item_id:null, detail:{ projekt:'1200000000000001', url:'https://app.asana.com/0/1200000000000001', neu:8, aktualisiert:0, unteraufgaben:1, angebot:[], ohne_konto:[], fehler:[] } },
+  { at:zeit(-2), who:'Alex', what:'launch_send', row_id:'WMRD27', item_id:null, detail:{ projekt:'1200000000000001', url:'https://app.asana.com/0/1200000000000001', neu:8, aktualisiert:0, unteraufgaben:1, angebot:[], ohne_konto:[], fehler:[], empfaenger:{ Alex:3, Merle:2, Tim:1, Christoph:1, Lea:1 } } },
 ];
 for (const p of LAUNCH_POOL) p.created_at = (p.id === 'n' || p.id === 'g') ? zeit(-1) : zeit(-100);
+/* V29: Stand des Rückwegs aus Asana, wie launch_list ihn liefert. */
+export const LAUNCH_SYNC = { automatisch:false, synced_at:zeit(-0.02), plaene:[], uebersprungen:'' , geprueft:8, erledigt:1, faelligkeit:0, kommentare:2, fehler:0 };
+LAUNCH_LOG.unshift({ at:zeit(-0.02), who:'System', what:'launch_sync', row_id:'WMRD27', item_id:'m-WMRD27-0', detail:{ titel:'Launch-Termin bestätigt', asana_gid:'9001', asana_task_gid:'1200000000000', text:'[asana:9001] Launch-Termin bestätigt: Alex schreibt „Termin steht“.' } });
 export const LAUNCH_LIST = { festivals: LAUNCH_FESTIVALS, meilensteine: LAUNCH_MEILENSTEINE, besetzung: LAUNCH_BESETZUNG, pool: LAUNCH_POOL,
-  richtwerte: LAUNCH_RICHTWERTE, bereiche: LAUNCH_BEREICHE, last: [], vorher: LAUNCH_VORHER, log: LAUNCH_LOG, asanaConfigured: true, heute };
+  richtwerte: LAUNCH_RICHTWERTE, bereiche: LAUNCH_BEREICHE, last: [], vorher: LAUNCH_VORHER, log: LAUNCH_LOG, sync: LAUNCH_SYNC, asanaConfigured: true, heute };
 
 export const ANTWORT = {
-  ping: { ok:true, version:28 },
+  ping: { ok:true, version:37 },
   launch_list: () => LAUNCH_LIST,
   launch_confirm: (p) => ({ ok:true, von:p.by||'Alex', bestaetigt:3, besetzung:2, offen:1, fehler:[] }),
+  launch_sync: () => Object.assign({ ok:true }, LAUNCH_SYNC, { laeufe:5 }),
   launch_send: () => ({ ok:true, projekt:'1200000000000001', url:'https://app.asana.com/0/1200000000000001', neu:4, aktualisiert:0, unteraufgaben:1, angebot:['Landingpage bereit → Christoph, Aufgabe bei Merle'], ohne_konto:[], fehler:[] }),
   people_list: { people:[
     { id:'a', name:'Alex', email:'alex@example.org', role:'GF', team:'GF', active:true, assignable:true, sort_order:1 },

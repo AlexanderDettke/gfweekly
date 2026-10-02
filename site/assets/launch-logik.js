@@ -1,4 +1,4 @@
-/* launch-logik.js · V27 Phase B (30.09.2026), erweitert V28 (30.09.2026) · reine Rechenlogik für launch.html und saison.html.
+/* launch-logik.js · V27 Phase B (30.09.2026), erweitert V28 (30.09.2026) und V29 (02.10.2026) · reine Rechenlogik für launch.html und saison.html.
    Kein DOM, kein Netz, keine Uhr: das heutige Datum kommt als Argument. Dadurch lässt sich alles in
    pruefung/launch-test.mjs nachrechnen. Im Browser liegt das Ergebnis als globales Objekt LaunchLogik,
    in node kommt es über require().
@@ -533,6 +533,11 @@
         else if (d.titel) text = `Meilenstein „${d.titel}“: ${listeWorte((d.geaendert || []).map(g => ({ person: 'Zuständigkeit', hilfe: 'Generator-Anteil', status: 'Stand' })[g] || g))} geändert`;
         else if (d.person) { const k = Object.keys(d.patch || {}); text = `${d.person}: ${listeWorte(k.map(x => x === 'launch_std_woche' ? 'Stunden je Woche ' + (d.patch[x] === null ? 'gelöscht' : 'auf ' + fmt(d.patch[x])) : x === 'verfuegbar_ab' ? 'verfügbar ab ' + (d.patch[x] ? kurz(d.patch[x]) : 'gelöscht') : x))}`; }
       } else if (e.what === 'launch_confirm') text = `${fest(e.row_id)}: ${anzahlWort(zahl(d.bestaetigt, 0), 'Zuordnung', 'Zuordnungen')} und ${anzahlWort(zahl(d.besetzung, 0), 'Besetzung', 'Besetzungen')} bestätigt`;
+      else if (e.what === 'launch_sync') {
+        /* V29: aus Asana zurück. Kommentar mit Text, sonst der Patch (erledigt, Fälligkeit). */
+        if (d.text) text = `${fest(e.row_id)}: ${String(d.text).replace(/^\[asana:\d+\]\s*/, '')}`;
+        else { const p = d.patch || {}; const teile = []; if (p.status === 'complete') teile.push('in Asana erledigt' + (p.completed_on ? ' am ' + kurz(p.completed_on) : '')); if (p.due_on) teile.push('Fälligkeit in Asana auf ' + kurz(p.due_on) + (p.due_on_vorher ? ' (vorher ' + kurz(p.due_on_vorher) + ')' : '')); text = `${fest(e.row_id)}: „${d.titel || 'Meilenstein'}“ ${teile.join(', ') || 'aus Asana übernommen'}`; }
+      }
       else if (e.what === 'launch_send') text = d.schritt ? `${fest(e.row_id)}: Asana-Projekt angelegt` : `${fest(e.row_id)}: nach Asana gesendet, ${zahl(d.neu, 0)} neu, ${zahl(d.aktualisiert, 0)} aktualisiert`;
       if (text) aus.push({ at, datum: String(at).slice(0, 10), wer: e.who || '', art: e.what, text });
     }
@@ -578,6 +583,111 @@
     });
   }
 
+
+  /* ===== V29 · Verteilen und starten: Vorschau des Versands, Kalibrierung über Ist-Stunden ===== */
+
+  /* ---- Vorschau in Worten, bevor launch_confirm und launch_send laufen. Zählt, was launch_send tun würde:
+     je Person Anzahl und Stunden (Mitte), Aufgaben ohne Person (werden nicht gesendet), Personen ohne Asana-Konto
+     (bleiben als Notiz), Externe ohne Konto (Angebotsaufgabe beim Übergebenden), Besetzung bestätigt?, neu oder
+     aktualisiert (asana_task_gid). Die Versandregel ist versandWeg aus V27. ---- */
+  function versandVorschau(meilensteine, pool, besetzung, festival, opt) {
+    opt = opt || {};
+    const person = id => (pool || []).find(p => p.id === id) || null;
+    /* opt.alle: auch Erledigtes zählen (für den Stand nach dem Versand); sonst nur Offenes, wie launch_send sendet. */
+    const offen = (meilensteine || []).filter(m => opt.alle || !FERTIG.has(m.status));
+    const mitPerson = offen.filter(m => m.person_id);
+    const ohnePerson = offen.filter(m => !m.person_id);
+    const je = new Map();
+    const ohneKonto = [], angebot = [], unteraufgaben = [];
+    let neu = 0, aktualisiert = 0;
+    const fv = besetzungVon(besetzung, festival && festival.event_id, 'fv');
+    const fvP = fv.person_id ? person(fv.person_id) : null;
+    const uebergebender = fvP && !istExtern(fvP) && hatKonto(fvP) ? fvP : ((pool || []).find(p => p.typ === 'gf' && /alex/i.test(p.name)) || null);
+    for (const m of mitPerson) {
+      const p = person(m.person_id);
+      const weg = versandWeg(p);
+      const mitte = (zahl(m.aufwand_lo, 0) + zahl(m.aufwand_hi, zahl(m.aufwand_lo, 0))) / 2;
+      if (weg.weg === 'notiz' || weg.weg === 'keine') { ohneKonto.push({ id: m.id, title: m.title, person_id: m.person_id, name: p ? p.name : 'unbekannt' }); continue; }
+      if (weg.weg === 'angebot') angebot.push({ id: m.id, title: m.title, person_id: m.person_id, name: p.name, bei: uebergebender ? uebergebender.name : null });
+      const ziel = weg.weg === 'angebot' ? uebergebender : p;
+      if (!ziel) { ohneKonto.push({ id: m.id, title: m.title, person_id: m.person_id, name: p.name }); continue; }
+      const a = anteile(m);
+      const e = je.get(ziel.id) || { person_id: ziel.id, name: ziel.name, typ: ziel.typ, anzahl: 0, stunden: 0, angebote: 0, unteraufgaben: 0 };
+      e.anzahl++; e.stunden += a.hatHilfe ? (a.zust.lo + a.zust.hi) / 2 : mitte; if (weg.weg === 'angebot') e.angebote++;
+      je.set(ziel.id, e);
+      if (m.asana_task_gid) aktualisiert++; else neu++;
+      /* Generator-Anteil als Unteraufgabe bei der Hilfe, nach denselben Regeln wie launch_send (Review V29, Befund 3):
+         Hilfe mit Konto bekommt die Unteraufgabe; Externe ohne Konto lösen ein Angebot beim Zuständigen aus; sonst Notiz. */
+      if (a.hatHilfe) {
+        const h = person(m.hilfe_person_id); const hw = versandWeg(h); const hStd = (a.hilfe.lo + a.hilfe.hi) / 2;
+        const titel = `Generator-Anteil (${Math.round(a.generator * 100)} Prozent): ${m.title}`;
+        if (hw.weg === 'aufgabe') {
+          const u = je.get(h.id) || { person_id: h.id, name: h.name, typ: h.typ, anzahl: 0, stunden: 0, angebote: 0, unteraufgaben: 0 };
+          u.unteraufgaben++; u.stunden += hStd; je.set(h.id, u);
+          unteraufgaben.push({ id: m.id, title: titel, name: h.name, bei: h.name });
+        } else if (hw.weg === 'angebot' && weg.weg === 'aufgabe') {
+          e.angebote++; e.unteraufgaben++; angebot.push({ id: m.id, title: titel, person_id: h.id, name: h.name, bei: p.name }); unteraufgaben.push({ id: m.id, title: titel, name: h.name, bei: p.name });
+        } else ohneKonto.push({ id: m.id, title: titel, person_id: m.hilfe_person_id, name: h ? h.name : 'unbekannt' });
+      }
+    }
+    const personen = [...je.values()].sort((a, b) => b.stunden - a.stunden || String(a.name).localeCompare(String(b.name), 'de'));
+    const gesendet = personen.reduce((a, p) => a + p.anzahl, 0);
+    const unter = unteraufgaben.length;   // Unteraufgaben bei der Hilfe und Angebots-Unteraufgaben beim Zuständigen
+    const besetzungZeilen = (besetzung || []).filter(b => festival && b.event_id === festival.event_id && b.person_id);
+    const besetzungBestaetigt = besetzungZeilen.length > 0 && besetzungZeilen.every(b => b.status === 'bestaetigt');
+    const zuBestaetigen = offen.filter(m => m.person_id && (m.zuordnung_status === 'offen' || m.zuordnung_status === 'vorschlag')).length;
+    return { personen, gesendet, unteraufgaben: unter, unteraufgabenListe: unteraufgaben, neu, aktualisiert, ohnePerson, ohneKonto, angebot, uebergebender: uebergebender ? uebergebender.name : null, besetzungBestaetigt, zuBestaetigen, offen: offen.length };
+  }
+  function versandVorschauSaetze(v, festival) {
+    const name = festival && (festival.kurzname || festival.name) || 'Dieses Festival';
+    const s = [];
+    if (!v.gesendet) s.push(`${name}: keine Aufgabe mit Person und Asana-Konto, es gibt nichts zu senden.`);
+    else {
+      /* Personen mit Hauptaufgaben zählen bei „an m Personen“; wer nur eine Unteraufgabe bekommt, steht getrennt (Review V29, Runde 3, Befund 2). */
+      const haupt = v.personen.filter(p => p.anzahl > 0), nurUnter = v.personen.filter(p => p.anzahl === 0);
+      s.push(`${name}: ${anzahlWort(v.gesendet, 'Aufgabe geht', 'Aufgaben gehen')} an ${anzahlWort(haupt.length, 'Person', 'Personen')}: ${listeWorte(haupt.map(p => `${p.name} (${p.anzahl}${p.unteraufgaben ? ' + ' + p.unteraufgaben + ' Unteraufgabe' + (p.unteraufgaben === 1 ? '' : 'n') : ''}, ${fmt(p.stunden)} Std.${p.angebote ? ', davon ' + p.angebote + ' Angebot' : ''})`))}.${v.unteraufgaben ? ' Dazu ' + anzahlWort(v.unteraufgaben, 'Unteraufgabe für Generator-Anteile', 'Unteraufgaben für Generator-Anteile') + (nurUnter.length ? ', nur als Unteraufgabe bei ' + listeWorte(nurUnter.map(p => `${p.name} (${p.unteraufgaben}, ${fmt(p.stunden)} Std.)`)) : '') + '.' : ''}`);
+      s.push(v.neu && v.aktualisiert ? `${v.neu} neu, ${v.aktualisiert} werden aktualisiert.` : v.aktualisiert ? `Alle ${v.aktualisiert} stehen schon in Asana und werden aktualisiert.` : `Alle ${v.neu} sind neu.`);
+    }
+    if (v.ohnePerson.length) s.push(`${anzahlWort(v.ohnePerson.length, 'Aufgabe hat', 'Aufgaben haben')} noch keine Person und ${v.ohnePerson.length === 1 ? 'wird' : 'werden'} nicht gesendet: ${listeWorte(v.ohnePerson.map(m => m.title))}.`);
+    if (v.ohneKonto.length) s.push(`Ohne Asana-Konto, ${v.ohneKonto.length === 1 ? 'bleibt' : 'bleiben'} als Notiz im Haus: ${listeWorte([...new Set(v.ohneKonto.map(m => m.name))])} (${anzahlWort(v.ohneKonto.length, 'Aufgabe', 'Aufgaben')}).`);
+    if (v.angebot.length) {
+      /* Empfänger je Angebot: Hauptaufgaben beim Übergebenden, Generator-Unteraufgaben beim Zuständigen. */
+      const bei = new Map(); for (const a of v.angebot) { const k = a.bei || 'niemandem mit Konto'; bei.set(k, (bei.get(k) || 0) + 1); }
+      s.push(`Externe ohne Konto: ${listeWorte([...new Set(v.angebot.map(m => m.name))])}. Dafür ${v.angebot.length === 1 ? 'entsteht eine Angebotsaufgabe' : 'entstehen ' + v.angebot.length + ' Angebotsaufgaben'} bei ${listeWorte([...bei.entries()].map(([k, n]) => bei.size > 1 ? `${k} (${n})` : k))}.`);
+    }
+    s.push(v.besetzungBestaetigt ? 'Die Besetzung des Festivals ist bestätigt.' : `Die Besetzung ist noch nicht bestätigt; der Start bestätigt sie mit (${anzahlWort(v.zuBestaetigen, 'Zuordnung', 'Zuordnungen')}).`);
+    return s;
+  }
+
+  /* ---- Kalibrierung: je Richtwert-Titel die Abweichung Ist zu Mitte der Spanne, nur Meilensteine mit ist_stunden.
+     Noch ohne automatische Anpassung der Richtwerte; die Zahl wird nur gezeigt. ---- */
+  function kalibrierung(meilensteine) {
+    const je = new Map();
+    let mitIst = 0;
+    for (const m of meilensteine || []) {
+      const ist = m.ist_stunden === null || m.ist_stunden === undefined || m.ist_stunden === '' ? null : zahl(m.ist_stunden, null);
+      if (ist === null) continue;
+      mitIst++;
+      const mitte = (zahl(m.aufwand_lo, 0) + zahl(m.aufwand_hi, zahl(m.aufwand_lo, 0))) / 2;
+      const e = je.get(m.title) || { title: m.title, n: 0, istSumme: 0, mitteSumme: 0 };
+      e.n++; e.istSumme += ist; e.mitteSumme += mitte; je.set(m.title, e);
+    }
+    const jeTitel = {};
+    for (const e of je.values()) {
+      const istSchnitt = e.istSumme / e.n, mitte = e.mitteSumme / e.n;
+      const abweichung = istSchnitt - mitte;
+      jeTitel[e.title] = { title: e.title, n: e.n, istSchnitt: Math.round(istSchnitt * 10) / 10, mitte: Math.round(mitte * 10) / 10, abweichung: Math.round(abweichung * 10) / 10,
+        prozent: mitte > 0 ? Math.round(abweichung / mitte * 100) : null,
+        wort: Math.abs(abweichung) < 0.05 ? 'wie der Richtwert' : abweichung > 0 ? `${fmt(abweichung)} Std. über dem Richtwert` : `${fmt(-abweichung)} Std. unter dem Richtwert` };
+    }
+    return { mitIst, gesamt: (meilensteine || []).length, jeTitel, titel: Object.keys(jeTitel).length };
+  }
+  function kalibrierungSatz(k, title) {
+    const e = k && k.jeTitel && k.jeTitel[title];
+    if (!e) return '';
+    return `bisher im Schnitt ${fmt(e.istSchnitt)} Std. (${anzahlWort(e.n, 'Ist-Wert', 'Ist-Werte')}, ${e.wort})`;
+  }
+
   function statusWort(s) { return STATUS_WORT[s] || s || 'offen'; }
   function statusAusWort(w) { return WORT_STATUS[w] || w; }
   function zuordnungWort(z) { return ZUORDNUNG_WORT[z] || z || 'offen'; }
@@ -590,5 +700,6 @@
     statusWort, statusAusWort, zuordnungWort, typWort, festivalKurz,
     /* V28 */ KRITISCH, FENSTER_LAUNCHES, FENSTER_ENTSCHEIDEN, FENSTER_LAST, listeWorte, tageWort, anzahlWort, phaseHeute, launchesBis, besetzungVon,
     saisonLage, saisonLageSatz, entscheidungen, kritischeKette, laengsteKette, haltbar, haltbarSatz, hebel, naechsteFaellig, bisherJetzt, aenderungen,
-    imFenster, montag, wochenplan };
+    imFenster, montag, wochenplan,
+    /* V29 */ versandVorschau, versandVorschauSaetze, kalibrierung, kalibrierungSatz };
 });

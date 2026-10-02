@@ -6,14 +6,14 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Das Hohe Haus · Saison</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=27" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=27" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=27" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=27" />
-<link rel="stylesheet" href="/assets/styles.css?v=27" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=28" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=28" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=28" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=28" />
+<link rel="stylesheet" href="/assets/styles.css?v=28" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 <style>
-/* Saison (V28, 30.09.2026): vier Antworten in fester Reihenfolge, aus den Daten von launch_list.
+/* Saison (V28, 30.09.2026; V29, 02.10.2026: Verteilen und starten, Rückweg aus Asana): vier Antworten in fester Reihenfolge, aus den Daten von launch_list.
    Status und Last stehen als Wort, Farbe trägt keine Bedeutung, Hervorhebung durch Rahmen.
    Die fünf Metaphasen stehen als Konstante im Skript; alles andere kommt aus dem System. */
 #sa{max-width:1040px;display:grid;gap:22px;margin-top:6px}
@@ -43,7 +43,7 @@
 .sa-phasen li.ist-jetzt{border:2px solid var(--text)}
 .sa-phasen b{display:block;font-size:var(--stufe-2);font-weight:600;line-height:1.3}
 .sa-phasen span{display:block;font-size:var(--stufe-1);color:var(--text-2);margin-top:2px}
-.sa-lage .kk-row{grid-template-columns:repeat(4,minmax(0,1fr))}
+.sa-lage .kk-row{grid-template-columns:repeat(5,minmax(0,1fr))}
 .sa-liste{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .sa-liste li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:baseline;padding:8px 10px;background:var(--surface-2);border-radius:var(--radius-m);font-size:var(--stufe-2);line-height:var(--leading-text)}
 .sa-liste li .w{font-weight:700;white-space:nowrap}
@@ -117,10 +117,18 @@ details[open]>summary .chev{transform:rotate(90deg)}
 .sa-w .f{color:var(--text-2);line-height:var(--leading-text)}
 .sa-w .s{font-variant-numeric:tabular-nums;white-space:nowrap}
 .sa-w.drei{border:2px solid var(--text)}
+.sa-start{display:grid;gap:8px;padding:12px;background:var(--surface);border:2px solid var(--text);border-radius:var(--radius-m)}
+.sa-start ul{margin:0;padding-left:1.1em;line-height:var(--leading-text);font-size:var(--stufe-2)}
+.sa-start .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sa-ok{background:var(--pos-bg);color:var(--text);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:var(--leading-text)}
+.sa-asana{display:grid;gap:8px}
+.sa-asana .zahlen{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:var(--stufe-2);color:var(--text-2)}
+.sa-asana .zahlen b{color:var(--text)}
+.sa-kopfrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
 .sa-foot{color:var(--text-3);font-size:var(--stufe-2);max-width:70ch;line-height:var(--leading-text)}
 
 @media (max-width:900px){
-  .sa-lage .kk-row{grid-template-columns:1fr 1fr}
+  .sa-lage .kk-row{grid-template-columns:1fr 1fr 1fr}
   .sa-kette{grid-template-columns:1fr 1fr}
   .sa-p{grid-template-columns:1fr 1fr} .sa-p .bw{grid-column:1/-1}
   .sa-vj{grid-template-columns:1fr} .sa-vj .kopf{display:none} .sa-vj .zeile{padding-top:12px;border-top:var(--rahmen) solid var(--border)}
@@ -136,7 +144,7 @@ details[open]>summary .chev{transform:rotate(90deg)}
   .sa-tafel .fuss .btn{justify-content:flex-start;text-align:left}
   .sa-w{grid-template-columns:1fr} .sa-w .s{white-space:normal}
 }
-@media (max-width:480px){ .sa-kette{grid-template-columns:1fr} .sa-p{grid-template-columns:1fr} .sa-lage .kk-row{grid-template-columns:1fr 1fr} }
+@media (max-width:480px){ .sa-kette{grid-template-columns:1fr} .sa-p{grid-template-columns:1fr} .sa-lage .kk-row{grid-template-columns:1fr 1fr} .sa-start .row{flex-direction:column;align-items:stretch} }
 @media (prefers-reduced-motion:reduce){.sa-auf .chev{transition:none}}
 </style>
 </head>
@@ -203,7 +211,8 @@ details[open]>summary .chev{transform:rotate(90deg)}
 
     <section class="sa-sec" aria-labelledby="saF4">
       <h2 id="saF4">Wann kann was wie passieren?</h2>
-      <p class="sa-muted">Je Festival nach VVK-Start. Fertig-am ist vorwärts gerechnet: Beginn heute oder nach dem letzten Vorgänger, eine spätere Verfügbarkeit schiebt. Die Hebel öffnen „Launch verteilen“ mit dem passenden Weg.</p>
+      <div class="sa-kopfrow"><p class="sa-muted">Je Festival nach VVK-Start. Fertig-am ist vorwärts gerechnet: Beginn heute oder nach dem letzten Vorgänger, eine spätere Verfügbarkeit schiebt. Die Hebel öffnen „Launch verteilen“ mit dem passenden Weg. „Launch starten“ bestätigt die Besetzung und sendet die Aufgaben nach Asana; danach zeigt der Block den Stand aus Asana.</p>
+        <div><button class="btn btn-brand btn-sm" data-act="sync">Stand aus Asana holen</button><p class="sa-muted" id="saSync" style="margin-top:4px"></p></div></div>
       <div id="saFestivals" style="display:grid;gap:12px"></div>
       <details class="sa-auf" id="saWochenDetail">
         <summary>Wochenplan bis Jahresende<span class="chev" aria-hidden="true">›</span></summary>
@@ -219,15 +228,17 @@ details[open]>summary .chev{transform:rotate(90deg)}
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=27"></script>
-<script src="/assets/launch-logik.js?v=27"></script>
-<script src="/assets/game.js?v=27"></script>
-<script src="/assets/eggs.js?v=27" defer></script>
+<script src="/assets/core.js?v=28"></script>
+<script src="/assets/launch-logik.js?v=28"></script>
+<script src="/assets/game.js?v=28"></script>
+<script src="/assets/eggs.js?v=28" defer></script>
 <script>
 /* V28 · Saison in vier Fragen. Daten aus launch_list, Rechenlogik aus LaunchLogik, Schreiben über launch_set und launch_confirm. */
 const $=s=>document.querySelector(s);
 const LL=LaunchLogik;
 let D=null, HEUTE=null, R=null; const saveTimer={};
+/* V29: je Festival offene Vorschau (Start) und das Ergebnis des letzten Starts in dieser Sitzung. */
+const START={ offen:{}, von:null, ergebnis:{} };
 
 /* Die fünf Metaphasen (Texte aus den Steckbriefen V26, je Phase ergänzt um „So arbeitet das Team jetzt“ und die Herausforderung).
    Die Analyse reicht bis 15.10. in den Systembau hinein; auf der Leiste liegen beide Segmente nach Tagen, die Überlappung ist sichtbar. */
@@ -278,7 +289,49 @@ function rechne(){
   const ph=LL.phaseHeute(SA_PHASEN, HEUTE);
   const lage=LL.saisonLage(D.festivals, D.meilensteine, D.besetzung, D.pool, { heute:HEUTE });
   const last=LL.last(LL.imFenster(D.meilensteine, HEUTE, LL.FENSTER_LAST, D.festivals), LL.zuweisbar(D.pool), { heute:HEUTE, fertigJe });
-  return { ketten, fertigJe, ph, lage, last };
+  const kal=LL.kalibrierung(D.meilensteine);
+  return { ketten, fertigJe, ph, lage, last, kal };
+}
+/* V29: Stand aus Asana je Festival aus Meilensteinen und Protokoll (letzter Versand). */
+function asanaStand(f){
+  const liste=ms(f); const gesendet=liste.filter(m=>m.asana_task_gid);
+  if(!gesendet.length) return null;
+  const log=(D.log||[]).filter(e=>e.what==="launch_send"&&e.row_id===f.short_name&&e.detail&&(e.detail.url||e.detail.projekt)).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  const letzter=log[0]||null, erster=log[log.length-1]||null;
+  const d=letzter&&letzter.detail||{};
+  /* Empfänger nach den Versandregeln (Angebot liegt beim Übergebenden), nicht die Zuständigen im Haus (Review V29, Befund 6). */
+  /* Empfänger über alle Versände (Namen vereinigt), Anzahl aus allen gesendeten Aufgaben; sonst Versandregeln (Review V29, Runde 3, Befund 1). */
+  const empfNamen=new Set(); for(const e of log) for(const k of Object.keys(e.detail&&e.detail.empfaenger&&typeof e.detail.empfaenger==="object"?e.detail.empfaenger:{})) empfNamen.add(k);
+  const vg=empfNamen.size?null:LL.versandVorschau(gesendet, D.pool, D.besetzung, f, { alle:true });
+  const personen=empfNamen.size?empfNamen:new Set(vg.personen.filter(p=>p.anzahl>0).map(p=>p.person_id));
+  const ohne=liste.filter(m=>!LL.FERTIG.has(m.status)&&!m.person_id).length;
+  const hinweise=[].concat(d.angebot||[], d.ohne_konto||[], d.fehler||[]);
+  const erledigt=gesendet.filter(m=>LL.FERTIG.has(m.status)).length;
+  return { seit: erster?String(erster.at).slice(0,10):null, url: d.url||(d.projekt?`https://app.asana.com/0/${d.projekt}`:null), n:gesendet.length, m:personen.size, ohne, hinweise, erledigt, offenNeu: liste.filter(m=>!LL.FERTIG.has(m.status)&&m.person_id&&!m.asana_task_gid).length };
+}
+function startVorschau(f){
+  const v=LL.versandVorschau(ms(f), D.pool, D.besetzung, f);
+  const saetze=LL.versandVorschauSaetze(v, f);
+  const von=START.von||gfWho();
+  const kann=v.gesendet>0&&D.asanaConfigured;
+  return `<div class="sa-start" id="start-${gfEsc(f.short_name)}"><h4 class="sa-eb">Vorschau: Launch starten, Aufgaben nach Asana</h4>
+    <ul>${saetze.map(x=>`<li>${gfEsc(x)}</li>`).join("")}</ul>
+    ${D.asanaConfigured?"":`<p class="sa-muted">Das Asana-Token fehlt in den Secrets; senden geht erst danach.</p>`}
+    <div class="row">${gfChips("startVon",["Alex","Lea"],von,{label:"Wer bestätigt und startet"})}<button class="btn btn-primary btn-sm" data-act="start" data-e="${f.event_id}" ${kann?"":"disabled"}>Jetzt starten als ${gfEsc(von)}</button><button class="btn btn-brand btn-sm" data-act="start-zu" data-f="${gfEsc(f.short_name)}">Abbrechen</button></div></div>`;
+}
+function startKnopf(f){
+  const st=asanaStand(f); const v=LL.versandVorschau(ms(f), D.pool, D.besetzung, f); const e=START.ergebnis[f.short_name];
+  const warnung=!st&&e&&e.abgebrochen?`<div class="sa-note" style="flex:1 1 100%"><b>Nicht gesendet:</b> Bestätigen hatte Fehler (${gfEsc((e.fehler||[]).join("; ")||"Protokoll")}). Erst beheben, dann erneut starten.</div>`:"";
+  const text=st?(v.neu?`Erneut senden: ${v.neu} neue, ${v.aktualisiert} aktualisieren`:`Erneut senden: ${v.aktualisiert} aktualisieren`):"Launch starten: Aufgaben nach Asana";
+  return warnung+`<button class="btn ${st?"btn-brand":"btn-primary"} btn-sm" data-act="start-auf" data-f="${gfEsc(f.short_name)}" ${v.gesendet?"":"disabled"} title="${v.gesendet?"":"Keine Aufgabe mit Person und Asana-Konto"}">${gfEsc(text)}</button>`;
+}
+function ergebnisSatz(f){
+  const st=asanaStand(f); if(!st) return "";
+  const e=START.ergebnis[f.short_name];
+  return `<div class="sa-asana">${e&&e.abgebrochen?`<div class="sa-note"><b>Nicht gesendet:</b> Bestätigen hatte Fehler (${gfEsc((e.fehler||[]).join("; ")||"Protokoll")}). Erst beheben, dann erneut starten.</div>`:""}<p class="sa-satz" style="font-size:var(--stufe-2)">In Asana seit ${st.seit?fmtD(st.seit):"heute"}${st.url?`, Projekt <a class="linkish" href="${gfEsc(st.url)}" target="_blank" rel="noopener">in Asana öffnen</a>`:""}, ${LL.anzahlWort(st.n,"Aufgabe","Aufgaben")} an ${LL.anzahlWort(st.m,"Person","Personen")}, ${LL.anzahlWort(st.ohne,"Aufgabe","Aufgaben")} ohne Person, ${LL.anzahlWort(st.hinweise.length,"Hinweis","Hinweise")}.</p>
+    <div class="zahlen"><span><b>${st.erledigt}</b> in Asana erledigt</span><span><b>${st.n-st.erledigt}</b> offen in Asana</span>${st.offenNeu?`<span><b>${st.offenNeu}</b> noch nicht gesendet</span>`:""}${e?`<span>letzter Start: <b>${e.neu}</b> neu, <b>${e.aktualisiert}</b> aktualisiert</span>`:""}</div>
+    ${st.hinweise.length?`<details class="sa-auf"><summary>Hinweise aus dem Versand<span class="chev" aria-hidden="true">›</span></summary><div class="body"><ul class="sa-liste">${st.hinweise.map(h=>`<li><span class="w">Hinweis</span><span>${gfEsc(h)}</span></li>`).join("")}</ul></div></details>`:""}
+    <p class="sa-muted">Die Hebel (Parallel, Verschieben, Hilfe) bleiben unter <a class="linkish" href="launch.html?festival=${encodeURIComponent(f.short_name)}">Launch verteilen</a> erreichbar.</p></div>`;
 }
 function optionen(cur, quelle, notiz){
   const pool=LL.reihenfolge(LL.zuweisbar(D.pool));
@@ -308,6 +361,7 @@ function renderPhase(){
     gfKachel({ icon:"meilenstein", value:lage.offeneBisJahresende, label:"offene Launch-Aufgaben bis Jahresende", title:lage.ohneTermin?`dazu ${lage.ohneTermin} ohne Termin`:"" }),
     gfKachel({ icon:"partner", value:lage.ohneFv.length, label:lage.ohneFv.length===1?"Festival ohne Festivalverantwortung":"Festivals ohne Festivalverantwortung", title:lage.ohneFv.map(f=>f.kurzname).join(", ") }),
     gfKachel({ icon:"zahl", value:`${lage.personenMitZeit} von ${lage.poolGesamt}`, label:"Personen mit eingetragener Zeit, von allen im Pool" }),
+    gfKachel({ icon:"check", value:`${R.kal.mitIst} von ${R.kal.gesamt}`, label:"Richtwerte kalibriert: Aufgaben mit Ist-Stunden", title:R.kal.titel?`${R.kal.titel} Richtwert-Titel mit Ist-Werten`:"noch keine Ist-Stunden eingetragen" }),
   ].join("");
   const ent=LL.entscheidungen(D.festivals, D.besetzung, R.ketten, { heute:HEUTE, bereich:bereichName, bereiche:SA_BEREICHE });
   const wort={ besetzung:"Besetzung", termin:"Termin", daten:"Daten" };
@@ -329,7 +383,7 @@ function renderTafel(){
       const titel=[q?"Quelle: "+q:"", n?"Notiz: "+n:""].filter(Boolean).join(" · ");
       return `<div class="feld"${titel?` title="${gfEsc(titel)}"`:""}><span class="fest">${gfEsc(f.kurzname)}</span><select data-f="besetzung" data-e="${f.event_id}" data-b="${b.key}" aria-label="${gfEsc(b.name)} für ${gfEsc(f.kurzname)}"${titel?` title="${gfEsc(titel)}"`:""}>${optionen(z.person_id, q, n)}</select><span class="st"><b>${gfEsc(z.wort)}</b>${z.person_id&&person(z.person_id)?" · "+gfEsc(LL.typWort(person(z.person_id).typ)):""}${n?" · "+gfEsc(n):""}</span></div>`; }).join("")).join("");
   const fuss=`<div class="fuss"></div>`+fest.map(f=>{ const st=bereiche.map(b=>LL.besetzungVon(D.besetzung, f.event_id, b.key).status); const offen=st.filter(x=>x==="vorschlag").length, ohne=st.filter(x=>x==="offen").length;
-      return `<div class="fuss"><button class="btn btn-primary btn-sm" data-act="confirm" data-e="${f.event_id}" ${offen?"":"disabled"} title="${offen?`${offen} ${offen===1?"Vorschlag":"Vorschläge"} werden fest${ohne?", "+ohne+" offen bleibt":""}`:"nichts zu bestätigen"}">${offen?`Besetzung bestätigen als ${gfEsc(gfWho())}`:"alles bestätigt"}</button>${ohne?`<p class="sa-muted" style="margin-top:4px">${ohne} ${ohne===1?"Bereich":"Bereiche"} offen</p>`:""}</div>`; }).join("");
+      return `<div class="fuss"><button class="btn btn-primary btn-sm" data-act="confirm" data-e="${f.event_id}" ${offen?"":"disabled"} title="${offen?`${offen} ${offen===1?"Vorschlag":"Vorschläge"} werden fest${ohne?", "+ohne+" offen bleibt":""}`:"nichts zu bestätigen"}">${offen?`Besetzung bestätigen als ${gfEsc(gfWho())}`:"alles bestätigt"}</button>${ohne?`<p class="sa-muted" style="margin-top:4px">${ohne} ${ohne===1?"Bereich":"Bereiche"} offen</p>`:""}<div style="margin-top:6px">${startKnopf(f)}</div></div>`; }).join("");
   $("#saTafel").innerHTML=kopf+zeilen+fuss;
 }
 function renderLast(){
@@ -364,19 +418,23 @@ function renderFestivals(){
     const hin=(f.hinweise||[]).map(h=>`<div class="sa-note"><b>Hinweis:</b> ${gfEsc(h)}</div>`).join("");
     if(laeuft||!f.sales_start_on){
       const nf=LL.naechsteFaellig(liste, HEUTE, 3);
-      return `<div class="sa-fest"><div class="kopf"><h3>${gfEsc(f.kurzname)}</h3><span class="vvk">${f.sales_start_on?"im Verkauf seit "+fmtD(f.sales_start_on):"VVK offen"}${f.launch_type==="campaign_boost"?" · Kampagnen-Boost":""}</span></div>
+      return `<div class="sa-fest" id="fest-${gfEsc(f.short_name)}"><div class="kopf"><h3>${gfEsc(f.kurzname)}</h3><span class="vvk">${f.sales_start_on?"im Verkauf seit "+fmtD(f.sales_start_on):"VVK offen"}${f.launch_type==="campaign_boost"?" · Kampagnen-Boost":""}</span></div>
         <ul class="sa-liste">${nf.liste.map(m=>`<li><span class="d">${m.due_on?fmtK(m.due_on):"ohne Termin"}</span><span>${gfEsc(m.title)} · ${gfEsc(pname(m.person_id))}${m.due_on&&m.due_on<HEUTE?" · überfällig":""}</span></li>`).join("")||`<li><span class="d">—</span><span>Keine offene Aufgabe mit Termin.</span></li>`}</ul>
-        <p class="sa-muted">${nf.offen} offene ${nf.offen===1?"Aufgabe":"Aufgaben"}${nf.ueberfaellig?", "+nf.ueberfaellig+" überfällig":""}${nf.ohneTermin?", "+nf.ohneTermin+" ohne Termin":""}. <a class="linkish" href="launch.html?festival=${encodeURIComponent(f.short_name)}">Im Launch verteilen öffnen</a></p>${hin}</div>`;
+        <p class="sa-muted">${nf.offen} offene ${nf.offen===1?"Aufgabe":"Aufgaben"}${nf.ueberfaellig?", "+nf.ueberfaellig+" überfällig":""}${nf.ohneTermin?", "+nf.ohneTermin+" ohne Termin":""}. <a class="linkish" href="launch.html?festival=${encodeURIComponent(f.short_name)}">Im Launch verteilen öffnen</a></p>
+        ${asanaStand(f)?ergebnisSatz(f):""}<div class="sa-kopfrow">${startKnopf(f)}</div>${START.offen[f.short_name]?startVorschau(f):""}${hin}</div>`;
     }
     const kk=LL.kritischeKette(liste, k);
     const h=LL.haltbar(f, liste, D.richtwerte, k, D.besetzung, { heute:HEUTE });
     const hb=LL.hebel(f, liste, D.pool, D.festivals, k, { heute:HEUTE, name:pname, entscheiden:SA_ENTSCHEIDEN[f.short_name]||null });
     const knopf=(key, titel, text)=>`<div><a class="btn btn-brand btn-sm" href="launch.html?festival=${encodeURIComponent(f.short_name)}&weg=${SA_HEBEL_WEG[key]}">${titel}</a><p>${gfEsc(text)}</p></div>`;
-    return `<div class="sa-fest"><div class="kopf"><h3>${gfEsc(f.kurzname)}</h3><span class="vvk">VVK ${fmtD(f.sales_start_on)}</span><span class="sa-rahmen">Launchziel ${fmtK(f.sales_start_on)}</span></div>
+    return `<div class="sa-fest" id="fest-${gfEsc(f.short_name)}"><div class="kopf"><h3>${gfEsc(f.kurzname)}</h3><span class="vvk">VVK ${fmtD(f.sales_start_on)}</span><span class="sa-rahmen">Launchziel ${fmtK(f.sales_start_on)}</span></div>
       <ul class="sa-kette" aria-label="Kritische Kette">${kk.map(x=>`<li><b>${gfEsc(x.title)}</b><span class="d">fertig ${x.fertig?fmtK(x.fertig):"offen"}</span><span class="x">${x.due_on?"Ziel "+fmtK(x.due_on)+" · ":""}${gfEsc(x.wort)}${x.person_id?" · "+gfEsc(pname(x.person_id)):" · niemand"}</span></li>`).join("")||`<li>Keine der vier kritischen Aufgaben liegt im Cockpit.</li>`}</ul>
       <p class="sa-satz" style="font-size:var(--stufe-2)">${gfEsc(LL.haltbarSatz(h))}</p>
-      <div class="sa-hebel">${knopf("parallel","Parallel",hb.parallel.text)}${knopf("verschieben","Verschieben",hb.verschieben.text)}${knopf("hilfe","Hilfe",hb.hilfe.text)}${hb.entscheiden?knopf("entscheiden","Entscheiden",hb.entscheiden.text):""}</div>${hin}</div>`;
+      ${asanaStand(f)?ergebnisSatz(f):`<div class="sa-hebel">${knopf("parallel","Parallel",hb.parallel.text)}${knopf("verschieben","Verschieben",hb.verschieben.text)}${knopf("hilfe","Hilfe",hb.hilfe.text)}${hb.entscheiden?knopf("entscheiden","Entscheiden",hb.entscheiden.text):""}</div>`}
+      <div class="sa-kopfrow">${startKnopf(f)}</div>${START.offen[f.short_name]?startVorschau(f):""}${hin}</div>`;
   }).join("");
+  const sy=D.sync||{};
+  $("#saSync").textContent=sy.uebersprungen?`Rückweg aus Asana: ${sy.uebersprungen}.`:sy.synced_at?`Zuletzt aus Asana geholt: ${new Date(sy.synced_at).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}${sy.automatisch?" (automatisch)":""}${sy.geprueft!==undefined?`, ${sy.geprueft} Aufgaben geprüft, ${sy.erledigt||0} erledigt, ${sy.faelligkeit||0} Fälligkeiten, ${sy.kommentare||0} Kommentare${sy.fehler?", "+sy.fehler+" Fehler":""}`:""}.`:"Noch kein Rückweg aus Asana gelaufen.";
   const wp=LL.wochenplan(D.meilensteine, D.festivals, { heute:HEUTE });
   $("#saWochen").innerHTML=wp.map(w=>`<div class="sa-w${w.dreiLaunches?" drei":""}"><span class="d">${fmtK(w.montag)} bis ${fmtK(w.sonntag)}${w.dreiLaunches?`<span class="sa-mark">drei Launches</span>`:""}</span><span class="f">${w.festivals.map(x=>`${gfEsc(x.kurzname)} ${x.anzahl} · ${LL.fmt(x.stunden)} Std.`).join(" · ")}</span><span class="s">Summe ${w.anzahl} · ${LL.fmt(w.stunden)} Std.</span></div>`).join("")||`<p class="sa-muted">Bis Jahresende ist kein offener Meilenstein fällig.</p>`;
 }
@@ -389,14 +447,40 @@ async function schreibe(payload, meldung){
   catch(e){ gfToast("Fehler: "+(e.message||"speichern")); await load(); return null; }
 }
 document.addEventListener("click", async e=>{
-  const b=e.target.closest("[data-act=confirm]"); if(!b||b.disabled) return;
+  const a=e.target.closest("[data-act]"); if(!a||a.disabled) return;
+  if(a.dataset.act==="start-auf"){ START.offen={}; START.offen[a.dataset.f]=true; renderFestivals(); const z=document.getElementById("start-"+a.dataset.f); if(z) z.scrollIntoView({block:"center"}); return; }
+  if(a.dataset.act==="start-zu"){ delete START.offen[a.dataset.f]; renderFestivals(); return; }
+  if(a.dataset.act==="sync"){ a.disabled=true; a.textContent="holt …";
+    try{ const r=await gfApi("launch_sync",{ by:gfWho() }); gfToast(r.uebersprungen?`Rückweg: ${r.uebersprungen}`:`Aus Asana: ${r.geprueft} geprüft, ${r.erledigt} erledigt, ${r.faelligkeit} Fälligkeiten, ${r.kommentare} Kommentare${r.fehler?", "+r.fehler+" Fehler":""}`); await load(); }
+    catch(err){ gfToast("Fehler: "+err.message); a.disabled=false; a.textContent="Stand aus Asana holen"; }
+    return; }
+  if(a.dataset.act==="start"){
+    const f=D.festivals.find(x=>x.event_id===a.dataset.e); if(!f) return;
+    const von=($("[name=startVon]")||{}).value||START.von||gfWho();
+    if(!confirm(`Launch ${f.kurzname} als ${von} starten? Alle Zuordnungen mit Person werden bestätigt und die Aufgaben nach Asana gesendet. Bestehende Aufgaben werden aktualisiert, nicht verdoppelt.`)) return;
+    a.disabled=true; a.textContent="startet …";
+    try{
+      const c=await gfApi("launch_confirm",{ event_id:f.event_id, by:von });
+      if((c.fehler&&c.fehler.length)||c.protokoll===false){
+        /* Teilweise bestätigt: nicht senden, sondern den Fehler sichtbar halten (Review V29, Befund 2). */
+        START.ergebnis[f.short_name]={ abgebrochen:true, bestaetigt:c.bestaetigt, fehler:c.fehler||[] };
+        gfToast(`${f.kurzname}: Bestätigen mit ${(c.fehler||[]).length||1} Fehlern, nicht gesendet`); await load(); return;
+      }
+      const r=await gfApi("launch_send",{ event_id:f.event_id, by:von });
+      START.ergebnis[f.short_name]=Object.assign({ bestaetigt:c.bestaetigt, besetzung:c.besetzung }, r); delete START.offen[f.short_name];
+      gfToast(`${f.kurzname}: ${c.bestaetigt} bestätigt, ${r.neu} neu, ${r.aktualisiert} aktualisiert${r.fehler&&r.fehler.length?", "+r.fehler.length+" Fehler":""}`);
+      await load(); const z=document.getElementById("fest-"+f.short_name); if(z) z.scrollIntoView({block:"start"});
+    }catch(err){ gfToast("Fehler: "+err.message); await load(); }
+    return; }
+  const b=a.dataset.act==="confirm"?a:null; if(!b) return;
   const f=D.festivals.find(x=>x.event_id===b.dataset.e); if(!f) return;
   if(!confirm(`Besetzung von ${f.kurzname} als ${gfWho()} bestätigen? Alle Vorschläge des Festivals werden fest, die noch nicht bestätigten Aufgaben folgen.`)) return;
   try{ const r=await gfApi("launch_confirm",{ event_id:f.event_id, by:gfWho() }); gfToast(`${r.besetzung} Besetzungen und ${r.bestaetigt} Aufgaben bestätigt als ${r.von}${r.fehler&&r.fehler.length?", "+r.fehler.length+" Fehler":""}`); await load(); }
   catch(err){ gfToast("Fehler: "+err.message); }
 });
 document.addEventListener("change", async e=>{
-  const t=e.target; const f=t.dataset.f; if(!f) return;
+  const t=e.target; if(t.name==="startVon"){ START.von=t.value; renderFestivals(); return; }
+  const f=t.dataset.f; if(!f) return;
   if(f==="besetzung"){ await schreibe({ event_id:t.dataset.e, bereich:t.dataset.b, person_id:t.value||null }, t.value?`${bereichName(t.dataset.b)}: ${pname(t.value)}, Vorschlag`:`${bereichName(t.dataset.b)} offen`); return; }
   if(f==="launch_std_woche"&&t.dataset.p){ const pid=t.dataset.p; clearTimeout(saveTimer[pid]);
     saveTimer[pid]=setTimeout(()=>{ schreibe({ person_id:pid, launch_std_woche:t.value===""?null:t.value }, "Stunden je Woche gespeichert"); }, 700); }

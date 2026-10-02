@@ -6,15 +6,15 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Das Hohe Haus · Launch verteilen</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=27" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=27" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=27" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=27" />
-<link rel="stylesheet" href="/assets/styles.css?v=27" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=28" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=28" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=28" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=28" />
+<link rel="stylesheet" href="/assets/styles.css?v=28" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 <style>
-/* Launch verteilen (V27 Phase B, 30.09.2026): Festivalwahl, Lage, vier Wege, Aufgaben je Bereich, Zeit je Person,
-   Bestätigen und Senden. Alles in Worten; Status und Last stehen als Wort, Farbe trägt keine Bedeutung. */
+/* Launch verteilen (V27 Phase B, 30.09.2026; V29, 02.10.2026: Ist-Stunden, Stand aus Asana): Festivalwahl, Lage, vier Wege, Aufgaben je Bereich,
+   Zeit je Person, Bestätigen und Senden. Alles in Worten; Status und Last stehen als Wort, Farbe trägt keine Bedeutung. */
 #ln{max-width:1040px;display:grid;gap:22px;margin-top:6px}
 .ln-lead{color:var(--text-2);max-width:70ch;margin:0;line-height:var(--leading-text)}
 .ln-eb{font-size:var(--stufe-1);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
@@ -78,6 +78,8 @@ details[open]>summary .chev{transform:rotate(90deg)}
 .ln-task select{width:100%}
 .ln-task .fchips.compact .chip{padding:5px 9px;font-size:var(--stufe-1);min-height:32px}
 .ln-task .fchips{gap:4px}
+.ln-task input[data-f=ist_stunden]{width:64px;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-s);color:var(--text);padding:5px 7px;min-height:36px;font-size:var(--stufe-2)}
+.ln-lage .kopfrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
 
 /* Zeit je Person */
 .ln-zeit{display:grid;gap:6px}
@@ -143,8 +145,9 @@ details[open]>summary .chev{transform:rotate(90deg)}
     <ol class="ln-fest" id="lnFest" aria-label="Festival wählen"></ol>
 
     <section class="ln-sec ln-lage" aria-labelledby="lnLageH">
-      <div class="ln-eb" id="lnStand">Stand heute</div>
+      <div class="kopfrow"><div class="ln-eb" id="lnStand">Stand heute</div><div><button class="btn btn-brand btn-sm" data-act="sync">Stand aus Asana holen</button></div></div>
       <h2 id="lnLageH">Die Lage</h2>
+      <p class="ln-muted" id="lnSync"></p>
       <p class="satz" id="lnSatz">lädt …</p>
       <div class="kk-row" id="lnKpi"></div>
       <div id="lnHinweise"></div>
@@ -194,10 +197,10 @@ details[open]>summary .chev{transform:rotate(90deg)}
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=27"></script>
-<script src="/assets/launch-logik.js?v=27"></script>
-<script src="/assets/game.js?v=27"></script>
-<script src="/assets/eggs.js?v=27" defer></script>
+<script src="/assets/core.js?v=28"></script>
+<script src="/assets/launch-logik.js?v=28"></script>
+<script src="/assets/game.js?v=28"></script>
+<script src="/assets/eggs.js?v=28" defer></script>
 <script>
 /* V27 Phase B · Launch verteilen. Die Seite hält alle Daten aus launch_list, rechnet mit LaunchLogik
    und schreibt über launch_set, launch_confirm, launch_send. Nach jedem Schreiben wird neu geladen. */
@@ -253,6 +256,8 @@ function renderLage(R){
   if(lage.ohneZeit) hin.push(`${lage.ohneZeit} beteiligte ${lage.ohneZeit===1?"Person hat":"Personen haben"} keine Stunden je Woche eingetragen; ihre Last lässt sich nicht bewerten.`);
   for(const b of bes(f)) if(!b.person_id) hin.push(`Bereich ${bereichName(b.bereich)} ist unbesetzt${b.notiz?": "+b.notiz:""}.`);
   $("#lnHinweise").innerHTML=hin.map(h=>`<div class="ln-note" style="margin-top:6px"><b>Hinweis:</b> ${gfEsc(h)}</div>`).join("");
+  const sy=D.sync||{};
+  $("#lnSync").textContent=sy.uebersprungen?`Rückweg aus Asana: ${sy.uebersprungen}.`:sy.synced_at?`Zuletzt aus Asana geholt: ${new Date(sy.synced_at).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}${sy.automatisch?" (automatisch)":""}${sy.geprueft!==undefined?`, ${sy.geprueft} Aufgaben geprüft, ${sy.erledigt||0} erledigt, ${sy.faelligkeit||0} Fälligkeiten, ${sy.kommentare||0} Kommentare${sy.fehler?", "+sy.fehler+" Fehler":""}`:""}. Erledigt in Asana heißt erledigt im Haus.`:"Noch kein Rückweg aus Asana gelaufen.";
 }
 
 /* ---- Weg A: so zuweisen wie vorgeschlagen ---- */
@@ -325,7 +330,7 @@ function renderWegD(R){
 
 /* ---- Aufgaben je Bereich ---- */
 function renderAufgaben(R){
-  const { f, kette }=R; const liste=ms(f);
+  const { f, kette }=R; const liste=ms(f); const kal=LL.kalibrierung(D.meilensteine);
   if(!liste.length){ $("#lnAufgaben").innerHTML=`<div class="empty soft">Für dieses Festival liegen keine Meilensteine im Cockpit.</div>`; return; }
   const gruppen=(D.bereiche||[]).map(b=>[b, liste.filter(m=>m.bereich===b.key)]).filter(([,l])=>l.length);
   const rest=liste.filter(m=>!m.bereich||!(D.bereiche||[]).some(b=>b.key===m.bereich)); if(rest.length) gruppen.push([{key:"", name:"Ohne Bereich"}, rest]);
@@ -335,7 +340,7 @@ function renderAufgaben(R){
       ${l.map(m=>{ const k=kette.je[m.id]||{}; const g=Number(m.generator_anteil||0);
         return `<div class="ln-task" data-id="${m.id}">
           <div><div class="t">${gfEsc(m.title)}</div><div class="zu">${gfEsc(LL.zuordnungWort(m.zuordnung_status))}${m.responsible?" · "+gfEsc(m.responsible):""}${m.asana_task_gid?" · in Asana":""}${m.due_on_vorher&&m.due_on_vorher!==m.due_on?" · vorher "+fmtK(m.due_on_vorher):""}</div></div>
-          <div><span class="k">Aufwand</span><div class="v">${LL.spanne(m.aufwand_lo,m.aufwand_hi,"Std.")}</div><div class="zu">${m.dauer_tage||"?"} ${m.dauer_tage===1?"Tag":"Tage"}${g>0?" · Generator "+Math.round(g*100)+" %":""}</div></div>
+          <div><span class="k">Aufwand</span><div class="v">${LL.spanne(m.aufwand_lo,m.aufwand_hi,"Std.")}</div><div class="zu">${m.dauer_tage||"?"} ${m.dauer_tage===1?"Tag":"Tage"}${g>0?" · Generator "+Math.round(g*100)+" %":""}</div>${LL.kalibrierungSatz(kal,m.title)?`<div class="zu">${gfEsc(LL.kalibrierungSatz(kal,m.title))}</div>`:""}${LL.FERTIG.has(m.status)?`<div class="zu" style="margin-top:4px"><label>Ist <input type="text" inputmode="decimal" data-f="ist_stunden" data-id="${m.id}" value="${m.ist_stunden===null||m.ist_stunden===undefined?"":gfEsc(String(m.ist_stunden))}" aria-label="Ist-Stunden für ${gfEsc(m.title)}"> Std.</label></div>`:""}</div>
           <div><span class="k">Fertig am</span><div class="v">${k.fertig?fmtK(k.fertig):"offen"}</div><div class="zu">${m.due_on?"Ziel "+fmtK(m.due_on)+" · ":""}${gfEsc(k.wort||"")}</div></div>
           <div><span class="k">Stand</span>${gfChips("st_"+m.id,[["offen","offen"],["läuft","läuft"],["erledigt","erledigt"]],LL.statusWort(m.status)==="blockiert"||LL.statusWort(m.status)==="in Prüfung"?"":LL.statusWort(m.status)==="entfällt"?"erledigt":LL.statusWort(m.status),{attr:`data-f="status" data-id="${m.id}"`,label:"Stand",cls:"compact"})}${["blocked","under_review","not_required"].includes(m.status)?`<div class="zu">im Cockpit: ${gfEsc(LL.statusWort(m.status))}</div>`:""}</div>
           <div><span class="k">Zuständig</span><select class="ln-sel" data-f="person_id" data-id="${m.id}" aria-label="Zuständig für ${gfEsc(m.title)}">${optionen(m.person_id)}</select></div>
@@ -403,6 +408,11 @@ document.addEventListener("click", async e=>{
     catch(err){ gfToast("Fehler: "+err.message); }
     return;
   }
+  if(act==="sync"){ b.disabled=true; b.textContent="holt …";
+    try{ const r=await gfApi("launch_sync",{ by:gfWho() }); gfToast(r.uebersprungen?`Rückweg: ${r.uebersprungen}`:`Aus Asana: ${r.geprueft} geprüft, ${r.erledigt} erledigt, ${r.faelligkeit} Fälligkeiten, ${r.kommentare} Kommentare${r.fehler?", "+r.fehler+" Fehler":""}`); await load(false); }
+    catch(err){ gfToast("Fehler: "+err.message); b.disabled=false; b.textContent="Stand aus Asana holen"; }
+    return;
+  }
   if(act==="send"){
     if(!confirm(`Bestätigte Aufgaben von ${f.kurzname} nach Asana senden? Bestehende Aufgaben werden aktualisiert, nicht verdoppelt.`)) return;
     b.disabled=true; b.textContent="sendet …";
@@ -444,6 +454,7 @@ document.addEventListener("change", async e=>{
     if(f==="status") await schreibe({ milestone_id:t.dataset.id, status:t.value }, "Stand gespeichert");
     else if(f==="person_id") await schreibe({ milestone_id:t.dataset.id, person_id:t.value||null }, t.value?`Zuständig: ${pname(t.value)}`:"Zuständigkeit gelöscht");
     else if(f==="hilfe_person_id") await schreibe({ milestone_id:t.dataset.id, hilfe_person_id:t.value||null }, t.value?`Generator-Anteil: ${pname(t.value)}`:"Generator-Anteil bleibt beim Zuständigen");
+    else if(f==="ist_stunden"){ const v=t.value.trim().replace(",","."); if(v!==""&&!(Number.isFinite(Number(v))&&Number(v)>=0)){ gfToast("Ist-Stunden: bitte eine Zahl"); return; } await schreibe({ milestone_id:t.dataset.id, ist_stunden:v===""?null:Number(v) }, "Ist-Stunden gespeichert"); }
     return;
   }
   if(t.dataset.p){
