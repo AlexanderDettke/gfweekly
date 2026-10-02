@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#171d18" />
+<title>Das Hohe Haus · Besetzung verteilen</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=28" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=28" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=28" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=28" />
+<link rel="stylesheet" href="/assets/styles.css?v=28" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
+<style>
+/* Besetzung verteilen (Paket Besetzung B1, 02.10.2026). Gespräche kommen aus der Besetzungswerkstatt im Habitat Hub
+   (nur lesen), Aufgaben gehören dem Hohen Haus (Edge Function „besetzung“). Gesprächsstand und Aufgabenstand stehen
+   getrennt und immer als Symbol plus Wort. Präfix .bz- (.bs- gehört der Besprechung). */
+#bz{max-width:1040px;display:grid;gap:22px;margin-top:6px}
+.bz-lead{color:var(--text-2);max-width:72ch;margin:0;line-height:var(--leading-text)}
+.bz-eb{font-size:var(--stufe-1);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
+.bz-sec{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);padding:16px 18px;display:grid;gap:12px}
+.bz-sec h2{font-size:var(--stufe-4);margin:0}
+.bz-muted{color:var(--text-2);font-size:var(--stufe-2);line-height:var(--leading-text);margin:0}
+.bz-kopf{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.bz-kopf .rechts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bz-note{background:var(--warn-bg);color:var(--text);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:var(--leading-text)}
+
+/* Festivalwahl */
+.bz-fest{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0;padding:0;list-style:none}
+.bz-fest button{width:100%;text-align:left;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:9px 12px;min-height:var(--ziel-min);color:var(--text)}
+.bz-fest button:hover{border-color:var(--border-strong)}
+.bz-fest button:focus-visible,.bz-pers button:focus-visible,.bz-gs button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.bz-fest button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.bz-fest b{display:block;font-size:var(--stufe-2);font-weight:600;line-height:1.3}
+.bz-fest span{display:block;font-size:var(--stufe-1);color:var(--text-2);margin-top:2px}
+.bz-jahr{display:flex;gap:6px;align-items:center}
+
+/* Bereiche und Gespräche */
+.bz-ber{display:grid;gap:10px}
+.bz-ber-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;padding-top:10px;border-top:var(--rahmen) solid var(--border)}
+.bz-ber-h h3{font-size:var(--stufe-3);margin:0}
+.bz-ber-h .n{margin-left:auto;font-size:var(--stufe-1);color:var(--text-2)}
+.bz-gs{background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:12px 14px;display:grid;gap:10px}
+.bz-gs.ziel{border-color:var(--accent)}
+.bz-gs-h{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.bz-gs-h .wer{font-weight:600;font-size:var(--stufe-3)}
+.bz-gs-h .ang{color:var(--text-2);font-size:var(--stufe-2)}
+.bz-zeile{display:grid;grid-template-columns:150px minmax(0,1fr);gap:4px 12px;font-size:var(--stufe-2);line-height:1.4}
+.bz-zeile .k{color:var(--text-2)}
+.bz-schritt{font-size:var(--stufe-2);line-height:var(--leading-text)}
+.bz-akt{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bz-akt a{font-size:var(--stufe-2);color:var(--link)}
+
+/* Formular Übernahme / Person wählen */
+.bz-form{display:grid;gap:10px;padding:12px;background:var(--surface);border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m)}
+.bz-form label.f{display:grid;gap:4px;font-size:var(--stufe-2);color:var(--text-2)}
+.bz-form textarea,.bz-form input[type=text],.bz-date{background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-s);color:var(--text);padding:8px 10px;font:inherit;font-size:var(--stufe-2);min-height:var(--ziel-min);width:100%}
+.bz-form textarea{min-height:64px;resize:vertical;line-height:1.4}
+.bz-date{width:auto;max-width:180px;min-height:36px;padding:5px 8px}
+.bz-form .ctx{font-size:var(--stufe-1);color:var(--text-2)}
+.bz-pers{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.bz-pers button{text-align:left;background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:7px 10px;min-height:var(--ziel-min);color:var(--text);font-size:var(--stufe-2)}
+.bz-pers button:hover{border-color:var(--border-strong)}
+.bz-pers button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.bz-pers button span{display:block;color:var(--text-2);font-size:var(--stufe-1);margin-top:1px}
+.bz-pers-such{max-width:280px}
+
+/* Aufgaben */
+.bz-auf{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.bz-a{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.1fr) minmax(0,1.9fr);gap:6px 14px;align-items:start;padding:10px 12px;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m)}
+.bz-a.ziel{border-color:var(--accent)}
+.bz-a .t{font-weight:600;font-size:var(--stufe-2);line-height:1.35}
+.bz-a .k{display:block;font-size:var(--stufe-1);color:var(--text-2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.bz-a .v{font-size:var(--stufe-2);line-height:1.35}
+.bz-a .x{font-size:var(--stufe-1);color:var(--text-2);margin-top:4px;line-height:1.4}
+.bz-a .voll{grid-column:1/-1}
+.bz-a .fchips{gap:4px}
+.bz-a .fchips .chip{padding:5px 9px;font-size:var(--stufe-1);min-height:32px}
+.bz-link{background:none;border:0;padding:0;color:var(--link);font:inherit;font-size:var(--stufe-1);text-decoration:underline;cursor:pointer;min-height:24px}
+.bz-asana{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:var(--stufe-1);color:var(--text-2)}
+.bz-best{display:grid;gap:8px;padding:10px 12px;background:var(--surface-2);border-radius:var(--radius-m);font-size:var(--stufe-2);line-height:var(--leading-text)}
+
+/* Wer trägt was */
+.bz-last{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.bz-last li{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,2.6fr);gap:4px 12px;padding:7px 10px;background:var(--surface-2);border-radius:var(--radius-s);font-size:var(--stufe-2)}
+.bz-last li .w{color:var(--text-2)}
+.bz-foot{color:var(--text-3);font-size:var(--stufe-2);max-width:72ch;line-height:var(--leading-text)}
+.bz-leer{padding:14px;border:var(--rahmen) dashed var(--border);border-radius:var(--radius-m);color:var(--text-2);font-size:var(--stufe-2)}
+
+@media (max-width:900px){
+  .bz-fest{grid-template-columns:1fr 1fr}
+  .bz-a{grid-template-columns:1fr 1fr} .bz-a .t-wrap{grid-column:1/-1}
+  .bz-zeile{grid-template-columns:1fr}
+  .bz-last li{grid-template-columns:1fr}
+}
+@media (max-width:480px){ .bz-a{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Das Hohe Haus</h1>
+    <div class="sub">Besetzung verteilen · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+  <div id="hero"></div>
+
+  <main id="bz">
+    <p class="bz-lead">Die Gespräche mit Partnern und Kollektiven stehen in der Besetzungswerkstatt im Habitat Hub. Hier macht ihr daraus Aufgaben mit einer verantwortlichen Person. Wer ein Gespräch führt, bleibt davon unabhängig, und eine erledigte Aufgabe bestätigt keine Partnerschaft.</p>
+
+    <div class="bz-kopf">
+      <div class="bz-jahr" id="bzJahr"></div>
+      <div class="rechts">
+        <a class="btn btn-ghost btn-sm" id="bzHub" href="https://habitat-hub.netlify.app/besetzung" target="_blank" rel="noopener">Besetzungswerkstatt im Hub ↗</a>
+        <button class="btn btn-brand btn-sm" data-act="neu-laden">Neu laden</button>
+      </div>
+    </div>
+
+    <ol class="bz-fest" id="bzFest" aria-label="Festival wählen"></ol>
+
+    <section class="bz-sec" aria-labelledby="bzLageH">
+      <div class="bz-eb" id="bzStand">Stand heute</div>
+      <h2 id="bzLageH">Die Lage</h2>
+      <p class="bz-muted" id="bzSatz">lädt …</p>
+      <div class="kk-row" id="bzKpi"></div>
+      <div id="bzHinweise"></div>
+    </section>
+
+    <section class="bz-sec" aria-labelledby="bzGesH">
+      <h2 id="bzGesH">Gespräche und Aufgaben je Bereich</h2>
+      <p class="bz-muted">Gesprächsstand, wer das Gespräch führt und der nächste Schritt kommen aus dem Hub und werden dort gepflegt. Aufgaben, Personen und Aufgabenstand pflegt ihr hier.</p>
+      <div id="bzBereiche" class="bz-ber"></div>
+    </section>
+
+    <section class="bz-sec" aria-labelledby="bzLastH">
+      <h2 id="bzLastH">Wer trägt was</h2>
+      <p class="bz-muted">Offene Aufgaben und Aufgaben in Arbeit dieses Festivals je Person.</p>
+      <ul class="bz-last" id="bzLast"></ul>
+    </section>
+
+    <p class="bz-foot">„Bestätigt“ im Gesprächsstand ist ein Planungsstand, keine Vertragsunterschrift, Budgetfreigabe oder Vollmacht. Budget, Verträge, Formathoheit und kreative Gestaltungshoheit entscheidet ihr gesondert. Eine Aufgabe geht nur nach Asana, wenn ihr sie dort einzeln absendet; danach gelten „erledigt“ und der Termin aus Asana.</p>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="/assets/core.js?v=28"></script>
+<script src="/assets/game.js?v=28"></script>
+<script src="/assets/eggs.js?v=28" defer></script>
+<script>
+const $=s=>document.querySelector(s);
+const BZ_FN="https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/besetzung";
+async function bzApi(action,payload){
+  const res=await fetch(BZ_FN,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,password:gfPW(),payload})});
+  let d={}; try{ d=await res.json(); }catch(e){}
+  if(res.status===401) throw {auth:true,message:"Passwort abgelaufen. Bitte neu entsperren."};
+  if(!res.ok){ const e=new Error(d.error||("HTTP "+res.status)); e.status=res.status; e.data=d; throw e; }
+  return d;
+}
+
+/* Gesprächsstand (Hub) und Aufgabenstand (Haus): getrennte Wörter, immer Symbol plus Wort. */
+const GESPRAECH={ vorgeschlagen:["offen","vorgeschlagen"], angefragt:["info","angefragt"], in_verhandlung:["action","in Verhandlung"],
+  bestaetigt:["pos","bestätigt (Planung)"], zurueckgestellt:["offen","zurückgestellt"], abgesagt:["crit","abgesagt"] };
+const AUFGABE=[["offen","offen"],["in_arbeit","in Arbeit"],["erledigt","erledigt"],["verworfen","verworfen"]];
+const AUFGABE_ZST={ offen:["offen","offen"], in_arbeit:["action","in Arbeit"], erledigt:["pos","erledigt"], verworfen:["neutral","verworfen"] };
+const AKTIV=["vorgeschlagen","angefragt","in_verhandlung","bestaetigt"];
+const TYP={ gf:"Geschäftsführung", team:"Team", extern:"Extern", minijob:"Minijob", partner:"Formatpartner" };
+
+let D=null, CUR=null, JAHR=null, ZIEL=null;
+const UI={ form:null, pers:{}, asana:null, such:"" };   // form = zuordnung_id mit offenem Übernahme-Formular, pers[aufgabe_id] = Personenwahl offen
+
+function heute(){ return (D&&D.heute)||new Date().toISOString().slice(0,10); }
+function datumDE(s){ if(!s) return ""; const d=new Date(s.length>10?s:s+"T00:00:00"); return d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric",timeZone:"Europe/Berlin"}); }
+function person(id){ return (D.personen||[]).find(p=>p.id===id)||null; }
+function pname(id){ const p=person(id); return p?p.name:(id?"nicht mehr im Pool":""); }
+function fmt(slug){ return (D.formate||[]).find(f=>f.slug===slug); }
+function zuordnungen(slug){ return (D.zuordnungen||[]).filter(z=>z.format_slug===slug); }
+function aufgabenZu(zid){ return (D.aufgaben||[]).filter(a=>a.zuordnung_id===zid); }
+function aufgabenFest(slug){ return (D.aufgaben||[]).filter(a=>a.format_slug===slug); }
+function offen(a){ return a.status==="offen"||a.status==="in_arbeit"; }
+function merke(){ try{ localStorage.setItem("gf_bz_fest",CUR); }catch(e){} }
+
+function renderJahr(){
+  const j=D.jahre||[D.jahr];
+  $("#bzJahr").innerHTML=j.length>1?`<span class="bz-muted">Saison</span>`+gfChips("bzJahr",j.map(x=>[String(x),String(x)]),String(D.jahr),{attr:'id="bzJahrIn"',label:"Saison wählen"}):`<span class="bz-muted">Saison ${D.jahr}</span>`;
+}
+function renderFest(){
+  const fs=[...(D.formate||[])].sort((a,b)=>(zuordnungen(b.slug).length>0)-(zuordnungen(a.slug).length>0)||a.name.localeCompare(b.name,"de"));
+  $("#bzFest").innerHTML=fs.map(f=>{
+    const g=zuordnungen(f.slug).filter(z=>AKTIV.includes(z.status)).length, o=aufgabenFest(f.slug).filter(offen).length;
+    const unter=g||o?`${g} ${g===1?"Gespräch":"Gespräche"} · ${o} ${o===1?"Aufgabe":"Aufgaben"} offen`:(f.konzept_da?"noch kein Gespräch":"Konzept noch offen");
+    return `<li><button type="button" data-fest="${gfEsc(f.slug)}" aria-pressed="${f.slug===CUR}"><b>${gfEsc(f.name)}</b><span>${unter}</span></button></li>`;
+  }).join("");
+}
+function bereicheVon(f){
+  const b=[...(f.bereiche||[])]; zuordnungen(f.slug).forEach(z=>{ if(!b.includes(z.bereich)) b.push(z.bereich); }); return b;
+}
+function renderLage(){
+  const f=fmt(CUR); if(!f) return;
+  const zs=zuordnungen(CUR), aktiv=zs.filter(z=>AKTIV.includes(z.status)), as=aufgabenFest(CUR), of=as.filter(offen);
+  const ohne=of.filter(a=>!a.person_id), ber=bereicheVon(f), leer=ber.filter(b=>!aktiv.some(z=>z.bereich===b));
+  const ueber=of.filter(a=>a.faellig&&a.faellig<heute());
+  $("#bzStand").textContent=`${f.name} · Saison ${D.jahr} · Stand ${datumDE(heute())}`;
+  const s=[];
+  s.push(aktiv.length?`${aktiv.length} ${aktiv.length===1?"Gespräch läuft":"Gespräche laufen"} in ${new Set(aktiv.map(z=>z.bereich)).size} von ${ber.length} Bereichen.`:`Für ${f.name} läuft im Hub noch kein Gespräch.`);
+  s.push(of.length?`${of.length} ${of.length===1?"Aufgabe ist":"Aufgaben sind"} offen oder in Arbeit${ohne.length?`, ${ohne.length} davon ohne Person`:""}.`:"Aus den Gesprächen ist noch keine offene Aufgabe entstanden.");
+  if(leer.length) s.push(`Ohne Gespräch: ${leer.join(", ")}.`);
+  if(!f.konzept_da) s.push("Das Konzept dieses Formats ist im Hub noch nicht beschrieben.");
+  $("#bzSatz").textContent=s.join(" ");
+  $("#bzKpi").innerHTML=[
+    gfKachel({icon:"partner",value:aktiv.length,label:"Gespräche laufen"}),
+    gfKachel({icon:"meilenstein",value:of.length,label:"Aufgaben offen"}),
+    gfKachel({icon:"zahl",value:ohne.length,label:"ohne Person",tone:ohne.length?"warn":""}),
+    gfKachel({icon:"frist",value:ueber.length,label:"überfällig",tone:ueber.length?"warn":""}),
+    gfKachel({icon:"ereignis",value:leer.length,label:"Bereiche ohne Gespräch"})
+  ].join("");
+  const hin=[];
+  zs.filter(z=>!AKTIV.includes(z.status)).forEach(z=>{ const n=aufgabenZu(z.id).filter(offen).length; if(n) hin.push(`<div class="bz-note"><b>${gfEsc(z.partner)}</b> · ${gfEsc(z.bereich)}: Gespräch ${GESPRAECH[z.status][1]}, aber ${n} ${n===1?"Aufgabe ist":"Aufgaben sind"} noch offen. Eine Absage erledigt Aufgaben nicht automatisch.</div>`); });
+  if(D.sync&&D.sync.fehler) hin.push(`<div class="bz-note">Der Abgleich mit Asana hatte ${D.sync.fehler} ${D.sync.fehler===1?"Fehler":"Fehler"}. Der Stand im Haus kann hinter Asana liegen.</div>`);
+  $("#bzHinweise").innerHTML=hin.join("");
+}
+
+function personWahl(key, cur, mitOffen){
+  const q=(UI.such||"").toLowerCase();
+  const ps=(D.personen||[]).filter(p=>!q||p.name.toLowerCase().includes(q)||(TYP[p.typ]||"").toLowerCase().includes(q));
+  const knopf=(id,name,unter)=>`<button type="button" data-pwahl="${gfEsc(key)}" data-pid="${gfEsc(id)}" aria-pressed="${(cur||"")===id}">${gfEsc(name)}<span>${gfEsc(unter)}</span></button>`;
+  return `<input type="text" class="bz-pers-such" data-such="${gfEsc(key)}" placeholder="Person suchen" aria-label="Person suchen" value="${gfEsc(UI.such)}">
+    <div class="bz-pers" role="group" aria-label="Verantwortliche Person">${mitOffen?knopf("","Noch offen","niemand zugewiesen"):""}${ps.map(p=>knopf(p.id,p.name,(TYP[p.typ]||p.typ||"")+(p.asana?" · Asana":" · ohne Asana"))).join("")}</div>`;
+}
+
+function formHTML(z){
+  const f=fmt(z.format_slug), wahl=UI.formWerte||{};
+  return `<form class="bz-form" data-form="${z.id}">
+    <div class="ctx">Neue Aufgabe · ${gfEsc(f?f.name:z.format_slug)} ${z.jahr} · ${gfEsc(z.bereich)} · ${gfEsc(z.partner)}</div>
+    <label class="f">Aufgabe<textarea name="titel" maxlength="300" required>${gfEsc(wahl.titel??z.naechster_schritt.slice(0,300))}</textarea></label>
+    <div class="f"><span class="bz-muted">Verantwortlich</span>${personWahl("neu",wahl.person_id||"",true)}</div>
+    <label class="f">Termin, freiwillig<input type="date" class="bz-date" name="faellig" value="${gfEsc(wahl.faellig??(z.faellig||""))}"></label>
+    <label class="f">Notiz zur Aufgabe, freiwillig<textarea name="beschreibung" maxlength="4000">${gfEsc(wahl.beschreibung||"")}</textarea></label>
+    <div class="bz-akt"><button class="btn btn-primary btn-sm" type="submit">Aufgabe anlegen</button><button class="btn btn-ghost btn-sm" type="button" data-act="form-zu">Abbrechen</button></div>
+  </form>`;
+}
+
+function aufgabeHTML(a){
+  const p=person(a.person_id), zst=AUFGABE_ZST[a.status]||["offen",a.status];
+  const wer=a.person_id?`${gfEsc(pname(a.person_id))}${p?` <span class="bz-muted">· ${gfEsc(TYP[p.typ]||p.typ||"")}</span>`:""}`:gfZustand("warn","noch niemand");
+  let asana="";
+  if(a.asana_task_gid) asana=`${gfZustand("pos","in Asana")} seit ${datumDE(a.asana_gesendet_at||a.updated_at)} <a href="https://app.asana.com/0/0/${gfEsc(a.asana_task_gid)}" target="_blank" rel="noopener">öffnen ↗</a>`;
+  else if(UI.asana===a.id) asana=`<div class="bz-best voll"><div>Geht als Aufgabe an <b>${gfEsc(pname(a.person_id))}</b> in deren Asana. In der Notiz stehen Festival, Bereich, Partnername und der Link zurück ins Haus. Danach gelten „erledigt“ und der Termin aus Asana.</div><div class="bz-akt"><button class="btn btn-primary btn-sm" data-act="asana-senden" data-id="${a.id}">Jetzt nach Asana senden</button><button class="btn btn-ghost btn-sm" data-act="asana-zu">Abbrechen</button></div></div>`;
+  else if(!D.asana_bereit) asana=`<span>Asana ist für das Haus nicht eingerichtet.</span>`;
+  else if(!a.person_id) asana=`<span>Nach Asana erst mit Person.</span>`;
+  else if(p&&!p.asana) asana=`<span>${gfEsc(p.name)} hat kein Asana-Konto im Pool, die Aufgabe bleibt im Haus.</span>`;
+  else if(a.status==="verworfen"||a.status==="erledigt") asana="";
+  else asana=`<button class="bz-link" data-act="asana-frage" data-id="${a.id}">Nach Asana senden</button>`;
+  const termin=a.asana_task_gid?`${gfFrist(a.faellig)}<div class="x">Termin pflegt Asana</div>`:`${a.faellig?gfFrist(a.faellig):""}<div><input type="date" class="bz-date" data-f="faellig" data-id="${a.id}" value="${gfEsc(a.faellig||"")}" aria-label="Termin der Aufgabe"></div>`;
+  const herkunft=`angelegt ${datumDE(a.created_at)} von ${gfEsc(a.erstellt_von)}${a.updated_at&&a.version>1?`, zuletzt ${datumDE(a.updated_at)} von ${gfEsc(a.geaendert_von)}`:""}`;
+  return `<li class="bz-a${ZIEL===a.id?" ziel":""}" id="a-${a.id}">
+    <div class="t-wrap"><span class="k">Aufgabe</span><div class="t">${gfEsc(a.titel)}</div>${a.beschreibung?`<div class="x">${gfEsc(a.beschreibung)}</div>`:""}<div class="x">${herkunft}</div></div>
+    <div><span class="k">Verantwortlich</span><div class="v">${wer}</div>${a.asana_task_gid?"":`<button class="bz-link" data-act="pers-auf" data-id="${a.id}">${a.person_id?"Person ändern":"Person wählen"}</button>`}</div>
+    <div><span class="k">Aufgabenstand</span>${gfChips("st-"+a.id,AUFGABE,a.status,{attr:`data-f="status" data-id="${a.id}"`,label:"Aufgabenstand",cls:"compact"})}<div class="x">${gfZustand(zst[0],zst[1])}</div></div>
+    <div class="voll bz-asana"><span class="k" style="margin:0">Termin</span>${termin}</div>
+    ${UI.pers[a.id]?`<div class="voll">${personWahl("a:"+a.id,a.person_id||"",true)}<div class="bz-akt" style="margin-top:6px"><button class="btn btn-ghost btn-sm" data-act="pers-zu" data-id="${a.id}">Fertig</button></div></div>`:""}
+    ${asana?`<div class="voll bz-asana">${asana}</div>`:""}
+  </li>`;
+}
+
+function gespraechHTML(z){
+  const g=GESPRAECH[z.status]||["offen",z.status], as=aufgabenZu(z.id);
+  const angebot=z.angebot&&z.angebot!==z.partner?`<span class="ang">${gfEsc(z.angebot)}</span>`:"";
+  const aktiv=AKTIV.includes(z.status);
+  return `<article class="bz-gs${as.some(a=>a.id===ZIEL)?" ziel":""}" id="z-${z.id}">
+    <div class="bz-gs-h"><span class="wer">${gfEsc(z.partner)}</span>${angebot}<span class="bz-muted">Gespräch</span>${gfZustand(g[0],g[1])}${z.gesperrt?gfZustand("warn","Sperrhinweis im Hub"):""}</div>
+    <div class="bz-zeile"><span class="k">Gespräch führt</span><span>${z.verantwortlich?gfEsc(z.verantwortlich)+' <span class="bz-muted">(Name im Hub)</span>':gfZustand("warn","im Hub niemand eingetragen")}</span>
+      <span class="k">Nächster Schritt im Hub</span><span class="bz-schritt">${z.naechster_schritt?gfEsc(z.naechster_schritt):'<span class="bz-muted">keiner eingetragen</span>'}${z.faellig?" · "+gfFrist(z.faellig):""}</span>
+      <span class="k">Zuletzt im Hub</span><span class="bz-muted">${datumDE(z.updated_at)}${z.geaendert_von?" von "+gfEsc(z.geaendert_von):""}${z.notizen?` · ${z.notizen} ${z.notizen===1?"Notiz":"Notizen"}`:""}</span></div>
+    ${as.length?`<ul class="bz-auf" aria-label="Aufgaben aus diesem Gespräch">${as.map(aufgabeHTML).join("")}</ul>`:`<p class="bz-muted">Aus diesem Gespräch ist noch keine Aufgabe entstanden.</p>`}
+    ${UI.form===z.id?formHTML(z):`<div class="bz-akt"><button class="btn ${aktiv?"btn-brand":"btn-ghost"} btn-sm" data-act="form-auf" data-z="${z.id}">${as.length?"Weitere Aufgabe übernehmen":"Als Aufgabe übernehmen"}</button><a href="${gfEsc(D.hub)}" target="_blank" rel="noopener">Gespräch im Hub ↗</a></div>`}
+  </article>`;
+}
+
+function renderBereiche(){
+  const f=fmt(CUR); if(!f){ $("#bzBereiche").innerHTML=""; return; }
+  const zs=zuordnungen(CUR);
+  $("#bzBereiche").innerHTML=bereicheVon(f).map(b=>{
+    const hier=zs.filter(z=>z.bereich===b).sort((x,y)=>AKTIV.includes(y.status)-AKTIV.includes(x.status)||(x.partner||"").localeCompare(y.partner||"","de"));
+    const aktiv=hier.filter(z=>AKTIV.includes(z.status)).length, of=hier.reduce((n,z)=>n+aufgabenZu(z.id).filter(offen).length,0);
+    const n=hier.length?`${aktiv} ${aktiv===1?"Gespräch läuft":"Gespräche laufen"} · ${of} ${of===1?"Aufgabe":"Aufgaben"} offen`:"";
+    return `<div class="bz-ber"><div class="bz-ber-h"><h3>${gfEsc(b)}</h3>${hier.length?"":gfZustand("offen","noch kein Gespräch")}<span class="n">${n}</span></div>
+      ${hier.length?hier.map(gespraechHTML).join(""):`<div class="bz-leer">Im Hub ist für ${gfEsc(f.name)} in diesem Bereich noch kein Partner zugeordnet. Zuordnen geht in der Besetzungswerkstatt.</div>`}</div>`;
+  }).join("");
+}
+
+function renderLast(){
+  const of=aufgabenFest(CUR).filter(offen), je={};
+  of.forEach(a=>{ const k=a.person_id||""; (je[k]=je[k]||[]).push(a); });
+  const keys=Object.keys(je).sort((a,b)=>(a===""?1:0)-(b===""?1:0)||je[b].length-je[a].length||pname(a).localeCompare(pname(b),"de"));
+  $("#bzLast").innerHTML=keys.length?keys.map(k=>`<li><span>${k?gfEsc(pname(k)):gfZustand("warn","noch niemand")}</span><span class="w">${je[k].length} · ${je[k].map(a=>gfEsc(a.titel.length>70?a.titel.slice(0,68)+" …":a.titel)).join(" · ")}</span></li>`).join(""):`<li><span class="w">Noch keine offene Aufgabe für dieses Festival.</span></li>`;
+}
+
+function renderAll(){ renderJahr(); renderFest(); renderLage(); renderBereiche(); renderLast(); }
+
+function ersetze(a){ if(!a) return; const i=D.aufgaben.findIndex(x=>x.id===a.id); if(i>=0) D.aufgaben[i]=a; else D.aufgaben.push(a); }
+function fehler(e){ if(e&&e.auth){ gfToast(e.message); sessionStorage.removeItem("gf_pw"); setTimeout(()=>location.reload(),1200); return; }
+  if(e&&e.data&&e.data.aktuell){ ersetze(e.data.aktuell); renderAll(); }
+  gfToast(e&&e.message?e.message:"Speichern nicht möglich"); }
+
+async function setze(id, felder, ok){
+  const a=D.aufgaben.find(x=>x.id===id); if(!a) return;
+  try{ const d=await bzApi("setzen",Object.assign({id,version:a.version,who:gfWho()},felder)); ersetze(d.aufgabe); renderAll(); gfToast(ok||"Gespeichert"); }
+  catch(e){ fehler(e); }
+}
+
+document.addEventListener("click",async e=>{
+  const b=e.target.closest("[data-fest],[data-act],[data-pwahl]"); if(!b) return;
+  if(b.dataset.fest){ CUR=b.dataset.fest; ZIEL=null; UI.form=null; merke(); history.replaceState(null,"","?festival="+encodeURIComponent(CUR)); renderAll(); return; }
+  if(b.dataset.pwahl){
+    const key=b.dataset.pwahl, pid=b.dataset.pid;
+    if(key==="neu"){ UI.formWerte=Object.assign(lesForm(),{person_id:pid}); renderBereiche(); fokus(`[data-pwahl="neu"][data-pid="${pid}"]`); return; }
+    const id=key.slice(2); UI.pers[id]=false; UI.such=""; await setze(id,{person_id:pid||null},pid?`Verantwortlich: ${pname(pid)}`:"Person entfernt, Aufgabe noch offen"); return;
+  }
+  const act=b.dataset.act;
+  if(act==="neu-laden"){ await load(); gfToast("Neu geladen"); return; }
+  if(act==="form-auf"){ UI.form=b.dataset.z; UI.formWerte=null; UI.such=""; renderBereiche(); fokus(`form[data-form="${UI.form}"] textarea`); return; }
+  if(act==="form-zu"){ UI.form=null; UI.formWerte=null; renderBereiche(); return; }
+  if(act==="pers-auf"){ UI.pers[b.dataset.id]=true; UI.such=""; renderBereiche(); fokus(`[data-such="a:${b.dataset.id}"]`); return; }
+  if(act==="pers-zu"){ UI.pers[b.dataset.id]=false; renderBereiche(); return; }
+  if(act==="asana-frage"){ UI.asana=b.dataset.id; renderBereiche(); return; }
+  if(act==="asana-zu"){ UI.asana=null; renderBereiche(); return; }
+  if(act==="asana-senden"){
+    b.disabled=true; b.textContent="Wird gesendet …";
+    try{ const d=await bzApi("asana_senden",{id:b.dataset.id,who:gfWho(),bestaetigt:true}); ersetze(d.aufgabe); UI.asana=null; renderAll(); gfToast(d.schon?"War schon in Asana":"In Asana angelegt"); }
+    catch(err){ UI.asana=null; fehler(err); renderAll(); }
+    return;
+  }
+});
+function lesForm(){ const f=document.querySelector(`form[data-form="${UI.form}"]`); if(!f) return UI.formWerte||{};
+  return { titel:f.titel.value, faellig:f.faellig.value, beschreibung:f.beschreibung.value, person_id:(UI.formWerte||{}).person_id||"" }; }
+function fokus(sel){ setTimeout(()=>{ const el=document.querySelector(sel); if(el) el.focus(); },0); }
+
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.dataset.such!==undefined){ UI.such=t.value; if(t.dataset.such==="neu") UI.formWerte=lesForm(); const pos=t.selectionStart; renderBereiche(); const n=document.querySelector(`[data-such="${t.dataset.such}"]`); if(n){ n.focus(); try{ n.setSelectionRange(pos,pos); }catch(err){} } }
+});
+document.addEventListener("change",async e=>{
+  const t=e.target;
+  if(t.id==="bzJahrIn"){ JAHR=Number(t.value); await load(); return; }
+  if(t.dataset.f==="status"&&t.dataset.id){ const w=(AUFGABE.find(x=>x[0]===t.value)||[])[1]||t.value; await setze(t.dataset.id,{status:t.value},`Aufgabenstand: ${w}`); return; }
+  if(t.dataset.f==="faellig"&&t.dataset.id){ await setze(t.dataset.id,{faellig:t.value||null},t.value?"Termin gespeichert":"Termin entfernt"); return; }
+});
+document.addEventListener("submit",async e=>{
+  const f=e.target.closest("form[data-form]"); if(!f) return; e.preventDefault();
+  const w=lesForm(); const titel=(w.titel||"").trim();
+  if(!titel){ gfToast("Bitte die Aufgabe in einem Satz beschreiben"); f.titel.focus(); return; }
+  const knopf=f.querySelector("button[type=submit]"); knopf.disabled=true; knopf.textContent="Wird angelegt …";
+  try{
+    const d=await bzApi("uebernehmen",{zuordnung_id:f.dataset.form,titel,person_id:w.person_id||null,faellig:w.faellig||null,beschreibung:w.beschreibung||"",who:gfWho()});
+    ersetze(d.aufgabe); ZIEL=d.aufgabe&&d.aufgabe.id; UI.form=null; UI.formWerte=null; renderAll();
+    gfToast(d.neu?(w.person_id?`Aufgabe angelegt für ${pname(w.person_id)}`:"Aufgabe angelegt, Person noch offen"):"Diese Aufgabe gab es schon, keine zweite angelegt");
+    const el=document.getElementById("a-"+ZIEL); if(el) el.scrollIntoView({block:"center"});
+  }catch(err){ knopf.disabled=false; knopf.textContent="Aufgabe anlegen"; fehler(err); }
+});
+document.addEventListener("gf-who",()=>gfToast("Änderungen laufen jetzt als "+gfWho()));
+
+async function load(erstes){
+  const d=await bzApi("lage",JAHR?{jahr:JAHR}:{});
+  D=d; JAHR=d.jahr;
+  const qs=new URLSearchParams(location.search);
+  if(erstes){ ZIEL=qs.get("aufgabe"); const zA=ZIEL&&D.aufgaben.find(a=>a.id===ZIEL); let gem=null; try{ gem=localStorage.getItem("gf_bz_fest"); }catch(e){}
+    const wunsch=(zA&&zA.format_slug)||qs.get("festival")||gem; CUR=(D.formate.find(f=>f.slug===wunsch)||D.formate.find(f=>zuordnungen(f.slug).length)||D.formate[0]||{}).slug; }
+  if(!D.formate.some(f=>f.slug===CUR)) CUR=(D.formate[0]||{}).slug;
+  if(!CUR){ $("#bzSatz").textContent="Im Hub sind noch keine Formate hinterlegt."; return; }
+  renderAll();
+  if(erstes&&ZIEL){ const el=document.getElementById("a-"+ZIEL); if(el) el.scrollIntoView({block:"center"}); }
+}
+gfGate(async()=>{
+  $("#app").style.display="block"; gfMountTopbar("besetzung");
+  gfMountHero("buehne","Besetzung verteilen","Aus den Gesprächen der Besetzungswerkstatt werden Aufgaben mit einer verantwortlichen Person, je Festival und Bereich.",{slim:true});
+  try{ await load(true); }catch(e){ $("#bzSatz").textContent="Fehler beim Laden: "+(e.message||"Verbindung"); }
+});
+</script>
+</body>
+</html>
