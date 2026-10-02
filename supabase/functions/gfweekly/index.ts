@@ -706,9 +706,9 @@ const MAIL_ALEX = 'alex@wildemoehre.org';
 const MAIL_LEA  = 'lea@wildemoehre.org';
 const HH_BASIS = 'https://hohes-haus.netlify.app';
 
-async function asana(pfad: string, methode = 'GET', koerper?: unknown){
+async function asana(pfad: string, methode = 'GET', koerper?: unknown, signal?: AbortSignal){
   const res = await fetch('https://app.asana.com/api/1.0' + pfad, {
-    method: methode,
+    method: methode, signal,
     headers: { 'Authorization': 'Bearer ' + ASANA_TOKEN, 'Content-Type': 'application/json', 'Accept': 'application/json' },
     body: koerper === undefined ? undefined : JSON.stringify({ data: koerper }),
   });
@@ -718,9 +718,9 @@ async function asana(pfad: string, methode = 'GET', koerper?: unknown){
   return d.data;
 }
 /* Eine Seite der Asana-Antwort mit next_page, damit Listen vollständig gelesen werden können. */
-async function asanaSeite(pfad: string){
+async function asanaSeite(pfad: string, signal?: AbortSignal){
   const res = await fetch('https://app.asana.com/api/1.0' + pfad, {
-    headers: { 'Authorization': 'Bearer ' + ASANA_TOKEN, 'Accept': 'application/json' },
+    signal, headers: { 'Authorization': 'Bearer ' + ASANA_TOKEN, 'Accept': 'application/json' },
   });
   const text = await res.text();
   let d: any = {}; try { d = JSON.parse(text); } catch (_e) { d = {}; }
@@ -911,6 +911,12 @@ async function launchPersonen(){
 /* V29: Satz in jeder Aufgabe, damit in Asana klar ist, was zurückfließt. */
 const LAUNCH_SICHTBAR = 'Stand und Fälligkeit werden stündlich ins Hohe Haus übernommen; erledigt in Asana heißt erledigt im Haus.';
 const LAUNCH_SYNC_MINUTEN = 60;
+/* V29b: Laufsperre und Zeitbudget. Die Sperre ist eine Zeile in gfweekly_launch_sync mit fester Kennung; ein Lauf nimmt sie
+   per bedingtem Update (frei oder älter als die Haltezeit) und gibt sie am Ende frei. Das Budget hält einen Lauf unter dem
+   Limit von pg_net (120 s) und der Edge Function (150 s); was nicht drankam, folgt im nächsten Lauf. */
+const LAUNCH_SYNC_SPERRE = '00000000-0000-0000-0000-000000000001';
+const LAUNCH_SYNC_HALTEN_MS = 5 * 60000;
+const LAUNCH_SYNC_BUDGET_MS = 90000;
 /* Projektbeschreibung: VVK-Start, Festivalverantwortung, Link auf die Saisonseite. */
 function launchProjektNotiz(festival: any, fvName: string | null){
   return [`Launch ${festival.kurzname} 2027 · VVK-Start ${festival.sales_start_on || 'offen'} · Festivalverantwortung ${fvName || 'offen'}.`,
@@ -929,24 +935,50 @@ async function launchSync(festivals: any[], who: string){
   if (!ASANA_TOKEN) { aus.uebersprungen = 'ASANA_TOKEN fehlt'; return aus; }
   const planIds = (festivals || []).map(f => f.plan_id).filter(Boolean);
   if (!planIds.length) return aus;
+  /* Sperre nehmen: Zeile anlegen, falls es sie nicht gibt, dann bedingt beanspruchen. */
+  const start = Date.now();
+  await admin.from('gfweekly_launch_sync').upsert({ plan_id: LAUNCH_SYNC_SPERRE, synced_at: '1970-01-01T00:00:00Z', ergebnis: { sperre: true }, updated_at: '1970-01-01T00:00:00Z' }, { onConflict: 'plan_id', ignoreDuplicates: true });
+  const { data: genommen, error: ge } = await admin.from('gfweekly_launch_sync').update({ updated_at: laufBeginn, ergebnis: { sperre: true, von: who, seit: laufBeginn } })
+    .eq('plan_id', LAUNCH_SYNC_SPERRE).lt('updated_at', new Date(Date.now() - LAUNCH_SYNC_HALTEN_MS).toISOString()).select('plan_id');
+  if (ge) { aus.fehler++; aus.uebersprungen = 'Sperre nicht lesbar: ' + ge.message; return aus; }
+  if (!(genommen || []).length) { aus.uebersprungen = 'Ein anderer Lauf ist gerade dabei'; return aus; }
+  try {
   const [{ data: ms, error: me }, { data: st, error: se }, { data: schon, error: le }] = await Promise.all([
     admin.from('vvp_launch_milestones').select('id,plan_id,title,status,due_on,due_on_vorher,asana_task_gid,completed_on').in('plan_id', planIds).not('asana_task_gid','is',null),
-    admin.from('gfweekly_launch_sync').select('plan_id,synced_at').in('plan_id', planIds),
+    admin.from('gfweekly_launch_sync').select('plan_id,synced_at,ergebnis').in('plan_id', planIds),
     admin.from('gfweekly_saison_log').select('detail').eq('what','launch_sync').not('detail->>asana_gid','is',null).order('at',{ascending:false}).limit(2000),
   ]);
   if (me || se || le) { aus.fehler++; aus.uebersprungen = 'Daten nicht lesbar: ' + String((me || se || le)!.message); return aus; }
   const bekannt = new Set((schon || []).map((l: any) => String(l.detail?.asana_gid || '')).filter(Boolean));
   const seitJe = new Map((st || []).map((x: any) => [x.plan_id, x.synced_at]));
+  /* Fortschrittsmarke je Plan: nach einem Abbruch geht es hinter der letzten fertigen Aufgabe weiter (Review V29b, Runde 2, Befund 2). */
+  const markeJe = new Map((st || []).map((x: any) => [x.plan_id, x.ergebnis && x.ergebnis.marke ? x.ergebnis : null]));
+  const frist = () => Math.max(0, LAUNCH_SYNC_BUDGET_MS - (Date.now() - start));
+  const signal = () => AbortSignal.timeout(Math.max(1000, frist()));
+  const istAbbruch = (e: unknown) => ['TimeoutError', 'AbortError'].includes(String((e as Error)?.name || ''));
   const jetzt = new Date().toISOString();
-  for (const f of festivals) {
-    const meine = (ms || []).filter((m: any) => m.plan_id === f.plan_id);
+  /* Älteste zuerst, damit bei knappem Budget jeder Plan an die Reihe kommt. */
+  const reihe = [...festivals].sort((a, b) => String(seitJe.get(a.plan_id) || '').localeCompare(String(seitJe.get(b.plan_id) || '')));
+  let rest = 0;
+  for (const f of reihe) {
+    if (Date.now() - start > LAUNCH_SYNC_BUDGET_MS) { rest++; continue; }
+    const markeAlt: any = markeJe.get(f.plan_id);
+    const alle = (ms || []).filter((m: any) => m.plan_id === f.plan_id).sort((a: any, b: any) => String(a.id).localeCompare(String(b.id)));
+    const meine = markeAlt ? alle.filter((m: any) => String(m.id) > String(markeAlt.marke)) : alle;
+    /* Zyklusbeginn: der Lauf, in dem dieser Durchgang des Plans begann; er wird am Ende der neue Zeitstempel,
+       damit Kommentare an früher geprüften Aufgaben nicht aus dem Fenster fallen. */
+    const zyklus = markeAlt?.zyklus || laufBeginn;
+    let letzteFertig: string | null = null;
     /* Erster Lauf eines Plans: alle Kommentare, die Entdopplung läuft über die Kennung der Story (Review V29, Runde 2, Befund 5). */
     const seit = seitJe.get(f.plan_id) || '1970-01-01T00:00:00Z';
     let fehler = 0, erledigt = 0, faelligkeit = 0, kommentare = 0;
+    let abgebrochen = false;
     for (const m of meine) {
+      if (Date.now() - start > LAUNCH_SYNC_BUDGET_MS) { abgebrochen = true; break; }
       aus.geprueft++;
       let aufgabe: any = null;
-      try { aufgabe = await asana(`/tasks/${m.asana_task_gid}?opt_fields=completed,completed_at,due_on,name`); } catch (_e) { fehler++; continue; }
+      try { aufgabe = await asana(`/tasks/${m.asana_task_gid}?opt_fields=completed,completed_at,due_on,name`, 'GET', undefined, signal()); }
+      catch (e) { if (istAbbruch(e)) { abgebrochen = true; break; } fehler++; continue; }
       const patch: Record<string, unknown> = {};
       if (aufgabe?.completed && m.status !== 'complete' && m.status !== 'not_required') {
         patch.status = 'complete'; patch.completed_on = String(aufgabe.completed_at || jetzt).slice(0, 10);
@@ -971,28 +1003,53 @@ async function launchSync(festivals: any[], who: string){
       let stories: any[] = []; let seitenRest = false;
       try {
         let pfad = `/tasks/${m.asana_task_gid}/stories?opt_fields=gid,text,created_at,type,created_by.name&limit=100`;
-        for (let seite = 0; seite < 50 && pfad; seite++) { const antwort = await asanaSeite(pfad); stories = stories.concat(antwort.data || []); pfad = antwort.next_page?.path || ''; }
+        for (let seite = 0; seite < 50 && pfad; seite++) { const antwort = await asanaSeite(pfad, signal()); stories = stories.concat(antwort.data || []); pfad = antwort.next_page?.path || ''; }
         seitenRest = !!pfad;
-      } catch (_e) { fehler++; continue; }
+      } catch (e) { if (istAbbruch(e)) { abgebrochen = true; break; } fehler++; continue; }
       if (seitenRest) fehler++;
-      for (const s of stories) {
-        if (s.type !== 'comment' || !s.created_at) continue;
-        if (s.created_at <= seit || s.created_at > laufBeginn) continue;
-        if (s.gid && bekannt.has(String(s.gid))) continue;
-        const ok = await launchLog(who, 'launch_sync', f.short_name, m.id, { titel: m.title, asana_gid: String(s.gid || '0'), asana_task_gid: m.asana_task_gid,
-          text: `[asana:${s.gid || '0'}] ${m.title}: ${(s.created_by?.name || 'Asana')} schreibt „${(s.text || '').slice(0, 400)}“.` });
-        if (!ok) { fehler++; continue; }
-        if (s.gid) bekannt.add(String(s.gid));
-        kommentare++;
+      /* Neue Kommentare dieser Aufgabe in einem einzigen Insert (Review V29b, Runde 3): die Datenbankarbeit wächst nicht mit
+         der Zahl der Kommentare. Nur bei einem Konflikt mit dem eindeutigen Index (23505) einzeln, dann gilt ein Doppel als übernommen. */
+      const neue = stories.filter((x: any) => x.type === 'comment' && x.created_at && x.created_at > seit && x.created_at <= laufBeginn && !(x.gid && bekannt.has(String(x.gid))))
+        .map((x: any) => ({ who, what: 'launch_sync', row_id: f.short_name, item_id: m.id, detail: { titel: m.title, asana_gid: String(x.gid || '0'), asana_task_gid: m.asana_task_gid,
+          text: `[asana:${x.gid || '0'}] ${m.title}: ${(x.created_by?.name || 'Asana')} schreibt „${(x.text || '').slice(0, 400)}“.` } }));
+      if (neue.length) {
+        const { error: ke } = await admin.from('gfweekly_saison_log').insert(neue);
+        if (!ke) { for (const z of neue) bekannt.add(z.detail.asana_gid); kommentare += neue.length; }
+        else if ((ke as any).code === '23505') {
+          let einzelnFehler = false;
+          for (const z of neue) {
+            if (frist() <= 0) { abgebrochen = true; break; }
+            const { error: e1 } = await admin.from('gfweekly_saison_log').insert(z);
+            if (e1 && (e1 as any).code !== '23505') { fehler++; einzelnFehler = true; continue; }
+            bekannt.add(z.detail.asana_gid); if (!e1) kommentare++;
+          }
+          if (abgebrochen) break;
+          if (einzelnFehler) continue;
+        } else { fehler++; continue; }
+      }
+      letzteFertig = String(m.id);
+    }
+    if (abgebrochen) {
+      rest++;
+      /* Fortschritt sichern, Zeitstempel bleibt; bei Fehlern keine neue Marke, damit die Aufgabe wieder drankommt. */
+      if (!fehler && (letzteFertig || markeAlt)) {
+        const { error } = await admin.from('gfweekly_launch_sync').upsert({ plan_id: f.plan_id, synced_at: seitJe.get(f.plan_id) || '1970-01-01T00:00:00Z',
+          ergebnis: { marke: letzteFertig || markeAlt.marke, zyklus, at: laufBeginn }, updated_at: jetzt }, { onConflict: 'plan_id' });
+        if (error) fehler++;
       }
     }
-    const ergebnis = { geprueft: meine.length, erledigt, faelligkeit, kommentare, fehler, at: laufBeginn };
-    /* Zeitstempel nur bei sauberem Lauf; ohne gesendete Aufgaben ist der Lauf trivial sauber. */
-    if (!fehler) { const { error } = await admin.from('gfweekly_launch_sync').upsert({ plan_id: f.plan_id, synced_at: laufBeginn, ergebnis, updated_at: jetzt }, { onConflict: 'plan_id' }); if (error) fehler++; }
+    const ergebnis = { geprueft: meine.length, erledigt, faelligkeit, kommentare, fehler, abgebrochen, at: zyklus };
+    /* Zeitstempel nur bei sauberem, vollständigem Lauf; ohne gesendete Aufgaben ist der Lauf trivial sauber. */
+    if (!fehler && !abgebrochen) { const { error } = await admin.from('gfweekly_launch_sync').upsert({ plan_id: f.plan_id, synced_at: zyklus, ergebnis, updated_at: jetzt }, { onConflict: 'plan_id' }); if (error) fehler++; }
     aus.laeufe++; aus.erledigt += erledigt; aus.faelligkeit += faelligkeit; aus.kommentare += kommentare; aus.fehler += fehler;
     aus.plaene.push(Object.assign({ plan_id: f.plan_id, short_name: f.short_name }, ergebnis, { fehler }));
   }
+  (aus as any).rest = rest; (aus as any).dauer_ms = Date.now() - start;
   return aus;
+  } finally {
+    /* Sperre freigeben, auch nach einem Fehler. */
+    await admin.from('gfweekly_launch_sync').update({ updated_at: '1970-01-01T00:00:00Z', ergebnis: { sperre: true, zuletzt: laufBeginn, von: who } }).eq('plan_id', LAUNCH_SYNC_SPERRE);
+  }
 }
 /* Der Text einer Asana-Aufgabe: Aufwand als Spanne, Dauer, Vorgänger, Generator-Anteil, Link ins Haus. */
 function launchAsanaNotiz(m: any, r: any, festival: any, zust: any, helfer: any, zusatz = ''){
@@ -2014,13 +2071,19 @@ Deno.serve(async (req: Request) => {
       /* V29: Rückweg aus Asana, wenn der letzte Lauf älter als 60 Minuten ist. Ein Fehler darin bricht die Liste nicht ab. */
       let sync: any = null;
       try {
-        const { data: st } = planIds.length ? await admin.from('gfweekly_launch_sync').select('plan_id,synced_at,ergebnis').in('plan_id', planIds) : { data: [] } as any;
+        const { data: st } = planIds.length ? await admin.from('gfweekly_launch_sync').select('plan_id,synced_at,ergebnis').in('plan_id', planIds).neq('plan_id', LAUNCH_SYNC_SPERRE) : { data: [] } as any;
         /* Der älteste Zeitstempel entscheidet: bleibt ein Plan nach einem Fehler zurück, wird er beim nächsten Aufruf wieder versucht (Review V29, Befund 1). */
         const zeiten = (st || []).map((x: any) => x.synced_at).sort();
         const letzter = zeiten[zeiten.length - 1] || null, aeltester = zeiten[0] || null;
         const alt = !aeltester || (Date.now() - Date.parse(aeltester)) > LAUNCH_SYNC_MINUTEN * 60000 || (st || []).length < planIds.length;
-        if (alt && ASANA_TOKEN) sync = Object.assign({ automatisch: true }, await launchSync(festivals, 'System'));
-        else sync = { automatisch: false, synced_at: letzter, plaene: st || [], uebersprungen: ASANA_TOKEN ? '' : 'ASANA_TOKEN fehlt' };
+        if (alt && ASANA_TOKEN) {
+          sync = Object.assign({ automatisch: true }, await launchSync(festivals, 'System'));
+          /* Für die Warnung zählt der gespeicherte Stand, nicht der Laufbeginn (Review V29b, Runde 2, Befund 3). */
+          const { data: st2 } = await admin.from('gfweekly_launch_sync').select('synced_at').in('plan_id', planIds);
+          const z2 = (st2 || []).map((x: any) => x.synced_at).sort();
+          sync.aeltester = (st2 || []).length < planIds.length ? null : (z2[0] || null);
+        }
+        else sync = { automatisch: false, synced_at: letzter, aeltester: aeltester, plaene: st || [], uebersprungen: ASANA_TOKEN ? '' : 'ASANA_TOKEN fehlt' };
       } catch (e) { sync = { automatisch: true, fehler: 1, uebersprungen: String((e as Error).message).slice(0, 200) }; }
       const eventIds = festivals.map(f => f.event_id);
       /* v36 (V28): dazu die Besetzung „bisher“ (Stand Sommer 2026) und das Launch-Protokoll für saison.html. */

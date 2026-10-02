@@ -257,7 +257,10 @@ function renderLage(R){
   for(const b of bes(f)) if(!b.person_id) hin.push(`Bereich ${bereichName(b.bereich)} ist unbesetzt${b.notiz?": "+b.notiz:""}.`);
   $("#lnHinweise").innerHTML=hin.map(h=>`<div class="ln-note" style="margin-top:6px"><b>Hinweis:</b> ${gfEsc(h)}</div>`).join("");
   const sy=D.sync||{};
-  $("#lnSync").textContent=sy.uebersprungen?`Rückweg aus Asana: ${sy.uebersprungen}.`:sy.synced_at?`Zuletzt aus Asana geholt: ${new Date(sy.synced_at).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}${sy.automatisch?" (automatisch)":""}${sy.geprueft!==undefined?`, ${sy.geprueft} Aufgaben geprüft, ${sy.erledigt||0} erledigt, ${sy.faelligkeit||0} Fälligkeiten, ${sy.kommentare||0} Kommentare${sy.fehler?", "+sy.fehler+" Fehler":""}`:""}. Erledigt in Asana heißt erledigt im Haus.`:"Noch kein Rückweg aus Asana gelaufen.";
+  /* V29b: läuft der Rückweg seit über zwei Stunden nicht, obwohl Aufgaben in Asana stehen, sagt die Seite das. */
+  const syAlt=sy.aeltester?(Date.now()-Date.parse(sy.aeltester))>2*3600000:true;   // nur der gespeicherte älteste Plan-Stand zählt
+  const inAsana=(D.meilensteine||[]).some(m=>m.asana_task_gid);
+  $("#lnSync").textContent=(inAsana&&D.asanaConfigured&&syAlt?"Achtung: der Rückweg aus Asana ist seit über zwei Stunden nicht gelaufen; Stand aus Asana holen. ":"")+(sy.uebersprungen?`Rückweg aus Asana: ${sy.uebersprungen}.`:sy.synced_at?`Zuletzt aus Asana geholt: ${new Date(sy.synced_at).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}${sy.automatisch?" (automatisch)":""}${sy.geprueft!==undefined?`, ${sy.geprueft} Aufgaben geprüft, ${sy.erledigt||0} erledigt, ${sy.faelligkeit||0} Fälligkeiten, ${sy.kommentare||0} Kommentare${sy.fehler?", "+sy.fehler+" Fehler":""}`:""}. Erledigt in Asana heißt erledigt im Haus.`:"Noch kein Rückweg aus Asana gelaufen.");
 }
 
 /* ---- Weg A: so zuweisen wie vorgeschlagen ---- */

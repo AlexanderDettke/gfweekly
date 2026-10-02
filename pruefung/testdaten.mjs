@@ -205,7 +205,7 @@ export const LAUNCH_LOG = [
 ];
 for (const p of LAUNCH_POOL) p.created_at = (p.id === 'n' || p.id === 'g') ? zeit(-1) : zeit(-100);
 /* V29: Stand des Rückwegs aus Asana, wie launch_list ihn liefert. */
-export const LAUNCH_SYNC = { automatisch:false, synced_at:zeit(-0.02), plaene:[], uebersprungen:'' , geprueft:8, erledigt:1, faelligkeit:0, kommentare:2, fehler:0 };
+export const LAUNCH_SYNC = { automatisch:false, synced_at:zeit(-0.02), aeltester:zeit(-0.03), plaene:[], uebersprungen:'' , geprueft:8, erledigt:1, faelligkeit:0, kommentare:2, fehler:0 };
 LAUNCH_LOG.unshift({ at:zeit(-0.02), who:'System', what:'launch_sync', row_id:'WMRD27', item_id:'m-WMRD27-0', detail:{ titel:'Launch-Termin bestätigt', asana_gid:'9001', asana_task_gid:'1200000000000', text:'[asana:9001] Launch-Termin bestätigt: Alex schreibt „Termin steht“.' } });
 export const LAUNCH_LIST = { festivals: LAUNCH_FESTIVALS, meilensteine: LAUNCH_MEILENSTEINE, besetzung: LAUNCH_BESETZUNG, pool: LAUNCH_POOL,
   richtwerte: LAUNCH_RICHTWERTE, bereiche: LAUNCH_BEREICHE, last: [], vorher: LAUNCH_VORHER, log: LAUNCH_LOG, sync: LAUNCH_SYNC, asanaConfigured: true, heute };

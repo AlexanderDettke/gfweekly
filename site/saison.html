@@ -434,7 +434,10 @@ function renderFestivals(){
       <div class="sa-kopfrow">${startKnopf(f)}</div>${START.offen[f.short_name]?startVorschau(f):""}${hin}</div>`;
   }).join("");
   const sy=D.sync||{};
-  $("#saSync").textContent=sy.uebersprungen?`Rückweg aus Asana: ${sy.uebersprungen}.`:sy.synced_at?`Zuletzt aus Asana geholt: ${new Date(sy.synced_at).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}${sy.automatisch?" (automatisch)":""}${sy.geprueft!==undefined?`, ${sy.geprueft} Aufgaben geprüft, ${sy.erledigt||0} erledigt, ${sy.faelligkeit||0} Fälligkeiten, ${sy.kommentare||0} Kommentare${sy.fehler?", "+sy.fehler+" Fehler":""}`:""}.`:"Noch kein Rückweg aus Asana gelaufen.";
+  /* V29b: läuft der Rückweg seit über zwei Stunden nicht, obwohl Aufgaben in Asana stehen, sagt die Seite das. */
+  const syAlt=sy.aeltester?(Date.now()-Date.parse(sy.aeltester))>2*3600000:true;   // nur der gespeicherte älteste Plan-Stand zählt
+  const inAsana=(D.meilensteine||[]).some(m=>m.asana_task_gid);
+  $("#saSync").textContent=(inAsana&&D.asanaConfigured&&syAlt?"Achtung: der Rückweg aus Asana ist seit über zwei Stunden nicht gelaufen; Stand aus Asana holen. ":"")+(sy.uebersprungen?`Rückweg aus Asana: ${sy.uebersprungen}.`:sy.synced_at?`Zuletzt aus Asana geholt: ${new Date(sy.synced_at).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}${sy.automatisch?" (automatisch)":""}${sy.geprueft!==undefined?`, ${sy.geprueft} Aufgaben geprüft, ${sy.erledigt||0} erledigt, ${sy.faelligkeit||0} Fälligkeiten, ${sy.kommentare||0} Kommentare${sy.fehler?", "+sy.fehler+" Fehler":""}`:""}.`:"Noch kein Rückweg aus Asana gelaufen.");
   const wp=LL.wochenplan(D.meilensteine, D.festivals, { heute:HEUTE });
   $("#saWochen").innerHTML=wp.map(w=>`<div class="sa-w${w.dreiLaunches?" drei":""}"><span class="d">${fmtK(w.montag)} bis ${fmtK(w.sonntag)}${w.dreiLaunches?`<span class="sa-mark">drei Launches</span>`:""}</span><span class="f">${w.festivals.map(x=>`${gfEsc(x.kurzname)} ${x.anzahl} · ${LL.fmt(x.stunden)} Std.`).join(" · ")}</span><span class="s">Summe ${w.anzahl} · ${LL.fmt(w.stunden)} Std.</span></div>`).join("")||`<p class="sa-muted">Bis Jahresende ist kein offener Meilenstein fällig.</p>`;
 }
