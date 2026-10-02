@@ -281,20 +281,22 @@ function openRow(id){
   const r=id?rowOf(id):{id:"",label:"",level:2,kind:"department"}; if(!r) return;
   OPEN={kind:"row",id:r.id||null};
   const fest=r.kind==="festival"||r.kind==="strang";
+  /* V30: Zeilen mit event_ref zeigen die Termine aus der Prognoseplattform, nur lesend. */
+  const plat=r.termin_quelle==="plattform"; const ro=plat?` readonly aria-readonly="true" title="Der Termin kommt aus der Prognoseplattform"`:"";
   $("#pBody").innerHTML=`<div class="fgrid">
     <div class="fld ffull"><label>Name</label><input name="label" value="${gfEsc(r.label)}" /></div>
     <div class="fld ffull"><label>Ebene</label>${gfChips("level",LVL,String(r.level),{label:"Ebene"})}</div>
     <div class="fld ffull"><label>Art</label>${gfChips("kind",KINDS,r.kind,{label:"Art"})}</div>
-    <div class="fld"><label>VVK-Start</label><input name="vvk_start" type="date" value="${r.vvk_start||""}" /></div>
+    <div class="fld"><label>VVK-Start</label><input name="vvk_start" type="date" value="${r.vvk_start||""}"${ro} /></div>
     <div class="fld"><label>Verkaufsziel</label><input name="target" inputmode="numeric" value="${r.target??""}" /></div>
-    <div class="fld"><label>Festival von</label><input name="festival_start" type="date" value="${r.festival_start||""}" /></div>
-    <div class="fld"><label>Festival bis</label><input name="festival_end" type="date" value="${r.festival_end||""}" /></div>
+    <div class="fld"><label>Festival von</label><input name="festival_start" type="date" value="${r.festival_start||""}"${ro} /></div>
+    <div class="fld"><label>Festival bis</label><input name="festival_end" type="date" value="${r.festival_end||""}"${ro} /></div>
     <div class="fld ffull"><label>Notiz</label><textarea name="note" rows="2">${gfEsc(r.note||"")}</textarea></div>
   </div>
-  <div class="sz-meta">${fest?"Ändert sich der VVK-Start oder der Festivaltermin, verschieben sich Vorlauf, Verkauf und Stichtag dieser Zeile mit. ":""}Die Termine in der Plattform Wilde Habitate bleiben unverändert, bis ihr die Saison freigebt.</div>`;
+  <div class="sz-meta">${plat?`Der Termin kommt aus der Prognoseplattform${r.event_short_name?" ("+gfEsc(r.event_short_name)+")":""}${r.termin_fehlt?", dort ist aber kein Termin eingetragen":""}. Ändern in <a class="linkish" href="${gfEsc(r.plattform_url||"https://wilde-habitate.netlify.app")}" target="_blank" rel="noopener">Wilde Habitate</a>; Vorlauf, Verkauf und Stichtag dieser Zeile folgen dann von selbst.`:`${fest?"Ändert sich der VVK-Start oder der Festivaltermin, verschieben sich Vorlauf, Verkauf und Stichtag dieser Zeile mit. ":""}Diese Zeile hat keinen Bezug zur Plattform und hält ihre Termine selbst.`}</div>`;
   $("#pFoot").innerHTML=`<button class="btn btn-primary" id="rSave">${r.id?"Speichern":"Anlegen"}</button><button class="btn btn-sm btn-brand" id="rAdd"${r.id?"":" hidden"}>Element in dieser Zeile</button>${r.id?`<button class="btn btn-sm btn-ghost" id="rDel" style="margin-left:auto">Zeile entfernen</button>`:""}`;
   panelOpen(r.id?"Zeile bearbeiten":"Neue Zeile");
-  $("#rSave").onclick=async()=>{ const f=readForm(); try{ const d=await szApi("row_save",Object.assign(f,{id:r.id||undefined,who:gfWho()})); await load(); gfToast(d.moved?`Gespeichert, ${d.moved} Termine mitverschoben`:"Gespeichert"); OPEN=null; panelClose(); }catch(e){ gfToast("Fehler: "+e.message); } };
+  $("#rSave").onclick=async()=>{ const f=readForm(); if(plat){ delete f.vvk_start; delete f.festival_start; delete f.festival_end; } try{ const d=await szApi("row_save",Object.assign(f,{id:r.id||undefined,who:gfWho()})); await load(); gfToast(d.moved?`Gespeichert, ${d.moved} Termine mitverschoben`:"Gespeichert"); OPEN=null; panelClose(); }catch(e){ gfToast("Fehler: "+e.message); } };
   if(r.id) $("#rAdd").onclick=()=>{ OPEN=null; panelClose(); openItem(null,{row_id:r.id}); };
   if(r.id) $("#rDel").onclick=async()=>{ if(!confirm(`Zeile „${r.label}“ mit allen Elementen entfernen?`)) return; try{ await szApi("row_delete",{id:r.id,who:gfWho()}); OPEN=null; panelClose(); await load(); gfToast("Zeile entfernt"); }catch(e){ gfToast("Fehler: "+e.message); } };
 }
