@@ -143,8 +143,9 @@ export const PROTOKOLL = {
 export const LAUNCH_BEREICHE = [
   { key:'fv', name:'Festivalverantwortung', beschreibung:'Trägt das Ergebnis', sort_order:1 }, { key:'gf', name:'Geschäftsführung', beschreibung:'Entscheidungen der GF', sort_order:2 },
   { key:'komm', name:'Kommunikation', beschreibung:'Website, Newsletter, Ads', sort_order:3 }, { key:'content', name:'Content', beschreibung:'Film, Fotos, Social', sort_order:4 },
-  { key:'ticket', name:'Ticketing', beschreibung:'Ticketmodell, Shop', sort_order:5 }, { key:'partner', name:'Partner', beschreibung:'Formatpartner, Kollektive', sort_order:6 },
-  { key:'sys', name:'Systeme', beschreibung:'Tracking, Technik', sort_order:7 }, { key:'recht', name:'Recht', beschreibung:'Rechte, Verträge', sort_order:8 } ];
+  { key:'ticket', name:'Ticketing', beschreibung:'Ticketmodell, Shop', sort_order:5 }, { key:'formatpartner', name:'Formatpartner', beschreibung:'Formatpartner, Partnerpaket', sort_order:6 }, { key:'kollektive', name:'Kollektive', beschreibung:'Kollektive auswählen und einbinden', sort_order:7 },
+  { key:'sys', name:'Systeme', beschreibung:'Tracking, Technik', sort_order:8 }, { key:'recht', name:'Recht', beschreibung:'Rechte, Verträge', sort_order:9 },
+  { key:'partner', name:'Partner (alt, entfällt)', beschreibung:'abgelöst am 02.10.2026', sort_order:99 } ];
 export const LAUNCH_RICHTWERTE = [
   ['Launch-Termin bestätigt', 'strategy', 'gf', 0.5, 1, 1, 0, -56, [], 'Entscheidung GF'],
   ['Positionierung freigegeben', 'strategy', 'fv', 4, 8, 5, 0, -42, [], null],
@@ -153,7 +154,7 @@ export const LAUNCH_RICHTWERTE = [
   ['Produktions-Briefing bereit', 'content', 'content', 3, 5, 2, 0.3, -35, [], null],
   ['Content produziert', 'content', 'content', 16, 32, 10, 0.5, -14, ['Produktions-Briefing bereit'], 'Kurzclips mit Generatoren'],
   ['Landingpage bereit', 'website', 'komm', 8, 16, 7, 0.4, -10, ['Kernbotschaft freigegeben'], null],
-  ['Partnerpaket bereit', 'partners', 'partner', 4, 8, 10, 0.3, -7, ['Kernbotschaft freigegeben'], 'Warten auf Partner'],
+  ['Partnerpaket bereit', 'partners', 'formatpartner', 4, 8, 10, 0.3, -7, ['Kernbotschaft freigegeben'], 'Warten auf Partner'],
   ['Bild-, Musik- und Persönlichkeitsrechte geklärt', 'legal', 'recht', 2, 4, 7, 0, -10, [], null],
   ['Tracking getestet', 'tracking', 'sys', 2, 4, 2, 0, -3, ['Landingpage bereit'], null],
   ['Launch durchgeführt', 'operations', 'fv', 6, 10, 1, 0, 0, ['Landingpage bereit', 'Tracking getestet', 'Content produziert', 'Partnerpaket bereit'], 'Launchtag'],
@@ -161,12 +162,12 @@ export const LAUNCH_RICHTWERTE = [
 export const LAUNCH_POOL = [
   { id:'a', name:'Alex', typ:'gf', felder:['gf','fv'], generator:true, launch_std_woche:6, verfuegbar_ab:null, briefing_std:0, stundensatz:null, hat_asana:true, active:true, assignable:true, sort_order:1 },
   { id:'l', name:'Lea', typ:'gf', felder:['gf','recht','ticket'], generator:true, launch_std_woche:null, verfuegbar_ab:null, briefing_std:0, stundensatz:null, hat_asana:true, active:true, assignable:true, sort_order:2 },
-  { id:'m', name:'Merle', typ:'team', felder:['fv','partner'], generator:true, launch_std_woche:10, verfuegbar_ab:null, briefing_std:0, stundensatz:null, hat_asana:true, active:true, assignable:true, sort_order:3 },
+  { id:'m', name:'Merle', typ:'team', felder:['fv','formatpartner','kollektive'], generator:true, launch_std_woche:10, verfuegbar_ab:null, briefing_std:0, stundensatz:null, hat_asana:true, active:true, assignable:true, sort_order:3 },
   { id:'t', name:'Tim', typ:'team', felder:['komm','content'], generator:true, launch_std_woche:4, verfuegbar_ab:null, briefing_std:0, stundensatz:null, hat_asana:true, active:true, assignable:true, sort_order:4 },
   { id:'c', name:'Christoph', typ:'extern', felder:['komm','sys'], generator:true, launch_std_woche:null, verfuegbar_ab:null, briefing_std:2, stundensatz:null, hat_asana:true, active:true, assignable:true, sort_order:5 },
   { id:'n', name:'Nora', typ:'minijob', felder:['content'], generator:true, launch_std_woche:5, verfuegbar_ab:tag(9), briefing_std:2, stundensatz:null, hat_asana:false, active:true, assignable:true, sort_order:6 },
   { id:'g', name:'Agentur Nord', typ:'agentur', felder:['content'], generator:true, launch_std_woche:null, verfuegbar_ab:null, briefing_std:3, stundensatz:60, hat_asana:false, active:true, assignable:true, sort_order:7 },
-  { id:'k', name:'Kollektiv Ost', typ:'partner', felder:['partner','fv'], generator:false, launch_std_woche:null, verfuegbar_ab:null, briefing_std:3, stundensatz:null, hat_asana:false, active:true, assignable:true, sort_order:8 },
+  { id:'k', name:'Kollektiv Ost', typ:'partner', felder:['formatpartner','kollektive','fv'], generator:false, launch_std_woche:null, verfuegbar_ab:null, briefing_std:3, stundensatz:null, hat_asana:false, active:true, assignable:true, sort_order:8 },
 ];
 export const LAUNCH_FESTIVALS = [
   { plan_id:'pl-fl', event_id:'ev-fl', name:'Fluidity 2027', kurzname:'Fluidity', short_name:'FLRD27', sales_start_on:tag(-60), launch_type:'campaign_boost', plan_status:'active', hinweise:[] },
@@ -175,8 +176,8 @@ export const LAUNCH_FESTIVALS = [
   { plan_id:'pl-lus', event_id:'ev-lus', name:'Lusatia 2027', kurzname:'Lusatia', short_name:'LUSRD27', sales_start_on:tag(14), launch_type:'relaunch', plan_status:'active', hinweise:[] },
   { plan_id:'pl-byn', event_id:'ev-byn', name:'by nature 2027', kurzname:'by nature', short_name:'BYNRD27', sales_start_on:tag(31), launch_type:'first_launch', plan_status:'active', hinweise:['Ob by nature 2027 stattfindet, ist als Vorhaben offen.'] },
 ];
-const LAUNCH_WER = { fv:{ 'ev-fl':'c', 'ev-wm':'a', 'ev-fam':null, 'ev-lus':'m', 'ev-byn':'m' }, gf:'a', komm:'c', content:'t', ticket:'l', partner:'m', sys:'c', recht:'l' };
-export const LAUNCH_BESETZUNG = LAUNCH_FESTIVALS.flatMap(f => LAUNCH_BEREICHE.map(b => {
+const LAUNCH_WER = { fv:{ 'ev-fl':'c', 'ev-wm':'a', 'ev-fam':null, 'ev-lus':'m', 'ev-byn':'m' }, gf:'a', komm:'c', content:'t', ticket:'l', formatpartner:'m', kollektive:'m', sys:'c', recht:'l', partner:null };
+export const LAUNCH_BESETZUNG = LAUNCH_FESTIVALS.flatMap(f => LAUNCH_BEREICHE.filter(b => b.sort_order < 99).map(b => {
   const w = typeof LAUNCH_WER[b.key] === 'object' ? LAUNCH_WER[b.key][f.event_id] : LAUNCH_WER[b.key];
   return { id:`b-${f.short_name}-${b.key}`, event_id:f.event_id, bereich:b.key, person_id:w || null, status:w ? (f.short_name === 'WMRD27' ? 'bestaetigt' : 'vorschlag') : 'offen',
     quelle:'Vorsortierung', notiz: !w ? 'keine tragfähige Besetzung' : null, bestaetigt_von: f.short_name === 'WMRD27' && w ? 'Alex' : null, bestaetigt_am: null }; }));
@@ -194,7 +195,7 @@ export const LAUNCH_MEILENSTEINE = LAUNCH_FESTIVALS.flatMap(f => LAUNCH_RICHTWER
 /* V28 · Saison: Besetzung „bisher“ (Stand Sommer 2026), Launch-Protokoll und created_at im Pool (Nora und die Agentur sind neu). */
 export const LAUNCH_VORHER = [
   ['fv','faktisch die GF'],['komm','Antonia (Newsletter, Social)'],['content','Antonia allein'],['ticket','je Festival verschieden, Annie nur Fluidity'],
-  ['partner','Lea (Kollektiv-Thread)'],['sys','verteilt, Tracking bei niemandem'],['recht','Legal'],['gf','GF'],
+  ['formatpartner','Lea (Kollektiv-Thread)'],['kollektive','Lea (Kollektiv-Thread)'],['sys','verteilt, Tracking bei niemandem'],['recht','Legal'],['gf','GF'],
 ].map(([bereich, text], i) => ({ bereich, text, quelle:'Rollen in Pool, TPA und Coda, Stand Sommer 2026', sort_order:i + 1 }));
 export const LAUNCH_LOG = [
   { at:zeit(-0.2), who:'Alex', what:'launch_confirm', row_id:'WMRD27', item_id:null, detail:{ bestaetigt:8, besetzung:7, offen:0, fehler:[] } },

@@ -270,7 +270,12 @@ const SA_PHASEN=[
     fertig:["alle fünf Festivals durchgeführt sind und der Abbau geplant ist"] },
 ];
 /* Bereiche der Tafel in fester Reihenfolge; Alias für „bisher“: Legal war Lea. Entscheiden-Hebel nur für by nature. */
-const SA_BEREICHE=["fv","komm","content","ticket","partner","sys","recht","gf"];
+/* Seit 02.10.2026 ist Partner geteilt in Formatpartner und Kollektive (Entscheidung Alex). Feste Reihenfolge, dazu jeder
+   weitere Bereich aus den Daten; Bereiche mit sort_order ab 99 (abgelöst, etwa „Partner (alt, entfällt)“) fallen weg. */
+const SA_BEREICHE_REIHE=["fv","komm","content","ticket","formatpartner","kollektive","sys","recht","gf"];
+let SA_BEREICHE=SA_BEREICHE_REIHE.slice();
+function saBereicheAusDaten(){ const aktiv=(D.bereiche||[]).filter(b=>Number(b.sort_order||0)<99).map(b=>b.key);
+  SA_BEREICHE=SA_BEREICHE_REIHE.filter(k=>aktiv.includes(k)).concat(aktiv.filter(k=>!SA_BEREICHE_REIHE.includes(k))); }
 const SA_ALIAS={ Legal:"Lea Luce" };
 const SA_ENTSCHEIDEN={ BYNRD27:"Ob by nature 2027 stattfindet oder auf 2027/28 verschoben wird. Stattfindet: Vorschlag übernehmen und bestätigen; sonst den VVK-Start verschieben." };
 const SA_HEBEL_WEG={ parallel:2, verschieben:3, hilfe:4, entscheiden:1 };
@@ -492,6 +497,7 @@ document.addEventListener("change", async e=>{
 async function load(){
   const d=await gfApi("launch_list",{});
   D=d; HEUTE=d.heute||new Date().toISOString().slice(0,10);
+  saBereicheAusDaten();
   if(!D.festivals||!D.festivals.length){ $("#saLage").innerHTML=`<p class="sa-satz">Im Cockpit liegen keine Launch-Pläne für 2027.</p>`; return; }
   renderAll();
 }

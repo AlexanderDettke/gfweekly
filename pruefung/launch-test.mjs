@@ -341,6 +341,14 @@ console.log('\n== 8. Saison: Bisher und Jetzt, Änderungen, Wochenplan ==');
   gleich('Systeme: bisher verteilt, jetzt Christian, neu', z('sys').aenderung, 'neu');
   gleich('Recht: Legal ist per Alias Lea, unverändert', z('recht').aenderung, 'unverändert');
   gleich('GF: Alexander ist Typ gf, „GF“ im Bisher-Text passt', z('gf').aenderung, 'unverändert');
+  /* Review V29c: ein Vorname, der nur Teil eines Bindestrich-Worts ist, zählt nicht als dieselbe Person. */
+  const VORHER2 = [{ bereich: 'kollektive', text: 'Lea (Kollektiv-Thread)', quelle: 'x' }];
+  const POOLK2 = POOL.concat([{ id: 'p-kost', name: 'Kollektiv Ost', typ: 'partner', felder: ['kollektive'] }]);
+  const BESK = FEST5.map(f => ({ event_id: f.event_id, bereich: 'kollektive', person_id: f.short_name === 'FAMRD27' ? 'p-lea' : 'p-kost', status: 'bestaetigt' }));
+  const bjK = L.bisherJetzt(VORHER2, BESK, FEST5, POOLK2, [{ key: 'kollektive', name: 'Kollektive' }]);
+  gleich('„Kollektiv Ost“ ist gegenüber „Lea (Kollektiv-Thread)“ geändert, nicht unverändert', bjK[0].aenderung, 'geändert');
+  const bjL = L.bisherJetzt(VORHER2, FEST5.map(f => ({ event_id: f.event_id, bereich: 'kollektive', person_id: 'p-lea', status: 'bestaetigt' })), FEST5, POOLK2, [{ key: 'kollektive', name: 'Kollektive' }]);
+  gleich('Lea überall bleibt unverändert', [bjL[0].aenderung, bjL[0].jetztText], ['unverändert', 'Lea Luce']);
   gleich('Jedes Feld trägt Quelle und Notiz der Besetzung', [z('fv').jetzt[2].quelle, z('fv').jetzt[2].notiz], ['Vorsortierung', 'keine tragfähige Besetzung']);
 
   const LOG = [

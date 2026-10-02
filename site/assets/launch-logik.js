@@ -505,7 +505,9 @@
       /* Änderung: „unverändert“, wenn jede heutige Person schon im Bisher-Text steht (Vorname, Alias oder GF für den Typ gf);
          „neu“, wenn bisher niemand fest zuständig war; sonst „geändert“. Offene Felder zählen als nicht vergleichbar. */
       const t = bisher.toLowerCase();
-      const passt = j => { if (j.name === 'offen') return false; const vn = vorname(j.name); if (t.includes(vn)) return true; if (j.typ === 'gf' && /\bgf\b/.test(t)) return true; for (const a in alias) if (t.includes(String(a).toLowerCase()) && vorname(alias[a]) === vn) return true; return false; };
+      /* Ganzes Wort, nicht Teil eines Bindestrich-Worts: „Kollektiv Ost“ passt nicht auf „Kollektiv-Thread“ (Review V29c). */
+      const wort = w => { const e = String(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); return new RegExp('(^|[^\\p{L}-])' + e + '($|[^\\p{L}-])', 'u').test(t); };
+      const passt = j => { if (j.name === 'offen') return false; const vn = vorname(j.name); if (vn && wort(vn)) return true; if (j.typ === 'gf' && /\bgf\b/.test(t)) return true; for (const a in alias) if (t.includes(String(a).toLowerCase()) && vorname(alias[a]) === vn) return true; return false; };
       let aenderung;
       if (jetzt.every(j => j.name === 'offen')) aenderung = 'offen';
       else if (jetzt.filter(j => j.name !== 'offen').every(passt)) aenderung = 'unverändert';
