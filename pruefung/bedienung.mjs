@@ -247,6 +247,41 @@ console.log('\n== Für dich und Besprechung ==');
   await b.close();
 }
 
+console.log('\n== Vorhaben (V31b): Ansichten, Akte, Punkt, Ball ==');
+{
+  frisch();
+  const p = await seite('/vorhaben.html');
+  pruefe('Woche ist die Standardansicht', await p.locator('.vh-woche').count() === 1);
+  pruefe('Überfällig steht oben', (await p.locator('.vh-wz').first().innerText()).includes('Überfällig'));
+  pruefe('Band der Abwesenheit steht in der Woche', await p.locator('.vh-band').count() >= 1);
+  await p.locator('[data-view="board"]').click();
+  pruefe('Board hat sechs Spalten', await p.locator('.vh-col').count() === 6);
+  pruefe('Spalte mit mehr als fünf trägt die Warnmarke', await p.locator('.vh-col.voll .vh-col-w').count() === 1);
+  await p.locator('[data-view="liste"]').click();
+  pruefe('Liste gruppiert nach Gruppen', await p.locator('.vh-l-g').count() >= 4);
+  pruefe('Ansicht wird gemerkt', await p.evaluate(() => localStorage.getItem('gf_vh_view')) === 'liste');
+  await p.locator('[data-filter="mir"]').click();
+  const mir = await p.locator('.vh-l-z').count();
+  pruefe('Filter „Bei mir“ zeigt Ball bei Alex, GF und extern mit Alex als Eigentümer', mir === 4, `${mir} Zeilen`);
+  await p.locator('[data-filter="alle"]').click();
+  await p.locator('.vh-l-z[data-open="xceed"]').click(); await p.waitForTimeout(300);
+  pruefe('Akte öffnet sich mit Titel', (await p.locator('#vhAkte h2').innerText()).includes('XCeed'));
+  pruefe('Link trägt die Akte', new URL(p.url()).searchParams.get('v') === 'xceed');
+  await p.locator('#vhAkte input[data-toggle="p1"]').check(); await p.waitForTimeout(300);
+  const t = letzte('punkt_toggle');
+  pruefe('Haken schickt punkt_toggle mit by', t && t.nutzlast.id === 'p1' && t.nutzlast.erledigt === true && t.nutzlast.by === 'Alex', JSON.stringify(t && t.nutzlast));
+  await p.locator('[data-ball-akte="alex"]').click(); await p.waitForTimeout(300);
+  const b = letzte('vorhaben_save');
+  pruefe('Ball geben an schickt den gesehenen Ball mit', b && b.nutzlast.ball === 'alex' && b.nutzlast.expect_ball === 'lea', JSON.stringify(b && b.nutzlast));
+  await p.locator('[data-tab="verlauf"]').click();
+  pruefe('Verlauf zeigt den Vorschlag mit Übernehmen', await p.locator('.vh-e.vorschlag [data-vstatus="bestaetigt"]').count() === 1);
+  await p.locator('.vh-e.vorschlag [data-vstatus="bestaetigt"]').click(); await p.waitForTimeout(300);
+  pruefe('Übernehmen schickt verlauf_status', letzte('verlauf_status')?.nutzlast.status === 'bestaetigt');
+  await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+  pruefe('Escape schließt die Akte', await p.locator('#vhAkte').isHidden());
+  await p.close();
+}
+
 await browser.close();
 server.close();
 if (meldungen.length) { console.log('\nKonsolenmeldungen im letzten Fall:'); for (const m of meldungen) console.log('   ' + m.slice(0,200)); fehler += meldungen.length; }

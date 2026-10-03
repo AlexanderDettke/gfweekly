@@ -60,6 +60,7 @@ const SEITEN = [
   ['inbox.html', '#list'],
   ['vertretung.html', '#absList'], ['uebergabe.html', '#list'], ['rueckkehr.html', '#entList'],
   ['saison.html', '#saLage'], ['launch.html', '#lnAufgaben'],
+  ['vorhaben.html', '#vhMain'], ['vorhaben.html?view=board&v=xceed', '#vhAkte'], ['vorhaben.html?view=liste&v=xceed&tab=verlauf', '#vhAkte'],
 ];
 const SCHIRME = [ { name:'1440', w:1440, h:900 }, { name:'390', w:390, h:844 } ];
 const THEMES = ['dark','light'];
@@ -222,7 +223,7 @@ for (const thema of THEMES) {
       }, kern);
       if (befund.tor) meldungen.push('Tor blieb zu');
       if (!befund.app) meldungen.push('Seiteninhalt blieb verborgen');
-      if (befund.nav !== 15) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 15 Haupteinträgen)');   // 15 seit Besetzung B1 (02.10.2026)
+      if (befund.nav !== 16) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 16 Haupteinträgen)');   // 16 seit V31 Vorhaben (03.10.2026)
       if (befund.unternav !== 4) meldungen.push('Unternavigation unvollständig (' + befund.unternav + ' von 4 Einträgen)');
       if (befund.fehltext.length) meldungen.push('Fehlermeldung auf der Seite: ' + befund.fehltext.join(', '));
       if (befund.kern < 0) meldungen.push('Kerninhalt ' + kern + ' fehlt im Aufbau');
@@ -239,7 +240,7 @@ for (const thema of THEMES) {
       }
       if (befund.breite > s.w + 1) meldungen.push(`Seitlicher Überlauf: ${befund.breite} px statt ${s.w} px`
         + (befund.ueber.length ? ' (zuerst ' + befund.ueber.join(', ') + ')' : ''));
-      const datei = path.join(OUT, `${seite.replace('.html','')}--${s.name}--${thema}.png`);
+      const datei = path.join(OUT, `${seite.replace('.html','').replace(/[?&=]/g,'_')}--${s.name}--${thema}.png`);
       await page.screenshot({ path:datei, fullPage:true });
       bilder++;
       if (meldungen.length) { fehler += meldungen.length; console.log(`\n${seite}  ${s.name}  ${thema}`); for (const m of meldungen) console.log('   ' + m); }

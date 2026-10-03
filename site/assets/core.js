@@ -155,10 +155,11 @@ const GF_ICONS={
   rad:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 3.5V8M12 16v4.5"/></svg>',
   tuer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v17"/><path d="M4 21h16"/><circle cx="13" cy="12" r="1" fill="currentColor"/></svg>',
   leute:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 20a5.5 5.5 0 0 1 11 0"/><path d="M13.5 15.2A4.5 4.5 0 0 1 21 18.5"/></svg>',
-  fahne:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4"/><path d="M6 4h12l-2.5 4L18 12H6"/></svg>'
+  fahne:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4"/><path d="M6 4h12l-2.5 4L18 12H6"/></svg>',
+  wegweiser:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 5.5h10.5L18.5 8l-3 2.5H5z"/><path d="M19 13.5H8.5L5.5 16l3 2.5H19z"/></svg>'
 };
 const GF_NAV=[
-  ["Heute",[["start","index.html","Für dich","home",null,"Deine Entscheidungen, seit gestern, nächste Fristen"],["neuigkeiten","neuigkeiten.html","Neuigkeiten","bell","newsBadge","Ticker, Sichtungskorb, Themenlage"],["besprechung","besprechung.html","Besprechung","check",null,"Agenda der GF, abarbeiten, Protokoll"]]],
+  ["Heute",[["start","index.html","Für dich","home",null,"Deine Entscheidungen, seit gestern, nächste Fristen"],["vorhaben","vorhaben.html","Vorhaben","wegweiser","vorhabenBadge","Woche, Board, Liste, Akte je Vorhaben"],["neuigkeiten","neuigkeiten.html","Neuigkeiten","bell","newsBadge","Ticker, Sichtungskorb, Themenlage"],["besprechung","besprechung.html","Besprechung","check",null,"Agenda der GF, abarbeiten, Protokoll"]]],
   ["Arbeiten",[["themen","board.html","Themen","board","themenBadge","Board, Kacheln, Liste, Entscheidungen"],["jahr","jahr.html","Jahr","cal",null,"Zyklus, Meilensteine, Rituale, Team, Plattformen, Habitat"],["saison","saison.html","Saison","rad",null,"Saison in vier Fragen: Phase und Herausforderung, wen wir haben, was sich geändert hat, wann was wie passieren kann"],["launch","launch.html","Launch","fahne",null,"Launch verteilen: wer macht was bis wann für alle fünf Festivals, bestätigen und nach Asana senden"],["besetzung","besetzung.html","Besetzung","leute",null,"Aus Gesprächen der Besetzungswerkstatt Aufgaben mit Person machen, je Festival und Bereich"],["capture","capture.html","Eingabe","pen",null,"Thema erfassen"]]],
   ["Vertretung",[["vertretung","vertretung.html","Abwesenheiten","schild",null,"Wer ist wann weg, wer vertritt, mit welcher Vollmacht"],["uebergabe","uebergabe.html","Übergabe","tausch","uebergabeBadge","Der Korb einer Abwesenheit: was vorher, was an die Vertretung, was ruht"],["rueckkehr","rueckkehr.html","Rückkehr","tuer",null,"Was in deiner Abwesenheit entschieden wurde und was auf dich wartet"]]],
   ["Verwalten",[["seiten","seiten.html","Wichtige Seiten","grid",null,"Arbeitsseiten mit Zugang"],["edit","bearbeiten.html","Bearbeiten","sliders",null,"Themen, Personen, Links pflegen"],["aufraeumen","aufraeumen.html","Aufräumen","check",null,"Jedem Eintrag einen Ausgang geben"]]]
@@ -223,6 +224,8 @@ function gfMountTopbar(active){
   const legacy=document.getElementById("subnav"); if(legacy){ legacy.style.display="none"; legacy.innerHTML=""; }
   /* V16: Sichtungskorb-Zähler (Kandidaten mit Status neu) an „Neuigkeiten“ */
   if(active!=="neuigkeiten") gfApi("news_list",{kinds:["kandidat"],statuses:["neu"],limit:500}).then(d=>{ const n=(d.items||[]).length; const b=el.querySelector("#newsBadge"); if(n>0){ b.textContent=n; b.style.display="inline-flex"; b.title=n+" Kandidaten im Sichtungskorb"; } }).catch(()=>{});
+  /* V31: offene Einwürfe plus Vorhaben mit Ball bei mir und Zustand überfällig, auch auf der Vorhaben-Seite selbst. */
+  gfVhBadge();
   if(active!=="themen") gfApi("list").then(d=>{ const n=(d.topics||[]).filter(t=>t.board_lane==="zu_besprechen" && t.kind!=="recurring").length; const b=el.querySelector("#themenBadge"); if(n>0){ b.textContent=n; b.style.display="inline-flex"; b.title=n+" Themen zu besprechen"; } }).catch(()=>{});
 }
 
@@ -670,3 +673,44 @@ async function gfLoadPlatforms(el, opts={}){
   el.querySelectorAll(".pf-ev .tk-row").forEach(row=>row.onclick=()=>{ const a=row.closest(".tk"); const o=a.classList.toggle("open"); row.setAttribute("aria-expanded",o?"true":"false"); });
   gfStagger(el,".pf-card");
 }
+
+/* ===========================================================
+   V31 (03.10.2026) · Vorhaben: gemeinsame Helfer für vorhaben.html, Für dich, Übergabe, Rückkehr und den Einwurf.
+   Ball: alex, lea, gf (GF gemeinsam), team und extern (mit Namen), offen (Ball fehlt). Frist: die maßgebliche Frist
+   aus der Sicht hh_vorhaben_lage (Frist des Vorhabens, sonst die nächste offene Punkt-Frist).
+   =========================================================== */
+const GF_VH_GRUPPE={ launch:"Launch-Strecke", geld:"Geld und Verträge", team:"Team und Rollen", partner:"Partner", system:"System", sonstiges:"Sonstiges" };
+const GF_VH_BALL=[["alex","Alex"],["lea","Lea"],["gf","GF gemeinsam"],["team","Team"],["extern","Wartet extern"],["offen","Ball fehlt"]];
+const GF_VH_ART={ whatsapp:"WhatsApp", telefon:"Telefon", mail:"Mail", plattform:"Plattform", notiz:"Notiz", einwurf:"Einwurf", uebergabe:"Übergabe", system:"Änderung", entscheidung:"Entscheidung", kalender:"Termin", termin:"Termin" };
+function gfVhIch(){ return gfWho()==="Lea"?"lea":"alex"; }
+function gfVhAndere(){ return gfWho()==="Lea"?"Alex":"Lea"; }
+function gfVhBallWort(b, name){ return ({alex:"Alex",lea:"Lea",gf:"GF gemeinsam",offen:"niemand"})[b] || ((name||"").trim() || (b==="team"?"Team":"extern")); }
+/* Ball als Bild plus Wort: Alex und Lea mit Foto, GF mit beiden, Team und extern mit Anfangsbuchstaben, ohne Ball gestrichelt. */
+function gfVhBallAv(b, name){
+  if(b==="alex"||b==="lea") return gfAvatarTag(b==="alex"?"Alex":"Lea","vh-av");
+  if(b==="gf") return `<span class="vh-av2" aria-hidden="true">${gfAvatarTag("Alex","vh-av")}${gfAvatarTag("Lea","vh-av")}</span>`;
+  if(b==="offen") return `<span class="vh-ini leer" aria-hidden="true">?</span>`;
+  const n=(name||"").trim(); return `<span class="vh-ini" aria-hidden="true">${gfEsc((n?n.charAt(0):(b==="team"?"T":"E")).toUpperCase())}</span>`;
+}
+function gfVhBall(v){ return `<span class="vh-ball">${gfVhBallAv(v.ball,v.ball_name)}<span>${gfEsc(gfVhBallWort(v.ball,v.ball_name))}</span></span>`; }
+function gfVhFrist(v){ return v.frist_massgeblich || v.frist || v.punkt_frist || null; }
+/* „Sa 10.10.“ */
+function gfVhTag(d){ if(!d) return ""; const t=new Date(d.slice(0,10)+"T12:00:00Z"); return t.toLocaleDateString("de-DE",{weekday:"short",timeZone:"UTC"}).replace(".","")+" "+t.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",timeZone:"UTC"}); }
+/* Zustand als Symbol plus Wort, nie Farbe allein. */
+function gfVhZustand(z){
+  const m={ bewegt:["action","●","bewegt"], ruhig:["","○","ruhig"], ueberfaellig:["warn","⚠","überfällig"], ball_fehlt:["crit","⚠","Ball fehlt"] }[z]||["","○",z||"ruhig"];
+  return `<span class="zst${m[0]?" "+m[0]:""}"><i aria-hidden="true">${m[1]}</i>${m[2]}</span>`;
+}
+/* „Bei mir“: Ball bei mir oder bei der GF, oder das Vorhaben gehört mir und wartet extern. */
+function gfVhMir(v, ich){ ich=ich||gfVhIch(); return v.ball===ich || v.ball==="gf" || (v.ball==="extern" && v.owner===ich); }
+function gfVhSeenKey(){ return "gf_vh_seen_"+gfWho(); }
+function gfVhSeen(){ try{ return localStorage.getItem(gfVhSeenKey())||""; }catch(e){ return ""; } }
+function gfVhMarkSeen(iso){ try{ localStorage.setItem(gfVhSeenKey(), iso||new Date().toISOString()); }catch(e){} }
+async function gfVhBadge(){
+  const b=document.getElementById("vorhabenBadge"); if(!b) return;
+  try{ const d=await gfApi("vorhaben_badge",{ person:gfWho() });
+    if(d.n>0){ b.textContent=d.n; b.style.display="inline-flex"; b.title=`${d.einwuerfe} Einwürfe warten, ${d.ueberfaellig_bei_mir} Vorhaben bei dir überfällig`; }
+    else b.style.display="none";
+  }catch(e){}
+}
+

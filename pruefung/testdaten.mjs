@@ -334,15 +334,75 @@ export const ANTWORT = {
       partners_moved:[ { name:'Partner A', lane:'aktiv', stage:'negotiation', owner:'Lea', signal:'gutes Gespräch', next_action:'Angebot schicken', target_on:tag(10), waiting_for:'', overdue:false, updated_at:zeit(-2) } ],
       partners_moved_count:1, overdue:[], overdue_count:0, upcoming:[] } },
 };
+
+/* V31 · Vorhaben: erfundene Vorhaben in der Form von hh_vorhaben_lage, Fristen relativ zu heute, damit Woche, Board und
+   Liste alle Zustände zeigen (überfällig, Ball fehlt, Konflikt, Launch, ohne Datum, Spalte mit mehr als fünf). */
+const vhZeile = (o) => ({ id:'vh-'+o.slug, slug:o.slug, title:o.title, gruppe:o.gruppe||'sonstiges', strand:null, metaphase:'Systembau, Launch und Formatpartner',
+  saison_row_id:o.saison?'lus':null, saison_item_id:null, ball:o.ball, ball_name:o.ball_name||null, ball_seit:zeit(-2), owner:o.owner||null,
+  stand:o.stand||null, naechster_schritt:o.schritt||null, frist:o.frist||null, frist_text:o.frist_text||null, konflikt:o.konflikt||null,
+  status:o.status||'aktiv', sort:o.sort||100, quellen:o.quellen||[], updated_by:'Alex', created_at:zeit(-5), updated_at:zeit(-1),
+  ball_vor_abwesenheit:null, absence_id:null, punkt_frist:o.punkt_frist||null, frist_massgeblich:o.frist||o.punkt_frist||null,
+  punkte_gesamt:o.pg??4, punkte_erledigt:o.pe??1, zuletzt_bewegt:zeit(o.bewegt??-1), themen_offen:o.th??1, kandidaten_neu:o.kd??2,
+  einwuerfe_offen:o.ew??0, vorschlaege_offen:0, zustand:o.zustand||'ruhig',
+  saison:o.saison?{ label:'Lusatia', vvk_start:o.frist, item_title:'VVK-Start', item_von:o.frist, item_bis:o.frist }:null });
+export const VORHABEN = [
+  vhZeile({ slug:'xceed', title:'XCeed Ticketing-Vertrag', gruppe:'geld', ball:'lea', owner:'gf', frist:tag(10), sort:5, pg:9, pe:4, zustand:'bewegt',
+    stand:'Alles verhandelt bis auf Bürgschaftstext und Freigabe.', schritt:'Bürgschaftstext einarbeiten und an XCeed senden', th:10, kd:32,
+    quellen:[{ quelle:'Gmail Alex', at:zeit(-0.1) },{ quelle:'Neuigkeiten', at:zeit(-0.2) }] }),
+  vhZeile({ slug:'liquiditaet', title:'Liquidität viertes Quartal', gruppe:'geld', ball:'lea', owner:'lea', punkt_frist:tag(3), sort:8, zustand:'bewegt', stand:'Lücke bis Jahresende.', schritt:'Zahlungsplan Oktober' }),
+  vhZeile({ slug:'draussenbande', title:'Draußenbande · Vorverkauf', gruppe:'launch', ball:'lea', owner:'lea', frist:tag(7), sort:10, zustand:'bewegt', schritt:'Familienpass festlegen, Shop öffnen' }),
+  vhZeile({ slug:'gls', title:'GLS-Kredit Glamping und Automaten', gruppe:'geld', ball:'extern', ball_name:'GLS (Michael Wegstein)', owner:'alex', frist:tag(-3), sort:25, zustand:'ueberfaellig',
+    konflikt:'Rückmeldung war bis Ende September erbeten', schritt:'Bei GLS nachfassen' }),
+  vhZeile({ slug:'lusatia', title:'Lusatia · Vorverkauf', gruppe:'launch', ball:'alex', owner:'alex', frist:tag(12), sort:20, saison:true, schritt:'Seite fertigstellen, Ticketing anlegen' }),
+  vhZeile({ slug:'subardo', title:'Subardo als Formatpartner', gruppe:'partner', ball:'lea', owner:'gf', frist:tag(3), sort:35, zustand:'bewegt',
+    konflikt:'Gesprächstermin liegt in Leas Abwesenheit', schritt:'Fragen einsammeln, Termin festlegen' }),
+  vhZeile({ slug:'freude-pakete', title:'Pakete und Flex-Tickets mit Freude eG', gruppe:'launch', ball:'offen', frist:tag(43), sort:40, zustand:'ball_fehlt', schritt:'Zuständigkeit festlegen', pg:3, pe:0 }),
+  vhZeile({ slug:'bynature', title:'by nature · Vorverkauf', gruppe:'launch', ball:'team', ball_name:'Helge', owner:'gf', frist:tag(29), sort:30, schritt:'Ansprache-Plan' }),
+  vhZeile({ slug:'helge', title:'Rolle Helge ab 2027', gruppe:'team', ball:'gf', owner:'gf', frist:tag(89), sort:80, schritt:'Rollenbeschreibung mit Befugnissen und Zielen' }),
+  vhZeile({ slug:'backoffice', title:'Backoffice und Buchhaltung', gruppe:'team', ball:'lea', owner:'lea', sort:90, schritt:'Entscheidung treffen' }),
+  vhZeile({ slug:'booking', title:'Booking-Standards', gruppe:'team', ball:'lea', owner:'lea', sort:95, schritt:'Paket schnüren' }),
+  vhZeile({ slug:'habitat-hub', title:'Habitat Hub und Aufgabenbereiche', gruppe:'system', ball:'alex', owner:'alex', frist:tag(89), sort:100, zustand:'bewegt', schritt:'Team einführen' }),
+];
+const vhPunkte = [
+  { id:'p1', vorhaben_id:'vh-xceed', titel:'Bürgschaftstext auf Deutsch', position:null, stand:'in Arbeit', wer:'Niclaas', frist:tag(1), erledigt:false, erledigt_at:null, erledigt_by:null, sort:10, quelle:'seed', created_at:zeit(-5), updated_at:zeit(-1) },
+  { id:'p2', vorhaben_id:'vh-xceed', titel:'Schriftliche Freigabe Infield', position:null, stand:null, wer:'Lea', frist:tag(-1), erledigt:false, erledigt_at:null, erledigt_by:null, sort:20, quelle:'seed', created_at:zeit(-5), updated_at:zeit(-1) },
+  { id:'p3', vorhaben_id:'vh-xceed', titel:'Auszahlung ab Monat 1 schriftlich', position:null, stand:'mündlich zugesagt', wer:'Alex', frist:null, erledigt:false, erledigt_at:null, erledigt_by:null, sort:30, quelle:'seed', created_at:zeit(-5), updated_at:zeit(-1) },
+  { id:'p4', vorhaben_id:'vh-xceed', titel:'Entscheidung für XCeed', position:null, stand:null, wer:'GF', frist:null, erledigt:true, erledigt_at:zeit(-9), erledigt_by:'Alex', sort:40, quelle:'seed', created_at:zeit(-9), updated_at:zeit(-9) },
+];
+const vhVerlauf = [
+  { id:'e1', vorhaben_id:'vh-xceed', happened_at:zeit(-0.2), art:'telefon', wer:'Alex mit Victor', text:'Auszahlung ab Monat 1 mündlich zugesagt, schriftlich bis Montag.', tag:null, status:'bestaetigt', source_ref:'seed:1', source_url:null, created_at:zeit(-0.2) },
+  { id:'e2', vorhaben_id:'vh-xceed', happened_at:zeit(-0.5), art:'system', wer:'Abgleich', text:'Mail von XCeed spricht dafür, dass „Entscheidung für XCeed“ erledigt ist.', tag:'Vorschlag: Punkt erledigt: Entscheidung für XCeed', status:'vorschlag', source_ref:'abgleich:alex:vorschlag:p4:m1', source_url:null, created_at:zeit(-0.5) },
+  { id:'e3', vorhaben_id:'vh-xceed', happened_at:zeit(-1), art:'uebergabe', wer:'Alex', text:'Ball von Alex an Lea', tag:null, status:'bestaetigt', source_ref:null, source_url:null, created_at:zeit(-1) },
+  { id:'e4', vorhaben_id:'vh-xceed', happened_at:zeit(-9), art:'entscheidung', wer:'Alex und Lea', text:'XCeed wird Ticketanbieter.', tag:'Entscheidung', status:'bestaetigt', source_ref:'seed:2', source_url:null, created_at:zeit(-9) },
+];
+export const VH_ANTWORT = {
+  vorhaben_list: () => ({ stand:zeit(0), heute, vorhaben:VORHABEN, metaphase:{ title:'Analyse und Retro', starts_on:tag(-12), ends_on:tag(12) },
+    abwesenheiten:[A1].map(a=>({ id:a.id, person:a.person, von:a.von, bis:a.bis, bis_geschaetzt:a.bis_geschaetzt, status:a.status, vertretung_standard:a.vertretung_standard, test:a.test })),
+    einwuerfe_offen:1, einwuerfe_ohne_vorhaben:1 }),
+  vorhaben_badge: { einwuerfe:1, ueberfaellig_bei_mir:0, n:1 },
+  vorhaben_get: (p) => { const v = VORHABEN.find(x => x.slug === p.slug || x.id === p.id || x.id === p.slug) || VORHABEN[0];
+    return { vorhaben:v, punkte:vhPunkte.filter(x=>x.vorhaben_id===v.id), verlauf:vhVerlauf.filter(x=>x.vorhaben_id===v.id),
+      themen:v.slug==='xceed'?[{ id:'t1', title:'Vertrag mit dem Landkreis verlängern', board_lane:'zu_besprechen', gate:'gf' }]:[],
+      kandidaten:v.slug==='xceed'?[{ id:'n3', title:'Pressefrage zur Zeltwiese', relevance:'hoch' }]:[], einwuerfe:[] }; },
+  einwurf_list: { einwuerfe:[ { id:'w1', created_at:zeit(-0.3), von:'Lea', kanal:'mail', text:'Mail von Niclaas: Bürgschaftstext ist fertig, liegt im Ordner.', vorhaben_id:null, status:'vorgeschlagen',
+    vorschlag:{ vorhaben_id:'vh-xceed', vorhaben_slug:'xceed', vorhaben_titel:'XCeed Ticketing-Vertrag', sicherheit:0.86,
+      verlauf:{ art:'mail', wer:'Niclaas an Lea', text:'Bürgschaftstext ist fertig und liegt im Ordner.', tag:null },
+      punkte:[{ id:'p1', titel:'Bürgschaftstext auf Deutsch', stand:'fertig', erledigt:true }], neue_punkte:[{ titel:'Text an XCeed senden', wer:'Lea', frist:tag(2) }],
+      ball:null, ball_name:null, naechster_schritt:'Bürgschaftstext an XCeed senden', frist:null, benachrichtigung:'morgen', verworfen:[] },
+    vorhaben:null } ] },
+};
+
 export const FALLBACK = { ok:true, items:[], topics:[], gains:[] };
 // Schreibende Aktionen darf der Lauf beantworten, ohne dass die Testdaten sie kennen; alles andere ist ein Testfehler.
 export const SCHREIBEND = new Set(['add','update','delete','capture','capture_many','checkin','score_event','decision_add','decision_update','decision_delete',
   'session_start','session_end','session_delete','ritual_toggle','ritual_save','ritual_delete','milestone_save','milestone_delete','news_update','news_accept','news_delete',
   'people_save','people_delete','link_add','link_delete','sites_save','sites_delete','category_save','gate_set','gate_set_many','inbox_promote','inbox_reject','tidy_suggest',
-  'absence_end','absence_tick','deputies_set','handover_build','handover_dossier','handover_log_add','launch_set']);
+  'absence_end','absence_tick','deputies_set','handover_build','handover_dossier','handover_log_add','launch_set',
+  'vorhaben_save','punkt_save','punkt_toggle','punkt_delete','verlauf_add','verlauf_status','vorhaben_verknuepfen','einwurf_verwerfen','schicht_uebergabe']);
 
 /* Je Seite: Kerninhalt, der nach dem Laden gefuellt sein muss (Text laenger als 20 Zeichen).
    Ohne diese Probe wuerde eine leer gebliebene Seite als bestanden durchgehen, weil gfGate das Tor schon vorher versteckt. */
 
 
 /* Schreibende Aktionen darf der Lauf mit einem leeren Erfolg beantworten; alles andere ohne Testdaten ist ein Testfehler. */
+Object.assign(ANTWORT, VH_ANTWORT);
