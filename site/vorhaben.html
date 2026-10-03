@@ -407,11 +407,11 @@ function punktForm(p){
 /* ---------- Einwurf und Übergabe (Dialoge aus core.js, 31c und 31d) ---------- */
 function einwurf(o={}){
   if(typeof gfEinwurf==="function") gfEinwurf({ ...o, onDone:async(r)=>{ await laden(true); const slug=r?.vorhaben?.slug; if(slug) oeffneAkte(slug,{tab:"verlauf"}); else if(AKTE_SLUG) oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); } });
-  else gfToast("Der Einwurf kommt mit dem nächsten Teilpaket.");
+  else gfToast("Der Einwurf ließ sich nicht laden. Bitte die Seite neu laden.");
 }
 $("#vhEinwurf").onclick=()=>einwurf(AKTE?{ vorhaben_id:AKTE.vorhaben.id }:{});
 $("#vhFab").onclick=()=>einwurf(AKTE?{ vorhaben_id:AKTE.vorhaben.id }:{});
-$("#vhWarte").onclick=()=>{ if(typeof gfEinwurfWarteschlange==="function") gfEinwurfWarteschlange({ onDone:()=>laden(true) }); else gfToast("Die Warteschlange kommt mit dem nächsten Teilpaket."); };
+$("#vhWarte").onclick=()=>gfEinwurfWarteschlange({ onDone:()=>laden(true) });
 $("#vhAkte").addEventListener("click",e=>{ const b=e.target.closest(".vh-warte.klein"); if(b && typeof gfEinwurfWarteschlange==="function"){ e.stopPropagation(); gfEinwurfWarteschlange({ vorhaben_id:AKTE.vorhaben.id, onDone:()=>{ laden(true); oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); } }); } }, true);
 $("#vhUebergabe").onclick=()=>{ if(typeof vhUebergabe==="function") vhUebergabe(); else gfToast("Die Übergabe kommt mit dem nächsten Teilpaket."); };
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && AKTE_SLUG && !$("#vhModal").classList.contains("open") && !document.querySelector(".modal-back.open")) schliesseAkte(); });

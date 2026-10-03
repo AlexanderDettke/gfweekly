@@ -59,6 +59,7 @@
   </section>
 </div>
 
+<button type="button" class="vh-fab" id="fdFab" aria-label="Einwurf: etwas eintragen"><span aria-hidden="true">+</span> Einwurf</button>
 <div class="toast" id="toast"></div>
 <script src="/assets/core.js?v=29"></script>
 <script src="/assets/game.js?v=29"></script>
@@ -214,7 +215,11 @@ async function load(){
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("start");
   const wd=NOW.toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long"});
-  gfMountHero("ankunft", `${gfAvatarTag(gfWho(),"hero-av")}Guten Tag, ${gfEsc(gfWho())}`, `<span class="hero-date">${wd} · ${GF_APP_SUB}</span>`, {slim:true});
+  gfMountHero("ankunft", `${gfAvatarTag(gfWho(),"hero-av")}Guten Tag, ${gfEsc(gfWho())}`, `<span class="hero-date">${wd} · ${GF_APP_SUB}</span>`,
+    {slim:true, aside:`<button type="button" class="btn btn-primary fd-einwurf" id="fdEinwurf"><span aria-hidden="true">+</span> Einwurf</button>`});
+  /* V31c · Einwurf aus Für dich: oben im Kopf, am Handy als fester Knopf unten. */
+  const einwurf=()=>gfEinwurf({ onDone:()=>{ load().catch(()=>{}); } });
+  $("#fdEinwurf").onclick=einwurf; $("#fdFab").onclick=einwurf;
   document.addEventListener("gf-who",e=>{ gfHeroText(`${gfAvatarTag(e.detail,"hero-av")}Guten Tag, ${gfEsc(e.detail)}`,null); if(GL) renderAll(); });
   try{ await load(); }catch(e){ $("#fdEntL").innerHTML=`<div class="empty">Konnte nicht laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
 });

@@ -312,6 +312,48 @@ console.log('\n== Vorhaben (V31b): Ansichten, Akte, Punkt, Ball ==');
   await q.close();
 }
 
+console.log('\n== Einwurf (V31c) ==');
+{
+  frisch();
+  const p = await seite('/vorhaben.html');
+  await p.locator('#vhEinwurf').click();
+  pruefe('Dialog fragt „Was ist passiert?“ mit Diktier-Hinweis', (await p.locator('#gfEwModal .vh-ew').innerText()).includes('Mikrofon der Tastatur'));
+  await p.locator('#gfEwWeiter').click(); await p.waitForTimeout(150);
+  pruefe('ohne Text geht nichts weiter', !letzte('einwurf_add') && (await p.locator('.vh-ew-fehler').count()) === 1);
+  await p.locator('#gfEwText').fill('Telefonat mit Victor: Auszahlung ab Monat 1 schriftlich bis Montag');
+  await p.locator('#gfEwWeiter').click(); await p.waitForTimeout(400);
+  const add = letzte('einwurf_add');
+  pruefe('einwurf_add mit Text, Kanal Knopf und by', add && add.nutzlast.kanal === 'knopf' && add.nutzlast.by === 'Alex' && /Victor/.test(add.nutzlast.text));
+  pruefe('Erkannt zeigt das Vorhaben', (await p.locator('.vh-ew-erkannt').innerText()).includes('XCeed'));
+  pruefe('Vorschlag als Haken: Verlauf, Punkt, neuer Punkt, Ball, Frist', await p.locator('.vh-ew-haken input[type=checkbox]').count() === 5);
+  pruefe('Ball ist nicht vorausgewählt', !(await p.locator('[data-aus="ball"]').isChecked()));
+  pruefe('Verworfenes ist sichtbar', (await p.locator('.vh-ew-verw').innerText()).includes('Nicht übernommen'));
+  await p.locator('[data-aus="neu:0"]').uncheck();
+  await p.locator('#gfEwModal .chip[data-v="sofort"]').click();
+  await p.locator('#gfEwOk').click(); await p.waitForTimeout(400);
+  const ap = letzte('einwurf_apply');
+  pruefe('Übernehmen schickt Auswahl, Revision, gesehenen Ball und Benachrichtigung',
+    ap && ap.nutzlast.revision === 'rev-1' && ap.nutzlast.expect_ball === 'lea' && ap.nutzlast.benachrichtigung === 'sofort'
+      && ap.nutzlast.auswahl.verlauf === true && ap.nutzlast.auswahl.punkte.includes('p3') && ap.nutzlast.auswahl.neue_punkte.length === 0
+      && ap.nutzlast.auswahl.ball === false && ap.nutzlast.auswahl.frist === true, JSON.stringify(ap && ap.nutzlast));
+  pruefe('Dialog schließt, Akte zeigt den Verlauf', await p.locator('#gfEwModal.open').count() === 0 && new URL(p.url()).searchParams.get('tab') === 'verlauf');
+  /* Warteschlange: Mail-Einwurf aus dem Abgleich */
+  await p.locator('#vhWarte').click(); await p.waitForTimeout(400);
+  pruefe('Warteschlange zeigt „1 von 1“ und die Herkunft', (await p.locator('#gfEwH').innerText()).includes('1 von 1') && (await p.locator('#gfEwModal').innerText()).includes('Mail · Lea'));
+  await p.locator('#gfEwAendern').click();
+  await p.locator('#gfEwModal .chip[data-v="vh-lusatia"]').click(); await p.waitForTimeout(400);
+  pruefe('anderes Vorhaben holt einen neuen Vorschlag', letzte('einwurf_vorschlag')?.nutzlast.vorhaben_id === 'vh-lusatia');
+  await p.locator('#gfEwSpaeter').click(); await p.waitForTimeout(200);
+  pruefe('Später schließt ohne Entscheidung', await p.locator('#gfEwModal.open').count() === 0 && !gesendet.some(x => x.action === 'einwurf_verwerfen'));
+  await p.close();
+  frisch();
+  const f = await seite('/index.html');
+  pruefe('Für dich hat den Einwurf-Knopf', await f.locator('#fdEinwurf').isVisible());
+  await f.locator('#fdEinwurf').click(); await f.waitForTimeout(300);
+  pruefe('Einwurf öffnet auf Für dich', await f.locator('#gfEwModal.open').count() === 1);
+  await f.close();
+}
+
 await browser.close();
 server.close();
 if (meldungen.length) { console.log('\nKonsolenmeldungen im letzten Fall:'); for (const m of meldungen) console.log('   ' + m.slice(0,200)); fehler += meldungen.length; }

@@ -395,6 +395,17 @@ export const VH_ANTWORT = {
     return { vorhaben:v, punkte:vhPunkte.filter(x=>x.vorhaben_id===v.id), verlauf:vhVerlauf.filter(x=>x.vorhaben_id===v.id),
       themen:v.slug==='xceed'?[{ id:'t1', title:'Vertrag mit dem Landkreis verlängern', board_lane:'zu_besprechen', gate:'gf' }]:[],
       kandidaten:v.slug==='xceed'?[{ id:'n3', title:'Pressefrage zur Zeltwiese', relevance:'hoch' }]:[], einwuerfe:[] }; },
+  /* Einwurf: Vorschlag wie aus einwurfPruefen, mit revision und ball_gesehen. */
+  einwurf_add: (p) => ({ einwurf:{ id:'w-neu', created_at:zeit(0), von:p.von||'Alex', kanal:p.kanal||'knopf', text:p.text, vorhaben_id:'vh-xceed', status:'vorgeschlagen',
+    vorschlag:{ vorhaben_id:'vh-xceed', vorhaben_slug:'xceed', vorhaben_titel:'XCeed Ticketing-Vertrag', ball_gesehen:'lea', sicherheit:0.9, revision:'rev-1',
+      verlauf:{ art:'telefon', wer:'Alex mit Victor', text:'Victor sagt Auszahlung ab Monat 1 zu, schriftlich bis Montag.', tag:null },
+      punkte:[{ id:'p3', titel:'Auszahlung ab Monat 1 schriftlich', stand:'mündlich zugesagt', erledigt:false }],
+      neue_punkte:[{ titel:'Bestätigung von Victor abholen', wer:'Alex', frist:tag(2) }],
+      ball:'alex', ball_name:null, naechster_schritt:null, frist:tag(2), benachrichtigung:'morgen', verworfen:['Punkt x ist kein offener Punkt dieses Vorhabens'], vertraulich:[] } }, ki_fehler:null }),
+  einwurf_vorschlag: (p) => ({ einwurf:{ id:p.id, created_at:zeit(0), von:'Alex', kanal:'knopf', text:'Text', vorhaben_id:p.vorhaben_id, status:'vorgeschlagen',
+    vorschlag:{ vorhaben_id:p.vorhaben_id, sicherheit:1, revision:'rev-2', verlauf:{ art:'notiz', wer:'Alex', text:'Neu geprüft.' }, punkte:[], neue_punkte:[], ball:null, naechster_schritt:null, frist:null, benachrichtigung:'morgen', verworfen:[] } }, ki_fehler:null }),
+  einwurf_apply: (p) => { const v = VORHABEN.find(x => x.id === p.vorhaben_id) || VORHABEN[0];
+    return { ok:true, vorhaben:v, verlauf:{ id:'e-neu', text:'eingetragen', art:'telefon' }, punkte:(p.auswahl&&p.auswahl.punkte)||[], neue_punkte:[], felder:null, ticker:p.benachrichtigung==='sofort', uebersprungen:[] }; },
   einwurf_list: { einwuerfe:[ { id:'w1', created_at:zeit(-0.3), von:'Lea', kanal:'mail', text:'Mail von Niclaas: Bürgschaftstext ist fertig, liegt im Ordner.', vorhaben_id:null, status:'vorgeschlagen',
     vorschlag:{ vorhaben_id:'vh-xceed', vorhaben_slug:'xceed', vorhaben_titel:'XCeed Ticketing-Vertrag', sicherheit:0.86,
       verlauf:{ art:'mail', wer:'Niclaas an Lea', text:'Bürgschaftstext ist fertig und liegt im Ordner.', tag:null },

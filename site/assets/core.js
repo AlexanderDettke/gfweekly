@@ -713,3 +713,163 @@ async function gfVhBadge(){
     else b.style.display="none";
   }catch(e){}
 }
+
+/* ===========================================================
+   V31c (03.10.2026) · Einwurf: ein Dialog für „Was ist passiert?“, erreichbar aus vorhaben.html, der Akte und Für dich.
+   Schritt 1: Text (am Handy über das Mikrofon der Tastatur diktiert), optional Vorhaben vorwählen, „Weiter“ ruft einwurf_add.
+   Schritt 2: Vorschlag der KI als Haken (Verlauf, Punkte, neue Punkte, Ball, nächster Schritt, Frist), Benachrichtigung,
+   Bearbeiten, Übernehmen (einwurf_apply mit revision und gesehenem Ball). Ohne Vorschlag: Vorhaben von Hand, nur Verlauf.
+   Nichts wird angewendet, bevor jemand „Übernehmen“ drückt. Die Warteschlange (Mail, Cowork, WhatsApp) nutzt Schritt 2.
+   =========================================================== */
+let GF_VH_LISTE=null;
+async function gfVhListe(neu){ if(!GF_VH_LISTE||neu){ const d=await gfApi("vorhaben_list"); GF_VH_LISTE=d.vorhaben||[]; } return GF_VH_LISTE; }
+function gfEwModal(){
+  let m=document.getElementById("gfEwModal");
+  if(!m){ m=document.createElement("div"); m.id="gfEwModal"; m.className="modal-back vh-ew-back"; document.body.appendChild(m); }
+  return m;
+}
+const GF_EW_KANAL={ knopf:"Knopf", sprache:"Sprache", cowork:"Cowork", whatsapp:"WhatsApp", mail:"Mail" };
+/* Öffnet den Einwurf. o.vorhaben_id wählt vor, o.einwurf öffnet einen vorhandenen (Warteschlange), o.onDone(ergebnis) nach dem Übernehmen,
+   o.kopf: Zusatzzeile (etwa „1 von 3“), o.weiter: Rückruf für „Später“ und nach jeder Entscheidung in der Warteschlange. */
+async function gfEinwurf(o={}){
+  const m=gfEwModal(); const zuvor=document.activeElement;
+  const S={ schritt:o.einwurf?2:1, ew:o.einwurf||null, ziel:o.einwurf?.vorhaben_id||o.vorhaben_id||null, bearbeiten:false, text:"", fehler:"", laedt:false, ki_fehler:"", ben:null, aus:null, aendern:false };
+  let liste=[]; try{ liste=await gfVhListe(true); }catch(e){}
+  const vhVon=id=>liste.find(v=>v.id===id)||null;
+  const vhSlug=s=>liste.find(v=>v.slug===s)||null;
+  const zu=(ergebnis)=>{ m.classList.remove("open"); m.innerHTML=""; document.removeEventListener("keydown",esc); try{ zuvor&&zuvor.focus&&zuvor.focus(); }catch(e){} return ergebnis; };
+  const esc=e=>{ if(e.key==="Escape" && !S.laedt){ zu(); if(o.weiter) o.weiter("abbruch"); } };
+  document.addEventListener("keydown",esc);
+  const vs=()=>S.ew&&S.ew.vorschlag||null;
+  /* Ziel des Vorschlags: vorhaben_id aus der Edge Function, sonst slug aus dem Mail-Abgleich. */
+  const vsZiel=()=>{ const v=vs(); if(!v) return null; return v.vorhaben_id || (vhSlug(v.vorhaben_slug)||{}).id || null; };
+  const passt=()=>!!vs() && vsZiel()===S.ziel;
+  function standardAuswahl(){
+    const v=vs(); if(!v) return { verlauf:true, punkte:[], neue_punkte:[], ball:false, naechster_schritt:false, frist:false };
+    return { verlauf:true, punkte:(v.punkte||[]).map(p=>p.id), neue_punkte:(v.neue_punkte||[]).map((_,i)=>i), ball:false, naechster_schritt:!!v.naechster_schritt, frist:!!v.frist };
+  }
+  const chipsVorhaben=(name, mitAuto)=>`<div class="vh-ew-liste">${gfChips(name, [...(mitAuto?[["","automatisch erkennen"]]:[]), ...liste.map(v=>[v.id, v.title])], S.ziel||"", { cls:"compact", label:"Vorhaben", attr:`id="${name}"` })}</div>`;
+  function render(){
+    const v=vs(), ziel=vhVon(S.ziel), istPassend=passt();
+    if(!S.aus) S.aus=standardAuswahl();
+    if(S.ben===null) S.ben=(v&&istPassend&&v.benachrichtigung)||"morgen";
+    const herkunft=S.ew?`${GF_EW_KANAL[S.ew.kanal]||S.ew.kanal} · ${gfEsc(S.ew.von)} · ${gfEsc(gfNewsWhen(S.ew.created_at))}`:"";
+    let body="";
+    if(S.schritt===1){
+      body=`<label class="vh-fld">Was ist passiert?<textarea id="gfEwText" rows="5" maxlength="4000" placeholder="Telefonat mit …, vereinbart ist …">${gfEsc(S.text)}</textarea></label>
+        <p class="vh-ew-hint">Am Handy: Mikrofon der Tastatur antippen und sprechen.</p>
+        <div class="vh-fld"><span>Vorhaben (optional, sonst erkennt es das Haus)</span>${chipsVorhaben("gfEwZiel1", true)}</div>`;
+    } else {
+      const vl=v&&v.verlauf||{}; const vert=(v&&v.vertraulich)||[];
+      const zeigeText=S.bearbeiten || !istPassend || vert.includes("verlauf") || !v || !vl.text;
+      const textWert=S.text || (istPassend&&vl.text) || S.ew.text;
+      const zeilen=[];
+      if(v && istPassend){
+        zeilen.push(["verlauf", `Eintrag in den Verlauf · ${gfEsc(GF_VH_ART[vl.art]||vl.art||"Notiz")} · ${gfEsc(vl.wer||S.ew.von)}`, true]);
+        (v.punkte||[]).forEach(p=>zeilen.push(["punkt:"+p.id, p.erledigt?`Punkt „${gfEsc(p.titel||"")}“ ist erledigt${p.stand?` · Stand: ${gfEsc(p.stand)}`:""}`:`Punkt „${gfEsc(p.titel||"")}“: Stand <b>${gfEsc(p.stand||"")}</b>`, S.aus.punkte.includes(p.id)]));
+        (v.neue_punkte||[]).forEach((n,i)=>zeilen.push(["neu:"+i, `Neuer Punkt: ${gfEsc(n.titel)}${n.wer?` · ${gfEsc(n.wer)}`:""}${n.frist?` · bis ${gfEsc(gfVhTag(n.frist))}`:""}`, S.aus.neue_punkte.includes(i)]));
+        if(v.ball) zeilen.push(["ball", `Ball an ${gfEsc(gfVhBallWort(v.ball, v.ball_name))} geben <small>(liegt jetzt bei ${gfEsc(ziel?gfVhBallWort(ziel.ball,ziel.ball_name):"?")})</small>`, S.aus.ball]);
+        if(v.naechster_schritt) zeilen.push(["schritt", `Nächster Schritt: ${gfEsc(v.naechster_schritt)}`, S.aus.naechster_schritt]);
+        if(v.frist) zeilen.push(["frist", `Neue Frist: ${gfEsc(gfVhTag(v.frist))}`, S.aus.frist]);
+      }
+      const sicher=v&&istPassend&&typeof v.sicherheit==="number"&&v.sicherheit<0.5&&!o.vorhaben_id;
+      body=`${herkunft?`<p class="vh-ew-hint">${herkunft}</p>`:""}
+        <blockquote class="vh-ew-roh">${gfEsc(S.ew.text)}</blockquote>
+        ${S.ki_fehler?`<div class="vh-ew-warn" role="status">${gfZustand("warn","ohne Vorschlag")} ${gfEsc(S.ki_fehler)} Wähle das Vorhaben von Hand; übernommen wird dann der Verlaufseintrag.</div>`:""}
+        <div class="vh-ew-erkannt"><span>${v&&istPassend?"Erkannt":"Vorhaben"}</span>
+          ${ziel?`<b>${gfEsc(ziel.title)}</b>${sicher?` ${gfZustand("warn","unsicher, bitte prüfen")}`:""}`:`<b>noch keins gewählt</b>`}
+          <button type="button" class="btn btn-sm btn-ghost" id="gfEwAendern" aria-expanded="${S.aendern||!ziel}">${ziel?"ändern":"wählen"}</button></div>
+        ${S.aendern||!ziel?`<div class="vh-fld">${chipsVorhaben("gfEwZiel2", false)}${v?`<p class="vh-ew-hint">Ein anderes Vorhaben holt einen neuen Vorschlag, der zu diesem Vorhaben passt.</p>`:""}</div>`:""}
+        ${v&&!istPassend&&ziel?`<div class="vh-ew-warn" role="status">${gfZustand("warn","Vorschlag passt nicht")} Der Vorschlag galt für ein anderes Vorhaben. Übernommen wird nur der Verlaufseintrag.</div>`:""}
+        ${vert.includes("verlauf")?`<div class="vh-ew-warn" role="status">${gfZustand("warn","vertraulich?")} Der vorgeschlagene Text sah nach vertraulichen Angaben aus und ist leer. Bitte selbst formulieren, was in die Akte darf.</div>`:""}
+        ${v&&istPassend&&!zeigeText?`<p class="vh-ew-vorschau">${gfEsc(vl.text)}</p>`:""}
+        ${zeigeText?`<label class="vh-fld">Verlaufseintrag<textarea id="gfEwVerlauf" rows="3" maxlength="2000">${gfEsc(textWert)}</textarea></label>`:""}
+        ${S.bearbeiten&&v&&istPassend&&v.naechster_schritt?`<label class="vh-fld">Nächster Schritt<input id="gfEwSchritt" maxlength="1000" value="${gfEsc(S.schritt_text||v.naechster_schritt)}"></label>`:""}
+        ${zeilen.length?`<fieldset class="vh-ew-haken"><legend>Das ändert sich</legend>${zeilen.map(([k,l,an])=>`<label><input type="checkbox" data-aus="${k}" ${an?"checked":""}><span>${l}</span></label>`).join("")}</fieldset>`:""}
+        ${v&&(v.verworfen||[]).length?`<details class="vh-ew-verw"><summary>Nicht übernommen (${v.verworfen.length})</summary><ul>${v.verworfen.map(x=>`<li>${gfEsc(x)}</li>`).join("")}</ul></details>`:""}
+        <div class="vh-fld"><span>${gfEsc(gfVhAndere())} erfährt es</span>${gfChips("gfEwBen", [["morgen","im Morgenbericht"],["sofort","sofort"]], S.ben, { cls:"compact", label:"Benachrichtigung", attr:'id="gfEwBen"' })}</div>`;
+    }
+    m.innerHTML=`<div class="modal vh-dlg vh-ew" role="dialog" aria-modal="true" aria-labelledby="gfEwH">
+      <div class="modal-h"><h3 id="gfEwH">Einwurf${o.kopf?` <small>${gfEsc(o.kopf)}</small>`:""}</h3><button type="button" class="icon-btn" data-ew-x aria-label="Schließen">✕</button></div>
+      <div class="vh-dlg-b">${body}${S.fehler?`<div class="vh-ew-fehler" role="alert">${gfEsc(S.fehler)}</div>`:""}${S.laedt?`<div class="loading" role="status">${S.schritt===1?"Das Haus ordnet zu …":"Einen Augenblick …"}</div>`:""}</div>
+      <div class="modal-f">${S.schritt===1
+        ?`<button type="button" class="btn btn-brand" data-ew-x>Abbrechen</button><button type="button" class="btn btn-primary" id="gfEwWeiter" style="margin-left:auto" ${S.laedt?"disabled":""}>Weiter</button>`
+        :`${o.weiter?`<button type="button" class="btn btn-brand" id="gfEwSpaeter">Später</button>`:""}<button type="button" class="btn btn-ghost" id="gfEwVerwerfen">Verwerfen</button>${vs()&&passt()?`<button type="button" class="btn btn-brand" id="gfEwBearb" aria-pressed="${S.bearbeiten}">Bearbeiten</button>`:""}<button type="button" class="btn btn-primary" id="gfEwOk" style="margin-left:auto" ${S.laedt||!S.ziel?"disabled":""}>Übernehmen</button>`}</div>
+    </div>`;
+    m.classList.add("open");
+    m.querySelectorAll("[data-ew-x]").forEach(b=>b.onclick=()=>{ if(S.laedt) return; zu(); if(o.weiter) o.weiter("abbruch"); });
+    const t1=m.querySelector("#gfEwText"); if(t1){ t1.oninput=()=>{ S.text=t1.value; }; if(!S.laedt) setTimeout(()=>t1.focus(),30); }
+    const z1=m.querySelector("#gfEwZiel1"); if(z1) z1.addEventListener("change",()=>{ S.ziel=z1.value||null; });
+    const z2=m.querySelector("#gfEwZiel2"); if(z2) z2.addEventListener("change",()=>neuesZiel(z2.value));
+    const vt=m.querySelector("#gfEwVerlauf"); if(vt) vt.oninput=()=>{ S.text=vt.value; };
+    const st=m.querySelector("#gfEwSchritt"); if(st) st.oninput=()=>{ S.schritt_text=st.value; };
+    const bn=m.querySelector("#gfEwBen"); if(bn) bn.addEventListener("change",()=>{ S.ben=bn.value; });
+    m.querySelectorAll("[data-aus]").forEach(c=>c.onchange=()=>{ const k=c.dataset.aus;
+      if(k==="verlauf") S.aus.verlauf=c.checked; else if(k==="ball") S.aus.ball=c.checked; else if(k==="schritt") S.aus.naechster_schritt=c.checked; else if(k==="frist") S.aus.frist=c.checked;
+      else if(k.startsWith("punkt:")){ const id=k.slice(6); S.aus.punkte=S.aus.punkte.filter(x=>x!==id); if(c.checked) S.aus.punkte.push(id); }
+      else if(k.startsWith("neu:")){ const i=+k.slice(4); S.aus.neue_punkte=S.aus.neue_punkte.filter(x=>x!==i); if(c.checked) S.aus.neue_punkte.push(i); } });
+    const w=m.querySelector("#gfEwWeiter"); if(w) w.onclick=weiter;
+    const a=m.querySelector("#gfEwAendern"); if(a) a.onclick=()=>{ S.aendern=!S.aendern; render(); };
+    const bb=m.querySelector("#gfEwBearb"); if(bb) bb.onclick=()=>{ S.bearbeiten=!S.bearbeiten; render(); };
+    const ok=m.querySelector("#gfEwOk"); if(ok) ok.onclick=uebernehmen;
+    const vw=m.querySelector("#gfEwVerwerfen"); if(vw) vw.onclick=verwerfen;
+    const sp=m.querySelector("#gfEwSpaeter"); if(sp) sp.onclick=()=>{ zu(); o.weiter("spaeter"); };
+  }
+  async function weiter(){
+    const text=(S.text||"").trim(); if(!text){ S.fehler="Bitte kurz aufschreiben, was passiert ist."; render(); return; }
+    S.fehler=""; S.laedt=true; render();
+    try{ const d=await gfApi("einwurf_add",{ text, kanal:"knopf", von:gfWho(), vorhaben_id:S.ziel||undefined, by:gfWho() });
+      S.ew=d.einwurf; S.ki_fehler=d.ki_fehler||""; S.ziel=S.ew.vorhaben_id||vsZiel()||S.ziel; S.schritt=2; S.text=""; S.aus=null; S.ben=null; }
+    catch(e){ S.fehler="Nicht gespeichert: "+(e.message||"Verbindung"); }
+    S.laedt=false; render();
+  }
+  async function neuesZiel(id){
+    if(!id||id===S.ziel){ S.aendern=false; render(); return; }
+    S.ziel=id; S.aendern=false;
+    if(!vs()&&!S.ki_fehler){ render(); return; }
+    S.laedt=true; S.fehler=""; render();
+    try{ const d=await gfApi("einwurf_vorschlag",{ id:S.ew.id, vorhaben_id:id, by:gfWho() }); S.ew=d.einwurf; S.ki_fehler=d.ki_fehler||""; S.aus=null; S.ben=null; }
+    catch(e){ S.fehler="Kein neuer Vorschlag: "+(e.message||"Verbindung")+". Übernommen wird dann nur der Verlaufseintrag."; }
+    S.laedt=false; render();
+  }
+  async function uebernehmen(){
+    if(!S.ziel){ S.fehler="Bitte ein Vorhaben wählen."; render(); return; }
+    const v=vs(), istPassend=passt(), ziel=vhVon(S.ziel);
+    const verlaufText=(m.querySelector("#gfEwVerlauf")?.value||"").trim();
+    const bearbeitet={}; if(verlaufText && (!istPassend || verlaufText!==(v?.verlauf?.text||""))) bearbeitet.verlauf_text=verlaufText;
+    if(S.schritt_text && S.schritt_text.trim()!==(v?.naechster_schritt||"")) bearbeitet.naechster_schritt=S.schritt_text.trim();
+    const aus=istPassend?S.aus:{ verlauf:true, punkte:[], neue_punkte:[], ball:false, naechster_schritt:false, frist:false };
+    if(!aus.verlauf && !aus.punkte.length && !aus.neue_punkte.length && !aus.ball && !aus.naechster_schritt && !aus.frist){ S.fehler="Nichts angehakt. Zum Wegwerfen „Verwerfen“ wählen."; render(); return; }
+    S.laedt=true; S.fehler=""; render();
+    try{
+      const r=await gfApi("einwurf_apply",{ id:S.ew.id, vorhaben_id:S.ziel, auswahl:aus, bearbeitet, benachrichtigung:S.ben, revision:v?.revision||undefined, expect_ball:ziel?.ball, by:gfWho() });
+      const teile=[r.verlauf?"Verlauf ergänzt":"", r.punkte?.length?`${r.punkte.length} ${r.punkte.length===1?"Punkt":"Punkte"} aktualisiert`:"", r.neue_punkte?.length?`${r.neue_punkte.length} neue ${r.neue_punkte.length===1?"Punkt":"Punkte"}`:"", r.felder?"Felder geändert":"", r.ticker?`${gfVhAndere()} sofort benachrichtigt`:`${gfVhAndere()} erfährt es im Morgenbericht`].filter(Boolean);
+      gfToast(`Eingetragen in „${r.vorhaben?.title||""}“: ${teile.join(", ")}.`);
+      if(r.uebersprungen?.length) setTimeout(()=>gfToast("Nicht übernommen: "+r.uebersprungen.join("; ")),2700);
+      GF_VH_LISTE=null; zu(); if(o.onDone) o.onDone(r); if(o.weiter) o.weiter("uebernommen"); try{ gfVhBadge(); }catch(e){}
+    }catch(e){ S.laedt=false; S.fehler=e.message||"Nicht übernommen"; if(/inzwischen|geändert/.test(S.fehler)){ try{ liste=await gfVhListe(true); }catch(x){} } render(); }
+  }
+  async function verwerfen(){
+    if(!confirm("Einwurf verwerfen? Er wird nicht eingetragen.")) return;
+    S.laedt=true; render();
+    try{ await gfApi("einwurf_verwerfen",{ id:S.ew.id, by:gfWho() }); gfToast("Einwurf verworfen"); zu(); if(o.onDone) o.onDone(null); if(o.weiter) o.weiter("verworfen"); try{ gfVhBadge(); }catch(e){} }
+    catch(e){ S.laedt=false; S.fehler=e.message||"Nicht verworfen"; render(); }
+  }
+  if(S.schritt===2 && S.ew){ if(!S.ziel) S.ziel=vsZiel(); if(!S.ew.vorschlag) S.ki_fehler="Für diesen Einwurf gibt es keinen Vorschlag."; }
+  render();
+}
+/* Warteschlange: offene Einwürfe nacheinander im selben Dialog. „Später“ springt weiter, ohne zu entscheiden. */
+async function gfEinwurfWarteschlange(o={}){
+  let liste=[];
+  try{ liste=(await gfApi("einwurf_list",{ status:"offen", vorhaben_id:o.vorhaben_id||undefined })).einwuerfe||[]; }
+  catch(e){ gfToast("Einwürfe ließen sich nicht laden: "+(e.message||"Verbindung")); return; }
+  liste.sort((a,b)=>(a.created_at||"").localeCompare(b.created_at||""));
+  if(!liste.length){ gfToast("Keine Einwürfe warten."); if(o.onDone) o.onDone(); return; }
+  let i=0, entschieden=0;
+  const zeige=()=>{
+    if(i>=liste.length){ if(o.onDone) o.onDone({ entschieden }); return; }
+    const ew=liste[i];
+    gfEinwurf({ einwurf:ew, kopf:`${i+1} von ${liste.length}`, weiter:(wie)=>{ if(wie==="uebernommen"||wie==="verworfen") entschieden++; if(wie==="abbruch"){ if(o.onDone) o.onDone({ entschieden }); return; } i++; zeige(); } });
+  };
+  zeige();
+}
