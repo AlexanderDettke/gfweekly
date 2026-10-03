@@ -320,7 +320,7 @@ async function scoreState(who: string, day: string){
 const ABS_ART = ['geplant','sofort'];
 const ABS_KONTAKT = ['keiner','wochenbrief','gespraech'];
 const ABS_STATUS = ['geplant','aktiv','rueckkehr','beendet'];
-const HO_KIND = ['thema','kandidat','meilenstein','ritual','termin','asana','partner'];
+const HO_KIND = ['thema','kandidat','meilenstein','ritual','termin','asana','partner','vorhaben']; // v38: vorhaben
 const HO_AMPEL = ['gruen','gelb','rot','vorher','ruht'];
 const HO_CLUSTER = ['A','B','C','D','E'];
 const HO_STATUS = ['vorschlag','bestaetigt','erledigt','entfallen'];
@@ -493,9 +493,12 @@ async function dossierFuer(item: any, absence: any){
     d.hinweis = item.context || null; d.phase = item.phase || null;
   } else if (item.kind === 'termin') {
     d.beschreibung = item.body || null; d.wer = item.who || null; d.quelle_url = item.source_url || null;
+  } else if (item.kind === 'vorhaben') {
+    Object.assign(d, await vhDossier(item));
   }
   const inhalt = [d.stand, d.naechster_schritt, (d as any).kontext, (d as any).text, (d as any).beschreibung,
-    (d as any).signal, (d as any).entscheidung, (d as any).notizen, (d as any).zitat, (d as any).hinweis, (d as any).wartet_auf];
+    (d as any).signal, (d as any).entscheidung, (d as any).notizen, (d as any).zitat, (d as any).hinweis, (d as any).wartet_auf,
+    ((d as any).punkte_offen || []).length ? 'punkte' : null, ((d as any).verlauf || []).length ? 'verlauf' : null];
   const leer = !inhalt.some(Boolean) && !((d.news as unknown[]) || []).length && !((d.beschluesse as unknown[]) || []).length;
   if (leer) {
     d.leer = true;
@@ -616,6 +619,8 @@ async function handoverItems(absence: any){
     items.push({ kind:'termin', ref_id:kennung, title:x.title, strand:x.strand, frist:tag,
       body:x.body, who:vornamen(x.who), source_url:x.source_url, gate:null });
   }
+  /* v38 (V31): Vorhaben mit Ball bei der abwesenden Person oder bei der GF mit Frist im Fenster. */
+  items.push(...await vhHandoverItems(absence, von, ende));
   /* Ein Vorgang, eine Zeile: derselbe Termin kann als mehrere Neuigkeiten vorliegen. */
   const gesehen = new Set<string>();
   const eindeutig = items.filter(x => { const k = x.kind+'|'+x.ref_id; if (gesehen.has(k)) return false; gesehen.add(k); return true; });
@@ -738,6 +743,7 @@ function asanaAbschnitt(row: any){
 function asanaLink(row: any){
   if (row.kind === 'thema') return `${HH_BASIS}/board.html?topic=${row.ref_id}`;
   if (row.kind === 'kandidat') return `${HH_BASIS}/neuigkeiten.html`;
+  if (row.kind === 'vorhaben') return `${HH_BASIS}/vorhaben.html?v=${encodeURIComponent(row.dossier?.slug || row.ref_id)}`;
   return `${HH_BASIS}/uebergabe.html?id=${row.absence_id}`;
 }
 /* Der Aufgabentext: Stand, nächster Schritt, Ampelregel als Satz, Notfalldefinition, Vollmacht, Frist, Link. */
@@ -1073,6 +1079,253 @@ function launchAsanaNotiz(m: any, r: any, festival: any, zust: any, helfer: any,
   return zeilen.filter(z => z !== null && z !== undefined).join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
+/* ===== v38 · V31 (03.10.2026) · Vorhaben: Woche, Board, Liste, Akte, Einwurf, Übergabe.
+   Tabellen hh_vorhaben, hh_vorhaben_punkte, hh_vorhaben_verlauf, hh_einwurf, Sicht hh_vorhaben_lage
+   (Migrationen 20261003162639 bis 20261003165328). Speichern mit Ballwechsel und Verlauf läuft über die
+   Datenbankfunktion hh_vorhaben_save, damit Zeile und Verlauf nur zusammen entstehen. Die KI im Einwurf schlägt vor,
+   angewendet wird erst mit einwurf_apply und nur, was die Person anhakt. Auftrag: docs/PAKET-V31-VORHABEN.md. ===== */
+const VH_BALL = ['alex','lea','gf','team','extern','offen'];
+const VH_GRUPPE = ['launch','geld','team','partner','system','sonstiges'];
+const VH_STATUS = ['aktiv','pausiert','erledigt','archiviert'];
+const VH_OWNER = ['alex','lea','gf'];
+const VH_ART = ['whatsapp','telefon','mail','plattform','notiz','einwurf','uebergabe','system','entscheidung','kalender','termin'];
+const VH_FELDER = ['title','gruppe','strand','ball','ball_name','owner','stand','naechster_schritt','frist','frist_text','konflikt','status','sort'];
+const VH_LAENGE: Record<string, number> = { title:200, strand:60, ball_name:120, stand:2000, naechster_schritt:1000, frist_text:200, konflikt:500 };
+const EW_KANAL = ['knopf','sprache','cowork','whatsapp','mail'];
+const EW_TIMEOUT_MS = 20000;
+const VH_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/* Fehler mit HTTP-Status, damit die Aktionen klar zwischen falscher Eingabe (400/404/409) und Störung (500) trennen. */
+class VhFehler extends Error { status: number; constructor(m: string, s = 400){ super(m); this.status = s; } }
+/* Gültiges Datum JJJJ-MM-TT, leer heißt null, alles andere undefined (ungültig). */
+function vhDatum(x: unknown): string | null | undefined {
+  if (x === null || x === undefined || x === '') return null;
+  const s = String(x).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return undefined;
+  const d = new Date(s + 'T00:00:00Z');
+  return isNaN(d.getTime()) || d.toISOString().slice(0,10) !== s ? undefined : s;
+}
+/* Schreibende Aktionen brauchen by, normiert auf Alex oder Lea. */
+function vhBy(t: any): string {
+  const roh = (t?.by ?? '').toString().trim();
+  if (!roh) throw new VhFehler('by fehlt (Alex oder Lea)');
+  const w = whoNorm(roh);
+  if (w !== 'Alex' && w !== 'Lea') throw new VhFehler('by muss Alex oder Lea sein');
+  return w;
+}
+function vhText(x: unknown, max: number){ return (x ?? '').toString().trim().slice(0, max); }
+function vhBallWort(ball: string, name?: string | null){
+  return ({ alex:'Alex', lea:'Lea', gf:'GF gemeinsam', offen:'niemand' } as Record<string,string>)[ball]
+    || ((name || '').trim() || (ball === 'team' ? 'Team' : 'extern'));
+}
+/* Prüft die Felder für vorhaben_save. Unbekannte Felder werden ignoriert, ungültige Werte abgelehnt. */
+function vhPatch(t: any){
+  const patch: Record<string, unknown> = {};
+  for (const f of VH_FELDER) {
+    if (t[f] === undefined) continue;
+    const v = t[f];
+    if (f === 'title') { const s = vhText(v, VH_LAENGE.title); if (!s) throw new VhFehler('title darf nicht leer sein'); patch.title = s; continue; }
+    if (f === 'gruppe') { if (!VH_GRUPPE.includes(v)) throw new VhFehler('gruppe: ' + VH_GRUPPE.join('|')); patch.gruppe = v; continue; }
+    if (f === 'ball') { if (!VH_BALL.includes(v)) throw new VhFehler('ball: ' + VH_BALL.join('|')); patch.ball = v; continue; }
+    if (f === 'owner') { if (v !== null && v !== '' && !VH_OWNER.includes(v)) throw new VhFehler('owner: ' + VH_OWNER.join('|') + ' oder leer'); patch.owner = v || null; continue; }
+    if (f === 'status') { if (!VH_STATUS.includes(v)) throw new VhFehler('status: ' + VH_STATUS.join('|')); patch.status = v; continue; }
+    if (f === 'frist') { const d = vhDatum(v); if (d === undefined) throw new VhFehler('frist ist kein Datum (JJJJ-MM-TT)'); patch.frist = d; continue; }
+    if (f === 'sort') { const n = parseInt(v); if (isNaN(n)) throw new VhFehler('sort ist keine Zahl'); patch.sort = n; continue; }
+    patch[f] = vhText(v, VH_LAENGE[f] || 500) || null;
+  }
+  /* Bei Alex, Lea, GF und niemand gibt es keinen Namen; ein alter Name von Team oder extern fällt weg. */
+  if (patch.ball !== undefined && ['alex','lea','gf','offen'].includes(patch.ball as string)) patch.ball_name = null;
+  return patch;
+}
+async function vhLese(ref: string){
+  const q = admin.from('hh_vorhaben_lage').select('*');
+  const { data, error } = await (VH_UUID.test(ref) ? q.eq('id', ref) : q.eq('slug', ref)).maybeSingle();
+  if (error) throw error;
+  if (!data) throw new VhFehler('Vorhaben ' + ref + ' gibt es nicht', 404);
+  return data;
+}
+async function vhSave(id: string, patch: Record<string, unknown>, by: string, notiz?: string | null, anlass?: string | null){
+  const { data, error } = await admin.rpc('hh_vorhaben_save', { p_id: id, p_patch: patch, p_by: by, p_notiz: notiz || null, p_anlass: anlass || null });
+  if (error) {
+    if (error.code === 'PT409' || /inzwischen/.test(error.message || '')) throw new VhFehler(error.message, 409);
+    if (error.code === 'P0002') throw new VhFehler(error.message, 404);
+    throw error;
+  }
+  return data as { vorhaben: any, ball_geaendert: boolean, verlauf: number };
+}
+async function vhVerlaufAdd(row: Record<string, unknown>){
+  const { data, error } = await admin.from('hh_vorhaben_verlauf').insert(row).select().single();
+  if (error) throw error; return data;
+}
+async function vhSlug(title: string){
+  const basis = slugKey(title);
+  const { data, error } = await admin.from('hh_vorhaben').select('slug').like('slug', basis + '%');
+  if (error) throw error;
+  const da = new Set((data || []).map((r: any) => r.slug));
+  if (!da.has(basis)) return basis;
+  for (let i = 2; i < 1000; i++) if (!da.has(basis + '-' + i)) return basis + '-' + i;
+  return basis + '-' + crypto.randomUUID().slice(0, 8);
+}
+/* Abhaken und Wieder-Öffnen. Nur wer den Zustand wirklich ändert, schreibt Verlauf: ein doppelter Klick oder
+   Alex und Lea gleichzeitig ergeben einen Eintrag, nicht zwei. */
+async function vhPunktToggle(id: string, erledigt: boolean, by: string, quelle?: string | null){
+  const jetzt = new Date().toISOString();
+  const { data, error } = await admin.from('hh_vorhaben_punkte')
+    .update({ erledigt, erledigt_at: erledigt ? jetzt : null, erledigt_by: erledigt ? by : null })
+    .eq('id', id).eq('erledigt', !erledigt).select().maybeSingle();
+  if (error) throw error;
+  if (!data) {
+    const { data: da, error: e2 } = await admin.from('hh_vorhaben_punkte').select('*').eq('id', id).maybeSingle();
+    if (e2) throw e2;
+    if (!da) throw new VhFehler('Punkt ' + id + ' gibt es nicht', 404);
+    return { punkt: da, geaendert: false, verlauf: null };
+  }
+  const verlauf = await vhVerlaufAdd({ vorhaben_id: data.vorhaben_id, punkt_id: data.id, art: 'system', wer: by,
+    text: (erledigt ? 'Punkt erledigt: ' : 'Punkt wieder offen: ') + data.titel, source_ref: quelle || null, created_by: by });
+  return { punkt: data, geaendert: true, verlauf };
+}
+
+/* ----- Einwurf: KI-Vorschlag, streng geprüft ----- */
+function vhHeuteText(){
+  const d = new Date();
+  return d.toLocaleDateString('de-DE', { timeZone:'Europe/Berlin', weekday:'long', day:'2-digit', month:'2-digit', year:'numeric' })
+    + ' (' + heuteBerlin() + ')';
+}
+/* Aktive Vorhaben mit ihren offenen Punkten: Grundlage für die KI und für die Prüfung ihrer Antwort. */
+async function vhKontext(nurId?: string | null){
+  let q = admin.from('hh_vorhaben').select('id,slug,title,ball,ball_name,stand,naechster_schritt,frist').in('status', ['aktiv','pausiert']).order('sort');
+  if (nurId) q = q.eq('id', nurId);
+  const { data: vh, error } = await q; if (error) throw error;
+  const ids = (vh || []).map((v: any) => v.id);
+  const { data: pk, error: e2 } = ids.length
+    ? await admin.from('hh_vorhaben_punkte').select('id,vorhaben_id,titel,stand,wer,frist').in('vorhaben_id', ids).eq('erledigt', false).order('sort')
+    : { data: [], error: null };
+  if (e2) throw e2;
+  return (vh || []).map((v: any) => ({ ...v, punkte: (pk || []).filter((p: any) => p.vorhaben_id === v.id) }));
+}
+async function einwurfKI(text: string, person: string, kontext: any[]){
+  const key = Deno.env.get('ANTHROPIC_API_KEY') || '';
+  if (!key) throw new Error('ANTHROPIC_API_KEY fehlt');
+  const model = Deno.env.get('GFWEEKLY_EINWURF_MODEL') || Deno.env.get('GFWEEKLY_TIDY_MODEL') || 'claude-sonnet-5';
+  const system = `Du ordnest kurze Meldungen der Geschäftsführung der Wilde Möhre GmbH (Alex und Lea) einem laufenden Vorhaben zu und schlägst vor, was sich in seiner Akte ändert. Du schlägst nur vor, angewendet wird erst nach Bestätigung.
+Regeln:
+- vorhaben_slug nur aus der Liste. Passt keines eindeutig, gib den besten Treffer mit niedriger sicherheit (unter 0.5) an.
+- verlauf: art ist eines von telefon, mail, whatsapp, notiz, entscheidung, termin, plattform. wer: wer mit wem (z. B. „Alex mit Victor“). text: ein bis zwei sachliche Sätze, was passiert ist und was vereinbart wurde. tag: optional ein Stichwort.
+- punkte: nur IDs offener Punkte dieses Vorhabens aus der Liste. erledigt nur true, wenn die Meldung es ausdrücklich sagt. stand nur, wenn sich am Punkt etwas geändert hat.
+- neue_punkte: nur, wenn die Meldung eine neue Aufgabe nennt, die noch nicht als Punkt existiert. frist als JJJJ-MM-TT, relativ zum heutigen Datum gerechnet („bis Montag“ ist der nächste Montag), sonst null.
+- ball (alex, lea, gf, team, extern, offen) nur, wenn die Meldung sagt, wer jetzt dran ist; bei team oder extern den Namen in ball_name. naechster_schritt und frist nur bei klarer Änderung, sonst null.
+- benachrichtigung: sofort nur, wenn die andere Person heute handeln muss, sonst morgen.
+- Vertraulich: keine Aussagen über Gesundheit, Befinden oder Eignung von Personen, keine Bewertungen von Menschen, keine Passwörter oder Kontodaten in den Text übernehmen. Personalthemen nur auf Sachebene.
+- Erfinde nichts, was nicht in der Meldung steht. Sprache Deutsch, keine Gedankenstriche.`;
+  const liste = kontext.map((v: any) => ({ slug: v.slug, titel: v.title, ball: vhBallWort(v.ball, v.ball_name), stand: v.stand, naechster_schritt: v.naechster_schritt, frist: v.frist,
+    offene_punkte: v.punkte.map((p: any) => ({ id: p.id, titel: p.titel, stand: p.stand, wer: p.wer, frist: p.frist })) }));
+  const body = {
+    model, max_tokens: 1500, system,
+    tools: [{ name: 'vorschlag', description: 'Gibt den Vorschlag für die Akte zurück.',
+      input_schema: { type: 'object', additionalProperties: false, required: ['vorhaben_slug','sicherheit','verlauf'],
+        properties: {
+          vorhaben_slug: { type: 'string' }, sicherheit: { type: 'number' },
+          verlauf: { type: 'object', properties: { art: { type: 'string' }, wer: { type: 'string' }, text: { type: 'string' }, tag: { type: ['string','null'] } }, required: ['art','text'] },
+          punkte: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, stand: { type: ['string','null'] }, erledigt: { type: 'boolean' } }, required: ['id'] } },
+          neue_punkte: { type: 'array', items: { type: 'object', properties: { titel: { type: 'string' }, wer: { type: ['string','null'] }, frist: { type: ['string','null'] } }, required: ['titel'] } },
+          ball: { type: ['string','null'] }, ball_name: { type: ['string','null'] }, naechster_schritt: { type: ['string','null'] }, frist: { type: ['string','null'] },
+          benachrichtigung: { type: 'string', enum: ['morgen','sofort'] },
+        } } }],
+    tool_choice: { type: 'tool', name: 'vorschlag' },
+    messages: [{ role: 'user', content: `Heute: ${vhHeuteText()}. Meldung von ${person}:\n${text}\n\nAktive Vorhaben:\n${JSON.stringify(liste)}` }],
+  };
+  const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), EW_TIMEOUT_MS);
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', { method:'POST', signal: ctl.signal,
+      headers: { 'content-type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01' }, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok) throw new Error('Anthropic: ' + (data?.error?.message || res.status));
+    const tool = (data.content || []).find((c: any) => c.type === 'tool_use');
+    if (!tool?.input) throw new Error('Anthropic: keine Antwort im erwarteten Format');
+    return { roh: tool.input, model };
+  } finally { clearTimeout(timer); }
+}
+/* Die Antwort der KI gilt als fremde Eingabe: jedes Feld wird geprüft, Unbekanntes verworfen und benannt. */
+function einwurfPruefen(roh: any, kontext: any[], vorgabeId: string | null, person: string){
+  const verworfen: string[] = [];
+  let vh = vorgabeId ? kontext.find((v: any) => v.id === vorgabeId) : null;
+  if (!vh) {
+    vh = kontext.find((v: any) => v.slug === roh?.vorhaben_slug) || null;
+    if (!vh && roh?.vorhaben_slug) verworfen.push(`Vorhaben „${vhText(roh.vorhaben_slug, 60)}“ gibt es nicht`);
+  }
+  let sicherheit = Number(roh?.sicherheit); if (!isFinite(sicherheit)) sicherheit = 0; sicherheit = Math.max(0, Math.min(1, sicherheit));
+  if (vorgabeId && vh) sicherheit = 1;
+  const v0 = roh?.verlauf || {};
+  const vArt = ['telefon','mail','whatsapp','notiz','entscheidung','termin','plattform'].includes(v0.art) ? v0.art : 'notiz';
+  if (v0.art && vArt !== v0.art) verworfen.push(`Kanal „${vhText(v0.art, 30)}“ unbekannt, als Notiz eingetragen`);
+  const verlauf = { art: vArt, wer: vhText(v0.wer, 120) || person, text: vhText(v0.text, 2000), tag: vhText(v0.tag, 120) || null };
+  const offen = new Map<string, any>((vh?.punkte || []).map((p: any) => [p.id, p]));
+  const punkte: any[] = [];
+  for (const p of (Array.isArray(roh?.punkte) ? roh.punkte.slice(0, 20) : [])) {
+    const da = offen.get(String(p?.id || ''));
+    if (!da) { verworfen.push(`Punkt ${vhText(p?.id, 40) || 'ohne ID'} ist kein offener Punkt dieses Vorhabens`); continue; }
+    const stand = vhText(p.stand, 500) || null, erledigt = p.erledigt === true;
+    if (!stand && !erledigt) continue;
+    if (punkte.some(x => x.id === da.id)) continue;
+    punkte.push({ id: da.id, titel: da.titel, stand, erledigt });
+  }
+  const neue: any[] = [];
+  for (const n of (Array.isArray(roh?.neue_punkte) ? roh.neue_punkte.slice(0, 10) : [])) {
+    const titel = vhText(n?.titel, 300); if (!titel) { verworfen.push('neuer Punkt ohne Titel'); continue; }
+    let frist = vhDatum(n.frist); if (frist === undefined) { verworfen.push(`Frist „${vhText(n.frist, 30)}“ bei „${titel}“ ist kein Datum`); frist = null; }
+    neue.push({ titel, wer: vhText(n.wer, 120) || null, frist });
+  }
+  let ball = roh?.ball ?? null;
+  if (ball !== null && !VH_BALL.includes(ball)) { verworfen.push(`Ball „${vhText(ball, 30)}“ unbekannt`); ball = null; }
+  if (ball !== null && vh && ball === vh.ball) ball = null;
+  const ball_name = ball && ['team','extern'].includes(ball) ? (vhText(roh?.ball_name, 120) || null) : null;
+  let frist = vhDatum(roh?.frist); if (frist === undefined) { verworfen.push(`Frist „${vhText(roh?.frist, 30)}“ ist kein Datum`); frist = null; }
+  if (frist && vh && frist === vh.frist) frist = null;
+  let naechster_schritt = vhText(roh?.naechster_schritt, 1000) || null;
+  if (naechster_schritt && vh && naechster_schritt === (vh.naechster_schritt || '').trim()) naechster_schritt = null;
+  const benachrichtigung = roh?.benachrichtigung === 'sofort' ? 'sofort' : 'morgen';
+  if (!vh) { punkte.length = 0; neue.length = 0; ball = null; frist = null; naechster_schritt = null; }
+  return { vorhaben_id: vh?.id || null, vorhaben_slug: vh?.slug || null, vorhaben_titel: vh?.title || null, sicherheit,
+    verlauf, punkte, neue_punkte: neue, ball, ball_name, naechster_schritt, frist, benachrichtigung, verworfen };
+}
+
+/* ----- Übergabe: Vorhaben als Korbzeilen ----- */
+async function vhHandoverItems(absence: any, von: string, ende: string){
+  const gate = absGate(absence.person);
+  const { data, error } = await admin.from('hh_vorhaben_lage')
+    .select('id,slug,title,strand,ball,ball_name,owner,stand,naechster_schritt,frist,frist_massgeblich,konflikt,status,absence_id')
+    .in('status', ['aktiv','pausiert']).limit(HO_GRENZE);
+  if (error) throw new Error('Vorhaben konnten nicht gelesen werden: ' + error.message);
+  const ids = (data || []).map((v: any) => v.id);
+  const { data: pk, error: e2 } = ids.length
+    ? await admin.from('hh_vorhaben_punkte').select('vorhaben_id,titel,stand,wer,frist').in('vorhaben_id', ids).eq('erledigt', false).order('sort')
+    : { data: [], error: null };
+  if (e2) throw new Error('Punkte konnten nicht gelesen werden: ' + e2.message);
+  const heute = heuteBerlin(); const items: any[] = [];
+  for (const v of (data || [])) {
+    const frist = v.frist_massgeblich || null;
+    /* Ball bei der abwesenden Person: immer. Ball bei der GF: nur, wenn die Frist ins Fenster fällt oder überfällig ist.
+       Was dieser Abwesenheit schon übergeben ist (absence_id), bleibt drin, auch wenn der Ball jetzt bei der Vertretung liegt. */
+    const meins = !!gate && v.ball === gate;
+    const gfImFenster = v.ball === 'gf' && !!frist && frist <= ende && (frist >= von || frist < heute);
+    if (!(meins || gfImFenster || v.absence_id === absence.id)) continue;
+    const offen = (pk || []).filter((p: any) => p.vorhaben_id === v.id);
+    items.push({ kind:'vorhaben', ref_id:v.id, title:v.title, strand:v.strand || null, frist,
+      short_description: v.stand, next_action: v.naechster_schritt,
+      context: [offen.length ? 'Offene Punkte: ' + offen.map((p: any) => p.titel).join('; ') : '', v.konflikt ? 'Konflikt: ' + v.konflikt : ''].filter(Boolean).join('\n'),
+      owner: v.owner ? vhBallWort(v.owner) : null, who: vhBallWort(v.ball, v.ball_name),
+      gate: ['gf','alex','lea'].includes(v.ball) ? v.ball : null, priority: null, slug: v.slug, konflikt: v.konflikt, punkte: offen });
+  }
+  return items;
+}
+async function vhDossier(item: any){
+  const { data: vl } = await admin.from('hh_vorhaben_verlauf').select('happened_at,art,wer,text')
+    .eq('vorhaben_id', item.ref_id).eq('status', 'bestaetigt').order('happened_at', { ascending:false }).limit(5);
+  return { slug: item.slug, konflikt: item.konflikt || null, ball: item.who,
+    punkte_offen: (item.punkte || []).map((p: any) => ({ titel: p.titel, stand: p.stand, wer: p.wer, frist: p.frist })),
+    verlauf: vl || [] };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method === 'GET') { try { await ensurePageInStorage(); } catch(_e){} return new Response(null,{ status:302, headers:{ 'Location':PUBLIC_PAGE, 'Cache-Control':'no-store' } }); }
@@ -1085,7 +1338,7 @@ Deno.serve(async (req: Request) => {
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:37, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
+    if (action === 'ping') return json({ ok:true, version:38, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -1639,13 +1892,20 @@ Deno.serve(async (req: Request) => {
       const { data: rows } = await admin.from('gfweekly_handover').select('id,ref_id,kind').eq('absence_id', t.id).eq('kind','thema');
       const nichtGeleert: string[] = [];
       for (const r of (rows || [])) {
-        const { error } = await admin.from('gfweekly_topics').update({ owner_backup:null }).eq('id', r.ref_id);
+        /* v38: nur Themen, die an genau dieser Korbzeile hängen. Sonst leert das Ende einer Testabwesenheit die
+           Vertretung einer echten, die dasselbe Thema im Korb hat. */
+        const { error } = await admin.from('gfweekly_topics').update({ owner_backup:null }).eq('id', r.ref_id).eq('handover_id', r.id);
         if (error) nichtGeleert.push(r.ref_id);
       }
       if (nichtGeleert.length) return json({ error:`Die Abwesenheit ist beendet, aber ${nichtGeleert.length} Themen tragen noch eine Vertretung.`, themen:nichtGeleert },500);
-      await handoverLog(t.id, 'notiz', `Rückübergabe bestätigt, ${(rows||[]).length} Themen wieder bei ${absence.person}.`, WHO);
+      /* v38: Vorhaben, deren Ball wegen dieser Abwesenheit gewandert ist, gehen zurück (hh_vorhaben_zurueck). */
+      const { data: vz, error: vze } = await admin.rpc('hh_vorhaben_zurueck', { p_absence: t.id, p_by: (t.by ?? WHO).toString().slice(0,60) });
+      if (vze) return json({ error:'Die Abwesenheit ist beendet, aber die Bälle der Vorhaben ließen sich nicht zurückgeben: '+vze.message },500);
+      const vorhabenZurueck = (vz as any)?.zurueck || [];
+      await handoverLog(t.id, 'notiz', `Rückübergabe bestätigt, ${(rows||[]).length} Themen wieder bei ${absence.person}`
+        + (vorhabenZurueck.length ? `, ${vorhabenZurueck.length} Vorhaben zurück.` : '.'), WHO);
       const archiviert = await asanaArchivieren(absence);
-      return json({ absence, asana_archiviert: archiviert });
+      return json({ absence, asana_archiviert: archiviert, vorhaben_zurueck: vorhabenZurueck });
     }
     if (action === 'deputies_list') {
       let q = admin.from('gfweekly_deputies').select('*').order('person').order('sort');
@@ -1754,6 +2014,11 @@ Deno.serve(async (req: Request) => {
         if (kf) return json({ error:'Kandidat konnte nicht zurückgegeben werden: '+kf.message },500);
         thema = kd;
       }
+      if (row.kind === 'vorhaben' && absence) {
+        const { data: vz, error: vze } = await admin.rpc('hh_vorhaben_zurueck', { p_absence: absence.id, p_by: by, p_vorhaben: row.ref_id });
+        if (vze) return json({ error:'Vorhaben konnte nicht zurückgegeben werden: '+vze.message },500);
+        thema = (vz as any)?.zurueck?.[0] || null;
+      }
       const { data: neu, error } = await admin.from('gfweekly_handover')
         .update({ status:'erledigt', vertretung:null, by, updated_at:new Date().toISOString() }).eq('id', t.id).select().single();
       if (error) throw error;
@@ -1851,6 +2116,10 @@ Deno.serve(async (req: Request) => {
           await admin.from('gfweekly_absences').update({ status:'rueckkehr', note_rueckkehr:briefing, rueckkehr_at:jetzt, updated_at:jetzt }).eq('id', absence.id);
           await handoverLog(absence.id, 'notiz', `Rückkehr von ${absence.person}, das Briefing steht bereit.`, 'lauf');
           absence.status = 'rueckkehr'; absence.rueckkehr_at = jetzt; schritte.push('Rückkehr');
+          /* v38: Bälle der Vorhaben zurück an die Person, die wiederkommt. */
+          const { data: vz, error: vze } = await admin.rpc('hh_vorhaben_zurueck', { p_absence: absence.id, p_by: 'lauf' });
+          if (vze) schritte.push('Vorhaben: Bälle nicht zurückgegeben (' + vze.message.slice(0,120) + ')');
+          else if (((vz as any)?.zurueck || []).length) schritte.push(`${(vz as any).zurueck.length} Vorhaben zurück`);
           if (await asanaArchivieren(absence)) schritte.push('Asana-Projekt archiviert');
         }
         if (absence.status === 'rueckkehr') {
@@ -1865,8 +2134,8 @@ Deno.serve(async (req: Request) => {
           if (seit >= 3) {
             await admin.from('gfweekly_absences').update({ status:'beendet', updated_at:new Date().toISOString() }).eq('id', absence.id);
             absence.status = 'beendet';
-            const { data: themen } = await admin.from('gfweekly_handover').select('ref_id').eq('absence_id', absence.id).eq('kind','thema');
-            for (const r of (themen || [])) await admin.from('gfweekly_topics').update({ owner_backup:null }).eq('id', r.ref_id);
+            const { data: themen } = await admin.from('gfweekly_handover').select('id,ref_id').eq('absence_id', absence.id).eq('kind','thema');
+            for (const r of (themen || [])) await admin.from('gfweekly_topics').update({ owner_backup:null }).eq('id', r.ref_id).eq('handover_id', r.id);
             await handoverLog(absence.id, 'notiz', 'Drei Tage nach der Rückkehr ohne Bestätigung: die Abwesenheit ist beendet.', 'lauf');
             schritte.push('beendet');
           }
@@ -2448,6 +2717,331 @@ Deno.serve(async (req: Request) => {
       return json(Object.assign({ ok: true, automatisch: false }, r));
     }
 
+    /* ----- Vorhaben (v38, V31) ----- */
+    if (action === 'vorhaben_list') {
+      let q = admin.from('hh_vorhaben_lage').select('*').order('sort').order('title');
+      if (t.status !== 'alle') q = q.in('status', ['aktiv','pausiert']);
+      const heute = heuteBerlin();
+      let qa = admin.from('gfweekly_absences').select('id,person,von,bis,bis_geschaetzt,status,vertretung_standard,test').in('status', ['geplant','aktiv']).order('von');
+      if (!t.include_test) qa = qa.eq('test', false);
+      const [vh, rows, items, meta, abs, ew] = await Promise.all([
+        q,
+        admin.from('gfweekly_saison_rows').select('id,label,vvk_start'),
+        admin.from('gfweekly_saison_items').select('id,title,starts_on,ends_on').not('id', 'is', null),
+        admin.from('gfweekly_saison_items').select('title,starts_on,ends_on').eq('row_id', 'meta').eq('archived', false).lte('starts_on', heute).gte('ends_on', heute).order('starts_on').limit(1),
+        qa,
+        admin.from('hh_einwurf').select('id,vorhaben_id').in('status', ['neu','vorgeschlagen']),
+      ]);
+      for (const r of [vh, rows, items, meta, abs, ew]) if (r.error) throw r.error;
+      const rowMap = new Map((rows.data || []).map((r: any) => [r.id, r]));
+      const itemMap = new Map((items.data || []).map((r: any) => [r.id, r]));
+      const liste = (vh.data || []).map((v: any) => {
+        const r: any = v.saison_row_id ? rowMap.get(v.saison_row_id) : null; const i: any = v.saison_item_id ? itemMap.get(v.saison_item_id) : null;
+        return { ...v, saison: (r || i) ? { label: r?.label || null, vvk_start: r?.vvk_start || null, item_title: i?.title || null, item_von: i?.starts_on || null, item_bis: i?.ends_on || null } : null };
+      });
+      return json({ stand: new Date().toISOString(), heute, vorhaben: liste, metaphase: (meta.data || [])[0] || null,
+        abwesenheiten: abs.data || [], einwuerfe_offen: (ew.data || []).length,
+        einwuerfe_ohne_vorhaben: (ew.data || []).filter((x: any) => !x.vorhaben_id).length });
+    }
+    if (action === 'vorhaben_badge') {
+      /* Zähler an „Vorhaben“ in der Navigation: offene Einwürfe plus Vorhaben mit Ball bei mir und Zustand überfällig. */
+      const ich = absGate(t.person || WHO);
+      const [ew, vh] = await Promise.all([
+        admin.from('hh_einwurf').select('id', { count:'exact', head:true }).in('status', ['neu','vorgeschlagen']),
+        ich ? admin.from('hh_vorhaben_lage').select('id', { count:'exact', head:true }).eq('ball', ich).eq('zustand', 'ueberfaellig').in('status', ['aktiv','pausiert'])
+            : Promise.resolve({ count: 0, error: null } as any),
+      ]);
+      if (ew.error) throw ew.error; if (vh.error) throw vh.error;
+      return json({ einwuerfe: ew.count || 0, ueberfaellig_bei_mir: vh.count || 0, n: (ew.count || 0) + (vh.count || 0) });
+    }
+    if (action === 'vorhaben_get') {
+      const ref = (t.id || t.slug || '').toString().trim(); if (!ref) return json({ error:'id oder slug fehlt' },400);
+      const v = await vhLese(ref);
+      const [pk, vl, th, kd, ew, sr, si] = await Promise.all([
+        admin.from('hh_vorhaben_punkte').select('*').eq('vorhaben_id', v.id).order('sort').order('created_at'),
+        admin.from('hh_vorhaben_verlauf').select('*').eq('vorhaben_id', v.id).in('status', ['bestaetigt','vorschlag']).order('happened_at', { ascending:false }).limit(200),
+        admin.from('gfweekly_topics').select('id,title,board_lane,gate').eq('vorhaben_id', v.id).eq('archived', false).order('created_at', { ascending:false }),
+        admin.from('gfweekly_news').select('id,title,relevance').eq('vorhaben_id', v.id).eq('kind', 'kandidat').eq('status', 'neu').order('happened_at', { ascending:false }),
+        admin.from('hh_einwurf').select('*').eq('vorhaben_id', v.id).in('status', ['neu','vorgeschlagen']).order('created_at', { ascending:false }),
+        v.saison_row_id ? admin.from('gfweekly_saison_rows').select('id,label,vvk_start').eq('id', v.saison_row_id).maybeSingle() : Promise.resolve({ data:null, error:null } as any),
+        v.saison_item_id ? admin.from('gfweekly_saison_items').select('id,title,starts_on,ends_on').eq('id', v.saison_item_id).maybeSingle() : Promise.resolve({ data:null, error:null } as any),
+      ]);
+      for (const r of [pk, vl, th, kd, ew, sr, si]) if (r.error) throw r.error;
+      const saison = (sr.data || si.data) ? { label: sr.data?.label || null, vvk_start: sr.data?.vvk_start || null, item_title: si.data?.title || null, item_von: si.data?.starts_on || null, item_bis: si.data?.ends_on || null } : null;
+      return json({ vorhaben: { ...v, saison }, punkte: pk.data || [], verlauf: vl.data || [], themen: th.data || [], kandidaten: kd.data || [], einwuerfe: ew.data || [] });
+    }
+    if (action === 'vorhaben_save') {
+      const by = vhBy(t); const patch = vhPatch(t);
+      const notiz = vhText(t.notiz, 1000) || null;
+      if (t.id || t.slug) {
+        const v = await vhLese((t.id || t.slug).toString());
+        if (t.expect_ball !== undefined && t.expect_ball !== null) patch.expect_ball = t.expect_ball;
+        if (!Object.keys(patch).filter(k => k !== 'expect_ball').length && !notiz) return json({ error:'nichts zu ändern' },400);
+        const r = await vhSave(v.id, patch, by, notiz, null);
+        return json({ vorhaben: await vhLese(v.id), ball_geaendert: r.ball_geaendert, verlauf: r.verlauf });
+      }
+      if (!patch.title) return json({ error:'title fehlt' },400);
+      delete patch.expect_ball;
+      let neu: any = null;
+      for (let versuch = 0; versuch < 3 && !neu; versuch++) {
+        const slug = await vhSlug(patch.title as string);
+        const row: Record<string, unknown> = { gruppe:'sonstiges', ball:'offen', ...patch, slug, updated_by: by };
+        if (row.ball && row.ball !== 'offen') row.ball_seit = new Date().toISOString();
+        const { data, error } = await admin.from('hh_vorhaben').insert(row).select().single();
+        if (error && error.code === '23505') continue;   // slug gleichzeitig vergeben: neuer Versuch
+        if (error) throw error; neu = data;
+      }
+      if (!neu) return json({ error:'Kein freier slug gefunden' },409);
+      await vhVerlaufAdd({ vorhaben_id: neu.id, art:'system', wer: by, text: 'Vorhaben angelegt' + (notiz ? ': ' + notiz : ''), created_by: by });
+      return json({ vorhaben: await vhLese(neu.id), angelegt: true });
+    }
+    if (action === 'punkt_save') {
+      const by = vhBy(t);
+      const patch: Record<string, unknown> = {};
+      if (t.titel !== undefined) { const s = vhText(t.titel, 300); if (!s) return json({ error:'titel darf nicht leer sein' },400); patch.titel = s; }
+      for (const f of ['position','stand','wer']) if (t[f] !== undefined) patch[f] = vhText(t[f], f === 'stand' ? 1000 : 120) || null;
+      if (t.frist !== undefined) { const d = vhDatum(t.frist); if (d === undefined) return json({ error:'frist ist kein Datum (JJJJ-MM-TT)' },400); patch.frist = d; }
+      if (t.sort !== undefined) { const n = parseInt(t.sort); if (isNaN(n)) return json({ error:'sort ist keine Zahl' },400); patch.sort = n; }
+      if (t.id) {
+        const { data: alt, error: e0 } = await admin.from('hh_vorhaben_punkte').select('*').eq('id', t.id).maybeSingle();
+        if (e0) throw e0; if (!alt) return json({ error:'Punkt gibt es nicht' },404);
+        if (!Object.keys(patch).length) return json({ error:'nichts zu ändern' },400);
+        const { data, error } = await admin.from('hh_vorhaben_punkte').update(patch).eq('id', t.id).select().single(); if (error) throw error;
+        /* Ein neuer Stand ist Bewegung im Vorhaben und gehört in den Verlauf. */
+        if (patch.stand !== undefined && (patch.stand || '') !== (alt.stand || ''))
+          await vhVerlaufAdd({ vorhaben_id: data.vorhaben_id, punkt_id: data.id, art:'system', wer: by, text: `Punkt ${data.titel}: ${data.stand || 'Stand gestrichen'}`, created_by: by });
+        return json({ punkt: data });
+      }
+      if (!t.vorhaben_id || !patch.titel) return json({ error:'vorhaben_id und titel fehlen' },400);
+      const v = await vhLese(t.vorhaben_id.toString());
+      if (patch.sort === undefined) {
+        const { data: letzte } = await admin.from('hh_vorhaben_punkte').select('sort').eq('vorhaben_id', v.id).order('sort', { ascending:false }).limit(1);
+        patch.sort = ((letzte || [])[0]?.sort ?? 0) + 10;
+      }
+      const { data, error } = await admin.from('hh_vorhaben_punkte').insert({ ...patch, vorhaben_id: v.id, quelle: vhText(t.quelle, 200) || 'von Hand' }).select().single();
+      if (error) throw error; return json({ punkt: data });
+    }
+    if (action === 'punkt_toggle') {
+      const by = vhBy(t); if (!t.id || typeof t.erledigt !== 'boolean') return json({ error:'id und erledigt (true|false) fehlen' },400);
+      return json(await vhPunktToggle(t.id.toString(), t.erledigt, by));
+    }
+    if (action === 'punkt_delete') {
+      vhBy(t); if (!t.id) return json({ error:'id fehlt' },400);
+      const { data: p, error: e0 } = await admin.from('hh_vorhaben_punkte').select('id,titel').eq('id', t.id).maybeSingle();
+      if (e0) throw e0; if (!p) return json({ error:'Punkt gibt es nicht' },404);
+      const { data: bezug, error: e1 } = await admin.from('hh_vorhaben_verlauf').select('id,text,happened_at')
+        .or(`punkt_id.eq.${p.id},source_ref.like.*${p.id}*`).limit(1);
+      if (e1) throw e1;
+      if ((bezug || []).length) return json({ error:`„${p.titel}“ hat schon Verlauf (${(bezug as any)[0].text.slice(0,80)}). Löschen würde ihn aus dem Zusammenhang reißen; setze den Punkt stattdessen auf erledigt oder ändere den Titel.` },409);
+      const { error } = await admin.from('hh_vorhaben_punkte').delete().eq('id', p.id); if (error) throw error;
+      return json({ ok:true });
+    }
+    if (action === 'verlauf_add') {
+      const by = vhBy(t);
+      if (!t.vorhaben_id) return json({ error:'vorhaben_id fehlt' },400);
+      if (!VH_ART.includes(t.art)) return json({ error:'art: '+VH_ART.join('|') },400);
+      const text = vhText(t.text, 4000); if (!text) return json({ error:'text fehlt' },400);
+      const v = await vhLese(t.vorhaben_id.toString());
+      let happened = new Date().toISOString();
+      if (t.happened_at) { const d = new Date(t.happened_at); if (isNaN(d.getTime())) return json({ error:'happened_at ist kein Zeitpunkt' },400); happened = d.toISOString(); }
+      const url = vhText(t.source_url, 2000); if (url && !/^https?:\/\//i.test(url)) return json({ error:'source_url muss mit http beginnen' },400);
+      const row = await vhVerlaufAdd({ vorhaben_id: v.id, art: t.art, wer: vhText(t.wer, 120) || by, text, tag: vhText(t.tag, 120) || null,
+        happened_at: happened, source_url: url || null, status: 'bestaetigt', created_by: by });
+      return json({ verlauf: row });
+    }
+    if (action === 'verlauf_status') {
+      const by = vhBy(t);
+      if (!t.id || !['bestaetigt','verworfen'].includes(t.status)) return json({ error:'id und status (bestaetigt|verworfen) fehlen' },400);
+      const { data: alt, error: e0 } = await admin.from('hh_vorhaben_verlauf').select('*').eq('id', t.id).maybeSingle();
+      if (e0) throw e0; if (!alt) return json({ error:'Eintrag gibt es nicht' },404);
+      const { data, error } = await admin.from('hh_vorhaben_verlauf').update({ status: t.status }).eq('id', t.id).select().single(); if (error) throw error;
+      /* Übernimmt jemand einen Vorschlag des Abgleichs „Punkt erledigt“, wird der Punkt auch abgehakt. Die Punkt-ID steht
+         im source_ref (abgleich:<person>:vorschlag:<Punkt-ID>:<Quelle>), so legt docs/ABGLEICH-VORHABEN.md es fest. */
+      let angewendet: any = null;
+      if (alt.status === 'vorschlag' && t.status === 'bestaetigt' && /^Vorschlag: Punkt erledigt/i.test(alt.tag || '')) {
+        const m = (alt.source_ref || '').match(/vorschlag:([0-9a-f-]{36})/i);
+        if (m) {
+          const { data: p } = await admin.from('hh_vorhaben_punkte').select('id,vorhaben_id').eq('id', m[1]).maybeSingle();
+          if (p && p.vorhaben_id === alt.vorhaben_id) angewendet = await vhPunktToggle(p.id, true, by, null);
+        }
+      }
+      return json({ verlauf: data, angewendet });
+    }
+    if (action === 'vorhaben_verknuepfen') {
+      vhBy(t);
+      const table = t.kind === 'thema' ? 'gfweekly_topics' : t.kind === 'kandidat' ? 'gfweekly_news' : null;
+      if (!table || !t.id) return json({ error:'kind (thema|kandidat) und id fehlen' },400);
+      let vid: string | null = null;
+      if (t.vorhaben_id) vid = (await vhLese(t.vorhaben_id.toString())).id;
+      const { data, error } = await admin.from(table).update({ vorhaben_id: vid }).eq('id', t.id).select('id,title,vorhaben_id').maybeSingle();
+      if (error) throw error; if (!data) return json({ error:'Eintrag gibt es nicht' },404);
+      return json({ item: data });
+    }
+    if (action === 'einwurf_add') {
+      const by = vhBy(t);
+      const text = vhText(t.text, 4000); if (!text) return json({ error:'text fehlt' },400);
+      const kanal = EW_KANAL.includes(t.kanal) ? t.kanal : 'knopf';
+      const von = ['Alex','Lea'].includes(whoNorm(t.von)) ? whoNorm(t.von) : by;
+      const vorgabe = t.vorhaben_id ? (await vhLese(t.vorhaben_id.toString())).id : null;
+      const { data: ew, error } = await admin.from('hh_einwurf').insert({ von, kanal, text, vorhaben_id: vorgabe, status:'neu' }).select().single();
+      if (error) throw error;
+      let ki_fehler: string | null = null; let einwurf = ew;
+      try {
+        const kontext = await vhKontext(vorgabe);
+        if (!kontext.length) throw new Error(vorgabe ? 'Das Vorhaben ist nicht aktiv' : 'Es gibt keine aktiven Vorhaben');
+        const { roh, model } = await einwurfKI(text, von, kontext);
+        const vs: any = einwurfPruefen(roh, kontext, vorgabe, von); vs.model = model;
+        const { data: up, error: ue } = await admin.from('hh_einwurf')
+          .update({ vorschlag: vs, status:'vorgeschlagen', vorhaben_id: vs.vorhaben_id || vorgabe }).eq('id', ew.id).eq('status','neu').select().single();
+        if (ue) throw ue; einwurf = up;
+      } catch (e) {
+        ki_fehler = (e as Error).name === 'AbortError' ? 'Die KI hat nicht innerhalb von 20 Sekunden geantwortet.' : String((e as Error).message || e).slice(0,300);
+      }
+      return json({ einwurf, ki_fehler });
+    }
+    if (action === 'einwurf_apply') {
+      const by = vhBy(t); if (!t.id) return json({ error:'id fehlt' },400);
+      const { data: ew, error: e0 } = await admin.from('hh_einwurf').select('*').eq('id', t.id).maybeSingle();
+      if (e0) throw e0; if (!ew) return json({ error:'Einwurf gibt es nicht' },404);
+      if (!['neu','vorgeschlagen'].includes(ew.status)) return json({ error:`Der Einwurf ist schon ${ew.status === 'uebernommen' ? 'übernommen' : 'verworfen'}.` },409);
+      const vs: any = ew.vorschlag || null;
+      const zielRef = (t.vorhaben_id || ew.vorhaben_id || vs?.vorhaben_id || '').toString();
+      if (!zielRef) return json({ error:'Bitte ein Vorhaben wählen.' },400);
+      const vh = await vhLese(zielRef);
+      const a = t.auswahl || {}; const bearbeitet = t.bearbeitet || {};
+      const jetzt = new Date().toISOString();
+      /* Erst den Einwurf für sich beanspruchen: wer zweimal tippt oder gleichzeitig übernimmt, wendet nichts doppelt an. */
+      const { data: claim, error: ce } = await admin.from('hh_einwurf')
+        .update({ status:'uebernommen', vorhaben_id: vh.id, entschieden_by: by, entschieden_at: jetzt })
+        .eq('id', ew.id).in('status', ['neu','vorgeschlagen']).select().maybeSingle();
+      if (ce) throw ce; if (!claim) return json({ error:'Der Einwurf wurde gerade schon entschieden.' },409);
+      const erg: any = { verlauf:null, punkte:[], neue_punkte:[], felder:null, ticker:null, uebersprungen:[] };
+      const quelle = 'einwurf:' + ew.id;
+      try {
+        if (!vs || a.verlauf) {
+          const art = ew.kanal === 'mail' ? 'mail' : (vs?.verlauf?.art || 'einwurf');
+          const text = vhText(bearbeitet.verlauf_text, 2000) || vs?.verlauf?.text || ew.text.slice(0, 2000);
+          const row = { vorhaben_id: vh.id, art, wer: vs?.verlauf?.wer || ew.von, text, tag: vs?.verlauf?.tag || null,
+            happened_at: ew.created_at, source_ref: quelle, status:'bestaetigt', created_by: by };
+          const { error: ve } = await admin.from('hh_vorhaben_verlauf').upsert(row, { onConflict:'source_ref', ignoreDuplicates:true });
+          if (ve) throw ve;
+          const { data: vr } = await admin.from('hh_vorhaben_verlauf').select('*').eq('source_ref', quelle).maybeSingle();
+          erg.verlauf = vr;
+        }
+        if (vs && Array.isArray(a.punkte) && a.punkte.length) {
+          const { data: alle, error: pe } = await admin.from('hh_vorhaben_punkte').select('id,titel,stand,erledigt').eq('vorhaben_id', vh.id);
+          if (pe) throw pe;
+          for (const pid of a.punkte) {
+            const p = (vs.punkte || []).find((x: any) => x.id === pid); const da = (alle || []).find((x: any) => x.id === pid);
+            if (!p || !da) { erg.uebersprungen.push(`Punkt ${p?.titel || pid} gehört nicht zu ${vh.title}`); continue; }
+            if (p.stand && p.stand !== (da.stand || '')) {
+              const { error: se } = await admin.from('hh_vorhaben_punkte').update({ stand: p.stand }).eq('id', pid); if (se) throw se;
+              await vhVerlaufAdd({ vorhaben_id: vh.id, punkt_id: pid, art:'system', wer: by, text: `Punkt ${da.titel}: ${p.stand}`, created_by: by });
+            }
+            if (p.erledigt && !da.erledigt) await vhPunktToggle(pid, true, by, null);
+            erg.punkte.push(pid);
+          }
+        }
+        if (vs && Array.isArray(a.neue_punkte) && a.neue_punkte.length) {
+          const { data: letzte } = await admin.from('hh_vorhaben_punkte').select('sort').eq('vorhaben_id', vh.id).order('sort', { ascending:false }).limit(1);
+          let sort = ((letzte || [])[0]?.sort ?? 0) + 10;
+          for (const i of a.neue_punkte) {
+            const n = (vs.neue_punkte || [])[parseInt(i)]; if (!n) { erg.uebersprungen.push(`neuer Punkt Nr. ${i} fehlt im Vorschlag`); continue; }
+            const { data: np, error: ne } = await admin.from('hh_vorhaben_punkte')
+              .insert({ vorhaben_id: vh.id, titel: n.titel, wer: n.wer, frist: n.frist, quelle, sort }).select().single();
+            if (ne) throw ne; erg.neue_punkte.push(np); sort += 10;
+          }
+        }
+        const patch: Record<string, unknown> = {};
+        if (vs && a.ball && vs.ball) { patch.ball = vs.ball; patch.ball_name = ['team','extern'].includes(vs.ball) ? (vs.ball_name || null) : null; }
+        const schritt = vhText(bearbeitet.naechster_schritt, 1000) || vs?.naechster_schritt;
+        if (vs && a.naechster_schritt && schritt) patch.naechster_schritt = schritt;
+        const fristB = vhDatum(bearbeitet.frist);
+        if (vs && a.frist && (fristB || vs.frist)) patch.frist = fristB || vs.frist;
+        if (Object.keys(patch).length) erg.felder = await vhSave(vh.id, patch, by, null, 'Einwurf');
+        const ben = ['sofort','morgen'].includes(t.benachrichtigung) ? t.benachrichtigung : (vs?.benachrichtigung || 'morgen');
+        if (ben === 'sofort') {
+          const andere = by === 'Alex' ? 'Lea' : 'Alex';
+          const text = erg.verlauf?.text || ew.text;
+          const { error: te } = await admin.from('gfweekly_news').upsert({ kind:'ticker', source:'manuell', who: andere,
+            title: `${vh.title}: ${firstSentence(text, 160)}`.slice(0, 500), body: `${text}\n\nEinwurf von ${ew.von}, übernommen von ${by}.`.slice(0, 6000),
+            happened_at: jetzt, relevance:'mittel', status:'neu', source_ref: quelle, vorhaben_id: vh.id }, { onConflict:'source_ref', ignoreDuplicates:true });
+          if (te) throw te; erg.ticker = true;
+        }
+        await admin.from('hh_einwurf').update({ vorschlag: { ...(vs || {}), benachrichtigung_gewaehlt: ben,
+          angewendet: { auswahl: a, vorhaben_id: vh.id, uebersprungen: erg.uebersprungen } } }).eq('id', ew.id);
+      } catch (e) {
+        /* Teilweise angewendet: der Einwurf geht zurück in die Warteschlange, damit er nicht als erledigt gilt.
+           Verlauf und Ticker tragen den Einwurf als source_ref und entstehen beim nächsten Versuch nicht doppelt. */
+        await admin.from('hh_einwurf').update({ status: ew.status, entschieden_by: null, entschieden_at: null }).eq('id', ew.id);
+        return json({ error: 'Einwurf nur teilweise übernommen: ' + String((e as Error).message || e).slice(0,200), teilweise: erg },500);
+      }
+      return json({ ok:true, vorhaben: await vhLese(vh.id), ...erg });
+    }
+    if (action === 'einwurf_verwerfen') {
+      const by = vhBy(t); if (!t.id) return json({ error:'id fehlt' },400);
+      const { data, error } = await admin.from('hh_einwurf').update({ status:'verworfen', entschieden_by: by, entschieden_at: new Date().toISOString() })
+        .eq('id', t.id).in('status', ['neu','vorgeschlagen']).select().maybeSingle();
+      if (error) throw error; if (!data) return json({ error:'Der Einwurf ist schon entschieden oder fehlt.' },409);
+      return json({ einwurf: data });
+    }
+    if (action === 'einwurf_list') {
+      let q = admin.from('hh_einwurf').select('*, vorhaben:hh_vorhaben(id,slug,title)').order('created_at', { ascending:false }).limit(200);
+      if (t.status !== 'alle') q = q.in('status', ['neu','vorgeschlagen']);
+      if (t.vorhaben_id) q = q.eq('vorhaben_id', t.vorhaben_id);
+      const { data, error } = await q; if (error) throw error;
+      return json({ einwuerfe: data || [] });
+    }
+    if (action === 'schicht_uebergabe') {
+      const by = vhBy(t);
+      const von = whoNorm(t.von), an = whoNorm(t.an);
+      if (!['Alex','Lea'].includes(von) || !['Alex','Lea'].includes(an)) return json({ error:'von und an müssen Alex oder Lea sein' },400);
+      const eintraege = Array.isArray(t.eintraege) ? t.eintraege.slice(0, 100) : [];
+      if (!eintraege.length) return json({ error:'eintraege fehlen' },400);
+      const ergebnis: any[] = [], fehler: any[] = [];
+      for (const e of eintraege) {
+        try {
+          if (!e?.vorhaben_id) throw new VhFehler('vorhaben_id fehlt');
+          if (!VH_BALL.includes(e.ball)) throw new VhFehler('ball: ' + VH_BALL.join('|'));
+          const v = await vhLese(e.vorhaben_id.toString());
+          const patch: Record<string, unknown> = { ball: e.ball, ball_name: ['team','extern'].includes(e.ball) ? (vhText(e.ball_name, 120) || null) : null };
+          const bleibt = v.ball === e.ball && (v.ball_name || '') === ((patch.ball_name as string) || '');
+          const notiz = vhText(e.notiz, 1000) || (bleibt ? 'Ball bleibt bei ' + vhBallWort(v.ball, v.ball_name) : null);
+          const r = await vhSave(v.id, patch, by, notiz, `Schichtwechsel ${von} an ${an}`);
+          ergebnis.push({ vorhaben_id: v.id, title: v.title, ball: r.vorhaben.ball, ball_geaendert: r.ball_geaendert });
+        } catch (err) { fehler.push({ vorhaben_id: e?.vorhaben_id || null, grund: String((err as Error).message || err).slice(0,200) }); }
+      }
+      return json({ ok: fehler.length === 0, ergebnis, fehler });
+    }
+    if (action === 'vorhaben_rueckkehr') {
+      /* Für rueckkehr.html: Vorhaben, die in dieser Abwesenheit übergeben waren oder ruhten, mit ihrem Verlauf seit Beginn. */
+      if (!t.absence_id) return json({ error:'absence_id fehlt' },400);
+      const { data: absence, error: ae } = await admin.from('gfweekly_absences').select('*').eq('id', t.absence_id).maybeSingle();
+      if (ae) throw ae; if (!absence) return json({ error:'Abwesenheit fehlt' },404);
+      const [ho, zr, gebunden] = await Promise.all([
+        admin.from('gfweekly_handover').select('ref_id,ampel,vertretung,status').eq('absence_id', absence.id).eq('kind', 'vorhaben').neq('status', 'vorschlag'),
+        admin.from('hh_vorhaben_verlauf').select('vorhaben_id,text,happened_at').like('source_ref', `abwesenheit:${absence.id}:zurueck:%`),
+        admin.from('hh_vorhaben').select('id').eq('absence_id', absence.id),
+      ]);
+      for (const r of [ho, zr, gebunden]) if (r.error) throw r.error;
+      const ids = [...new Set([...(ho.data || []).map((r: any) => r.ref_id), ...(zr.data || []).map((r: any) => r.vorhaben_id), ...(gebunden.data || []).map((r: any) => r.id)])];
+      if (!ids.length) return json({ absence, vorhaben: [] });
+      const [vh, vl] = await Promise.all([
+        admin.from('hh_vorhaben_lage').select('id,slug,title,ball,ball_name,stand,naechster_schritt,frist_massgeblich,zustand,absence_id').in('id', ids),
+        admin.from('hh_vorhaben_verlauf').select('id,vorhaben_id,happened_at,art,wer,text,tag').in('vorhaben_id', ids).eq('status', 'bestaetigt')
+          .gte('happened_at', addDays(absence.von, -1) + 'T22:00:00Z').order('happened_at', { ascending:false }).limit(500),
+      ]);
+      if (vh.error) throw vh.error; if (vl.error) throw vl.error;
+      const liste = (vh.data || []).map((v: any) => ({ ...v,
+        korb: (ho.data || []).find((r: any) => r.ref_id === v.id) || null,
+        zurueck: (zr.data || []).find((r: any) => r.vorhaben_id === v.id) || null,
+        verlauf: (vl.data || []).filter((e: any) => e.vorhaben_id === v.id) }));
+      return json({ absence, vorhaben: liste });
+    }
+
     return json({ error:'unknown action' }, 400);
-  } catch (e) { return json({ error:String((e as Error).message ?? e) }, 500); }
+  } catch (e) {
+    if (e instanceof VhFehler) return json({ error: e.message }, e.status);
+    return json({ error:String((e as Error).message ?? e) }, 500);
+  }
 });
