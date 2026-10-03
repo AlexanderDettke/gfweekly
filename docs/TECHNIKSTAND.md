@@ -692,3 +692,9 @@ Auftrag: `docs/PAKET-V31-VORHABEN.md`, Prüfauftrag `docs/reviews/V31-pruefauftr
 - `rueckkehr.html`: Abschnitt „Deine Vorhaben zurück“ aus `vorhaben_rueckkehr` (Ball zurück, noch bei der Vertretung oder hat geruht, je Vorhaben die Einträge seit Beginn der Abwesenheit, höchstens fünf, Rest in der Akte); „Rückübergabe bestätigen“ schickt jetzt `by` mit.
 
 **Geprüft (Oberflächentest).** `pruefung/bedienung.mjs`, Abschnitt 31d: 15 Proben (Reihenfolge und Inhalt der Blöcke auf Für dich, „wartet auf dich“, „Alles gesehen“, Vorhaben-Zeile in der Übergabe mit Link, Rückkehr, Übergabe-Dialog Feierabend mit Nutzlast, Urlaub mit laufender Abwesenheit, Pflichtname bei Team, Ruht). Schirme 84 Bilder, 0 Meldungen.
+
+### 31e · Abgleich und Quellen
+
+**Abgleich.** Läuft als geplanter Cowork-Auftrag (`docs/ABGLEICH-VORHABEN.md`), in der Edge Function ist dafür nichts gebaut. Geprüft am 03.10.2026 um 20:16 Uhr (Berliner Zeit), nach dem Deploy: 0 Verlaufseinträge und 0 Einwürfe mit `source_ref` `abgleich:`, keine `quellen` an einem Vorhaben. Ein Lauf mit Wirkung ist damit noch nicht belegt (siehe `FRAGEN_FUER_MORGEN.md`). Was die Oberfläche für den Abgleich bereithält: Vorschläge im Verlauf (Übernehmen, Verwerfen, „Punkt erledigt“ hakt ab), Einwürfe aus Mail in der Warteschlange (Vorschläge mit `vorhaben_slug` werden erkannt und vollständig geprüft angewendet, einmalig live geprüft, siehe `docs/reviews/V31a-antwort-3.md`), Abgleichstand aus `quellen` unten in der Akte.
+
+**XCeed.** Ergebnis mit Quellen in `docs/XCEED-SCHNITTSTELLE.md`: Partner Tickets API mit API-Schlüssel (Events, Tickets, Buchungen), keine Webhooks in der Doku, keine geplanten Mailberichte dokumentiert. Falls XCeed Berichte per Mail schickt: an `alex+xceed@wildemoehre.org`, nicht an die Einwurf-Adresse.
