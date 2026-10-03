@@ -175,9 +175,50 @@ function maengelSichtbar() {
   }
 }
 
+/* ---- V31 · Regeln aus dem Lernlog (docs/reviews/V31-lernlog.md) ---- */
+
+/* PostgREST wiederholt Transaktionen mit SQLSTATE 40001 (serialization_failure) bis zum Timeout. Ein Konflikt, den eine
+   Funktion selbst meldet, braucht einen eigenen Code (PT409 ergibt HTTP 409). Gefunden in der Wirkungsprobe vom 03.10.2026. */
+function konfliktcode() {
+  const ordner = 'supabase/migrations';
+  if (!gibt(ordner)) return;
+  for (const f of fs.readdirSync(path.join(WURZEL, ordner)).filter(x => x.endsWith('.sql') && x >= '20261003')) {
+    lies(path.join(ordner, f)).split('\n').forEach((z, i) => {
+      if (/^\s*--/.test(z)) return;
+      if (/errcode\s*=\s*'(serialization_failure|40001)'/i.test(z)) melde('konfliktcode', `${f}:${i + 1} meldet einen Konflikt mit 40001, PostgREST wiederholt ihn bis zum Timeout; PT409 verwenden`);
+    });
+  }
+}
+
+/* Eine Negativprobe muss den Grund prüfen, nicht nur den Status (Review 31a, Runde 1, Befund 8). In der Wirkungsprobe
+   laufen erwartete Fehler deshalb über abgelehnt(…, /Grund/, …), nie über api(…, 4xx). */
+function negativproben() {
+  const f = 'pruefung/vorhaben-probe.mjs';
+  if (!gibt(f)) return;
+  lies(f).split('\n').forEach((z, i) => {
+    if (/\bapi\([^;]*,\s*4\d\d\s*\)/.test(z) && !/async function api/.test(z)) melde('negativproben', `${f}:${i + 1} erwartet einen Fehler ohne den Grund zu prüfen; abgelehnt(…) verwenden`);
+  });
+}
+
+/* Der Vertraulichkeitsfilter steht zweimal: VH_VERTRAULICH in der Edge Function (KI-Antwort) und hh_vertraulich in der
+   Datenbank (alles, was angewendet wird). Beide müssen dieselben Wörter kennen (Review 31a, Runden 2 und 3). */
+function vertraulichGleich() {
+  const ts = 'supabase/functions/gfweekly/index.ts';
+  if (!gibt(ts)) return;
+  const m1 = lies(ts).match(/const VH_VERTRAULICH = \/\((.+)\)\/i;/);
+  const mig = fs.readdirSync(path.join(WURZEL, 'supabase/migrations')).filter(x => x.endsWith('.sql')).sort()
+    .map(x => lies('supabase/migrations/' + x)).filter(t => /function public\.hh_vertraulich/.test(t)).pop();
+  const m2 = mig && mig.match(/~\* '\((.+)\)';/);
+  if (!m1 || !m2) { melde('vertraulich', 'Filter nicht gefunden (VH_VERTRAULICH oder hh_vertraulich)'); return; }
+  const woerter = (x) => new Set(x.split('|').map(w => w.replace(/\\[bmM]|\\s|\\d|\[0-9\]|\{\d+\}|[()?\[\]\- ]|\\/g, '').toLowerCase()).filter(w => /^[a-zäöüß]{3,}/.test(w)));
+  const a = woerter(m1[1]), b = woerter(m2[1]);
+  const fehlt = [...a].filter(w => !b.has(w)).concat([...b].filter(w => !a.has(w)));
+  if (fehlt.length) melde('vertraulich', 'Edge Function und Datenbank filtern verschiedene Wörter: ' + fehlt.join(', '));
+}
+
 /* Waehrend der Abnahme selbst wird die Frischepruefung ausgelassen: sie prueft den Beleg, den dieselbe
    Abnahme erst schreibt. Danach laeuft der Waechter noch einmal vollstaendig. */
-const pruefungen = [migrationen, behauptungen, selbstbestaetigung, stichtag, maengelSichtbar];
+const pruefungen = [migrationen, behauptungen, selbstbestaetigung, stichtag, maengelSichtbar, konfliktcode, negativproben, vertraulichGleich];
 if (!process.env.WAECHTER_OHNE_FRISCHE) pruefungen.push(frische);
 for (const f of pruefungen) {
   try { f(); } catch (e) { melde(f.name, 'Prüfung selbst fehlgeschlagen, das gilt als Befund: ' + e.message); }

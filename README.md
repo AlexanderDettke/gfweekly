@@ -1,5 +1,8 @@
 # Das Hohe Haus (vormals GF Weekly)
 
+> **Stand 03.10.2026: V31 Vorhaben** liegt auf dem Branch `paket/v31-vorhaben` (noch nicht gepusht). Edge Function v38 ist deployt,
+> die Migrationen sind angewendet, die Seiten gehen mit dem Push live. Einzelheiten und Prüfstand in `docs/TECHNIKSTAND.md`, Abschnitt V31.
+>
 > **Stand 22.09.2026: der Bereich Vertretung (V24) ist nicht abgenommen.** Eine vollständige unabhängige Prüfung
 > gegen die Paketdatei hat 34 Befunde gemeldet, elf davon schwer. Sie stehen in `docs/BEKANNTE-MAENGEL.md` und
 > sind auf Entscheidung von Alex vorerst nicht behoben. Der Rest des Hauses ist davon nicht betroffen.
@@ -29,7 +32,8 @@ V9.1 (13.09.2026) legt die Optik des Design Systems „Modernist" (Claude Design
 Farbrollen, Dunkelmodus und Statusfarben bleiben unverändert Habitate. Modernists roter Akzent (#ec3013) wurde **bewusst nicht** übernommen: er kollidiert mit `--crit` („ausgefallen"), das im Cockpit dieselbe Farbe als Signal trägt. Die vier Diagrammfarben `--chart-teal/-peach/-coral/-grid` sind aus der Habitate-Quelle nachgezogen und stehen für spätere Kennzahl-Visualisierungen bereit.
 
 ## Wächter und Prüfungen
-`pruefung/abnahme.sh` fährt alles: Tokens gegen die Quelle des Design-Systems, Farbscan, Kontrast der Token-Zone, Matrix, Schirme (16 Seiten × 1440/390 × dunkel/hell) und Bedienproben.
+`pruefung/abnahme.sh` fährt alles: Tokens gegen die Quelle des Design-Systems, Farbscan, Kontrast der Token-Zone, Matrix, Schirme (19 Seiten in 21 Ansichten × 1440/390 × dunkel/hell, 84 Bilder) und Bedienproben.
+`pruefung/vorhaben-probe.mjs` ist die Wirkungsprobe der Vorhaben gegen das echte Backend (`GF_PW=… node pruefung/vorhaben-probe.mjs`), sie arbeitet nur an Testvorhaben und räumt den Bestand des vorigen Laufs auf.
 `pruefung/waechter.mjs` sind die statischen Prüfungen, die keine Meinung brauchen: eindeutige Versionskennungen der Migrationen, Behauptungen in der Dokumentation ohne Beleg, Prüfskripte, die sich selbst bestätigen, feste Datumswerte ohne Stichtag, und ob die letzte Abnahme zum aktuellen Stand der geprüften Dateien gehört (`pruefung/stand.sh`, Beleg in `pruefung/letzte-abnahme.json`).
 Der Wächter läuft dreifach: in `abnahme.sh`, bei jedem Push über `.github/workflows/waechter.yml`, und als Stop-Hook in Claude Code (`.claude/settings.json`), damit keine Sitzung „fertig" sagen kann, solange er Befunde meldet.
 **Schirme und Bedienung sind Oberflächentests**: sie fangen die Edge Function ab und belegen Aufbau, Kontrast, Überlauf und Bedienwege, nicht die Wirkung in der Datenbank.
@@ -129,6 +133,10 @@ Edge Function v30: `handover_set` und `handover_set_many` rufen nur noch die Dat
 Nachbesserung v31 aus der zweiten und v32 aus der dritten Prüfrunde: „Alex“ und „Lea“ werden über ihre feste E-Mail aufgelöst statt über den Namen, ein Lesefehler der Personenliste bricht den Export ab, eine aufgehobene Ruhe räumt Ausgang und Frist am Thema auf (`20260922_hh_handover_set_ruhe.sql`), der Rücksync schreibt den Vermerk vor dem Status und liest Kommentare seitenweise, und eine gekürzte Antwort von `handover_list` meldet sich als `gekuerzt`.
 Oberfläche: `board.html?owner=<Name>&luecke=1` filtert nach derselben Regel wie die Kachel Übernahmefähigkeit (zuständig und ohne Stand oder ohne nächsten Schritt), mit Chip „Lücken“ in der Board-Leiste und Link aus der Kachel. Ist der Korb an einer Obergrenze gelaufen, sagt die Übergabeseite es.
 Live durchgespielt am 22.09.2026: Paket 2 (zwei Testabwesenheiten, `absence_tick` zweimal, Testdaten restlos zurückgebaut), aus 4c ein Durchgang mit einem Projekt und einer Aufgabe, dazu Vault-Secret `gfweekly_password` und der tägliche Cron-Lauf. Das ist **keine** vollständige Abnahme von 4c: die Paketdatei verlangt mindestens zehn Aufgaben mit geprüften Empfängern und Themenlinks sowie einen manuellen Durchlauf von Abschnitt H mit Kalendertest, und das Testprojekt wurde archiviert statt gelöscht.
+
+## V31 (03.10.2026): Vorhaben
+Neue Seite `site/vorhaben.html` (Navigation Heute, nach Für dich): alle laufenden Vorhaben der GF als Woche (nach maßgeblicher Frist, mit Bändern der Abwesenheiten), Board (sechs Spalten nach Ball, ziehen oder „Ball weitergeben“) und Liste (nach Gruppen); die Akte rechts oder als Blatt mit Ball, Frist, Punkten, nächstem Schritt, Reiter Prozess (Stand, Checkliste, verknüpfte Themen und Kandidaten, Ball geben an, Abgleichstand) und Verlauf (Kanal, wer, Vorschläge des Abgleichs übernehmen oder verwerfen). Einwurf („Was ist passiert?“, am Handy diktiert): die KI schlägt Vorhaben, Verlaufseintrag und Änderungen vor, angewendet wird nur, was jemand anhakt. Übergabe als Feierabend oder Urlaub/Krank, Vorhaben im Übergabekorb, Rückgabe der Bälle nach der Abwesenheit, Für dich mit „Deine Vorhaben“ und „Seit du zuletzt da warst“.
+Backend: Tabellen `hh_vorhaben`, `hh_vorhaben_punkte`, `hh_vorhaben_verlauf`, `hh_einwurf`, Sicht `hh_vorhaben_lage`, Datenbankfunktionen für jeden mehrstufigen Schreibweg (Migrationen `20261003162639` bis `20261003182649`), Edge Function v38. Der Abgleich läuft als Cowork-Auftrag (`docs/ABGLEICH-VORHABEN.md`). XCeed: `docs/XCEED-SCHNITTSTELLE.md`.
 
 ## Backend
 Tabellen `gfweekly_topics`, `gfweekly_inbox`, `gfweekly_people`, `gfweekly_links`, `gfweekly_protocol_requests`, `gfweekly_assets`, `gfweekly_sites`, `gfweekly_site_categories`, `gfweekly_sessions`, `gfweekly_decisions`, `gfweekly_news`, `gfweekly_score_rules`, `gfweekly_score_levels`, `gfweekly_score_events`, `gfweekly_checkins`, `gfweekly_badges`, dazu die Meta-Planungs-Tabellen aus V10.

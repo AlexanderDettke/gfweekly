@@ -1,3 +1,22 @@
+# Arbeitsstand · Paket V31 Vorhaben · Stand 03.10.2026
+
+Auftrag `docs/PAKET-V31-VORHABEN.md`, Teilpakete 31a bis 31e in einem Zug, Branch `paket/v31-vorhaben`, nicht gepusht (das macht Alex).
+
+| Teil | Stand | Prüfung |
+|---|---|---|
+| 31a Backend | gebaut, Migrationen angewendet, v38 deployt | Wirkungsprobe gegen das echte Backend, drei Codex-Runden |
+| 31b Seite Vorhaben | gebaut | Schirme und Bedienung (Oberflächentest), drei Codex-Runden |
+| 31c Einwurf | gebaut | Bedienung (Oberflächentest), Codex-Runden siehe `docs/reviews/` |
+| 31d Für dich, Übergabe, Rückkehr | gebaut | Bedienung, Live-Durchspiel, Codex-Runden siehe `docs/reviews/` |
+| 31e Abgleich, XCeed | Abgleich-Lauf mit Wirkung belegt, XCeed recherchiert | Codex-Runden siehe `docs/reviews/` |
+
+Belege, Zahlen und Grenzen stehen in `docs/TECHNIKSTAND.md`, Abschnitt V31, die Reviews mit Antworten in `docs/reviews/V31*`,
+was offen ist in `FRAGEN_FUER_MORGEN.md` und `docs/BEKANNTE-MAENGEL.md`.
+
+---
+
+## Frühere Stände
+
 # Arbeitsstand · Pakete V23 und V24
 
 Ziel: die vier Pakete aus `docs/PAKETE-V23-V24.md` umsetzen. Alex ist bis morgen nicht erreichbar,

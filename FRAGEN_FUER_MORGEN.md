@@ -1,4 +1,30 @@
-# Fragen für morgen · Stand 22.09.2026
+# Fragen für morgen · Stand 03.10.2026 (V31 Vorhaben)
+
+## V31: was von euch kommen muss
+
+1. **Push und Live-Check (Alex).** Branch `paket/v31-vorhaben` pushen und nach `main` bringen, dann am Handy `hohes-haus.netlify.app/vorhaben.html` öffnen: Woche, Akte, Einwurf mit dem Mikrofon der Tastatur. Edge Function v38 und alle Migrationen sind schon live; bis zum Push zeigt die alte Seite einfach keine Vorhaben.
+2. **Leas Urlaub eintragen (Lea, spätestens 13.10.).** Über „Übergeben“ → Urlaub (14. bis 25.10.) oder `vertretung.html`. Erst dann zeigen Woche und Lagezeile das Band „Lea abwesend“, und der Übergabekorb nimmt ihre Vorhaben auf. Heute ist keine Abwesenheit eingetragen.
+3. **Abgleich-Auftrag in Cowork ersetzen (Alex) und Leas Lauf einrichten (Lea).** Der Text in `docs/ABGLEICH-VORHABEN.md` ist nach der Review nachgezogen: Quelle C ohne die Einwurf-Adresse (sonst landet eine Einwurf-Mail doppelt in der Akte), neue Quelle C2 für XCeed-Berichte an `alex+xceed@wildemoehre.org`, Abgleichstand über `select hh_vorhaben_quelle(…)` statt UPDATE. Der eingerichtete Auftrag trägt noch den alten Text. Er läuft (erster Lauf mit Wirkung am 03.10. um 20:18 Uhr).
+4. **Zwei Vorschläge des Abgleichs warten in der XCeed-Akte** (Stand von „Bürgschaftstext auf Deutsch“ und „Auszahlung ab Monat 1 schriftlich“). „Stand am Punkt übernehmen …“ öffnet den Punkt mit dem vorgeschlagenen Stand.
+5. **Der Einwurf aus dem Durchspiel ist nicht in XCeed eingetragen.** „Telefonat mit Victor: Auszahlung ab Monat 1 schriftlich bis Montag“ wurde erkannt (XCeed, Punkt „Auszahlung ab Monat 1 schriftlich“), übernommen habe ich ihn am Testvorhaben, damit keine unbestätigte Zusage in der echten Akte steht. Wenn das so stimmt: einmal selbst einwerfen.
+
+## V31: zu entscheiden
+
+6. **Doppeltes auf Für dich.** Ich habe nichts entfernt: „Deine Entscheidung“ zeigt Themen und Kandidaten, die Akte zählt verknüpfte Themen nur. Sollen Themen, die an einem Vorhaben hängen, aus „Deine Entscheidung“ verschwinden? Dann wäre die Startseite kürzer, aber Entscheidungen stünden nur noch in der Akte.
+7. **„Erfährt es im Morgenbericht“.** Die Wahl im Einwurf steuert bisher nur, ob sofort ein Ticker entsteht. Den Morgenbericht schreibt der tägliche Cowork-Auftrag; der liest den Verlauf der Vorhaben noch nicht. Bis dahin sieht die andere Person den Eintrag unter „Seit du zuletzt da warst“. Soll der tägliche Auftrag einen Absatz „Vorhaben seit gestern“ bekommen?
+8. **Stand-Vorschläge des Abgleichs strukturiert schreiben?** Heute steht der neue Stand im Text nach „jetzt so steht:“, die Akte liest ihn dort heraus und lässt ihn prüfen. Sauberer wäre ein eigenes Feld; das hieße, den Abgleich-Text und die Tabelle zu ändern.
+9. **Stufen für Verträge** (Angebot, Verhandlung, Rechtsprüfung … im Prototyp der XCeed-Akte) sind weggelassen, wie das Paket es für V31 erlaubt.
+10. **XCeed-Schlüssel.** Für die Partner Tickets API vergibt XCeed einen API-Schlüssel (partners@xceed.me); drei Fragen an XCeed stehen in `docs/XCEED-SCHNITTSTELLE.md`.
+
+## V31: gut zu wissen
+
+- Die KI im Einwurf ist Claude Sonnet 5 über `ANTHROPIC_API_KEY` (gesetzt); ein anderes Modell geht über das Secret `GFWEEKLY_EINWURF_MODEL`.
+- Testbestand: `test-v31` und `test-v31-ziel` stehen archiviert in der Datenbank, dazu beendete Testabwesenheiten; der nächste Lauf der Wirkungsprobe räumt sie ab. In der XCeed-Akte stehen acht verworfene Einträge aus dem Durchspiel (Haken und Ball hin und zurück), sie sind in der Akte nicht sichtbar; `ball_seit` ist zurückgesetzt.
+- Das Passwort der Edge Function ist in dieser Sitzung nicht gefallen; die Proben holen es aus dem Vault in eine Umgebungsvariable.
+
+---
+
+# Frühere Fragen · Stand 22.09.2026
 
 Die Fragen vom 21.09. sind beantwortet (`ANTWORTEN_ZU_FRAGEN.md`) und abgearbeitet. Was erledigt ist, steht
 durchgestrichen und mit einem Satz, wie es ausgegangen ist. Was noch von dir kommen muss, steht unten.
