@@ -681,3 +681,14 @@ Auftrag: `docs/PAKET-V31-VORHABEN.md`, Prüfauftrag `docs/reviews/V31-pruefauftr
 - Keine eigene Sprachaufnahme in V31 (Paket 31c).
 
 **Geprüft (Oberflächentest).** `pruefung/bedienung.mjs`, Abschnitt Einwurf: 14 Proben (Pflichttext, `einwurf_add`, Haken, Ball nicht vorausgewählt, Verworfenes sichtbar, Nutzlast von `einwurf_apply` mit Revision, gesehenem Ball und Benachrichtigung, Warteschlange mit Herkunft, Zielwechsel ruft `einwurf_vorschlag`, Später ohne Entscheidung, Einwurf aus Für dich). Die Wirkung im Backend belegt die Wirkungsprobe aus 31a.
+
+### 31d · Für dich, Übergabe, Rückkehr
+
+**Implementiert.**
+- Für dich (`site/index.html`): erster Block „Deine Vorhaben“ (Ball bei mir oder GF, nach maßgeblicher Frist, höchstens fünf, Rest „und <n> weitere →“ auf `vorhaben.html?filter=mir`), zweiter Block „Seit du zuletzt da warst“ (neue Aktion `vorhaben_seit`: bestätigte Verlaufseinträge aktiver Vorhaben seit `gf_vh_seen_<Person>`, ohne Wert 24 Stunden, ohne die eigenen Einträge; je Vorhaben eine Zeile mit Zahl und jüngstem Eintrag, „wartet auf dich“, wenn im Fenster ein Ballwechsel steht und der Ball jetzt bei mir liegt; „Alles gesehen“ setzt den Zeitpunkt). Beim Personenwechsel lädt die Seite neu.
+- Entscheidung zu Doppeltem: die bisherigen Blöcke (Deine Entscheidung, Vertretung, Seit gestern, Nächste Fristen) rücken nach unten, keiner entfällt. Sie zeigen Themen, Kandidaten, das Briefing des Laufs und Fristen außerhalb der Vorhaben; die Akte zählt verknüpfte Themen nur und ersetzt die Entscheidungsliste nicht. Offen als Frage in `FRAGEN_FUER_MORGEN.md`.
+- Übergabe aus `vorhaben.html` („Übergeben“, auch am Handy im Kopf): Anlass Feierabend oder Schichtende (Bälle bei mir je Vorhaben „<andere> übernimmt“, „bleibt bei mir“, „GF gemeinsam“, Notiz; `schicht_uebergabe` mit gesehenem Ball; Konflikte je Zeile), Urlaub oder Krank (nimmt die laufende Abwesenheit oder legt über `absence_set` eine an, auf Wunsch als Probe mit `test: true`; die Vorhaben-Zeilen des Korbs oben mit „<andere> übernimmt“, „Ruht bis <Rückkehr>“, „Team“ mit Pflichtname; `handover_set_many`; Link in die Übergabe für den Rest des Korbs).
+- `uebergabe.html`: Vorhaben-Zeilen tragen das Wort „Vorhaben“, der Titel und „Akte öffnen“ führen in die Akte; das Dossier zeigt Ball, Konflikt, offene Punkte und die letzten Verlaufseinträge.
+- `rueckkehr.html`: Abschnitt „Deine Vorhaben zurück“ aus `vorhaben_rueckkehr` (Ball zurück, noch bei der Vertretung oder hat geruht, je Vorhaben die Einträge seit Beginn der Abwesenheit, höchstens fünf, Rest in der Akte); „Rückübergabe bestätigen“ schickt jetzt `by` mit.
+
+**Geprüft (Oberflächentest).** `pruefung/bedienung.mjs`, Abschnitt 31d: 15 Proben (Reihenfolge und Inhalt der Blöcke auf Für dich, „wartet auf dich“, „Alles gesehen“, Vorhaben-Zeile in der Übergabe mit Link, Rückkehr, Übergabe-Dialog Feierabend mit Nutzlast, Urlaub mit laufender Abwesenheit, Pflichtname bei Team, Ruht). Schirme 84 Bilder, 0 Meldungen.

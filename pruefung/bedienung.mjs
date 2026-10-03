@@ -339,6 +339,64 @@ console.log('\n== Vorhaben (V31b): Ansichten, Akte, Punkt, Ball ==');
   await r.close();
 }
 
+console.log('\n== Für dich, Übergabe, Rückkehr (V31d) ==');
+{
+  frisch();
+  const f = await seite('/index.html');
+  pruefe('„Deine Vorhaben“ steht als erster Block', await f.evaluate(() => document.querySelector('#app section.fd')?.id) === 'fdVh');
+  const zeilen = await f.locator('#fdVhL .fd-row').count();
+  pruefe('Deine Vorhaben: Ball bei Alex oder GF, höchstens fünf', zeilen === 3, `${zeilen} Zeilen`);
+  pruefe('sortiert nach Frist', (await f.locator('#fdVhL .fd-row .fd-title').first().innerText()).includes('Lusatia'));
+  pruefe('Seit du zuletzt da warst: je Vorhaben eine Zeile', await f.locator('#fdSeitL .fd-row').count() === 2);
+  pruefe('Ball seitdem zu mir gewechselt: Marke „wartet auf dich“', (await f.locator('#fdSeitL .fd-row').first().innerText()).includes('wartet auf dich'));
+  await f.locator('#fdSeitOk').click(); await f.waitForTimeout(150);
+  pruefe('Alles gesehen setzt den Zeitpunkt und leert den Block', !!(await f.evaluate(() => localStorage.getItem('gf_vh_seen_Alex'))) && await f.locator('#fdSeitL .fd-row').count() === 0);
+  await f.close();
+
+  frisch();
+  const u = await seite('/uebergabe.html?id=abs-1');
+  await u.locator('#nurV').uncheck();
+  await u.waitForTimeout(200);
+  const vh = u.locator('.ub-row', { hasText:'XCeed Ticketing-Vertrag' });
+  pruefe('Übergabe zeigt die Vorhaben-Zeile mit dem Wort „Vorhaben“', await vh.count() === 1 && /^vorhaben/i.test(await vh.locator('.k').innerText()), `${await vh.count()} Zeilen`);
+  pruefe('Titel führt in die Akte', (await vh.locator('.t a').getAttribute('href')) === 'vorhaben.html?v=xceed');
+  await u.close();
+
+  frisch();
+  const r = await seite('/rueckkehr.html?id=abs-3');
+  pruefe('Rückkehr hat „Deine Vorhaben zurück“', await r.locator('#vhSec').isVisible() && (await r.locator('#vhList').innerText()).includes('Ball zurück bei Alex'));
+  pruefe('mit den Einträgen seit Beginn der Abwesenheit', (await r.locator('#vhList').innerText()).includes('Tranche bestätigt'));
+  await r.close();
+
+  /* Übergabe-Dialog als Lea: Feierabend, dann Urlaub mit der laufenden Abwesenheit. */
+  frisch();
+  const p = await seite('/vorhaben.html');
+  await p.evaluate(() => { sessionStorage.setItem('gf_who', 'Lea'); document.dispatchEvent(new CustomEvent('gf-who', { detail:'Lea' })); });
+  await p.locator('#vhUebergabe').click(); await p.waitForTimeout(150);
+  pruefe('Übergabe fragt nach dem Anlass', await p.locator('[data-anlass]').count() === 3);
+  await p.locator('[data-anlass="schicht"]').click();
+  const reihen = await p.locator('.vh-ue-z').count();
+  pruefe('Feierabend listet die Bälle bei Lea', reihen === 6, `${reihen} Zeilen`);
+  await p.locator('.vh-ue-z').nth(1).locator('[data-v="bleibt"]').click();
+  await p.locator('.vh-ue-z').nth(0).locator('.vh-ue-n').fill('Bürgschaft liegt im Ordner');
+  await p.locator('#vhUeOk').click(); await p.waitForTimeout(300);
+  const sw = letzte('schicht_uebergabe');
+  pruefe('schicht_uebergabe: von Lea an Alex, gesehener Ball, Notiz, „bleibt“ ohne Notiz fällt weg',
+    sw && sw.nutzlast.von === 'Lea' && sw.nutzlast.an === 'Alex' && sw.nutzlast.by === 'Lea' && sw.nutzlast.eintraege.length === 5
+      && sw.nutzlast.eintraege.every(e => e.expect_ball === 'lea' && e.ball === 'alex') && sw.nutzlast.eintraege.some(e => e.notiz === 'Bürgschaft liegt im Ordner'), JSON.stringify(sw && sw.nutzlast).slice(0, 200));
+  await p.locator('#vhUebergabe').click(); await p.waitForTimeout(150);
+  await p.locator('[data-anlass="urlaub"]').click(); await p.waitForTimeout(400);
+  pruefe('Urlaub nimmt die laufende Abwesenheit und zeigt die Vorhaben-Zeile', await p.locator('.vh-ue-z').count() === 1 && (await p.locator('.vh-ue').innerText()).includes('weitere Einträge im Korb'));
+  await p.locator('.vh-ue-z [data-v="team"]').click();
+  await p.locator('#vhUeSenden').click(); await p.waitForTimeout(150);
+  pruefe('Team ohne Namen wird nicht gesendet', !letzte('handover_set_many') && (await p.locator('.vh-ew-fehler').count()) === 1);
+  await p.locator('.vh-ue-z [data-v="ruht"]').click();
+  await p.locator('#vhUeSenden').click(); await p.waitForTimeout(300);
+  const hs = letzte('handover_set_many');
+  pruefe('Ruht geht als Ampel ruht an handover_set_many', hs && hs.nutzlast.items.length === 1 && hs.nutzlast.items[0].id === 'hv1' && hs.nutzlast.items[0].ampel === 'ruht', JSON.stringify(hs && hs.nutzlast));
+  await p.close();
+}
+
 console.log('\n== Einwurf (V31c) ==');
 {
   frisch();

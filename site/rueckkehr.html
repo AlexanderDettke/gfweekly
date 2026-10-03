@@ -45,6 +45,12 @@
     <div class="rk-list" id="warList"></div>
   </section>
 
+  <!-- V31d · Vorhaben, deren Ball wegen der Abwesenheit gewandert ist oder die geruht haben. -->
+  <section class="rk-sec" aria-label="Deine Vorhaben zurück" id="vhSec" hidden>
+    <div class="sec-h"><h2>Deine Vorhaben zurück</h2><span class="fd-n" id="vhN"></span></div>
+    <div class="rk-list" id="vhList"></div>
+  </section>
+
   <section class="rk-sec" aria-label="Abschluss">
     <button class="btn btn-primary" id="endBtn">Rückübergabe bestätigen</button>
   </section>
@@ -123,7 +129,7 @@ $("#warList").addEventListener("click",async e=>{
 });
 $("#endBtn").onclick=async()=>{
   if(!confirm("Rückübergabe bestätigen? Die Abwesenheit wird beendet und die Vertretungen werden gelöscht.")) return;
-  try{ await gfApi("absence_end",{ id:ABSENCE.id }); gfToast("Willkommen zurück"); location.href="index.html"; }
+  try{ await gfApi("absence_end",{ id:ABSENCE.id, by:gfWho() }); gfToast("Willkommen zurück"); location.href="index.html"; }
   catch(e){ gfToast("Fehler: "+e.message); }
 };
 
@@ -139,6 +145,22 @@ async function load(){
   const [l, p]=await Promise.all([ gfApi("handover_list",{ absence_id:ABSENCE.id }), gfApi("handover_log",{ absence_id:ABSENCE.id }).catch(()=>({log:[]})) ]);
   ITEMS=l.items||[]; LOG=p.log||[];
   renderKopf(); renderKpis(); renderEnt(); renderWartet();
+  ladeVorhaben();
+}
+/* V31d · „Deine Vorhaben zurück“: je Vorhaben, ob der Ball zurück ist oder noch bei der Vertretung liegt (Rückgabe mit
+   der Rückübergabe), und was seit Beginn der Abwesenheit im Verlauf steht, höchstens fünf Einträge, der Rest in der Akte. */
+async function ladeVorhaben(){
+  let d; try{ d=await gfApi("vorhaben_rueckkehr",{ absence_id:ABSENCE.id }); }catch(e){ return; }
+  const l=d.vorhaben||[]; $("#vhSec").hidden=!l.length; $("#vhN").textContent=l.length||"";
+  $("#vhList").innerHTML=l.map(v=>{
+    const zurueck=v.zurueck?gfZustand("ok","Ball zurück bei "+gfVhBallWort(v.ball,v.ball_name)):v.absence_id?gfZustand("warn","noch bei "+gfVhBallWort(v.ball,v.ball_name)+", zurück mit der Rückübergabe"):gfZustand("info","Ball bei "+gfVhBallWort(v.ball,v.ball_name));
+    const ruhte=v.korb&&v.korb.ampel==="ruht"?gfZustand("offen","hat geruht"):"";
+    const e=(v.verlauf||[]);
+    return `<article class="rk-row">
+      <span class="t"><a href="vorhaben.html?v=${encodeURIComponent(v.slug)}&tab=verlauf">${gfEsc(v.title)}</a></span>${zurueck} ${ruhte}
+      <span class="m">${e.length?`${e.length} ${e.length===1?"Eintrag":"Einträge"} seit ${gfEsc(gfFmtShort(ABSENCE.von))}:`:"Seitdem nichts im Verlauf."}</span>
+      ${e.length?`<ul class="rk-vl">${e.slice(0,5).map(x=>`<li>${gfEsc(gfNewsWhen(x.happened_at))} · ${gfEsc(GF_VH_ART[x.art]||x.art)}${x.wer?" · "+gfEsc(x.wer):""}: ${gfEsc(x.text)}</li>`).join("")}${e.length>5?`<li><a href="vorhaben.html?v=${encodeURIComponent(v.slug)}&tab=verlauf">und ${e.length-5} weitere in der Akte →</a></li>`:""}</ul>`:""}
+    </article>`; }).join("");
 }
 function whoGleich(p){ return (p||"").toLowerCase()===gfWho().toLowerCase(); }
 gfGate(async()=>{

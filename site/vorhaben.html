@@ -423,7 +423,133 @@ $("#vhEinwurf").onclick=()=>einwurf(AKTE?{ vorhaben_id:AKTE.vorhaben.id }:{});
 $("#vhFab").onclick=()=>einwurf(AKTE?{ vorhaben_id:AKTE.vorhaben.id }:{});
 $("#vhWarte").onclick=()=>gfEinwurfWarteschlange({ onDone:()=>laden(true) });
 $("#vhAkte").addEventListener("click",e=>{ const b=e.target.closest(".vh-warte.klein"); if(b && typeof gfEinwurfWarteschlange==="function"){ e.stopPropagation(); gfEinwurfWarteschlange({ vorhaben_id:AKTE.vorhaben.id, onDone:()=>{ laden(true); oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); } }); } }, true);
-$("#vhUebergabe").onclick=()=>{ if(typeof vhUebergabe==="function") vhUebergabe(); else gfToast("Die Übergabe kommt mit dem nächsten Teilpaket."); };
+$("#vhUebergabe").onclick=()=>vhUebergabe();
+
+/* ---------- Übergabe (31d) ----------
+   Feierabend oder Schichtende: Bälle bei mir je Vorhaben an die andere Person, bleibt oder GF, mit Notiz (schicht_uebergabe).
+   Urlaub oder Krank: Abwesenheit anlegen oder die laufende nehmen (absence_set baut den Korb), die Vorhaben-Zeilen des Korbs
+   oben mit „<andere> übernimmt“, „Ruht bis <Rückkehr>“, „Team“; gespeichert über handover_set_many. Den Rest des Korbs
+   (Themen, Kandidaten, Termine) entscheidet die Übergabeseite. */
+async function vhUebergabe(){
+  const m=$("#vhModal"); m.classList.add("vh-ew-back");
+  const ich=gfWho(), andere=gfVhAndere(), meinBall=gfVhIch(), heute=DATA?.heute||new Date().toLocaleDateString("sv-SE",{timeZone:"Europe/Berlin"});
+  const S={ anlass:null, wahl:{}, notiz:{}, name:{}, abw:null, korb:[], rest:0, laedt:false, fehler:"", form:{ von:heute, bis:"", test:false } };
+  const frei=gfModalAuf(m);
+  const zu=()=>{ m.classList.remove("open","vh-ew-back"); m.innerHTML=""; m.onkeydown=null; frei(); };
+  const meine=()=>(DATA?.vorhaben||[]).filter(v=>v.ball===meinBall).sort((a,b)=>(gfVhFrist(a)||"9999").localeCompare(gfVhFrist(b)||"9999"));
+  const laufend=()=>(DATA?.abwesenheiten||[]).find(a=>gfWhoNorm(a.person)===ich&&(a.status==="geplant"||a.status==="aktiv"));
+  const rueck=a=>gfVhTag(gfAddDays(a.bis||a.bis_geschaetzt||gfAddDays(a.von,13),1));
+  function chips(id, opts, cur, label){ return `<div class="fchips compact" role="group" aria-label="${gfEsc(label)}">${opts.map(([k,l])=>`<button type="button" class="chip${cur===k?" on":""}" aria-pressed="${cur===k}" data-wahl="${gfEsc(id)}" data-v="${k}">${gfEsc(l)}</button>`).join("")}</div>`; }
+  function render(){
+    let kopf=`${gfEsc(ich)} übergibt an ${gfEsc(andere)}`, unter="", body="", fuss="";
+    if(!S.anlass){
+      body=`<p class="vh-dlg-t">Wofür übergibst du?</p>
+        <div class="vh-ue-anlass">${[["schicht","Feierabend oder Schichtende","Bälle für heute weitergeben, keine Abwesenheit"],["urlaub","Urlaub","Abwesenheit mit Vertretung, Korb und Rückgabe"],["krank","Krank","Ab sofort weg, Korb und Rückgabe"]].map(([k,l,h])=>`<button type="button" class="vh-ue-a" data-anlass="${k}"><b>${l}</b><span>${h}</span></button>`).join("")}</div>`;
+      fuss=`<button type="button" class="btn btn-brand" data-ue-x>Abbrechen</button>`;
+    } else if(S.anlass==="schicht"){
+      unter="Feierabend oder Schichtende";
+      const l=meine();
+      body=l.length?`<p class="vh-dlg-t">${l.length} ${l.length===1?"Vorhaben liegt":"Vorhaben liegen"} bei dir.</p>${l.map(v=>{ const w=S.wahl[v.id]||"andere"; return `<div class="vh-ue-z">
+          <div class="vh-ue-t"><b>${gfEsc(v.title)}</b><span>${gfEsc(v.naechster_schritt||"kein nächster Schritt")}</span></div>
+          ${chips(v.id,[["andere",andere+" übernimmt"],["bleibt","bleibt bei mir"],["gf","GF gemeinsam"]],w,"Ball für "+v.title)}
+          <input class="vh-ue-n" data-notiz="${v.id}" maxlength="300" placeholder="Notiz für ${gfEsc(andere)} (optional)" aria-label="Notiz zu ${gfEsc(v.title)}" value="${gfEsc(S.notiz[v.id]||"")}">
+        </div>`; }).join("")}`:`<p class="fd-empty">Gerade liegt kein Ball bei dir. Nichts zu übergeben.</p>`;
+      fuss=`<button type="button" class="btn btn-brand" data-ue-zurueck>Zurück</button>${l.length?`<button type="button" class="btn btn-primary" id="vhUeOk" style="margin-left:auto" ${S.laedt?"disabled":""}>Übergabe senden</button>`:""}`;
+    } else if(!S.abw){
+      unter=S.anlass==="urlaub"?"Urlaub":"Krank";
+      body=`<div class="vh-pform-z"><label class="vh-fld">Ab<input type="date" id="vhUeVon" value="${gfEsc(S.form.von)}" required></label>
+        <label class="vh-fld">${S.anlass==="urlaub"?"Bis (letzter Urlaubstag)":"Voraussichtlich bis (optional)"}<input type="date" id="vhUeBis" value="${gfEsc(S.form.bis)}" ${S.anlass==="urlaub"?"required":""}></label></div>
+        <p class="vh-dlg-t">Vertretung: ${gfEsc(andere)}. Das Haus baut den Übergabekorb, die Vorhaben stehen gleich oben.</p>
+        <label class="vh-ue-test"><input type="checkbox" id="vhUeTest" ${S.form.test?"checked":""}> Probe (Testabwesenheit, zählt nicht für Bänder und Für dich)</label>`;
+      fuss=`<button type="button" class="btn btn-brand" data-ue-zurueck>Zurück</button><button type="button" class="btn btn-primary" id="vhUeAnlegen" style="margin-left:auto" ${S.laedt?"disabled":""}>Weiter</button>`;
+    } else {
+      const a=S.abw; unter=`${S.anlass==="urlaub"?"Urlaub":S.anlass==="krank"?"Krank":"Abwesenheit"} ${gfVhTag(a.von)}${a.bis?" bis "+gfVhTag(a.bis):a.bis_geschaetzt?" bis voraussichtlich "+gfVhTag(a.bis_geschaetzt):""}${a.test?" · Probe":""}`;
+      body=S.korb.length?S.korb.map(z=>{ const w=S.wahl[z.id]; return `<div class="vh-ue-z">
+          <div class="vh-ue-t"><b>${gfEsc(z.title)}</b><span>${gfEsc((z.dossier&&z.dossier.naechster_schritt)||"kein nächster Schritt")}</span>${z.status!=="vorschlag"?gfZustand("ok","schon entschieden"):""}</div>
+          ${chips(z.id,[["andere",andere+" übernimmt"],["ruht","Ruht bis "+rueck(a)],["team","Team"]],w,"Übergabe für "+z.title)}
+          ${w==="team"?`<input class="vh-ue-n" data-name="${z.id}" maxlength="120" placeholder="Wer im Team? (Pflicht)" aria-label="Wer im Team übernimmt ${gfEsc(z.title)}" value="${gfEsc(S.name[z.id]||"")}">`:""}
+        </div>`; }).join("")+(S.rest?`<p class="vh-dlg-t">Dazu ${S.rest} weitere Einträge im Korb (Themen, Kandidaten, Termine): <a href="uebergabe.html?id=${encodeURIComponent(a.id)}">in der Übergabe entscheiden →</a></p>`:"")
+        :`<p class="fd-empty">Kein Vorhaben mit Ball bei dir im Korb. ${S.rest?`<a href="uebergabe.html?id=${encodeURIComponent(a.id)}">Übergabe öffnen →</a>`:""}</p>`;
+      fuss=`<button type="button" class="btn btn-brand" data-ue-x>Später</button>${S.korb.length?`<button type="button" class="btn btn-primary" id="vhUeSenden" style="margin-left:auto" ${S.laedt?"disabled":""}>Übergabe senden</button>`:""}`;
+    }
+    m.innerHTML=`<div class="modal vh-dlg vh-ue" role="dialog" aria-modal="true" aria-labelledby="vhUeH">
+      <div class="modal-h"><div class="vh-ue-kopf">${gfAvatarTag(ich,"vh-av")}<span aria-hidden="true">→</span>${gfAvatarTag(andere,"vh-av")}<div><h3 id="vhUeH">${kopf}</h3>${unter?`<div class="vh-dlg-t">${gfEsc(unter)}</div>`:""}</div></div><button type="button" class="icon-btn" data-ue-x aria-label="Schließen">✕</button></div>
+      <div class="vh-dlg-b">${body}${S.fehler?`<div class="vh-ew-fehler" role="alert">${gfEsc(S.fehler)}</div>`:""}${S.laedt?`<div class="loading" role="status">Einen Augenblick …</div>`:""}</div>
+      <div class="modal-f">${fuss}</div></div>`;
+    m.classList.add("open");
+    m.querySelectorAll("[data-ue-x]").forEach(b=>b.onclick=()=>{ if(!S.laedt) zu(); });
+    m.querySelectorAll("[data-ue-zurueck]").forEach(b=>b.onclick=()=>{ S.anlass=null; S.fehler=""; render(); });
+    m.querySelectorAll("[data-anlass]").forEach(b=>b.onclick=()=>waehleAnlass(b.dataset.anlass));
+    m.querySelectorAll("[data-wahl]").forEach(b=>b.onclick=()=>{ S.wahl[b.dataset.wahl]=b.dataset.v; merke(); render(); m.querySelector(`[data-wahl="${CSS.escape(b.dataset.wahl)}"][data-v="${b.dataset.v}"]`)?.focus(); });
+    const ok=m.querySelector("#vhUeOk"); if(ok) ok.onclick=schicht;
+    const an=m.querySelector("#vhUeAnlegen"); if(an) an.onclick=anlegen;
+    const se=m.querySelector("#vhUeSenden"); if(se) se.onclick=senden;
+    m.onkeydown=e=>{ if(e.key==="Escape" && !S.laedt) zu(); };
+  }
+  function merke(){
+    m.querySelectorAll("[data-notiz]").forEach(i=>{ S.notiz[i.dataset.notiz]=i.value; });
+    m.querySelectorAll("[data-name]").forEach(i=>{ S.name[i.dataset.name]=i.value; });
+    const v=m.querySelector("#vhUeVon"), b=m.querySelector("#vhUeBis"), t=m.querySelector("#vhUeTest");
+    if(v) S.form.von=v.value; if(b) S.form.bis=b.value; if(t) S.form.test=t.checked;
+  }
+  async function waehleAnlass(k){
+    S.anlass=k; S.fehler="";
+    if(k==="schicht"){ render(); return; }
+    const a=laufend(); if(a){ S.laedt=true; render(); await korb(a); S.laedt=false; }
+    else if(k==="krank") S.form.von=heute;
+    render();
+  }
+  async function korb(a){
+    try{ const d=await gfApi("handover_list",{ absence_id:a.id }); S.abw=d.absence||a;
+      const alle=d.items||[]; S.korb=alle.filter(x=>x.kind==="vorhaben"); S.rest=alle.length-S.korb.length;
+      for(const z of S.korb){ if(S.wahl[z.id]) continue;
+        S.wahl[z.id]=z.ampel==="ruht"?"ruht":(z.vertretung&&gfWhoNorm(z.vertretung)==="Team")?"team":"andere";
+        if(S.wahl[z.id]==="team") S.name[z.id]=z.vertretung; }
+    }catch(e){ S.fehler="Der Korb ließ sich nicht laden: "+(e.message||"Verbindung"); }
+  }
+  async function anlegen(){
+    merke();
+    if(!S.form.von){ S.fehler="Bitte angeben, ab wann."; render(); return; }
+    if(S.anlass==="urlaub" && !S.form.bis){ S.fehler="Bitte den letzten Urlaubstag angeben."; render(); return; }
+    if(S.form.bis && S.form.bis<S.form.von){ S.fehler="Das Ende liegt vor dem Anfang."; render(); return; }
+    S.laedt=true; S.fehler=""; render();
+    try{
+      const d=await gfApi("absence_set",{ person:ich, von:S.form.von, bis:S.anlass==="urlaub"?S.form.bis:null, bis_geschaetzt:S.anlass==="krank"?(S.form.bis||null):null,
+        art:S.anlass==="urlaub"?"geplant":"sofort", kontakt:"keiner", vertretung_standard:andere, test:!!S.form.test, note:S.anlass==="urlaub"?"Urlaub":"Krank", who:ich });
+      await korb(d.absence);
+    }catch(e){ S.fehler="Nicht angelegt: "+(e.message||"Verbindung"); }
+    S.laedt=false; render();
+  }
+  async function schicht(){
+    merke();
+    const eintraege=meine().map(v=>{ const w=S.wahl[v.id]||"andere", n=(S.notiz[v.id]||"").trim();
+      if(w==="bleibt" && !n) return null;
+      return { vorhaben_id:v.id, ball:w==="andere"?(andere==="Lea"?"lea":"alex"):w==="gf"?"gf":meinBall, expect_ball:v.ball, notiz:n||undefined }; }).filter(Boolean);
+    if(!eintraege.length){ zu(); gfToast("Nichts geändert"); return; }
+    S.laedt=true; S.fehler=""; render();
+    try{ const d=await gfApi("schicht_uebergabe",{ von:ich, an:andere, eintraege, by:ich });
+      S.laedt=false;
+      if(!d.ok){ S.fehler=`${d.fehler.length} nicht übergeben: `+d.fehler.map(f=>{ const v=meine().find(x=>x.id===f.vorhaben_id); return `${v?v.title:"Vorhaben"} (${f.grund})`; }).join("; "); await laden(true); render(); return; }
+      zu(); gfToast(`${(d.ergebnis||[]).filter(x=>x.ball_geaendert).length} Bälle an ${andere} übergeben, Notizen im Verlauf.`); await laden(true); if(AKTE_SLUG) oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true});
+    }catch(e){ S.laedt=false; S.fehler="Nicht gespeichert: "+(e.message||"Verbindung"); render(); }
+  }
+  async function senden(){
+    merke();
+    const fehlt=S.korb.filter(z=>S.wahl[z.id]==="team" && !(S.name[z.id]||"").trim());
+    if(fehlt.length){ S.fehler=`Bitte für „${fehlt[0].title}“ angeben, wer im Team übernimmt.`; render(); return; }
+    const amp=z=>["gruen","gelb","rot"].includes(z.ampel)?z.ampel:"gruen";
+    const items=S.korb.map(z=>{ const w=S.wahl[z.id];
+      return w==="ruht"?{ id:z.id, ampel:"ruht" } : { id:z.id, ampel:amp(z), vertretung:w==="team"?S.name[z.id].trim():andere }; });
+    S.laedt=true; S.fehler=""; render();
+    try{ const d=await gfApi("handover_set_many",{ items, by:ich });
+      S.laedt=false;
+      if(!d.ok){ S.fehler=`${d.misslungen.length} nicht gespeichert: `+d.misslungen.map(x=>`${x.titel||"Zeile"} (${x.grund})`).join("; "); render(); return; }
+      zu(); gfToast(`${d.updated} Vorhaben übergeben.`+(S.rest?" Den Rest des Korbs in der Übergabe entscheiden.":"")); await laden(true);
+    }catch(e){ S.laedt=false; S.fehler="Nicht gespeichert: "+(e.message||"Verbindung"); render(); }
+  }
+  render();
+  setTimeout(()=>m.querySelector("[data-anlass]")?.focus(),40);
+}
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && AKTE_SLUG && !$("#vhModal").classList.contains("open") && !document.querySelector(".modal-back.open")) schliesseAkte(); });
 document.addEventListener("gf-who",()=>{ if(DATA){ renderSteuer(); renderMain(); } gfVhBadge(); });
 

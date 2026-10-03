@@ -60,7 +60,9 @@
    die aktuelle Ansicht in einem Zug. Bei kurzer und ungeplanter Abwesenheit ist die Seite eine Wache:
    nur Fristen, Ampeln gesperrt, nichts wird umgehängt. */
 const $=s=>document.querySelector(s);
-const KIND_LBL={ thema:"Thema", kandidat:"Kandidat", meilenstein:"Meilenstein", ritual:"Ritual", termin:"Termin", asana:"Asana", partner:"Partner" };
+const KIND_LBL={ thema:"Thema", kandidat:"Kandidat", meilenstein:"Meilenstein", ritual:"Ritual", termin:"Termin", asana:"Asana", partner:"Partner", vorhaben:"Vorhaben" };
+/* V31d: Vorhaben-Zeilen tragen das Wort „Vorhaben“ und führen in die Akte. */
+const akteLink=x=>`vorhaben.html?v=${encodeURIComponent((x.dossier&&x.dossier.slug)||x.ref_id)}`;
 let ABSENCE=null, ITEMS=[], ZAEHL={}, GEKUERZT=false, FILTER={ quadrant:"", cluster:"", ampel:"", nurVorschlag:true, nurLuecken:false }, LOG=[], PERSONEN=[];
 
 function istWache(){ return ABSENCE && ABSENCE.art==="sofort" && ABSENCE.stufe==="kurz"; }
@@ -136,7 +138,7 @@ function zeile(x){
   return `<article class="ub-row ${x.luecke?"is-luecke":""}" data-id="${x.id}">
     <div class="ub-r1">
       ${gfQuadrant(x.quadrant)}
-      <span class="t">${gfEsc(x.title||"")}</span>
+      <span class="t">${x.kind==="vorhaben"?`<a href="${akteLink(x)}">${gfEsc(x.title||"")}</a>`:gfEsc(x.title||"")}</span>
       <span class="k">${gfEsc(KIND_LBL[x.kind]||x.kind)}${x.strand?" · "+gfEsc(x.strand):""}</span>
       ${gfFrist(x.frist)}
       ${x.luecke?gfZustand("warn","Stand fehlt"):""}
@@ -172,19 +174,25 @@ function dossierHtml(x){
   add("Text", d.text); add("Zitat", d.zitat); add("Quelle", d.quelle);
   add("Partner", d.partner); add("Phase", d.phase); add("Wartet auf", d.wartet_auf); add("Signal", d.signal);
   add("Beschreibung", d.beschreibung); add("Zeitraum", d.zeitraum); add("Wer", d.wer); add("Hinweis", d.hinweis);
+  if(x.kind==="vorhaben"){ add("Ball", d.ball); add("Konflikt", d.konflikt); }
+  const punkte=(d.punkte_offen||[]).map(p=>`<li>${gfEsc(p.titel)}${[p.stand,p.wer,p.frist?("Frist "+gfFmtShort(p.frist)):""].filter(Boolean).length?` · ${gfEsc([p.stand,p.wer,p.frist?("Frist "+gfFmtShort(p.frist)):""].filter(Boolean).join(" · "))}`:""}</li>`).join("");
+  const verlauf=(Array.isArray(d.verlauf)?d.verlauf:[]).map(e=>`<li>${gfEsc(gfFmtShort(e.happened_at))} · ${gfEsc(GF_VH_ART[e.art]||e.art)}${e.wer?" · "+gfEsc(e.wer):""}: ${gfEsc(e.text||"")}</li>`).join("");
   const news=(d.news||[]).map(n=>`<li>${gfEsc(gfFmtShort(n.happened_at))}: ${gfEsc(n.title||"")}${n.source_url?` <a href="${gfEsc(n.source_url)}" target="_blank" rel="noopener">Quelle ↗</a>`:""}</li>`).join("");
   const besch=(d.beschluesse||[]).map(b=>`<li>${gfEsc(gfFmtShort(b.decided_at))}: ${gfEsc(b.decision||"")}${b.next_action?` · nächster Schritt: ${gfEsc(b.next_action)}`:""}</li>`).join("");
   const fragen=(d.fragen||[]).length?`<p>${gfZustand("warn","Niemand hat den Stand notiert")} Wer Bescheid weiß: ${gfEsc((d.fragen||[]).join(", "))}</p>`:"";
   return `${zeilen.length?`<dl>${zeilen.join("")}</dl>`:""}
     ${news?`<div><b>Letzte Neuigkeiten</b><ul>${news}</ul></div>`:""}
     ${besch?`<div><b>Beschlüsse</b><ul>${besch}</ul></div>`:""}
+    ${punkte?`<div><b>Offene Punkte</b><ul>${punkte}</ul></div>`:""}
+    ${verlauf?`<div><b>Letzte Einträge im Verlauf</b><ul>${verlauf}</ul></div>`:""}
     ${d.wache?`<p>${gfZustand("warn","Wache")} Diese Frist läuft in den nächsten drei Tagen ab.</p>`:""}
     ${fragen}
-    ${!zeilen.length&&!news&&!besch?`<p class="fd-muted">Das Haus weiß zu diesem Vorgang nichts außer dem Titel.</p>`:""}
+    ${!zeilen.length&&!news&&!besch&&!punkte&&!verlauf?`<p class="fd-muted">Das Haus weiß zu diesem Vorgang nichts außer dem Titel.</p>`:""}
     <div class="akt">
       <button class="btn btn-sm btn-brand" data-act="doss">Dossier neu</button>
       ${x.kind==="thema"?`<a class="btn btn-sm btn-brand" href="board.html?topic=${gfEsc(x.ref_id)}">Stand ergänzen</a>`:""}
       ${x.kind==="kandidat"?`<a class="btn btn-sm btn-brand" href="neuigkeiten.html">Im Sichtungskorb ansehen</a>`:""}
+      ${x.kind==="vorhaben"?`<a class="btn btn-sm btn-brand" href="${akteLink(x)}">Akte öffnen</a>`:""}
     </div>`;
 }
 async function setzen(id, patch){

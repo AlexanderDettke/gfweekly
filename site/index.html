@@ -35,6 +35,16 @@
   <header id="topbar"></header>
   <div id="hero"></div>
 
+  <!-- V31d · Vorhaben zuerst: was bei mir liegt, und was sich seit meinem letzten Besuch bewegt hat. -->
+  <section class="fd" id="fdVh" aria-label="Deine Vorhaben">
+    <div class="fd-h"><h2>Deine Vorhaben</h2><span class="fd-n" id="fdVhN"></span><span class="line"></span><a class="btn btn-sm btn-ghost" href="vorhaben.html">Vorhaben →</a></div>
+    <div class="fd-list" id="fdVhL"><div class="loading">lädt …</div></div>
+  </section>
+  <section class="fd" id="fdSeit" aria-label="Seit du zuletzt da warst">
+    <div class="fd-h"><h2>Seit du zuletzt da warst</h2><span class="fd-n" id="fdSeitN"></span><span class="line"></span><button type="button" class="btn btn-sm btn-ghost" id="fdSeitOk" hidden>Alles gesehen</button></div>
+    <div class="fd-list" id="fdSeitL"></div>
+  </section>
+
   <!-- V22c · Für dich: drei Blöcke, sonst nichts. -->
   <section class="fd" id="fdEnt" aria-label="Deine Entscheidung">
     <div class="fd-h"><h2>Deine Entscheidung</h2><span class="fd-n" id="fdEntN"></span><span class="line"></span><a class="btn btn-sm btn-primary" id="fdMeet" href="besprechung.html" hidden>Zur Besprechung</a></div>
@@ -71,7 +81,7 @@
    Block 3: die drei nächsten Daten aus Fristen, Zieldaten der Partner, Meilensteinen und Kalender-Tickern. */
 const $=s=>document.querySelector(s);
 const NOW=new Date(); const TODAY=NOW.toLocaleDateString("sv-SE");
-let GL=null, LAGE=[], CAL=[], DIG=null, MS=[], STRANDS=[], ABS=[], ABSZ={}, VT=[];
+let GL=null, LAGE=[], CAL=[], DIG=null, MS=[], STRANDS=[], ABS=[], ABSZ={}, VT=[], VH=null, SEIT=null;
 function meWho(){ return gfWho()==="Lea"?"lea":"alex"; }
 function dayDiff(d){ const a=new Date(TODAY+"T00:00:00"), b=new Date((d||"").slice(0,10)+"T00:00:00"); return Math.round((b-a)/86400000); }
 function fmtD(d){ return d?new Date(d.slice(0,10)+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}):""; }
@@ -87,6 +97,47 @@ function fristWord(d){
 function strandLabel(k){ const s=STRANDS.find(x=>x.key===k); return s?(s.short||s.label):(k||""); }
 function itemHref(x){ return x.kind==="thema"?`board.html?topic=${x.id}`:"neuigkeiten.html"; }
 function itemSort(a,b){ return (a.gate_frist||"9999").localeCompare(b.gate_frist||"9999") || (a.created_at||"").localeCompare(b.created_at||""); }
+
+/* ---- V31d · Deine Vorhaben: Ball bei mir oder bei der GF, nach Frist, höchstens fünf ---- */
+function renderVh(){
+  if(!VH){ $("#fdVhL").innerHTML=`<p class="fd-empty">Die Vorhaben ließen sich gerade nicht laden.</p>`; return; }
+  const me=meWho();
+  const meine=VH.filter(v=>v.ball===me||v.ball==="gf").sort((a,b)=>(gfVhFrist(a)||"9999").localeCompare(gfVhFrist(b)||"9999")||a.sort-b.sort);
+  $("#fdVhN").textContent=meine.length||"";
+  if(!meine.length){ $("#fdVhL").innerHTML=`<p class="fd-empty">Kein Ball bei dir. <a href="vorhaben.html">Alle Vorhaben →</a></p>`; return; }
+  const show=meine.slice(0,5), rest=meine.length-show.length;
+  $("#fdVhL").innerHTML=show.map(v=>{ const f=fristWord(gfVhFrist(v));
+    return `<a class="fd-row" href="vorhaben.html?v=${encodeURIComponent(v.slug)}">
+      <div class="fd-main"><div class="fd-title">${gfEsc(v.title)}</div><div class="fd-note">${v.naechster_schritt?"→ "+gfEsc(v.naechster_schritt):"kein nächster Schritt"}</div></div>
+      <div class="fd-side">${f?gfZustand(f.tone||"info",f.t):`<span class="fd-muted">ohne Frist</span>`}<span class="fd-who">${v.ball==="gf"?"GF gemeinsam":"bei dir"}${v.zustand==="ueberfaellig"||v.zustand==="ball_fehlt"?"":v.zustand==="bewegt"?" · bewegt":""}</span></div>
+    </a>`; }).join("")+(rest?`<a class="fd-more" href="vorhaben.html?filter=mir">und ${rest} weitere →</a>`:"");
+  gfStagger($("#fdVhL"),".fd-row");
+}
+/* ---- V31d · Seit du zuletzt da warst: Verlauf seit dem letzten „Alles gesehen“ (sonst 24 Stunden), je Vorhaben eine Zeile ---- */
+function renderSeit(){
+  const ok=$("#fdSeitOk");
+  if(!SEIT){ $("#fdSeitL").innerHTML=`<p class="fd-empty">Der Verlauf ließ sich gerade nicht laden.</p>`; ok.hidden=true; return; }
+  const me=meWho(), vh=new Map((SEIT.vorhaben||[]).map(v=>[v.id,v]));
+  const gruppen=new Map();
+  for(const e of SEIT.eintraege||[]){ if(!gruppen.has(e.vorhaben_id)) gruppen.set(e.vorhaben_id,[]); gruppen.get(e.vorhaben_id).push(e); }
+  const zeilen=[...gruppen.entries()].map(([id,es])=>({ v:vh.get(id), es, neu:es[0].created_at })).filter(z=>z.v)
+    .sort((a,b)=>b.neu.localeCompare(a.neu));
+  const wann=gfVhSeen()?`seit ${gfNewsWhen(SEIT.seit)}`:"24 Stunden";
+  $("#fdSeitN").textContent=wann;
+  ok.hidden=!zeilen.length;
+  if(!zeilen.length){ $("#fdSeitL").innerHTML=`<p class="fd-empty">Nichts Neues in den Vorhaben (${wann}).</p>`; return; }
+  const show=zeilen.slice(0,6), rest=zeilen.length-show.length;
+  $("#fdSeitL").innerHTML=show.map(({v,es})=>{
+    const j=es[0];
+    /* Ball seitdem zu mir gewechselt: ein Ballwechsel im Fenster und der Ball liegt jetzt bei mir. */
+    const zuMir=v.ball===me && es.some(e=>e.art==="uebergabe");
+    return `<a class="fd-row" href="vorhaben.html?v=${encodeURIComponent(v.slug)}&tab=verlauf">
+      <div class="fd-main"><div class="fd-title">${gfEsc(v.title)}</div><div class="fd-note">${gfEsc(GF_VH_ART[j.art]||j.art)}${j.wer?" · "+gfEsc(j.wer):""}: ${gfEsc(gfFirstSentence(j.text,160))}</div></div>
+      <div class="fd-side">${zuMir?gfZustand("action","wartet auf dich"):""}<span class="fd-who">${es.length} ${es.length===1?"Eintrag":"Einträge"} · ${gfEsc(gfNewsWhen(j.created_at))}</span></div>
+    </a>`; }).join("")+(rest?`<a class="fd-more" href="vorhaben.html?filter=bewegt">und ${rest} weitere Vorhaben →</a>`:"");
+  gfStagger($("#fdSeitL"),".fd-row");
+}
+document.getElementById("fdSeitOk").addEventListener("click",()=>{ gfVhMarkSeen(new Date().toISOString()); SEIT={ seit:new Date().toISOString(), eintraege:[], vorhaben:SEIT?.vorhaben||[] }; renderSeit(); gfToast("Alles gesehen"); });
 
 /* ---- Block 1 ---- */
 function renderEnt(){
@@ -191,8 +242,13 @@ function renderVt(){
   }
   sec.hidden=true;
 }
-function renderAll(){ renderEnt(); renderVt(); renderNeu(); renderFr(); }
+function renderAll(){ renderVh(); renderSeit(); renderEnt(); renderVt(); renderNeu(); renderFr(); }
 async function load(){
+  const [vh, seit]=await Promise.all([
+    gfApi("vorhaben_list").catch(()=>null),
+    gfApi("vorhaben_seit",{ seit:gfVhSeen()||undefined, person:gfWho() }).catch(()=>null),
+  ]);
+  VH=vh?vh.vorhaben||[]:null; SEIT=seit;
   const [gl, lg, cal, dig, ms, cyc, abs]=await Promise.all([
     gfApi("gate_list",{limit:1000}),
     gfApi("news_list",{kinds:["lage"],limit:60}).catch(()=>({items:[]})),
@@ -220,7 +276,8 @@ gfGate(async()=>{
   /* V31c · Einwurf aus Für dich: oben im Kopf, am Handy als fester Knopf unten. */
   const einwurf=()=>gfEinwurf({ onDone:()=>{ load().catch(()=>{}); } });
   $("#fdEinwurf").onclick=einwurf; $("#fdFab").onclick=einwurf;
-  document.addEventListener("gf-who",e=>{ gfHeroText(`${gfAvatarTag(e.detail,"hero-av")}Guten Tag, ${gfEsc(e.detail)}`,null); if(GL) renderAll(); });
+  /* „Seit du zuletzt da warst“ gehört der Person: beim Wechsel neu laden, nicht nur neu zeichnen. */
+  document.addEventListener("gf-who",e=>{ gfHeroText(`${gfAvatarTag(e.detail,"hero-av")}Guten Tag, ${gfEsc(e.detail)}`,null); load().catch(()=>{}); });
   try{ await load(); }catch(e){ $("#fdEntL").innerHTML=`<div class="empty">Konnte nicht laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
 });
 </script>

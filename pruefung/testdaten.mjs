@@ -72,6 +72,12 @@ export const korbZeile = (o) => ({ id:o.id, absence_id:o.absence_id, kind:o.kind
 
 export const KORB_SAAT = {
   'abs-1': [
+    /* V31d: eine Vorhaben-Zeile, schon bestätigt (Vertretung Alex), damit Übergabe und Dialog sie zeigen. */
+    korbZeile({ id:'hv1', absence_id:'abs-1', kind:'vorhaben', ref_id:'vh-xceed', title:'XCeed Ticketing-Vertrag', frist:tag(10), z:2,f:3,u:0,g:2,
+      quadrant:'sofort', cluster:'E', ampel:'gelb', vertretung:'Alex', status:'bestaetigt',
+      dossier:{ art:'vorhaben', slug:'xceed', stand:'Alles verhandelt bis auf Bürgschaftstext.', naechster_schritt:'Bürgschaftstext an XCeed senden', ball:'Lea', konflikt:null,
+        punkte_offen:[{ titel:'Bürgschaftstext auf Deutsch', stand:'in Arbeit', wer:'Niclaas', frist:tag(1) }], verlauf:[{ happened_at:zeit(-1), art:'telefon', wer:'Alex mit Victor', text:'Auszahlung ab Monat 1 mündlich zugesagt.' }] },
+      begruendung:'Zur anderen GF, weil Geld ab 5.000 € im Spiel ist (Z2 F3 U0 G2).' }),
     korbZeile({ id:'h1', absence_id:'abs-1', ref_id:'t1', title:'Vertrag mit dem Landkreis verlängern', frist:tag(3), z:3,f:3,u:2,g:3,
       quadrant:'sofort', cluster:'A', ampel:'vorher', luecke:true, begruendung:'Vor Abreise, weil die Frist vor der Abreise liegt; Sache der GF; Stand und nächster Schritt fehlen (Z3 F3 U2 G3).' }),
     korbZeile({ id:'h2', absence_id:'abs-1', ref_id:'t2', title:'Shuttle für das Festival ausschreiben', frist:tag(18), z:2,f:2,u:1,g:2,
@@ -382,6 +388,14 @@ export const VH_ANTWORT = {
     abwesenheiten:[A1].map(a=>({ id:a.id, person:a.person, von:a.von, bis:a.bis, bis_geschaetzt:a.bis_geschaetzt, status:a.status, vertretung_standard:a.vertretung_standard, test:a.test })),
     einwuerfe_offen:1, einwuerfe_ohne_vorhaben:1 }),
   vorhaben_badge: { einwuerfe:1, ueberfaellig_bei_mir:0, n:1 },
+  schicht_uebergabe: (p) => ({ ok:true, fehler:[], ergebnis:(p.eintraege||[]).map(e => ({ vorhaben_id:e.vorhaben_id, title:'', ball:e.ball, ball_geaendert:e.ball !== e.expect_ball })) }),
+  vorhaben_seit: () => ({ seit:zeit(-1), vorhaben:VORHABEN,
+    eintraege:[ { id:'s1', vorhaben_id:'vh-lusatia', happened_at:zeit(-0.1), created_at:zeit(-0.1), art:'uebergabe', wer:'Lea', text:'Ball von Lea an Alex. Seite ist fast fertig.', created_by:'Lea' },
+                { id:'s2', vorhaben_id:'vh-lusatia', happened_at:zeit(-0.3), created_at:zeit(-0.3), art:'system', wer:'Lea', text:'Stand: Website als Prototyp', created_by:'Lea' },
+                { id:'s3', vorhaben_id:'vh-xceed', happened_at:zeit(-0.5), created_at:zeit(-0.5), art:'mail', wer:'Niclaas an Lea', text:'Bürgschaftstext kommt heute Nacht.', created_by:'abgleich-lea' } ] }),
+  vorhaben_rueckkehr: () => ({ absence:A3, vorhaben:[ { ...VORHABEN[0], ball:'alex', absence_id:null, korb:{ ref_id:'vh-xceed', ampel:'gruen', vertretung:'Lea', status:'bestaetigt' },
+    zurueck:{ vorhaben_id:'vh-xceed', text:'Zurück nach der Abwesenheit von Alex: Ball von Lea an Alex', happened_at:zeit(-1) },
+    verlauf:[ { id:'r1', vorhaben_id:'vh-xceed', happened_at:zeit(-3), art:'telefon', wer:'Lea mit Victor', text:'Tranche bestätigt.' } ] } ] }),
   /* Ballwechsel wie das Backend: veralteter Ball ergibt 409, sonst wird wirklich geschrieben. */
   vorhaben_save: (p) => {
     const v = VORHABEN.find(x => x.id === p.id || x.slug === p.slug);
@@ -420,7 +434,7 @@ export const SCHREIBEND = new Set(['add','update','delete','capture','capture_ma
   'session_start','session_end','session_delete','ritual_toggle','ritual_save','ritual_delete','milestone_save','milestone_delete','news_update','news_accept','news_delete',
   'people_save','people_delete','link_add','link_delete','sites_save','sites_delete','category_save','gate_set','gate_set_many','inbox_promote','inbox_reject','tidy_suggest',
   'absence_end','absence_tick','deputies_set','handover_build','handover_dossier','handover_log_add','launch_set',
-  'vorhaben_save','punkt_save','punkt_toggle','punkt_delete','verlauf_add','verlauf_status','vorhaben_verknuepfen','einwurf_verwerfen','schicht_uebergabe']);
+  'handover_set_many','vorhaben_save','punkt_save','punkt_toggle','punkt_delete','verlauf_add','verlauf_status','vorhaben_verknuepfen','einwurf_verwerfen']);
 
 /* Je Seite: Kerninhalt, der nach dem Laden gefuellt sein muss (Text laenger als 20 Zeichen).
    Ohne diese Probe wuerde eine leer gebliebene Seite als bestanden durchgehen, weil gfGate das Tor schon vorher versteckt. */

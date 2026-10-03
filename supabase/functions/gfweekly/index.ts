@@ -2774,6 +2774,21 @@ Deno.serve(async (req: Request) => {
       if (ew.error) throw ew.error; if (vh.error) throw vh.error;
       return json({ einwuerfe: ew.count || 0, ueberfaellig_bei_mir: vh.count || 0, n: (ew.count || 0) + (vh.count || 0) });
     }
+    if (action === 'vorhaben_seit') {
+      /* Für dich, „Seit du zuletzt da warst“: bestätigte Verlaufseinträge aktiver Vorhaben seit einem Zeitpunkt,
+         ohne die eigenen (wer selbst eingetragen hat, muss es nicht noch einmal lesen). Ohne Zeitpunkt: 24 Stunden. */
+      const seit = t.seit && !isNaN(Date.parse(t.seit)) ? new Date(t.seit).toISOString() : new Date(Date.now() - 86400000).toISOString();
+      const ich = whoNorm(t.person || WHO);
+      const [vl, vh] = await Promise.all([
+        admin.from('hh_vorhaben_verlauf').select('id,vorhaben_id,happened_at,created_at,art,wer,text,created_by').eq('status', 'bestaetigt')
+          .gt('created_at', seit).order('created_at', { ascending:false }).limit(400),
+        admin.from('hh_vorhaben').select('id,slug,title,ball,ball_name,status').in('status', ['aktiv','pausiert']),
+      ]);
+      if (vl.error) throw vl.error; if (vh.error) throw vh.error;
+      const aktiv = new Map((vh.data || []).map((v: any) => [v.id, v]));
+      const eintraege = (vl.data || []).filter((e: any) => aktiv.has(e.vorhaben_id) && whoNorm(e.created_by) !== ich);
+      return json({ seit, eintraege, vorhaben: [...aktiv.values()] });
+    }
     if (action === 'vorhaben_get') {
       const ref = (t.id || t.slug || '').toString().trim(); if (!ref) return json({ error:'id oder slug fehlt' },400);
       const v = await vhLese(ref);

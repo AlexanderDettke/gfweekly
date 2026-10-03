@@ -1689,3 +1689,25 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 }
 @media(max-width:760px){ .fd-einwurf{display:none} }
 .vh-ew .fchips.compact .chip{min-height:var(--ziel-min);padding:6px 12px;font-size:var(--stufe-2)}
+
+/* V31d · Rückkehr und Für dich */
+.rk-vl{margin:0;padding-left:18px;width:100%;font-size:var(--stufe-2);color:var(--text)}
+.rk-vl li{margin:2px 0}
+/* V31d · Übergabe-Dialog */
+.vh-ue{max-width:720px}
+.vh-ue-kopf{display:flex;align-items:center;gap:10px}
+.vh-ue-kopf .vh-av{width:32px;height:32px}
+.vh-ue-kopf h3{margin:0}
+.vh-ue-anlass{display:flex;flex-direction:column;gap:8px}
+.vh-ue-a{display:flex;flex-direction:column;gap:2px;text-align:left;padding:12px 14px;border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);color:var(--text);min-height:var(--ziel-min)}
+.vh-ue-a:hover{border-color:var(--accent);background:var(--surface-2)}
+.vh-ue-a b{font-size:var(--stufe-3)}
+.vh-ue-a span{font-size:var(--stufe-2);color:var(--text-2)}
+.vh-ue-z{display:flex;flex-direction:column;gap:6px;padding:10px 0;border-top:var(--rahmen) solid var(--border)}
+.vh-ue-t{display:flex;flex-direction:column;gap:2px}
+.vh-ue-t b{font-size:var(--stufe-3)}
+.vh-ue-t span{font-size:var(--stufe-2);color:var(--text-2)}
+.vh-ue .fchips.compact .chip{min-height:var(--ziel-min);padding:6px 12px;font-size:var(--stufe-2)}
+.vh-ue-n{min-height:var(--ziel-min);padding:8px 10px;border-radius:var(--radius-s);border:var(--rahmen) solid var(--border-strong);background:var(--surface-2);color:var(--text);font:inherit;font-size:var(--stufe-2)}
+.vh-ue-n::placeholder{color:var(--text-2);opacity:1}
+.vh-ue-test{display:flex;gap:8px;align-items:center;font-size:var(--stufe-2);color:var(--text-2)}
