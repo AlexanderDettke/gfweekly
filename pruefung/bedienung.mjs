@@ -377,13 +377,18 @@ console.log('\n== Für dich, Übergabe, Rückkehr (V31d) ==');
   await p.locator('[data-anlass="schicht"]').click();
   const reihen = await p.locator('.vh-ue-z').count();
   pruefe('Feierabend listet die Bälle bei Lea', reihen === 6, `${reihen} Zeilen`);
-  await p.locator('.vh-ue-z').nth(1).locator('[data-v="bleibt"]').click();
+  pruefe('Vorauswahl ist „bleibt bei mir“', await p.locator('.vh-ue-z [data-v="bleibt"].on').count() === 6);
+  await p.locator('.vh-ue-z').nth(0).locator('[data-v="andere"]').click();
+  await p.locator('.vh-ue-z').nth(2).locator('[data-v="andere"]').click();
   await p.locator('.vh-ue-z').nth(0).locator('.vh-ue-n').fill('Bürgschaft liegt im Ordner');
+  await p.locator('.vh-ue-z').nth(3).locator('.vh-ue-n').fill('nur zur Info');
   await p.locator('#vhUeOk').click(); await p.waitForTimeout(300);
   const sw = letzte('schicht_uebergabe');
   pruefe('schicht_uebergabe: von Lea an Alex, gesehener Ball, Notiz, „bleibt“ ohne Notiz fällt weg',
-    sw && sw.nutzlast.von === 'Lea' && sw.nutzlast.an === 'Alex' && sw.nutzlast.by === 'Lea' && sw.nutzlast.eintraege.length === 5
-      && sw.nutzlast.eintraege.every(e => e.expect_ball === 'lea' && e.ball === 'alex') && sw.nutzlast.eintraege.some(e => e.notiz === 'Bürgschaft liegt im Ordner'), JSON.stringify(sw && sw.nutzlast).slice(0, 200));
+    sw && sw.nutzlast.von === 'Lea' && sw.nutzlast.an === 'Alex' && sw.nutzlast.by === 'Lea'
+      && sw.nutzlast.eintraege.length === 3 && sw.nutzlast.eintraege.every(e => e.expect_ball === 'lea')
+      && sw.nutzlast.eintraege.filter(e => e.ball === 'alex').length === 2 && sw.nutzlast.eintraege.some(e => e.ball === 'lea' && e.notiz === 'nur zur Info')
+      && sw.nutzlast.eintraege.some(e => e.notiz === 'Bürgschaft liegt im Ordner'), JSON.stringify(sw && sw.nutzlast).slice(0, 300));
   await p.locator('#vhUebergabe').click(); await p.waitForTimeout(150);
   await p.locator('[data-anlass="urlaub"]').click(); await p.waitForTimeout(400);
   pruefe('Urlaub nimmt die laufende Abwesenheit und zeigt die Vorhaben-Zeile', await p.locator('.vh-ue-z').count() === 1 && (await p.locator('.vh-ue').innerText()).includes('weitere Einträge im Korb'));

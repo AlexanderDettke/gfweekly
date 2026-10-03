@@ -449,7 +449,8 @@ async function vhUebergabe(){
     } else if(S.anlass==="schicht"){
       unter="Feierabend oder Schichtende";
       const l=meine();
-      body=l.length?`<p class="vh-dlg-t">${l.length} ${l.length===1?"Vorhaben liegt":"Vorhaben liegen"} bei dir.</p>${l.map(v=>{ const w=S.wahl[v.id]||"andere"; return `<div class="vh-ue-z">
+      /* Vorauswahl „bleibt bei mir“: weitergegeben wird nur, was jemand ausdrücklich wählt, nie alles auf einen Klick. */
+      body=l.length?`<p class="vh-dlg-t">${l.length} ${l.length===1?"Vorhaben liegt":"Vorhaben liegen"} bei dir. Wähle, was ${gfEsc(andere)} übernimmt.</p>${l.map(v=>{ const w=S.wahl[v.id]||"bleibt"; return `<div class="vh-ue-z">
           <div class="vh-ue-t"><b>${gfEsc(v.title)}</b><span>${gfEsc(v.naechster_schritt||"kein nächster Schritt")}</span></div>
           ${chips(v.id,[["andere",andere+" übernimmt"],["bleibt","bleibt bei mir"],["gf","GF gemeinsam"]],w,"Ball für "+v.title)}
           <input class="vh-ue-n" data-notiz="${v.id}" maxlength="300" placeholder="Notiz für ${gfEsc(andere)} (optional)" aria-label="Notiz zu ${gfEsc(v.title)}" value="${gfEsc(S.notiz[v.id]||"")}">
@@ -522,7 +523,7 @@ async function vhUebergabe(){
   }
   async function schicht(){
     merke();
-    const eintraege=meine().map(v=>{ const w=S.wahl[v.id]||"andere", n=(S.notiz[v.id]||"").trim();
+    const eintraege=meine().map(v=>{ const w=S.wahl[v.id]||"bleibt", n=(S.notiz[v.id]||"").trim();
       if(w==="bleibt" && !n) return null;
       return { vorhaben_id:v.id, ball:w==="andere"?(andere==="Lea"?"lea":"alex"):w==="gf"?"gf":meinBall, expect_ball:v.ball, notiz:n||undefined }; }).filter(Boolean);
     if(!eintraege.length){ zu(); gfToast("Nichts geändert"); return; }
