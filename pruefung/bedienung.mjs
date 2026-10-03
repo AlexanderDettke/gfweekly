@@ -274,7 +274,14 @@ console.log('\n== Vorhaben (V31b): Ansichten, Akte, Punkt, Ball ==');
   const b = letzte('vorhaben_save');
   pruefe('Ball geben an schickt den gesehenen Ball mit', b && b.nutzlast.ball === 'alex' && b.nutzlast.expect_ball === 'lea', JSON.stringify(b && b.nutzlast));
   await p.locator('[data-tab="verlauf"]').click();
-  pruefe('Verlauf zeigt den Vorschlag mit Übernehmen', await p.locator('.vh-e.vorschlag [data-vstatus="bestaetigt"]').count() === 1);
+  const nv = await p.locator('.vh-e.vorschlag').count(), nb = await p.locator('.vh-e.vorschlag [data-vstatus="bestaetigt"]').count();
+  pruefe('Verlauf zeigt den Vorschlag mit Übernehmen', nb === 1, nv + ' Vorschläge, ' + nb + ' Knöpfe');
+  /* Stand-Vorschlag: öffnet den Punkt mit dem vorgeschlagenen Stand, Speichern übernimmt beides. */
+  await p.locator('[data-vstand="e5"]').click(); await p.waitForTimeout(200);
+  pruefe('Stand-Vorschlag öffnet den Punkt mit dem neuen Stand', await p.locator('.vh-punkt-form input[name="stand"]').inputValue() === 'fertig übersetzt');
+  await p.locator('.vh-punkt-form button[type=submit]').click(); await p.waitForTimeout(400);
+  pruefe('Speichern schickt den Stand mit erwartetem Wert und bestätigt den Vorschlag', letzte('punkt_save')?.nutzlast.stand === 'fertig übersetzt' && letzte('punkt_save')?.nutzlast.expect?.stand === 'in Arbeit' && letzte('verlauf_status')?.nutzlast.id === 'e5');
+  await p.locator('[data-tab="verlauf"]').click(); await p.waitForTimeout(200);
   await p.locator('.vh-e.vorschlag [data-vstatus="bestaetigt"]').click(); await p.waitForTimeout(300);
   pruefe('Übernehmen schickt verlauf_status', letzte('verlauf_status')?.nutzlast.status === 'bestaetigt');
   await p.keyboard.press('Escape'); await p.waitForTimeout(200);
@@ -398,7 +405,15 @@ console.log('\n== Für dich, Übergabe, Rückkehr (V31d) ==');
   await p.locator('.vh-ue-z [data-v="ruht"]').click();
   await p.locator('#vhUeSenden').click(); await p.waitForTimeout(300);
   const hs = letzte('handover_set_many');
-  pruefe('Ruht geht als Ampel ruht an handover_set_many', hs && hs.nutzlast.items.length === 1 && hs.nutzlast.items[0].id === 'hv1' && hs.nutzlast.items[0].ampel === 'ruht', JSON.stringify(hs && hs.nutzlast));
+  pruefe('Ruht geht als Ampel ruht an handover_set_many, mit dem gesehenen Stand', hs && hs.nutzlast.items.length === 1 && hs.nutzlast.items[0].id === 'hv1' && hs.nutzlast.items[0].ampel === 'ruht'
+    && hs.nutzlast.items[0].expect && hs.nutzlast.items[0].expect.status === 'bestaetigt' && hs.nutzlast.items[0].expect.vertretung === 'Alex', JSON.stringify(hs && hs.nutzlast));
+  /* Bestätigte Zeile unverändert: nichts wird gesendet. */
+  gesendet.length = 0;
+  await p.locator('#vhUebergabe').click(); await p.waitForTimeout(150);
+  await p.locator('[data-anlass="urlaub"]').click(); await p.waitForTimeout(400);
+  pruefe('bestätigte Zeile zeigt ihren Stand', (await p.locator('.vh-ue-z').innerText()).includes('entschieden'));
+  await p.locator('#vhUeSenden').click(); await p.waitForTimeout(300);
+  pruefe('unveränderte bestätigte Zeile wird nicht gesendet', !letzte('handover_set_many'));
   await p.close();
 }
 

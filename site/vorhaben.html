@@ -339,6 +339,15 @@ function punktZeile(p){
     <button type="button" class="btn btn-sm btn-ghost vh-p-edit" data-punkt-edit="${p.id}" aria-label="${gfEsc(p.titel)} ändern">ändern</button>
   </li>`;
 }
+/* Vorschlag mit seiner Wirkung beschriften: „Punkt erledigt“ hakt ab, „Stand“ öffnet den Punkt mit dem neuen Stand,
+   alles andere nimmt den Eintrag nur in den Verlauf auf. */
+function vorschlagPunkt(e){ const m=(e.source_ref||"").match(/vorschlag:([^:]+):/i); return m?AKTE.punkte.find(p=>p.id===m[1]):null; }
+function vorschlagKnopf(e){
+  const tag=e.tag||"", p=vorschlagPunkt(e);
+  if(/^Vorschlag: Punkt erledigt/i.test(tag) && p && !p.erledigt) return `<button type="button" class="btn btn-sm btn-primary" data-vstatus="bestaetigt" data-id="${e.id}">Übernehmen und „${gfEsc(p.titel.slice(0,40))}“ abhaken</button>`;
+  if(/^Vorschlag: Stand/i.test(tag) && p) return `<button type="button" class="btn btn-sm btn-primary" data-vstand="${e.id}">Stand am Punkt übernehmen …</button>`;
+  return `<button type="button" class="btn btn-sm btn-primary" data-vstatus="bestaetigt" data-id="${e.id}">In den Verlauf übernehmen</button>`;
+}
 function verlauf(d){
   /* Ohne gemerkten Besuch gelten die letzten 24 Stunden (wie „Seit du zuletzt da warst“ auf Für dich). */
   const seen=gfVhSeen()||new Date(Date.now()-86400000).toISOString();
@@ -346,7 +355,7 @@ function verlauf(d){
   const zeile=e=>`<li class="vh-e${e.status==="vorschlag"?" vorschlag":""}${seen&&(e.created_at>seen)?" neu":""}">
       <div class="vh-e-k">${gfEsc(gfNewsWhen(e.happened_at))} · <b>${gfEsc(GF_VH_ART[e.art]||e.art)}</b>${e.wer?" · "+gfEsc(e.wer):""}${e.tag?` · <span class="vh-e-tag">${gfEsc(e.tag)}</span>`:""}${e.status==="vorschlag"?` ${markeHtml(["warn","●","Vorschlag"])}`:""}</div>
       <div class="vh-e-t">${gfEsc(e.text)}${e.source_url?` <a href="${gfEsc(e.source_url)}" target="_blank" rel="noopener">Quelle ↗</a>`:""}</div>
-      ${e.status==="vorschlag"?`<div class="vh-e-a"><button type="button" class="btn btn-sm btn-primary" data-vstatus="bestaetigt" data-id="${e.id}">Übernehmen</button><button type="button" class="btn btn-sm btn-ghost" data-vstatus="verworfen" data-id="${e.id}">Verwerfen</button></div>`:""}
+      ${e.status==="vorschlag"?`<div class="vh-e-a">${vorschlagKnopf(e)}<button type="button" class="btn btn-sm btn-ghost" data-vstatus="verworfen" data-id="${e.id}">Verwerfen</button></div>`:""}
     </li>`;
   return `<div class="fchips compact vh-vlf" role="group" aria-label="Verlauf filtern">${[["alle","Alles"],["entscheidungen","Nur Entscheidungen"],["neu","Seit meinem letzten Besuch"]].map(([k,l])=>`<button type="button" class="chip${VL_FILTER===k?" on":""}" aria-pressed="${VL_FILTER===k}" data-vlf="${k}">${l}</button>`).join("")}</div>
     ${VL_FILTER==="neu"?`<p class="vh-sync">Seit ${gfEsc(gfNewsWhen(seen))}${gfVhSeen()?" (zuletzt „Alles gesehen“ auf Für dich)":" (letzte 24 Stunden)"}</p>`:""}
@@ -381,15 +390,20 @@ $("#vhAkte").addEventListener("click",async e=>{
   if(e.target.closest("[data-rueckgaengig]") && GELOEST){ const g=GELOEST;
     try{ await gfApi("vorhaben_verknuepfen",{ kind:g.kind, id:g.id, vorhaben_id:g.vorhaben_id, by:gfWho() }); GELOEST=null; gfToast("Zuordnung wiederhergestellt"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
     catch(err){ gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); } return; }
+  const vst=e.target.closest("[data-vstand]"); if(vst){ const ev=AKTE.verlauf.find(x=>x.id===vst.dataset.vstand), p=ev&&vorschlagPunkt(ev); if(!p) return;
+    /* Neuer Stand steht im Text nach „jetzt so steht:“ (docs/ABGLEICH-VORHABEN.md, Abschnitt F); die Person prüft ihn im Formular. */
+    const m=(ev.text||"").match(/jetzt so steht:\s*(.+?)\s*$/i);
+    TAB="prozess"; renderAkte(); punktForm(p, { stand:m?m[1].replace(/[.“"]+$/,""):"", vorschlag:ev.id }); return; }
   if(e.target.closest("[data-punkt-neu]")){ punktForm(null); return; }
   const pe=e.target.closest("[data-punkt-edit]"); if(pe){ punktForm(AKTE.punkte.find(p=>p.id===pe.dataset.punktEdit)); return; }
 });
-function punktForm(p){
+function punktForm(p, vor={}){
   const box=p ? (()=>{ const li=document.querySelector(`.vh-punkt[data-punkt="${p.id}"]`); let f=li.querySelector(".vh-punkt-form"); if(!f){ f=document.createElement("div"); f.className="vh-punkt-form"; li.appendChild(f); } return f; })() : $("#vhPunktNeu");
   box.hidden=false;
   box.innerHTML=`<form class="vh-pform">
     <label class="vh-fld">Punkt<input name="titel" required maxlength="300" value="${gfEsc(p?.titel||"")}"></label>
-    ${p?`<label class="vh-fld">Stand<input name="stand" maxlength="1000" value="${gfEsc(p.stand||"")}"></label>`:""}
+    ${vor.vorschlag?`<p class="vh-dlg-t">Vorschlag des Abgleichs: neuen Stand prüfen, dann speichern. Der Vorschlag gilt danach als übernommen.</p>`:""}
+    ${p?`<label class="vh-fld">Stand<input name="stand" maxlength="1000" value="${gfEsc(vor.stand!==undefined&&vor.stand!==""?vor.stand:(p.stand||""))}"></label>`:""}
     <div class="vh-pform-z"><label class="vh-fld">Wer<input name="wer" maxlength="120" value="${gfEsc(p?.wer||"")}"></label>
     <label class="vh-fld">Frist<input name="frist" type="date" value="${gfEsc(p?.frist||"")}"></label></div>
     <div class="vh-pform-a"><button type="submit" class="btn btn-sm btn-primary">${p?"Speichern":"Hinzufügen"}</button><button type="button" class="btn btn-sm btn-ghost" data-pform-x>Abbrechen</button>${p?`<button type="button" class="btn btn-sm btn-ghost" data-pform-del style="margin-left:auto">Löschen</button>`:""}</div>
@@ -409,7 +423,9 @@ function punktForm(p){
       for(const k of Object.keys(daten)){ const alt=p[k]??null, neu=daten[k]===""?null:daten[k]; if((alt||null)!==(neu||null)){ nutz[k]=daten[k]; nutz.expect[k]=alt; } }
       if(!Object.keys(nutz.expect).length){ box.innerHTML=""; return; } }
     else nutz={ vorhaben_id:AKTE.vorhaben.id, ...daten, by:gfWho() };
-    try{ await gfApi("punkt_save", nutz); gfToast(p?"Punkt gespeichert":"Punkt hinzugefügt"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
+    try{ await gfApi("punkt_save", nutz);
+      if(vor.vorschlag) await gfApi("verlauf_status",{ id:vor.vorschlag, status:"bestaetigt", by:gfWho() });
+      gfToast(vor.vorschlag?"Stand übernommen":p?"Punkt gespeichert":"Punkt hinzugefügt"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
     catch(err){ gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); }
   };
 }
@@ -433,11 +449,12 @@ $("#vhUebergabe").onclick=()=>vhUebergabe();
 async function vhUebergabe(){
   const m=$("#vhModal"); m.classList.add("vh-ew-back");
   const ich=gfWho(), andere=gfVhAndere(), meinBall=gfVhIch(), heute=DATA?.heute||new Date().toLocaleDateString("sv-SE",{timeZone:"Europe/Berlin"});
-  const S={ anlass:null, wahl:{}, notiz:{}, name:{}, abw:null, korb:[], rest:0, laedt:false, fehler:"", form:{ von:heute, bis:"", test:false } };
+  const S={ anlass:null, wahl:{}, init:{}, notiz:{}, name:{}, abw:null, korb:[], rest:0, laedt:false, fehler:"", form:{ von:heute, bis:"", test:false }, neu:false };
   const frei=gfModalAuf(m);
   const zu=()=>{ m.classList.remove("open","vh-ew-back"); m.innerHTML=""; m.onkeydown=null; frei(); };
   const meine=()=>(DATA?.vorhaben||[]).filter(v=>v.ball===meinBall).sort((a,b)=>(gfVhFrist(a)||"9999").localeCompare(gfVhFrist(b)||"9999"));
-  const laufend=()=>(DATA?.abwesenheiten||[]).find(a=>gfWhoNorm(a.person)===ich&&(a.status==="geplant"||a.status==="aktiv"));
+  /* Alle geplanten und laufenden Abwesenheiten der Person; bei mehreren wählt sie aus, statt dass die erste gewinnt. */
+  const laufende=()=>(DATA?.abwesenheiten||[]).filter(a=>gfWhoNorm(a.person)===ich&&(a.status==="geplant"||a.status==="aktiv"));
   const rueck=a=>gfVhTag(gfAddDays(a.bis||a.bis_geschaetzt||gfAddDays(a.von,13),1));
   function chips(id, opts, cur, label){ return `<div class="fchips compact" role="group" aria-label="${gfEsc(label)}">${opts.map(([k,l])=>`<button type="button" class="chip${cur===k?" on":""}" aria-pressed="${cur===k}" data-wahl="${gfEsc(id)}" data-v="${k}">${gfEsc(l)}</button>`).join("")}</div>`; }
   function render(){
@@ -456,21 +473,28 @@ async function vhUebergabe(){
           <input class="vh-ue-n" data-notiz="${v.id}" maxlength="300" placeholder="Notiz für ${gfEsc(andere)} (optional)" aria-label="Notiz zu ${gfEsc(v.title)}" value="${gfEsc(S.notiz[v.id]||"")}">
         </div>`; }).join("")}`:`<p class="fd-empty">Gerade liegt kein Ball bei dir. Nichts zu übergeben.</p>`;
       fuss=`<button type="button" class="btn btn-brand" data-ue-zurueck>Zurück</button>${l.length?`<button type="button" class="btn btn-primary" id="vhUeOk" style="margin-left:auto" ${S.laedt?"disabled":""}>Übergabe senden</button>`:""}`;
+    } else if(!S.abw && !S.neu && laufende().length){
+      unter=S.anlass==="urlaub"?"Urlaub":"Krank";
+      body=`<p class="vh-dlg-t">Für welche Abwesenheit?</p><div class="vh-ue-anlass">${laufende().map(a=>`<button type="button" class="vh-ue-a" data-abw="${gfEsc(a.id)}"><b>${gfEsc(gfVhTag(a.von))}${a.bis?" bis "+gfEsc(gfVhTag(a.bis)):a.bis_geschaetzt?" bis voraussichtlich "+gfEsc(gfVhTag(a.bis_geschaetzt)):""}</b><span>${a.status==="aktiv"?"läuft":"geplant"}${a.vertretung_standard?" · Vertretung "+gfEsc(a.vertretung_standard):""}</span></button>`).join("")}
+        <button type="button" class="vh-ue-a" data-abw-neu><b>Neue Abwesenheit anlegen</b><span>mit eigenem Zeitraum</span></button></div>`;
+      fuss=`<button type="button" class="btn btn-brand" data-ue-zurueck>Zurück</button>`;
     } else if(!S.abw){
       unter=S.anlass==="urlaub"?"Urlaub":"Krank";
       body=`<div class="vh-pform-z"><label class="vh-fld">Ab<input type="date" id="vhUeVon" value="${gfEsc(S.form.von)}" required></label>
         <label class="vh-fld">${S.anlass==="urlaub"?"Bis (letzter Urlaubstag)":"Voraussichtlich bis (optional)"}<input type="date" id="vhUeBis" value="${gfEsc(S.form.bis)}" ${S.anlass==="urlaub"?"required":""}></label></div>
         <p class="vh-dlg-t">Vertretung: ${gfEsc(andere)}. Das Haus baut den Übergabekorb, die Vorhaben stehen gleich oben.</p>
-        <label class="vh-ue-test"><input type="checkbox" id="vhUeTest" ${S.form.test?"checked":""}> Probe (Testabwesenheit, zählt nicht für Bänder und Für dich)</label>`;
+        <label class="vh-ue-test"><input type="checkbox" id="vhUeTest" ${S.form.test?"checked":""}> Probe (Testabwesenheit, zählt nicht für Bänder und Für dich)</label>
+        <p class="vh-dlg-t">Auch eine Probe baut den Korb aus den echten Vorhaben. Was du danach sendest, bewegt echte Bälle, bis die Probe endet.</p>`;
       fuss=`<button type="button" class="btn btn-brand" data-ue-zurueck>Zurück</button><button type="button" class="btn btn-primary" id="vhUeAnlegen" style="margin-left:auto" ${S.laedt?"disabled":""}>Weiter</button>`;
     } else {
       const a=S.abw; unter=`${S.anlass==="urlaub"?"Urlaub":S.anlass==="krank"?"Krank":"Abwesenheit"} ${gfVhTag(a.von)}${a.bis?" bis "+gfVhTag(a.bis):a.bis_geschaetzt?" bis voraussichtlich "+gfVhTag(a.bis_geschaetzt):""}${a.test?" · Probe":""}`;
-      body=S.korb.length?S.korb.map(z=>{ const w=S.wahl[z.id]; return `<div class="vh-ue-z">
-          <div class="vh-ue-t"><b>${gfEsc(z.title)}</b><span>${gfEsc((z.dossier&&z.dossier.naechster_schritt)||"kein nächster Schritt")}</span>${z.status!=="vorschlag"?gfZustand("ok","schon entschieden"):""}</div>
+      const probe=a.test?`<div class="vh-ew-warn" role="status">${gfZustand("warn","Probe")} Gesendete Wahlen bewegen echte Bälle, bis die Probe endet. <button type="button" class="btn btn-sm btn-ghost" id="vhUeProbeEnde">Probe beenden, Bälle zurück</button></div>`:"";
+      body=probe+(S.korb.length?S.korb.map(z=>{ const w=S.wahl[z.id]; return `<div class="vh-ue-z">
+          <div class="vh-ue-t"><b>${gfEsc(z.title)}</b><span>${gfEsc((z.dossier&&z.dossier.naechster_schritt)||"kein nächster Schritt")}</span>${z.status!=="vorschlag"?gfZustand("ok","entschieden: "+(z.ampel==="ruht"?"ruht":z.vertretung?"bei "+z.vertretung:"ohne Vertretung")+(w!==S.init[z.id]?" · wird geändert":"")):gfZustand("offen","Vorschlag, noch offen")}</div>
           ${chips(z.id,[["andere",andere+" übernimmt"],["ruht","Ruht bis "+rueck(a)],["team","Team"]],w,"Übergabe für "+z.title)}
           ${w==="team"?`<input class="vh-ue-n" data-name="${z.id}" maxlength="120" placeholder="Wer im Team? (Pflicht)" aria-label="Wer im Team übernimmt ${gfEsc(z.title)}" value="${gfEsc(S.name[z.id]||"")}">`:""}
         </div>`; }).join("")+(S.rest?`<p class="vh-dlg-t">Dazu ${S.rest} weitere Einträge im Korb (Themen, Kandidaten, Termine): <a href="uebergabe.html?id=${encodeURIComponent(a.id)}">in der Übergabe entscheiden →</a></p>`:"")
-        :`<p class="fd-empty">Kein Vorhaben mit Ball bei dir im Korb. ${S.rest?`<a href="uebergabe.html?id=${encodeURIComponent(a.id)}">Übergabe öffnen →</a>`:""}</p>`;
+        :`<p class="fd-empty">Kein Vorhaben mit Ball bei dir im Korb. ${S.rest?`<a href="uebergabe.html?id=${encodeURIComponent(a.id)}">Übergabe öffnen →</a>`:""}</p>`);
       fuss=`<button type="button" class="btn btn-brand" data-ue-x>Später</button>${S.korb.length?`<button type="button" class="btn btn-primary" id="vhUeSenden" style="margin-left:auto" ${S.laedt?"disabled":""}>Übergabe senden</button>`:""}`;
     }
     m.innerHTML=`<div class="modal vh-dlg vh-ue" role="dialog" aria-modal="true" aria-labelledby="vhUeH">
@@ -485,6 +509,11 @@ async function vhUebergabe(){
     const ok=m.querySelector("#vhUeOk"); if(ok) ok.onclick=schicht;
     const an=m.querySelector("#vhUeAnlegen"); if(an) an.onclick=anlegen;
     const se=m.querySelector("#vhUeSenden"); if(se) se.onclick=senden;
+    m.querySelectorAll("[data-abw]").forEach(b=>b.onclick=async()=>{ S.laedt=true; render(); await korb(laufende().find(a=>a.id===b.dataset.abw)); S.laedt=false; render(); });
+    const an2=m.querySelector("[data-abw-neu]"); if(an2) an2.onclick=()=>{ S.neu=true; render(); };
+    const pe=m.querySelector("#vhUeProbeEnde"); if(pe) pe.onclick=async()=>{ S.laedt=true; render();
+      try{ const d=await gfApi("absence_end",{ id:S.abw.id, by:ich }); zu(); gfToast(`Probe beendet, ${(d.vorhaben_zurueck||[]).length} Bälle zurück.`); await laden(true); }
+      catch(e){ S.laedt=false; S.fehler="Probe nicht beendet: "+(e.message||"Verbindung"); render(); } };
     m.onkeydown=e=>{ if(e.key==="Escape" && !S.laedt) zu(); };
   }
   function merke(){
@@ -496,16 +525,20 @@ async function vhUebergabe(){
   async function waehleAnlass(k){
     S.anlass=k; S.fehler="";
     if(k==="schicht"){ render(); return; }
-    const a=laufend(); if(a){ S.laedt=true; render(); await korb(a); S.laedt=false; }
-    else if(k==="krank") S.form.von=heute;
+    const l=laufende(); if(l.length===1){ S.laedt=true; render(); await korb(l[0]); S.laedt=false; }
+    else if(!l.length && k==="krank") S.form.von=heute;
     render();
   }
   async function korb(a){
     try{ const d=await gfApi("handover_list",{ absence_id:a.id }); S.abw=d.absence||a;
       const alle=d.items||[]; S.korb=alle.filter(x=>x.kind==="vorhaben"); S.rest=alle.length-S.korb.length;
-      for(const z of S.korb){ if(S.wahl[z.id]) continue;
-        S.wahl[z.id]=z.ampel==="ruht"?"ruht":(z.vertretung&&gfWhoNorm(z.vertretung)==="Team")?"team":"andere";
-        if(S.wahl[z.id]==="team") S.name[z.id]=z.vertretung; }
+      /* Bestätigte Zeilen zeigen, was gilt (und werden nur gesendet, wenn sich die Wahl ändert); offene Vorschläge
+         bekommen eine Vorauswahl, die mit „Übergabe senden“ bestätigt wird. */
+      for(const z of S.korb){
+        const ist=z.ampel==="ruht"?"ruht":z.vertretung?(gfWhoNorm(z.vertretung)===andere?"andere":"team"):null;
+        S.init[z.id]=z.status==="vorschlag"?null:ist;
+        if(S.wahl[z.id]===undefined) S.wahl[z.id]=z.status==="vorschlag"?(z.ampel==="ruht"?"ruht":"andere"):ist;
+        if(ist==="team" && S.name[z.id]===undefined) S.name[z.id]=z.vertretung; }
     }catch(e){ S.fehler="Der Korb ließ sich nicht laden: "+(e.message||"Verbindung"); }
   }
   async function anlegen(){
@@ -539,12 +572,15 @@ async function vhUebergabe(){
     const fehlt=S.korb.filter(z=>S.wahl[z.id]==="team" && !(S.name[z.id]||"").trim());
     if(fehlt.length){ S.fehler=`Bitte für „${fehlt[0].title}“ angeben, wer im Team übernimmt.`; render(); return; }
     const amp=z=>["gruen","gelb","rot"].includes(z.ampel)?z.ampel:"gruen";
-    const items=S.korb.map(z=>{ const w=S.wahl[z.id];
-      return w==="ruht"?{ id:z.id, ampel:"ruht" } : { id:z.id, ampel:amp(z), vertretung:w==="team"?S.name[z.id].trim():andere }; });
+    /* Gesendet wird, was noch offen ist oder sich ausdrücklich ändert, jeweils mit dem gesehenen Stand (expect). */
+    const items=S.korb.filter(z=>S.wahl[z.id] && (z.status==="vorschlag" || S.wahl[z.id]!==S.init[z.id] || (S.wahl[z.id]==="team" && (S.name[z.id]||"").trim()!==(z.vertretung||"")))).map(z=>{ const w=S.wahl[z.id];
+      const expect={ status:z.status, ampel:z.ampel, vertretung:z.vertretung||null };
+      return w==="ruht"?{ id:z.id, ampel:"ruht", expect } : { id:z.id, ampel:amp(z), vertretung:w==="team"?S.name[z.id].trim():andere, expect }; });
+    if(!items.length){ zu(); gfToast("Nichts geändert."); return; }
     S.laedt=true; S.fehler=""; render();
     try{ const d=await gfApi("handover_set_many",{ items, by:ich });
       S.laedt=false;
-      if(!d.ok){ S.fehler=`${d.misslungen.length} nicht gespeichert: `+d.misslungen.map(x=>`${x.titel||"Zeile"} (${x.grund})`).join("; "); render(); return; }
+      if(!d.ok){ S.fehler=`${d.misslungen.length} nicht gespeichert: `+d.misslungen.map(x=>`${x.titel||"Zeile"} (${x.grund})`).join("; ")+". Der Korb ist neu geladen."; S.wahl={}; await korb(S.abw); render(); return; }
       zu(); gfToast(`${d.updated} Vorhaben übergeben.`+(S.rest?" Den Rest des Korbs in der Übergabe entscheiden.":"")); await laden(true);
     }catch(e){ S.laedt=false; S.fehler="Nicht gespeichert: "+(e.message||"Verbindung"); render(); }
   }

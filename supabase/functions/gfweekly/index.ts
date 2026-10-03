@@ -1995,11 +1995,17 @@ Deno.serve(async (req: Request) => {
         if (it.frist !== undefined) patch.frist = it.frist || '';
         if (it.regel_note !== undefined) patch.regel_note = (it.regel_note ?? '').toString().slice(0,500);
         if (it.status !== undefined && HO_STATUS.includes(it.status)) patch.status = it.status;
+        /* v38 (V31d): gesehener Stand der Zeile; hh_handover_set antwortet 409, wenn jemand sie inzwischen geändert hat. */
+        if (it.expect && typeof it.expect === 'object' && !Array.isArray(it.expect)) {
+          const ex: Record<string, unknown> = {};
+          for (const k of ['status','ampel','vertretung']) if (it.expect[k] !== undefined) ex[k] = it.expect[k] === null ? null : String(it.expect[k]).slice(0,120);
+          if (Object.keys(ex).length) patch.expect = ex;
+        }
         const { data, error } = await admin.rpc('hh_handover_set', { p_id: it.id, p_by: by, p_patch: patch });
         if (error) {
-          if (action === 'handover_set') return json({ error:'Übergabe nicht gespeichert: '+error.message },500);
+          if (action === 'handover_set') return json({ error:'Übergabe nicht gespeichert: '+error.message }, error.code === 'PT409' ? 409 : 500);
           const { data: t0 } = await admin.from('gfweekly_handover').select('title').eq('id', it.id).maybeSingle();
-          misslungen.push({ id: it.id, titel: t0?.title ?? null, grund: error.message });
+          misslungen.push({ id: it.id, titel: t0?.title ?? null, grund: error.message, konflikt: error.code === 'PT409' });
           continue;
         }
         n++; ergebnis.push({ ...(data?.item ?? {}), vorgang: data?.vorgang ?? null });
@@ -2778,16 +2784,24 @@ Deno.serve(async (req: Request) => {
       /* Für dich, „Seit du zuletzt da warst“: bestätigte Verlaufseinträge aktiver Vorhaben seit einem Zeitpunkt,
          ohne die eigenen (wer selbst eingetragen hat, muss es nicht noch einmal lesen). Ohne Zeitpunkt: 24 Stunden. */
       const seit = t.seit && !isNaN(Date.parse(t.seit)) ? new Date(t.seit).toISOString() : new Date(Date.now() - 86400000).toISOString();
+      /* Eigene Einträge: nur was die Person selbst in der Oberfläche getan hat (created_by genau Alex oder Lea).
+         Einträge des Abgleichs aus ihrem Konto (abgleich-alex) sind für sie neu und bleiben drin. */
       const ich = whoNorm(t.person || WHO);
-      const [vl, vh] = await Promise.all([
-        admin.from('hh_vorhaben_verlauf').select('id,vorhaben_id,happened_at,created_at,art,wer,text,created_by').eq('status', 'bestaetigt')
-          .gt('created_at', seit).order('created_at', { ascending:false }).limit(400),
-        admin.from('hh_vorhaben').select('id,slug,title,ball,ball_name,status').in('status', ['aktiv','pausiert']),
-      ]);
-      if (vl.error) throw vl.error; if (vh.error) throw vh.error;
-      const aktiv = new Map((vh.data || []).map((v: any) => [v.id, v]));
-      const eintraege = (vl.data || []).filter((e: any) => aktiv.has(e.vorhaben_id) && whoNorm(e.created_by) !== ich);
-      return json({ seit, eintraege, vorhaben: [...aktiv.values()] });
+      const { data: vh, error: e1 } = await admin.from('hh_vorhaben').select('id,slug,title,ball,ball_name,status').in('status', ['aktiv','pausiert']);
+      if (e1) throw e1;
+      const ids = (vh || []).map((v: any) => v.id);
+      const eintraege: any[] = []; let gekuerzt = false;
+      /* Gefiltert wird in der Datenbank, gelesen seitenweise bis 2.000 Einträge; darüber sagt die Antwort „gekuerzt“. */
+      for (let von = 0; ids.length && von < 2000; von += 500) {
+        const { data, error } = await admin.from('hh_vorhaben_verlauf').select('id,vorhaben_id,happened_at,created_at,art,wer,text,created_by')
+          .eq('status', 'bestaetigt').gt('created_at', seit).in('vorhaben_id', ids).or(`created_by.is.null,created_by.neq.${ich}`)
+          .order('created_at', { ascending:false }).range(von, von + 499);
+        if (error) throw error;
+        eintraege.push(...(data || []));
+        if ((data || []).length < 500) break;
+        if (von + 500 >= 2000) gekuerzt = true;
+      }
+      return json({ seit, eintraege, vorhaben: vh || [], gekuerzt });
     }
     if (action === 'vorhaben_get') {
       const ref = (t.id || t.slug || '').toString().trim(); if (!ref) return json({ error:'id oder slug fehlt' },400);

@@ -184,6 +184,8 @@ try {
   akte = await api('vorhaben_get', { id: testId });
   ok(akte.verlauf.some(e => e.text === 'Schichtwechsel Lea an Alex: Ball von Lea an Alex. Probe Feierabend'), 'Verlauf des Schichtwechsels mit Notiz');
 
+  const seit = await api('vorhaben_seit', { seit: new Date(Date.now() - 15 * 60000).toISOString(), person: 'Alex' });
+  ok(seit.eintraege.some(e => e.created_by === 'Lea') && !seit.eintraege.some(e => e.created_by === 'Alex'), 'vorhaben_seit: Einträge von Lea ja, eigene nein');
   console.log('== Abwesenheit ==');
   await api('vorhaben_save', { id: testId, ball: 'lea', frist: '2026-11-20', by: BY });
   const von = new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 10), bis = new Date(Date.now() + 86400000 * 33).toISOString().slice(0, 10);
@@ -197,6 +199,7 @@ try {
     const h1 = await api('handover_set', { id: zeile.id, ampel: 'gruen', vertretung: 'Alex', by: BY });
     ok(h1.vorgang && h1.vorgang.ball === 'alex' && h1.vorgang.absence_id === absenceId, 'Vertretung: Ball bei Alex, absence_id gesetzt');
     await api('handover_set', { id: zeile.id, ampel: 'gruen', vertretung: 'Alex', by: BY });
+    await abgelehnt('handover_set', { id: zeile.id, ampel: 'ruht', expect: { status: 'vorschlag', ampel: zeile.ampel, vertretung: null }, by: 'Lea' }, 409, /inzwischen geändert/, 'Korbzeile mit veraltetem Stand');
     akte = await api('vorhaben_get', { id: testId });
     ok(akte.vorhaben.ball_vor_abwesenheit === 'lea', 'ball_vor_abwesenheit = lea');
     ok(akte.verlauf.filter(e => /^in Vertretung für Lea/.test(e.text)).length === 1, 'genau ein Eintrag „in Vertretung für Lea“ trotz doppeltem Setzen');

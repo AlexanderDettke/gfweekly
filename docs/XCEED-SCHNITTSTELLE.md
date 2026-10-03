@@ -1,7 +1,7 @@
 # XCeed: Schnittstelle, Webhooks, Exporte · Stand 03.10.2026
 
 Auftrag: `docs/PAKET-V31-VORHABEN.md`, Abschnitt 31e. Geprüft, ob XCeed für Veranstalter eine Schnittstelle, Webhooks oder regelmäßige
-Exporte per Mail anbietet. Gebaut wird in V31 nichts davon.
+Exporte per Mail anbietet. Gebaut wird in V31 nichts davon. Alles hier ist Recherche in öffentlichen Quellen vom 03.10.2026, nicht bei XCeed bestätigt.
 
 ## Kurz
 
@@ -24,9 +24,10 @@ Exporte per Mail anbietet. Gebaut wird in V31 nichts davon.
 1. **Sobald es einen Schlüssel gibt** (Frage an XCeed im laufenden Vertrag, Ball beim Vorhaben „XCeed Ticketing-Vertrag“), kann ein späteres Paket
    die Verkaufszahlen je Festival stündlich lesen, nach dem Muster des Asana-Rückwegs (pg_cron, Laufsperre, Zeitbudget). Der Schlüssel gehört dann
    als Supabase-Secret `XCEED_API_KEY` in die Edge Function, nicht in den Quelltext.
-2. **Bis dahin** liest der Abgleich aus Cowork Mails von xceed.me ohnehin mit (`docs/ABGLEICH-VORHABEN.md`, Quelle C: „Mails von xceed.me … immer prüfen“).
+2. **Bis dahin** liest der Abgleich aus Cowork eingehende Mails von xceed.me mit (`docs/ABGLEICH-VORHABEN.md`, Quelle C: „Mails von xceed.me … immer prüfen“), solange Gmail sie nicht als Werbung oder Soziales einsortiert.
 3. **Falls XCeed Berichte per Mail anbietet:** an `alex+xceed@wildemoehre.org` schicken lassen (Plus-Adresse von Google Workspace, landet im
-   Postfach von Alex, also in Quelle C des Abgleichs, und lässt sich in Gmail filtern). **Nicht** an `alex+einwurf@…`: was dort ankommt, wird zu einem
+   Postfach von Alex). Der Abgleich liest diese Adresse in einer eigenen Suche ohne Kategorie-Ausschluss (Quelle C2 in `docs/ABGLEICH-VORHABEN.md`,
+   Nachtrag vom 03.10.2026); im eingerichteten Cowork-Auftrag steht C2 erst, wenn sein Text ersetzt ist. **Nicht** an `alex+einwurf@…`: was dort ankommt, wird zu einem
    Einwurf mit Vorschlag und landet in der Warteschlange der Vorhaben, ein täglicher Verkaufsbericht gehört nicht dorthin.
 
 ## Offene Fragen an XCeed

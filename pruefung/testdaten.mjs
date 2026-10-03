@@ -380,6 +380,7 @@ const vhPunkte = [
 const vhVerlauf = [
   { id:'e1', vorhaben_id:'vh-xceed', happened_at:zeit(-0.2), art:'telefon', wer:'Alex mit Victor', text:'Auszahlung ab Monat 1 mündlich zugesagt, schriftlich bis Montag.', tag:null, status:'bestaetigt', source_ref:'seed:1', source_url:null, created_at:zeit(-0.2) },
   { id:'e2', vorhaben_id:'vh-xceed', happened_at:zeit(-0.5), art:'system', wer:'Abgleich', text:'Mail von XCeed spricht dafür, dass „Entscheidung für XCeed“ erledigt ist.', tag:'Vorschlag: Punkt erledigt: Entscheidung für XCeed', status:'vorschlag', source_ref:'abgleich:alex:vorschlag:p4:m1', source_url:null, created_at:zeit(-0.5) },
+  { id:'e5', vorhaben_id:'vh-xceed', happened_at:zeit(-0.4), art:'system', wer:'Abgleich', text:'Mail von Niclaas spricht dafür, dass „Bürgschaftstext auf Deutsch“ jetzt so steht: fertig übersetzt.', tag:'Vorschlag: Stand: Bürgschaftstext auf Deutsch', status:'vorschlag', source_ref:'abgleich:alex:vorschlag:p1:m2', source_url:null, created_at:zeit(-0.4) },
   { id:'e3', vorhaben_id:'vh-xceed', happened_at:zeit(-1), art:'uebergabe', wer:'Alex', text:'Ball von Alex an Lea', tag:null, status:'bestaetigt', source_ref:null, source_url:null, created_at:zeit(-1) },
   { id:'e4', vorhaben_id:'vh-xceed', happened_at:zeit(-9), art:'entscheidung', wer:'Alex und Lea', text:'XCeed wird Ticketanbieter.', tag:'Entscheidung', status:'bestaetigt', source_ref:'seed:2', source_url:null, created_at:zeit(-9) },
 ];
