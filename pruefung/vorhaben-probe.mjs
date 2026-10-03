@@ -122,7 +122,7 @@ try {
   ok(!akte.verlauf.some(e => e.id === v1.id), 'verworfener Eintrag fehlt in der Akte');
 
   console.log('== Einwurf mit KI ==');
-  const e1 = await api('einwurf_add', { text: 'Telefonat mit Testperson, Punkt Probe ist erledigt', kanal: 'knopf', von: 'Alex', by: BY });
+  const e1 = await api('einwurf_add', { text: 'V31-Probe: Telefonat mit Testperson, Punkt Probe ist erledigt', kanal: 'knopf', von: 'Alex', by: BY });
   const ew = e1.einwurf, vs = ew.vorschlag;
   ok(!e1.ki_fehler, 'KI hat geantwortet', e1.ki_fehler);
   ok(ew.status === 'vorgeschlagen' && !!vs, 'Einwurf steht mit Vorschlag', ew.status);
@@ -131,10 +131,12 @@ try {
   ok(vs && vs.punkte.some(p => p.id === p1.id && p.erledigt === true), 'Vorschlag: Punkt Probe erledigt', vs && vs.punkte);
   ok(vs && ['telefon', 'notiz'].includes(vs.verlauf.art) && vs.verlauf.text.length > 0, `Verlaufsvorschlag (${vs && vs.verlauf.art})`);
   ok((await api('vorhaben_get', { id: testId })).punkte.find(p => p.id === p1.id).erledigt === false, 'vor dem Übernehmen ist nichts angewendet');
-  await abgelehnt('einwurf_apply', { id: ew.id, vorhaben_id: testId, auswahl: { verlauf: true }, bearbeitet: { verlauf_text: 'Das Passwort ist 1234' }, by: BY }, 400, /vertraulich/, 'bearbeiteter Text mit Passwort wird abgelehnt');
+  await abgelehnt('einwurf_apply', { id: ew.id, vorhaben_id: testId, auswahl: { verlauf: true }, bearbeitet: { verlauf_text: 'Das Passwort ist 1234' }, revision: vs && vs.revision, by: BY }, 400, /vertraulich/, 'bearbeiteter Text mit Passwort wird abgelehnt');
+  await abgelehnt('einwurf_apply', { id: ew.id, vorhaben_id: testId, auswahl: { verlauf: true, naechster_schritt: true }, bearbeitet: { naechster_schritt: 'Kennwort an XCeed schicken' }, revision: vs && vs.revision, by: BY }, 400, /vertraulich/, 'bearbeiteter nächster Schritt mit Kennwort wird abgelehnt');
+  await abgelehnt('einwurf_apply', { id: ew.id, vorhaben_id: testId, auswahl: { verlauf: true }, revision: 'alt', by: BY }, 409, /geändert/, 'veraltete Revision des Vorschlags');
   if (!erkannt) { await api('einwurf_verwerfen', { id: ew.id, by: BY }); ok(false, 'Einwurf verworfen, weil die KI ein anderes Vorhaben erkannt hat'); }
   else {
-    const ap = await api('einwurf_apply', { id: ew.id, vorhaben_id: testId, auswahl: { verlauf: true, punkte: [p1.id], neue_punkte: [], ball: false, naechster_schritt: false, frist: false }, benachrichtigung: 'morgen', by: BY });
+    const ap = await api('einwurf_apply', { id: ew.id, vorhaben_id: testId, auswahl: { verlauf: true, punkte: [p1.id], neue_punkte: [], ball: false, naechster_schritt: false, frist: false }, benachrichtigung: 'morgen', revision: vs.revision, by: BY });
     ok(ap.ok && ap.verlauf && ap.verlauf.source_ref === 'einwurf:' + ew.id, 'Verlauf trägt source_ref einwurf:<id>');
     akte = await api('vorhaben_get', { id: testId });
     ok(akte.punkte.find(p => p.id === p1.id).erledigt === true, 'Punkt Probe ist in der Datenbank erledigt');
@@ -144,21 +146,29 @@ try {
   }
   /* Zielwechsel: Vorschlag für test-v31, übernommen in test-v31-ziel. Nur der Verlauf darf ankommen. */
   const p3 = (await api('punkt_save', { vorhaben_id: testId, titel: 'Zweite Probe', by: BY })).punkt;
-  const e2 = await api('einwurf_add', { text: 'Punkt Zweite Probe ist erledigt, Telefonat mit Testperson', vorhaben_id: testId, by: BY });
+  const e2 = await api('einwurf_add', { text: 'V31-Probe: Punkt Zweite Probe ist erledigt, Telefonat mit Testperson', vorhaben_id: testId, by: BY });
   ok(e2.einwurf.vorhaben_id === testId, 'vorgegebenes Vorhaben hat Vorrang');
-  const ap2 = await api('einwurf_apply', { id: e2.einwurf.id, vorhaben_id: zielId, auswahl: { verlauf: true, punkte: [p3.id], ball: true, naechster_schritt: true, frist: true }, by: BY });
-  ok(ap2.uebersprungen.some(x => /galt für/.test(x)) && !ap2.punkte.length && !ap2.felder, 'Zielwechsel: nur der Verlauf, Hinweis „galt für“');
+  const ap2 = await api('einwurf_apply', { id: e2.einwurf.id, vorhaben_id: zielId, auswahl: { verlauf: true, punkte: [p3.id], ball: true, naechster_schritt: true, frist: true }, revision: e2.einwurf.vorschlag?.revision, by: BY });
+  ok(ap2.uebersprungen.some(x => /galt für/.test(x)) && !ap2.punkte.length && !ap2.felder && ap2.ticker === false, 'Zielwechsel: nur der Verlauf, kein Ticker, Hinweis „galt für“');
+  /* Zielwechsel mit vertraulichem Text: ohne bearbeiteten Text kein Eintrag. */
+  const e4 = await api('einwurf_add', { text: 'V31-Probe: Testperson ist krank, Termin verschiebt sich', vorhaben_id: testId, by: BY });
+  await abgelehnt('einwurf_apply', { id: e4.einwurf.id, vorhaben_id: zielId, auswahl: { verlauf: true }, revision: e4.einwurf.vorschlag?.revision, by: BY }, 400, /vertraulich/, 'Zielwechsel mit vertraulichem Einwurftext braucht Bearbeitung');
+  const ap4 = await api('einwurf_apply', { id: e4.einwurf.id, vorhaben_id: zielId, auswahl: { verlauf: true }, bearbeitet: { verlauf_text: 'Termin mit Testperson verschiebt sich.' }, benachrichtigung: 'sofort', revision: e4.einwurf.vorschlag?.revision, by: BY });
+  ok(ap4.verlauf?.text === 'Termin mit Testperson verschiebt sich.' && ap4.ticker === true, 'bearbeiteter Text wird eingetragen, ausdrücklich „sofort“ legt den Ticker an');
   ok((await api('vorhaben_get', { id: testId })).punkte.find(p => p.id === p3.id).erledigt === false, 'Punkt im ursprünglichen Vorhaben bleibt offen');
   ok((await api('vorhaben_get', { id: zielId })).verlauf.some(e => e.source_ref === 'einwurf:' + e2.einwurf.id), 'Verlauf steht im gewählten Vorhaben');
   /* Ziel ändern mit neuem Vorschlag */
-  const e3 = await api('einwurf_add', { text: `Probe: Punkt ${xc.punkte[0].id} ist erledigt`, vorhaben_id: testId, by: BY });
+  const e3 = await api('einwurf_add', { text: `V31-Probe: Punkt ${xc.punkte[0].id} ist erledigt`, vorhaben_id: testId, by: BY });
   ok(!(e3.einwurf.vorschlag?.punkte || []).some(p => p.id === xc.punkte[0].id), 'Punkt eines fremden Vorhabens steht nicht im Vorschlag');
   const e3b = await api('einwurf_vorschlag', { id: e3.einwurf.id, vorhaben_id: zielId, by: BY });
   ok(e3b.einwurf.vorhaben_id === zielId && (e3b.ki_fehler || e3b.einwurf.vorschlag?.vorhaben_id === zielId), 'einwurf_vorschlag prüft gegen das neue Ziel', e3b.ki_fehler);
+  ok(!e3b.einwurf.vorschlag?.revision || e3b.einwurf.vorschlag.revision !== e3.einwurf.vorschlag?.revision, 'neuer Vorschlag hat eine neue Revision');
   await api('einwurf_verwerfen', { id: e3.einwurf.id, by: BY }); ok(true, 'Einwurf verworfen');
 
   console.log('== Schichtwechsel ==');
   await abgelehnt('schicht_uebergabe', { von: 'Lea', an: 'Alex', eintraege: [{ vorhaben_id: testId, ball: 'alex' }], by: 'Alex' }, 400, /by muss von sein/, 'Schichtwechsel nur durch die Person, die abgibt');
+  const swx = await api('schicht_uebergabe', { von: 'Lea', an: 'Alex', eintraege: [{ vorhaben_id: testId, ball: 'alex' }], by: 'Lea' });
+  ok(!swx.ok && /expect_ball fehlt/.test(swx.fehler[0]?.grund || ''), 'Schichtwechsel ohne gesehenen Ball wird je Zeile abgelehnt');
   const sw = await api('schicht_uebergabe', { von: 'Lea', an: 'Alex', eintraege: [{ vorhaben_id: testId, ball: 'alex', notiz: 'Probe Feierabend', expect_ball: 'lea' }], by: 'Lea' });
   ok(sw.ok && sw.ergebnis[0].ball === 'alex', 'Schichtwechsel setzt den Ball auf Alex');
   const sw2 = await api('schicht_uebergabe', { von: 'Lea', an: 'Alex', eintraege: [{ vorhaben_id: testId, ball: 'gf', expect_ball: 'lea' }], by: 'Lea' });
@@ -214,6 +224,8 @@ try {
       await api('vorhaben_save', { id, status: 'archiviert', ball: 'offen', by: BY });
       ok((await api('vorhaben_get', { id })).vorhaben.status === 'archiviert', `${akte.vorhaben.slug} ist archiviert`);
     }
+    const rest = await api('probe_aufraeumen', { nur_einwuerfe: true, by: BY });
+    ok(rest.ok && rest.ticker >= 1, `Einwürfe und Ticker der Probe gelöscht (${rest.einwuerfe} Einwürfe, ${rest.ticker} Ticker)`);
     if (!echt0) throw new Error('kein Anfangszustand, Vergleich nicht möglich');
     const echt1 = await schnappschuss();
     const geaendert = Object.keys(echt0).filter(k => echt0[k] !== echt1[k]);

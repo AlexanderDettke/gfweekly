@@ -2883,7 +2883,7 @@ Deno.serve(async (req: Request) => {
         const kontext = await vhKontext(vorgabe);
         if (!kontext.length) throw new Error(vorgabe ? 'Das Vorhaben ist nicht aktiv' : 'Es gibt keine aktiven Vorhaben');
         const { roh, model } = await einwurfKI(text, von, kontext);
-        const vs: any = einwurfPruefen(roh, kontext, vorgabe, von); vs.model = model;
+        const vs: any = einwurfPruefen(roh, kontext, vorgabe, von); vs.model = model; vs.revision = crypto.randomUUID();
         const { data: up, error: ue } = await admin.from('hh_einwurf')
           .update({ vorschlag: vs, status:'vorgeschlagen', vorhaben_id: vs.vorhaben_id || vorgabe }).eq('id', ew.id).eq('status','neu').select().single();
         if (ue) throw ue; einwurf = up;
@@ -2904,13 +2904,15 @@ Deno.serve(async (req: Request) => {
       const b = t.bearbeitet || {};
       const fristB = vhDatum(b.frist); if (fristB === undefined) return json({ error:'Frist ist kein Datum (JJJJ-MM-TT)' },400);
       const bearbeitet = { verlauf_text: vhText(b.verlauf_text, 2000) || null, naechster_schritt: vhText(b.naechster_schritt, 1000) || null, frist: fristB };
-      if (vhVertraulich(bearbeitet.verlauf_text)) return json({ error:'Der Text enthält möglicherweise vertrauliche Angaben (Zugangsdaten, Kontonummer, Gesundheit). Bitte so formulieren, dass er in die Akte darf.' },400);
+      if (vhVertraulich(bearbeitet.verlauf_text) || vhVertraulich(bearbeitet.naechster_schritt)) return json({ error:'Der Text enthält möglicherweise vertrauliche Angaben (Zugangsdaten, Kontonummer, Gesundheit). Bitte so formulieren, dass er in die Akte darf.' },400);
       const a = t.auswahl || {};
       const auswahl = { verlauf: !!a.verlauf, ball: !!a.ball, naechster_schritt: !!a.naechster_schritt, frist: !!a.frist,
         punkte: Array.isArray(a.punkte) ? a.punkte.map(String).filter((x: string) => VH_UUID.test(x)).slice(0, 50) : [],
         neue_punkte: Array.isArray(a.neue_punkte) ? a.neue_punkte.map((x: unknown) => parseInt(String(x))).filter((x: number) => x >= 0 && x < 50) : [] };
       const ben = ['sofort','morgen'].includes(t.benachrichtigung) ? t.benachrichtigung : null;
-      const erg = await vhRpc('hh_einwurf_apply', { p_id: ew.id, p_vorhaben: vh.id, p_auswahl: auswahl, p_bearbeitet: bearbeitet, p_benachrichtigung: ben, p_by: by });
+      /* revision: der Vorschlag, den die Person gesehen hat (Review 31a Runde 2, Befund 5). */
+      const erg = await vhRpc('hh_einwurf_apply', { p_id: ew.id, p_vorhaben: vh.id, p_auswahl: auswahl, p_bearbeitet: bearbeitet, p_benachrichtigung: ben, p_by: by,
+        p_revision: t.revision ? String(t.revision).slice(0, 64) : null });
       return json({ ok:true, vorhaben: await vhLese(vh.id), ...erg });
     }
     if (action === 'einwurf_vorschlag') {
@@ -2925,7 +2927,7 @@ Deno.serve(async (req: Request) => {
         const kontext = await vhKontext(vh.id);
         if (!kontext.length) throw new Error('Das Vorhaben ist nicht aktiv');
         const { roh, model } = await einwurfKI(ew.text, ew.von, kontext);
-        const vs: any = einwurfPruefen(roh, kontext, vh.id, ew.von); vs.model = model; vs.neu_geprueft_von = by;
+        const vs: any = einwurfPruefen(roh, kontext, vh.id, ew.von); vs.model = model; vs.neu_geprueft_von = by; vs.revision = crypto.randomUUID();
         const { data: up, error: ue } = await admin.from('hh_einwurf').update({ vorschlag: vs, status:'vorgeschlagen', vorhaben_id: vh.id })
           .eq('id', ew.id).in('status', ['neu','vorgeschlagen']).select().maybeSingle();
         if (ue) throw ue; if (!up) return json({ error:'Der Einwurf wurde gerade entschieden.' },409);
@@ -2968,8 +2970,9 @@ Deno.serve(async (req: Request) => {
           const patch: Record<string, unknown> = { ball: e.ball, ball_name: ['team','extern'].includes(e.ball) ? (vhText(e.ball_name, 120) || null) : null };
           const bleibt = v.ball === e.ball && (v.ball_name || '') === ((patch.ball_name as string) || '');
           const notiz = vhText(e.notiz, 1000) || (bleibt ? 'Ball bleibt bei ' + vhBallWort(v.ball, v.ball_name) : null);
-          /* Der Ball, den die Person im Dialog gesehen hat. Liegt er inzwischen woanders, meldet die Zeile 409. */
-          patch.expect_ball = VH_BALL.includes(e.expect_ball) ? e.expect_ball : v.ball;
+          /* Der Ball, den die Person im Dialog gesehen hat, ist Pflicht. Liegt er inzwischen woanders, meldet die Zeile einen Konflikt. */
+          if (!VH_BALL.includes(e.expect_ball)) throw new VhFehler('expect_ball fehlt: welcher Ball war im Dialog zu sehen?');
+          patch.expect_ball = e.expect_ball;
           const r = await vhSave(v.id, patch, by, notiz, `Schichtwechsel ${von} an ${an}`);
           ergebnis.push({ vorhaben_id: v.id, title: v.title, ball: r.vorhaben.ball, ball_geaendert: r.ball_geaendert });
         } catch (err) { fehler.push({ vorhaben_id: e?.vorhaben_id || null, konflikt: err instanceof VhFehler && err.status === 409, grund: String((err as Error).message || err).slice(0,200) }); }
@@ -2981,9 +2984,19 @@ Deno.serve(async (req: Request) => {
          mit Punkten, Verlauf und Einwürfen, und beendete Testabwesenheiten mit der Notiz „V31-Probe“ samt Korb.
          Echte Vorhaben und echte Abwesenheiten erreicht diese Aktion nicht: slug, Status, test und Notiz sind fest. */
       vhBy(t);
+      /* Einwürfe der Probe tragen den Text „V31-Probe: …“, auch wenn die KI sie einem echten Vorhaben zugeordnet hat. */
+      let vorhaben = 0, einwuerfe = 0, abwesenheiten = 0;
+      const { data: pe, error: e6 } = await admin.from('hh_einwurf').delete().like('text', 'V31-Probe:%').select('id'); if (e6) throw e6; einwuerfe += (pe || []).length;
+      /* Ticker aus „sofort“ an den Testvorhaben gehören nicht ins Laufband, auch nicht bis zum nächsten Lauf. */
+      const { data: tv } = await admin.from('hh_vorhaben').select('id').in('slug', ['test-v31','test-v31-ziel']);
+      let ticker = 0;
+      if ((tv || []).length) {
+        const { data: tk, error: e7 } = await admin.from('gfweekly_news').delete().like('source_ref', 'einwurf:%').in('vorhaben_id', (tv || []).map((x: any) => x.id)).select('id');
+        if (e7) throw e7; ticker = (tk || []).length;
+      }
+      if (t.nur_einwuerfe) return json({ ok:true, vorhaben, einwuerfe, ticker, abwesenheiten, aktiv_uebrig:false });
       const { data: alte, error: e0 } = await admin.from('hh_vorhaben').select('id,slug,status').in('slug', ['test-v31','test-v31-ziel']);
       if (e0) throw e0;
-      let vorhaben = 0, einwuerfe = 0, abwesenheiten = 0;
       for (const alt of (alte || [])) {
         if (alt.status !== 'archiviert') continue;
         const { data: ew, error: e1 } = await admin.from('hh_einwurf').delete().eq('vorhaben_id', alt.id).select('id'); if (e1) throw e1; einwuerfe += (ew || []).length;
