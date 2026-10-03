@@ -1294,7 +1294,7 @@ function einwurfPruefen(roh: any, kontext: any[], vorgabeId: string | null, pers
   for (const p of punkte) if (vhVertraulich(p.stand)) { p.stand = null; vertraulich.push('punkt:' + p.id); verworfen.push(`Stand zu „${p.titel}“ möglicherweise vertraulich, weggelassen`); }
   for (let i = neue.length - 1; i >= 0; i--) if (vhVertraulich(neue[i].titel) || vhVertraulich(neue[i].wer)) { verworfen.push('ein neuer Punkt war möglicherweise vertraulich und ist weggelassen'); vertraulich.push('neuer_punkt'); neue.splice(i, 1); }
   if (vhVertraulich(naechster_schritt)) { naechster_schritt = null; vertraulich.push('naechster_schritt'); verworfen.push('Nächster Schritt möglicherweise vertraulich, weggelassen'); }
-  return { vorhaben_id: vh?.id || null, vorhaben_slug: vh?.slug || null, vorhaben_titel: vh?.title || null, sicherheit,
+  return { vorhaben_id: vh?.id || null, vorhaben_slug: vh?.slug || null, vorhaben_titel: vh?.title || null, ball_gesehen: vh?.ball || null, sicherheit,
     verlauf, punkte: punkte.filter(p => p.stand || p.erledigt), neue_punkte: neue, ball, ball_name, naechster_schritt, frist, benachrichtigung, verworfen, vertraulich };
 }
 
@@ -2876,7 +2876,9 @@ Deno.serve(async (req: Request) => {
       const kanal = EW_KANAL.includes(t.kanal) ? t.kanal : 'knopf';
       const von = ['Alex','Lea'].includes(whoNorm(t.von)) ? whoNorm(t.von) : by;
       const vorgabe = t.vorhaben_id ? (await vhLese(t.vorhaben_id.toString())).id : null;
-      const { data: ew, error } = await admin.from('hh_einwurf').insert({ von, kanal, text, vorhaben_id: vorgabe, status:'neu' }).select().single();
+      /* source_ref nur für die Wirkungsprobe (probe:v31:<lauf>:<n>), damit sie ausschließlich ihre eigenen Einwürfe aufräumt. */
+      const probeRef = typeof t.source_ref === 'string' && /^probe:v31:[a-z0-9-]{4,40}:\d{1,3}$/.test(t.source_ref) ? t.source_ref : null;
+      const { data: ew, error } = await admin.from('hh_einwurf').insert({ von, kanal, text, vorhaben_id: vorgabe, status:'neu', source_ref: probeRef }).select().single();
       if (error) throw error;
       let ki_fehler: string | null = null; let einwurf = ew;
       try {
@@ -2912,7 +2914,7 @@ Deno.serve(async (req: Request) => {
       const ben = ['sofort','morgen'].includes(t.benachrichtigung) ? t.benachrichtigung : null;
       /* revision: der Vorschlag, den die Person gesehen hat (Review 31a Runde 2, Befund 5). */
       const erg = await vhRpc('hh_einwurf_apply', { p_id: ew.id, p_vorhaben: vh.id, p_auswahl: auswahl, p_bearbeitet: bearbeitet, p_benachrichtigung: ben, p_by: by,
-        p_revision: t.revision ? String(t.revision).slice(0, 64) : null });
+        p_revision: t.revision ? String(t.revision).slice(0, 64) : null, p_expect_ball: VH_BALL.includes(t.expect_ball) ? t.expect_ball : null });
       return json({ ok:true, vorhaben: await vhLese(vh.id), ...erg });
     }
     if (action === 'einwurf_vorschlag') {
@@ -2980,13 +2982,14 @@ Deno.serve(async (req: Request) => {
       return json({ ok: fehler.length === 0, ergebnis, fehler });
     }
     if (action === 'probe_aufraeumen') {
-      /* Nur für pruefung/vorhaben-probe.mjs: löscht das Testvorhaben test-v31 eines früheren Laufs (nur wenn archiviert)
+      /* Nur für pruefung/vorhaben-probe.mjs: löscht Einwürfe mit source_ref probe:v31:…, Ticker aus Einwürfen an den
+         Testvorhaben und das Testvorhaben test-v31 eines früheren Laufs (nur wenn archiviert)
          mit Punkten, Verlauf und Einwürfen, und beendete Testabwesenheiten mit der Notiz „V31-Probe“ samt Korb.
          Echte Vorhaben und echte Abwesenheiten erreicht diese Aktion nicht: slug, Status, test und Notiz sind fest. */
       vhBy(t);
-      /* Einwürfe der Probe tragen den Text „V31-Probe: …“, auch wenn die KI sie einem echten Vorhaben zugeordnet hat. */
+      /* Einwürfe der Probe tragen source_ref probe:v31:<lauf>:<n>, auch wenn die KI sie einem echten Vorhaben zugeordnet hat. */
       let vorhaben = 0, einwuerfe = 0, abwesenheiten = 0;
-      const { data: pe, error: e6 } = await admin.from('hh_einwurf').delete().like('text', 'V31-Probe:%').select('id'); if (e6) throw e6; einwuerfe += (pe || []).length;
+      const { data: pe, error: e6 } = await admin.from('hh_einwurf').delete().like('source_ref', 'probe:v31:%').select('id'); if (e6) throw e6; einwuerfe += (pe || []).length;
       /* Ticker aus „sofort“ an den Testvorhaben gehören nicht ins Laufband, auch nicht bis zum nächsten Lauf. */
       const { data: tv } = await admin.from('hh_vorhaben').select('id').in('slug', ['test-v31','test-v31-ziel']);
       let ticker = 0;

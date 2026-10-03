@@ -47,6 +47,7 @@ async function testVorhaben(slug, titel) {
 }
 
 let testId = null, zielId = null, absenceId = null, echt0 = null;
+const LAUF = Date.now().toString(36);   // Kennung dieses Laufs in source_ref der Einwürfe
 try {
   console.log('== Grundlage ==');
   const ping = await api('ping');
@@ -122,7 +123,7 @@ try {
   ok(!akte.verlauf.some(e => e.id === v1.id), 'verworfener Eintrag fehlt in der Akte');
 
   console.log('== Einwurf mit KI ==');
-  const e1 = await api('einwurf_add', { text: 'V31-Probe: Telefonat mit Testperson, Punkt Probe ist erledigt', kanal: 'knopf', von: 'Alex', by: BY });
+  const e1 = await api('einwurf_add', { text: 'V31-Probe: Telefonat mit Testperson, Punkt Probe ist erledigt', kanal: 'knopf', von: 'Alex', by: BY, source_ref: `probe:v31:${LAUF}:1` });
   const ew = e1.einwurf, vs = ew.vorschlag;
   ok(!e1.ki_fehler, 'KI hat geantwortet', e1.ki_fehler);
   ok(ew.status === 'vorgeschlagen' && !!vs, 'Einwurf steht mit Vorschlag', ew.status);
@@ -146,19 +147,19 @@ try {
   }
   /* Zielwechsel: Vorschlag für test-v31, übernommen in test-v31-ziel. Nur der Verlauf darf ankommen. */
   const p3 = (await api('punkt_save', { vorhaben_id: testId, titel: 'Zweite Probe', by: BY })).punkt;
-  const e2 = await api('einwurf_add', { text: 'V31-Probe: Punkt Zweite Probe ist erledigt, Telefonat mit Testperson', vorhaben_id: testId, by: BY });
+  const e2 = await api('einwurf_add', { text: 'V31-Probe: Punkt Zweite Probe ist erledigt, Telefonat mit Testperson', vorhaben_id: testId, by: BY, source_ref: `probe:v31:${LAUF}:2` });
   ok(e2.einwurf.vorhaben_id === testId, 'vorgegebenes Vorhaben hat Vorrang');
   const ap2 = await api('einwurf_apply', { id: e2.einwurf.id, vorhaben_id: zielId, auswahl: { verlauf: true, punkte: [p3.id], ball: true, naechster_schritt: true, frist: true }, revision: e2.einwurf.vorschlag?.revision, by: BY });
   ok(ap2.uebersprungen.some(x => /galt für/.test(x)) && !ap2.punkte.length && !ap2.felder && ap2.ticker === false, 'Zielwechsel: nur der Verlauf, kein Ticker, Hinweis „galt für“');
   /* Zielwechsel mit vertraulichem Text: ohne bearbeiteten Text kein Eintrag. */
-  const e4 = await api('einwurf_add', { text: 'V31-Probe: Testperson ist krank, Termin verschiebt sich', vorhaben_id: testId, by: BY });
+  const e4 = await api('einwurf_add', { text: 'V31-Probe: Testperson ist krank, Termin verschiebt sich', vorhaben_id: testId, by: BY, source_ref: `probe:v31:${LAUF}:3` });
   await abgelehnt('einwurf_apply', { id: e4.einwurf.id, vorhaben_id: zielId, auswahl: { verlauf: true }, revision: e4.einwurf.vorschlag?.revision, by: BY }, 400, /vertraulich/, 'Zielwechsel mit vertraulichem Einwurftext braucht Bearbeitung');
   const ap4 = await api('einwurf_apply', { id: e4.einwurf.id, vorhaben_id: zielId, auswahl: { verlauf: true }, bearbeitet: { verlauf_text: 'Termin mit Testperson verschiebt sich.' }, benachrichtigung: 'sofort', revision: e4.einwurf.vorschlag?.revision, by: BY });
   ok(ap4.verlauf?.text === 'Termin mit Testperson verschiebt sich.' && ap4.ticker === true, 'bearbeiteter Text wird eingetragen, ausdrücklich „sofort“ legt den Ticker an');
   ok((await api('vorhaben_get', { id: testId })).punkte.find(p => p.id === p3.id).erledigt === false, 'Punkt im ursprünglichen Vorhaben bleibt offen');
   ok((await api('vorhaben_get', { id: zielId })).verlauf.some(e => e.source_ref === 'einwurf:' + e2.einwurf.id), 'Verlauf steht im gewählten Vorhaben');
   /* Ziel ändern mit neuem Vorschlag */
-  const e3 = await api('einwurf_add', { text: `V31-Probe: Punkt ${xc.punkte[0].id} ist erledigt`, vorhaben_id: testId, by: BY });
+  const e3 = await api('einwurf_add', { text: `V31-Probe: Punkt ${xc.punkte[0].id} ist erledigt`, vorhaben_id: testId, by: BY, source_ref: `probe:v31:${LAUF}:4` });
   ok(!(e3.einwurf.vorschlag?.punkte || []).some(p => p.id === xc.punkte[0].id), 'Punkt eines fremden Vorhabens steht nicht im Vorschlag');
   const e3b = await api('einwurf_vorschlag', { id: e3.einwurf.id, vorhaben_id: zielId, by: BY });
   ok(e3b.einwurf.vorhaben_id === zielId && (e3b.ki_fehler || e3b.einwurf.vorschlag?.vorhaben_id === zielId), 'einwurf_vorschlag prüft gegen das neue Ziel', e3b.ki_fehler);
@@ -192,6 +193,8 @@ try {
     akte = await api('vorhaben_get', { id: testId });
     ok(akte.vorhaben.ball_vor_abwesenheit === 'lea', 'ball_vor_abwesenheit = lea');
     ok(akte.verlauf.filter(e => /^in Vertretung für Lea/.test(e.text)).length === 1, 'genau ein Eintrag „in Vertretung für Lea“ trotz doppeltem Setzen');
+    const prot = (await api('handover_log', { absence_id: absenceId })).log.filter(l => l.handover_id === zeile.id);
+    ok(prot.length === 1, `genau ein Übergabeprotokoll trotz doppeltem Setzen (${prot.length})`);
     const end = await api('absence_end', { id: absenceId, by: BY });
     ok((end.vorhaben_zurueck || []).some(x => x.id === testId && x.an === 'lea'), 'absence_end gibt den Ball an Lea zurück');
     akte = await api('vorhaben_get', { id: testId });
