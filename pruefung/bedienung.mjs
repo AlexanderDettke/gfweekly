@@ -62,7 +62,7 @@ const seite = async (url) => {
     if (m.type() !== 'error') return;
     /* Eine abgefangene Fehlerantwort ist gewollt (Asana ohne Token). Der Browser meldet sie trotzdem;
        das ist keine Meldung der Seite und zählt hier nicht. */
-    if (erwarteterFehler && /Failed to load resource: the server responded with a status of 400/.test(m.text())) return;
+    if (erwarteterFehler && /Failed to load resource: the server responded with a status of 40[09]/.test(m.text())) return;
     meldungen.push(m.text());
   });
   p.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
@@ -280,6 +280,36 @@ console.log('\n== Vorhaben (V31b): Ansichten, Akte, Punkt, Ball ==');
   await p.keyboard.press('Escape'); await p.waitForTimeout(200);
   pruefe('Escape schließt die Akte', await p.locator('#vhAkte').isHidden());
   await p.close();
+
+  /* Ball weitergeben über den Dialog auf der Boardkarte, mit Pflichtname und Notiz. */
+  frisch();
+  const q = await seite('/vorhaben.html?view=board');
+  const karte = q.locator('.vh-col[data-col="lea"] .vh-card[data-slug="xceed"]');
+  await karte.hover();
+  await karte.locator('.vh-weiter').click();
+  pruefe('Dialog „Ball weitergeben“ öffnet', await q.locator('#vhModal.open .vh-dlg').count() === 1);
+  await q.locator('#vhModal .chip[data-v="team"]').click();
+  await q.locator('#vhBallOk').click(); await q.waitForTimeout(150);
+  pruefe('Team ohne Namen wird nicht gesendet, das Feld meldet sich', !letzte('vorhaben_save') && await q.locator('#vhBallFehler').isVisible());
+  await q.locator('#vhBallName').fill('Helge');
+  await q.locator('#vhBallNotiz').fill('bitte bis Montag');
+  await q.locator('#vhBallOk').click(); await q.waitForTimeout(500);
+  const w = letzte('vorhaben_save');
+  pruefe('Dialog schickt Ball, Name, Notiz und gesehenen Ball', w && w.nutzlast.ball === 'team' && w.nutzlast.ball_name === 'Helge' && w.nutzlast.notiz === 'bitte bis Montag' && w.nutzlast.expect_ball === 'lea', JSON.stringify(w && w.nutzlast));
+  pruefe('Karte steht danach in der Spalte Team', await q.locator('.vh-col[data-col="team"] .vh-card[data-slug="xceed"]').count() === 1);
+  /* Veralteter Stand: das Board zeigt noch Lea, im Backend liegt der Ball schon anders. */
+  const v2 = q.locator('.vh-col[data-col="lea"] .vh-card[data-slug="subardo"]');
+  await q.evaluate(() => { const v = DATA.vorhaben.find(x => x.slug === 'subardo'); v.ball = 'offen'; });
+  erwarteterFehler = true;   // die 409 gehört zu dieser Probe
+  await v2.hover(); await v2.locator('.vh-weiter').click();
+  await q.locator('#vhModal .chip[data-v="alex"]').click(); await q.locator('#vhBallOk').click(); await q.waitForTimeout(400);
+  erwarteterFehler = false;
+  pruefe('Konflikt meldet sich mit dem aktuellen Stand', (await q.locator('#toast').innerText()).includes('inzwischen'));
+  /* Tastatur: Karte mit Enter öffnen. */
+  await q.locator('.vh-card[data-slug="lusatia"] .vh-open').focus();
+  await q.keyboard.press('Enter'); await q.waitForTimeout(300);
+  pruefe('Enter auf einer Karte öffnet die Akte', (await q.locator('#vhAkte h2').innerText()).includes('Lusatia'));
+  await q.close();
 }
 
 await browser.close();

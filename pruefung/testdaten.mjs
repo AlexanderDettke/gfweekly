@@ -117,7 +117,7 @@ export const KORB_SAAT = {
    zuruecksetzen() stellt den Saatstand wieder her; die Bedienprüfung ruft das vor jedem Fall. */
 export let KORB = JSON.parse(JSON.stringify(KORB_SAAT));
 export let NEUE = [];
-export function zuruecksetzen(){ KORB = JSON.parse(JSON.stringify(KORB_SAAT)); NEUE = []; }
+export function zuruecksetzen(){ KORB = JSON.parse(JSON.stringify(KORB_SAAT)); NEUE = []; if (typeof vhZuruecksetzen === 'function') vhZuruecksetzen(); }
 const zeileVon = (id) => Object.values(KORB).flat().find(r => r.id === id);
 const vorgangVon = (z) => z && z.kind === 'thema'
   ? { id:z.ref_id, gate: z.vertretung ? 'alex' : 'lea', owner_backup: z.vertretung || null } : null;
@@ -363,6 +363,8 @@ export const VORHABEN = [
   vhZeile({ slug:'booking', title:'Booking-Standards', gruppe:'team', ball:'lea', owner:'lea', sort:95, schritt:'Paket schnüren' }),
   vhZeile({ slug:'habitat-hub', title:'Habitat Hub und Aufgabenbereiche', gruppe:'system', ball:'alex', owner:'alex', frist:tag(89), sort:100, zustand:'bewegt', schritt:'Team einführen' }),
 ];
+const VH_SAAT = JSON.stringify(VORHABEN);
+function vhZuruecksetzen(){ VORHABEN.splice(0, VORHABEN.length, ...JSON.parse(VH_SAAT)); }
 const vhPunkte = [
   { id:'p1', vorhaben_id:'vh-xceed', titel:'Bürgschaftstext auf Deutsch', position:null, stand:'in Arbeit', wer:'Niclaas', frist:tag(1), erledigt:false, erledigt_at:null, erledigt_by:null, sort:10, quelle:'seed', created_at:zeit(-5), updated_at:zeit(-1) },
   { id:'p2', vorhaben_id:'vh-xceed', titel:'Schriftliche Freigabe Infield', position:null, stand:null, wer:'Lea', frist:tag(-1), erledigt:false, erledigt_at:null, erledigt_by:null, sort:20, quelle:'seed', created_at:zeit(-5), updated_at:zeit(-1) },
@@ -380,6 +382,15 @@ export const VH_ANTWORT = {
     abwesenheiten:[A1].map(a=>({ id:a.id, person:a.person, von:a.von, bis:a.bis, bis_geschaetzt:a.bis_geschaetzt, status:a.status, vertretung_standard:a.vertretung_standard, test:a.test })),
     einwuerfe_offen:1, einwuerfe_ohne_vorhaben:1 }),
   vorhaben_badge: { einwuerfe:1, ueberfaellig_bei_mir:0, n:1 },
+  /* Ballwechsel wie das Backend: veralteter Ball ergibt 409, sonst wird wirklich geschrieben. */
+  vorhaben_save: (p) => {
+    const v = VORHABEN.find(x => x.id === p.id || x.slug === p.slug);
+    if (!v) return { __status:404, error:'Vorhaben gibt es nicht' };
+    if (p.expect_ball && p.expect_ball !== v.ball) return { __status:409, error:'Der Ball liegt inzwischen bei '+v.ball+', bitte neu laden' };
+    const alt = v.ball + '|' + (v.ball_name || '');
+    for (const f of ['ball','ball_name','stand','naechster_schritt','frist','status']) if (p[f] !== undefined) v[f] = p[f];
+    return { vorhaben:v, ball_geaendert: alt !== v.ball + '|' + (v.ball_name || ''), verlauf:1 };
+  },
   vorhaben_get: (p) => { const v = VORHABEN.find(x => x.slug === p.slug || x.id === p.id || x.id === p.slug) || VORHABEN[0];
     return { vorhaben:v, punkte:vhPunkte.filter(x=>x.vorhaben_id===v.id), verlauf:vhVerlauf.filter(x=>x.vorhaben_id===v.id),
       themen:v.slug==='xceed'?[{ id:'t1', title:'Vertrag mit dem Landkreis verlängern', board_lane:'zu_besprechen', gate:'gf' }]:[],

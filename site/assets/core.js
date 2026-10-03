@@ -713,4 +713,3 @@ async function gfVhBadge(){
     else b.style.display="none";
   }catch(e){}
 }
-

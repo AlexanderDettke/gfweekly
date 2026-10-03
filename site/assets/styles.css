@@ -1635,7 +1635,7 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
   html.vh-akte-offen body{overflow:hidden}
 }
 @media(max-width:760px){
-  .vh-kopf-a{display:none}
+  #vhEinwurf{display:none}
   .vh-reihe{flex-wrap:nowrap;overflow-x:auto;width:100%;padding-bottom:4px;scrollbar-width:none}
   .vh-reihe::-webkit-scrollbar{display:none}
   .vh-steuer{flex-direction:column;gap:6px}
@@ -1658,3 +1658,6 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 }
 .vh-marke{display:inline-block;overflow:visible}
 .vh-marke i{margin-right:5px}
+.vh-fehler{font-size:var(--stufe-2);font-weight:500;color:var(--crit-text)}
+.vh-fld input[aria-invalid=true]{border-color:var(--crit)}
+.vh-geloest{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:8px 10px;border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);font-size:var(--stufe-2)}

@@ -66,7 +66,7 @@
    Liest vorhaben_list und vorhaben_get, schreibt über vorhaben_save, punkt_*, verlauf_status, vorhaben_verknuepfen.
    Ansicht und Filter stehen in localStorage gf_vh_view und gf_vh_filter, die Akte im Link (?v=<slug>&tab=verlauf). */
 const $=s=>document.querySelector(s);
-let DATA=null, AKTE=null, AKTE_SLUG=null, TAB="prozess", VL_FILTER="alle";
+let DATA=null, AKTE=null, AKTE_SLUG=null, TAB="prozess", VL_FILTER="alle", AKTE_LAUF=0, GELOEST=null;
 let VIEW=(()=>{ try{ const v=localStorage.getItem("gf_vh_view"); return ["woche","board","liste"].includes(v)?v:"woche"; }catch(e){ return "woche"; } })();
 let FILTER=(()=>{ try{ const v=localStorage.getItem("gf_vh_filter"); return ["alle","mir","bewegt","konflikte"].includes(v)?v:"alle"; }catch(e){ return "alle"; } })();
 const Q=new URLSearchParams(location.search);
@@ -205,7 +205,7 @@ function renderListe(liste){
 
 function renderMain(){
   const liste=sichtbar();
-  if(!liste.length){ $("#vhMain").innerHTML=`<div class="empty soft">Nichts in dieser Auswahl. ${FILTER!=="alle"?`<button type="button" class="btn btn-sm btn-ghost" data-filter-reset>Alle zeigen</button>`:""}</div>`; return; }
+  if(!liste.length){ $("#vhMain").innerHTML=`<div class="empty soft">${({mir:"Im Filter „Bei mir“ steht gerade nichts.",bewegt:"Im Filter „Bewegt“ steht gerade nichts.",konflikte:"Im Filter „Konflikte“ steht gerade nichts."})[FILTER]||"Noch keine Vorhaben."} ${FILTER!=="alle"?`<button type="button" class="btn btn-sm btn-ghost" data-filter-reset>Alle zeigen</button>`:""}</div>`; return; }
   $("#vhMain").innerHTML= VIEW==="board" ? renderBoard(liste) : VIEW==="liste" ? renderListe(liste) : renderWoche(liste);
   gfStagger($("#vhMain"), ".vh-card,.vh-l-z");
 }
@@ -231,7 +231,7 @@ function ballWaehlen(v, vorwahl){
     <div class="vh-dlg-b">
       <p class="vh-dlg-t"><b>${gfEsc(v.title)}</b><br>Jetzt bei ${gfEsc(gfVhBallWort(v.ball,v.ball_name))}</p>
       ${gfChips("ball", GF_VH_BALL.map(([k,l])=>[k,k==="offen"?"niemand":l]), vorwahl||v.ball, { label:"Ball an", attr:'id="vhBallWert"' })}
-      <label class="vh-fld" id="vhBallNameW" ${["team","extern"].includes(vorwahl||v.ball)?"":"hidden"}>Name<input type="text" id="vhBallName" maxlength="120" value="${gfEsc(["team","extern"].includes(v.ball)?v.ball_name||"":"")}" placeholder="zum Beispiel Helge oder XCeed"></label>
+      <label class="vh-fld" id="vhBallNameW" ${["team","extern"].includes(vorwahl||v.ball)?"":"hidden"}>Wer genau? (Pflicht bei Team und extern)<input type="text" id="vhBallName" maxlength="120" required aria-describedby="vhBallFehler" value="${gfEsc(["team","extern"].includes(v.ball)?v.ball_name||"":"")}" placeholder="zum Beispiel Helge oder XCeed"><span class="vh-fehler" id="vhBallFehler" hidden>Bitte einen Namen eintragen, damit klar ist, wer dran ist.</span></label>
       <label class="vh-fld">Notiz für den Verlauf (optional)<input type="text" id="vhBallNotiz" maxlength="300"></label>
     </div>
     <div class="modal-f"><button type="button" class="btn btn-brand" data-x>Abbrechen</button><button type="button" class="btn btn-primary" id="vhBallOk" style="margin-left:auto">Weitergeben</button></div>
@@ -242,9 +242,11 @@ function ballWaehlen(v, vorwahl){
   m.querySelectorAll("[data-x]").forEach(b=>b.onclick=zu); m.onclick=e=>{ if(e.target===m) zu(); };
   m.onkeydown=e=>{ if(e.key==="Escape") zu(); };
   $("#vhBallOk").onclick=async()=>{
-    const b=wert.value, name=["team","extern"].includes(b)?$("#vhBallName").value.trim():null;
-    if(b===v.ball && (name||"")===(v.ball_name||"") && !$("#vhBallNotiz").value.trim()){ zu(); return; }
-    zu(); await ballSetzen(v, b, name, $("#vhBallNotiz").value.trim());
+    /* Erst alles lesen, dann schließen: zu() leert den Dialog. */
+    const b=wert.value, mitName=["team","extern"].includes(b), name=mitName?$("#vhBallName").value.trim():null, notiz=$("#vhBallNotiz").value.trim();
+    if(mitName && !name){ const f=$("#vhBallName"); f.setAttribute("aria-invalid","true"); $("#vhBallFehler").hidden=false; f.focus(); return; }
+    if(b===v.ball && (name||"")===(v.ball_name||"") && !notiz){ zu(); return; }
+    zu(); await ballSetzen(v, b, name, notiz);
   };
   setTimeout(()=>m.querySelector(".fchips .chip.on,.fchips .chip")?.focus(),40);
 }
@@ -264,12 +266,16 @@ async function oeffneAkte(slug, opts={}){
   if(!opts.still) a.innerHTML=`<div class="loading">lädt …</div>`;
   document.querySelectorAll(".vh-card.on,.vh-l-z.on").forEach(x=>x.classList.remove("on"));
   document.querySelectorAll(`[data-slug="${CSS.escape(slug)}"].vh-card,.vh-l-z[data-open="${CSS.escape(slug)}"]`).forEach(x=>x.classList.add("on"));
-  try{ AKTE=await gfApi("vorhaben_get",{ slug }); }
-  catch(e){ a.innerHTML=`<div class="empty soft">Die Akte ließ sich nicht laden: ${gfEsc(e.message||"Verbindung")}. <button type="button" class="btn btn-sm btn-ghost" data-akte-zu>Schließen</button></div>`; return; }
-  renderAkte(); if(!opts.still) a.querySelector("h2")?.focus();
+  /* Nur die jüngste Anfrage darf die Akte zeichnen: kommen zwei Antworten verkehrt herum an, gewinnt nicht die alte. */
+  const lauf=++AKTE_LAUF;
+  let d;
+  try{ d=await gfApi("vorhaben_get",{ slug }); }
+  catch(e){ if(lauf!==AKTE_LAUF) return; a.innerHTML=`<div class="empty soft">Die Akte ließ sich nicht laden: ${gfEsc(e.message||"Verbindung")}. <button type="button" class="btn btn-sm btn-ghost" data-akte-zu>Schließen</button></div>`; return; }
+  if(lauf!==AKTE_LAUF || AKTE_SLUG!==slug) return;
+  AKTE=d; renderAkte(); if(!opts.still) a.querySelector("h2")?.focus();
 }
 function schliesseAkte(){
-  AKTE=null; AKTE_SLUG=null; const a=$("#vhAkte"); a.hidden=true; a.innerHTML=""; document.documentElement.classList.remove("vh-akte-offen");
+  AKTE_LAUF++; AKTE=null; AKTE_SLUG=null; GELOEST=null; const a=$("#vhAkte"); a.hidden=true; a.innerHTML=""; document.documentElement.classList.remove("vh-akte-offen");
   const u=new URL(location.href); u.searchParams.delete("v"); u.searchParams.delete("tab"); history.replaceState(null,"",u);
   document.querySelectorAll(".vh-card.on,.vh-l-z.on").forEach(x=>x.classList.remove("on"));
 }
@@ -307,6 +313,7 @@ function prozess(d){
     <div class="vh-punkt-neu" id="vhPunktNeu" hidden></div>
     <ul class="vh-punkte">${p.map(punktZeile).join("")||`<li class="vh-nichts">Noch keine Punkte.</li>`}</ul>
     <div class="vh-sec-h"><h3>Verknüpft</h3></div>
+    ${GELOEST&&GELOEST.vorhaben_id===v.id?`<div class="vh-geloest" role="status">Zuordnung gelöst: ${gfEsc(GELOEST.titel)} <button type="button" class="btn btn-sm btn-ghost" data-rueckgaengig>Rückgängig</button></div>`:""}
     <div class="vh-verkn">
       ${verknBlock(["Thema","Themen"], d.themen, t=>`<a href="board.html?topic=${encodeURIComponent(t.id)}">${gfEsc(t.title)}</a>`, "thema")}
       ${verknBlock(["neuer Kandidat","neue Kandidaten"], d.kandidaten, k=>`<a href="neuigkeiten.html">${gfEsc(k.title)}</a>`, "kandidat")}
@@ -330,20 +337,22 @@ function punktZeile(p){
   </li>`;
 }
 function verlauf(d){
-  const seen=gfVhSeen();
-  const filt=VL_FILTER==="entscheidungen"?d.verlauf.filter(e=>e.art==="entscheidung"):VL_FILTER==="neu"?d.verlauf.filter(e=>!seen||e.created_at>seen||e.happened_at>seen):d.verlauf;
+  /* Ohne gemerkten Besuch gelten die letzten 24 Stunden (wie „Seit du zuletzt da warst“ auf Für dich). */
+  const seen=gfVhSeen()||new Date(Date.now()-86400000).toISOString();
+  const filt=VL_FILTER==="entscheidungen"?d.verlauf.filter(e=>e.art==="entscheidung"):VL_FILTER==="neu"?d.verlauf.filter(e=>(e.created_at||e.happened_at)>seen):d.verlauf;
   const zeile=e=>`<li class="vh-e${e.status==="vorschlag"?" vorschlag":""}${seen&&(e.created_at>seen)?" neu":""}">
       <div class="vh-e-k">${gfEsc(gfNewsWhen(e.happened_at))} · <b>${gfEsc(GF_VH_ART[e.art]||e.art)}</b>${e.wer?" · "+gfEsc(e.wer):""}${e.tag?` · <span class="vh-e-tag">${gfEsc(e.tag)}</span>`:""}${e.status==="vorschlag"?` ${markeHtml(["warn","●","Vorschlag"])}`:""}</div>
       <div class="vh-e-t">${gfEsc(e.text)}${e.source_url?` <a href="${gfEsc(e.source_url)}" target="_blank" rel="noopener">Quelle ↗</a>`:""}</div>
       ${e.status==="vorschlag"?`<div class="vh-e-a"><button type="button" class="btn btn-sm btn-primary" data-vstatus="bestaetigt" data-id="${e.id}">Übernehmen</button><button type="button" class="btn btn-sm btn-ghost" data-vstatus="verworfen" data-id="${e.id}">Verwerfen</button></div>`:""}
     </li>`;
   return `<div class="fchips compact vh-vlf" role="group" aria-label="Verlauf filtern">${[["alle","Alles"],["entscheidungen","Nur Entscheidungen"],["neu","Seit meinem letzten Besuch"]].map(([k,l])=>`<button type="button" class="chip${VL_FILTER===k?" on":""}" aria-pressed="${VL_FILTER===k}" data-vlf="${k}">${l}</button>`).join("")}</div>
-    <ul class="vh-verlauf">${filt.map(zeile).join("")||`<li class="vh-nichts">${VL_FILTER==="neu"?"Seit deinem letzten Besuch ist nichts dazugekommen.":"Noch kein Eintrag."}</li>`}</ul>
+    ${VL_FILTER==="neu"?`<p class="vh-sync">Seit ${gfEsc(gfNewsWhen(seen))}${gfVhSeen()?" (zuletzt „Alles gesehen“ auf Für dich)":" (letzte 24 Stunden)"}</p>`:""}
+    <ul class="vh-verlauf">${filt.map(zeile).join("")||`<li class="vh-nichts">${VL_FILTER==="neu"?"Seitdem ist nichts dazugekommen.":VL_FILTER==="entscheidungen"?"Noch keine Entscheidung eingetragen.":"Noch kein Eintrag."}</li>`}</ul>
     <button type="button" class="vh-eintragen" data-einwurf-akte>Etwas eintragen …</button>`;
 }
 async function feldSpeichern(feld, wert){
-  const v=AKTE.vorhaben; if((v[feld]||"")===wert) return;
-  try{ const d=await gfApi("vorhaben_save",{ id:v.id, [feld]:wert, by:gfWho() }); AKTE.vorhaben={...AKTE.vorhaben, ...d.vorhaben}; gfToast(feld==="stand"?"Stand gespeichert":"Nächster Schritt gespeichert"); laden(true); }
+  if(!AKTE) return; const v=AKTE.vorhaben; if((v[feld]||"")===wert) return;
+  try{ const d=await gfApi("vorhaben_save",{ id:v.id, [feld]:wert, by:gfWho() }); if(AKTE && AKTE.vorhaben.id===v.id) AKTE.vorhaben={...AKTE.vorhaben, ...d.vorhaben}; gfToast(feld==="stand"?"Stand gespeichert":"Nächster Schritt gespeichert"); laden(true); }
   catch(e){ gfToast("Nicht gespeichert: "+(e.message||"Verbindung")); }
 }
 $("#vhAkte").addEventListener("focusout",e=>{ const t=e.target.closest("textarea[data-feld]"); if(!t) return; feldSpeichern(t.dataset.feld, t.value.trim()); });
@@ -363,8 +372,12 @@ $("#vhAkte").addEventListener("click",async e=>{
     try{ const r=await gfApi("verlauf_status",{ id:vs.dataset.id, status:vs.dataset.vstatus, by:gfWho() }); gfToast(vs.dataset.vstatus==="bestaetigt"?(r.angewendet?.geaendert?"Übernommen, Punkt abgehakt":"Übernommen"):"Verworfen"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
     catch(err){ vs.disabled=false; gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); } return; }
   const lo=e.target.closest("[data-loesen]"); if(lo){ lo.disabled=true;
-    try{ await gfApi("vorhaben_verknuepfen",{ kind:lo.dataset.loesen, id:lo.dataset.id, vorhaben_id:null, by:gfWho() }); gfToast("Zuordnung gelöst"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
+    const vid=AKTE.vorhaben.id, titel=lo.closest("li")?.querySelector("a")?.textContent||"Eintrag";
+    try{ await gfApi("vorhaben_verknuepfen",{ kind:lo.dataset.loesen, id:lo.dataset.id, vorhaben_id:null, by:gfWho() }); GELOEST={ kind:lo.dataset.loesen, id:lo.dataset.id, vorhaben_id:vid, titel }; gfToast("Zuordnung gelöst"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
     catch(err){ lo.disabled=false; gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); } return; }
+  if(e.target.closest("[data-rueckgaengig]") && GELOEST){ const g=GELOEST; GELOEST=null;
+    try{ await gfApi("vorhaben_verknuepfen",{ kind:g.kind, id:g.id, vorhaben_id:g.vorhaben_id, by:gfWho() }); gfToast("Zuordnung wiederhergestellt"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
+    catch(err){ gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); } return; }
   if(e.target.closest("[data-punkt-neu]")){ punktForm(null); return; }
   const pe=e.target.closest("[data-punkt-edit]"); if(pe){ punktForm(AKTE.punkte.find(p=>p.id===pe.dataset.punktEdit)); return; }
 });
