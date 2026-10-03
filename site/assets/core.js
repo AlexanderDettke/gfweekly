@@ -721,6 +721,26 @@ async function gfVhBadge(){
    Bearbeiten, Übernehmen (einwurf_apply mit revision und gesehenem Ball). Ohne Vorschlag: Vorhaben von Hand, nur Verlauf.
    Nichts wird angewendet, bevor jemand „Übernehmen“ drückt. Die Warteschlange (Mail, Cowork, WhatsApp) nutzt Schritt 2.
    =========================================================== */
+/* V31b · Dialoge wirklich modal: der Rest der Seite ist inert, Tab bleibt im Dialog, beim Schließen kehrt der Fokus zurück.
+   gfModalAuf(back) gibt die Funktion zurück, die das alles wieder aufhebt. */
+function gfModalAuf(back){
+  const zuvor=document.activeElement;
+  const andere=[...document.body.children].filter(e=>e!==back && e.id!=="toast" && !e.inert && e.tagName!=="SCRIPT");
+  andere.forEach(e=>{ e.inert=true; });
+  const falle=e=>{
+    if(e.key!=="Tab") return;
+    const f=[...back.querySelectorAll('button:not([disabled]),[href],input:not([type=hidden]):not([disabled]),textarea:not([disabled]),select:not([disabled]),summary,[tabindex]:not([tabindex="-1"])')].filter(x=>x.getClientRects().length);
+    if(!f.length) return; const a=f[0], z=f[f.length-1];
+    if(!back.contains(document.activeElement)){ e.preventDefault(); a.focus(); }
+    else if(e.shiftKey && document.activeElement===a){ e.preventDefault(); z.focus(); }
+    else if(!e.shiftKey && document.activeElement===z){ e.preventDefault(); a.focus(); }
+  };
+  back.addEventListener("keydown",falle);
+  return ()=>{ back.removeEventListener("keydown",falle); andere.forEach(e=>{ e.inert=false; });
+    try{ if(zuvor&&zuvor.isConnected&&zuvor.focus){ zuvor.focus();
+      /* Knöpfe, die nur bei Zeiger oder Fokus in ihrer Karte sichtbar sind: erst die Karte fokussieren, dann den Knopf. */
+      if(document.activeElement!==zuvor){ const k=zuvor.closest("article,li,section")?.querySelector("button:not([disabled]),[href]"); if(k){ k.focus(); zuvor.focus(); } } } }catch(x){} };
+}
 let GF_VH_LISTE=null;
 async function gfVhListe(neu){ if(!GF_VH_LISTE||neu){ const d=await gfApi("vorhaben_list"); GF_VH_LISTE=d.vorhaben||[]; } return GF_VH_LISTE; }
 function gfEwModal(){
@@ -732,12 +752,12 @@ const GF_EW_KANAL={ knopf:"Knopf", sprache:"Sprache", cowork:"Cowork", whatsapp:
 /* Öffnet den Einwurf. o.vorhaben_id wählt vor, o.einwurf öffnet einen vorhandenen (Warteschlange), o.onDone(ergebnis) nach dem Übernehmen,
    o.kopf: Zusatzzeile (etwa „1 von 3“), o.weiter: Rückruf für „Später“ und nach jeder Entscheidung in der Warteschlange. */
 async function gfEinwurf(o={}){
-  const m=gfEwModal(); const zuvor=document.activeElement;
+  const m=gfEwModal(); const frei=gfModalAuf(m);
   const S={ schritt:o.einwurf?2:1, ew:o.einwurf||null, ziel:o.einwurf?.vorhaben_id||o.vorhaben_id||null, bearbeiten:false, text:"", fehler:"", laedt:false, ki_fehler:"", ben:null, aus:null, aendern:false };
   let liste=[]; try{ liste=await gfVhListe(true); }catch(e){}
   const vhVon=id=>liste.find(v=>v.id===id)||null;
   const vhSlug=s=>liste.find(v=>v.slug===s)||null;
-  const zu=(ergebnis)=>{ m.classList.remove("open"); m.innerHTML=""; document.removeEventListener("keydown",esc); try{ zuvor&&zuvor.focus&&zuvor.focus(); }catch(e){} return ergebnis; };
+  const zu=(ergebnis)=>{ m.classList.remove("open"); m.innerHTML=""; document.removeEventListener("keydown",esc); frei(); return ergebnis; };
   const esc=e=>{ if(e.key==="Escape" && !S.laedt){ zu(); if(o.weiter) o.weiter("abbruch"); } };
   document.addEventListener("keydown",esc);
   const vs=()=>S.ew&&S.ew.vorschlag||null;

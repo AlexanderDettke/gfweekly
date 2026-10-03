@@ -305,11 +305,38 @@ console.log('\n== Vorhaben (V31b): Ansichten, Akte, Punkt, Ball ==');
   await q.locator('#vhModal .chip[data-v="alex"]').click(); await q.locator('#vhBallOk').click(); await q.waitForTimeout(400);
   erwarteterFehler = false;
   pruefe('Konflikt meldet sich mit dem aktuellen Stand', (await q.locator('#toast').innerText()).includes('inzwischen'));
+  /* Name gehört zur Ballart: by nature liegt bei Team (Helge), der Wechsel zu extern leert das Feld. */
+  const bn = q.locator('.vh-col[data-col="team"] .vh-card[data-slug="bynature"]');
+  await bn.hover(); await bn.locator('.vh-weiter').click();
+  await q.locator('#vhModal .chip[data-v="team"]').click();
+  pruefe('bei gleicher Ballart steht der bisherige Name', await q.locator('#vhBallName').inputValue() === 'Helge');
+  await q.locator('#vhModal .chip[data-v="extern"]').click();
+  pruefe('Wechsel von Team zu extern leert den Namen', await q.locator('#vhBallName').inputValue() === '');
+  /* Fokusfalle: zwanzig Mal Tab, der Fokus bleibt im Dialog; Escape gibt ihn an den Knopf zurück. */
+  for (let i = 0; i < 20; i++) await q.keyboard.press('Tab');
+  pruefe('Tab bleibt im Dialog', await q.evaluate(() => document.getElementById('vhModal').contains(document.activeElement)));
+  pruefe('Hintergrund ist inert, solange der Dialog offen ist', await q.evaluate(() => document.getElementById('app').inert === true));
+  await q.keyboard.press('Escape'); await q.waitForTimeout(150);
+  const nachEsc = await q.evaluate(() => ({ offen: document.getElementById('vhModal').classList.contains('open'), fokus: document.activeElement?.className, inert: document.getElementById('app').inert }));
+  pruefe('Escape schließt und gibt den Fokus zurück', !nachEsc.offen && /vh-weiter/.test(nachEsc.fokus || '') && nachEsc.inert === false, JSON.stringify(nachEsc));
   /* Tastatur: Karte mit Enter öffnen. */
   await q.locator('.vh-card[data-slug="lusatia"] .vh-open').focus();
   await q.keyboard.press('Enter'); await q.waitForTimeout(300);
   pruefe('Enter auf einer Karte öffnet die Akte', (await q.locator('#vhAkte h2').innerText()).includes('Lusatia'));
   await q.close();
+  /* Punkt ändern: nur geänderte Felder, mit dem gesehenen Wert. */
+  frisch();
+  const r = await seite('/vorhaben.html?v=xceed');
+  await r.locator('[data-punkt-edit="p1"]').click();
+  await r.locator('.vh-punkt-form input[name="wer"]').fill('Niclaas und Lea');
+  await r.locator('.vh-punkt-form button[type=submit]').click(); await r.waitForTimeout(300);
+  const ps = letzte('punkt_save');
+  pruefe('Punkt ändern schickt nur das geänderte Feld mit erwartetem Wert', ps && ps.nutzlast.wer === 'Niclaas und Lea' && ps.nutzlast.expect && ps.nutzlast.expect.wer === 'Niclaas'
+    && ps.nutzlast.titel === undefined && ps.nutzlast.stand === undefined && ps.nutzlast.frist === undefined, JSON.stringify(ps && ps.nutzlast));
+  await r.locator('#vhAkte textarea[data-feld="stand"]').fill('Neuer Stand'); await r.locator('#vhAkte h2').click(); await r.waitForTimeout(300);
+  const vsv = letzte('vorhaben_save');
+  pruefe('Stand speichert mit dem gesehenen Wert', vsv && vsv.nutzlast.stand === 'Neuer Stand' && vsv.nutzlast.expect && 'stand' in vsv.nutzlast.expect, JSON.stringify(vsv && vsv.nutzlast));
+  await r.close();
 }
 
 console.log('\n== Einwurf (V31c) ==');

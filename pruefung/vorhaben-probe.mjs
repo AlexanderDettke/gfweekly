@@ -89,6 +89,13 @@ try {
   ok(akte.verlauf.some(e => e.punkt_id === p1.id && e.text === 'Punkt Probe: Probe in Arbeit'), 'neuer Stand im Verlauf');
   ok(akte.verlauf.some(e => e.text === 'Vorhaben angelegt') || !!akte.verlauf.length, 'Verlauf des Testvorhabens vorhanden');
   await abgelehnt('punkt_delete', { id: p1.id, by: BY }, 409, /schon Verlauf/, 'Punkt mit Verlauf lässt sich nicht löschen');
+  /* Alex und Lea bearbeiten denselben Punkt: anderes Feld geht durch, dasselbe Feld mit altem Wert ergibt 409. */
+  await api('punkt_save', { id: p1.id, wer: 'Lea', expect: { wer: 'Testperson' }, by: 'Lea' });
+  const pf = await api('punkt_save', { id: p1.id, frist: '2026-12-02', expect: { frist: '2026-12-01' }, by: BY });
+  ok(pf.punkt.wer === 'Lea' && pf.punkt.frist === '2026-12-02', 'Änderung an einem anderen Feld lässt die fremde Änderung stehen');
+  await abgelehnt('punkt_save', { id: p1.id, wer: 'Alex', expect: { wer: 'Testperson' }, by: BY }, 409, /Inzwischen geändert \(wer\)/, 'dasselbe Feld mit altem Wert');
+  await abgelehnt('vorhaben_save', { id: testId, stand: 'B', expect: { stand: 'gibt es nicht' }, by: BY }, 409, /Inzwischen geändert \(stand\)/, 'Stand mit altem Wert');
+  await abgelehnt('punkt_save', { id: p1.id, wer: 'Alex', expect: { geheim: 1 }, by: BY }, 400, /kennt das Feld/, 'expect mit unbekanntem Feld');
   const p2 = (await api('punkt_save', { vorhaben_id: testId, titel: 'Wegwerfpunkt', by: BY })).punkt;
   await api('punkt_delete', { id: p2.id, by: BY }); ok(true, 'Punkt ohne Verlauf lässt sich löschen');
 

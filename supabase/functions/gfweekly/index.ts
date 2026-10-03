@@ -1137,6 +1137,17 @@ function vhPatch(t: any){
   if (patch.ball !== undefined && ['alex','lea','gf','offen'].includes(patch.ball as string)) patch.ball_name = null;
   return patch;
 }
+/* expect: je Feld der zuletzt gesehene Wert (nur bekannte Felder, nur einfache Werte); die Datenbank vergleicht. */
+function vhExpect(x: unknown, felder: string[]){
+  if (!x || typeof x !== 'object' || Array.isArray(x)) return undefined;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(x as Record<string, unknown>)) {
+    if (!felder.includes(k)) throw new VhFehler('expect kennt das Feld ' + k + ' nicht');
+    if (v !== null && !['string','number','boolean'].includes(typeof v)) throw new VhFehler('expect.' + k + ' ist kein einfacher Wert');
+    out[k] = v;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
 async function vhLese(ref: string){
   const q = admin.from('hh_vorhaben_lage').select('*');
   const { data, error } = await (VH_UUID.test(ref) ? q.eq('id', ref) : q.eq('slug', ref)).maybeSingle();
@@ -2786,6 +2797,7 @@ Deno.serve(async (req: Request) => {
         const v = await vhLese((t.id || t.slug).toString());
         if (t.expect_ball !== undefined && t.expect_ball !== null) patch.expect_ball = t.expect_ball;
         if (!Object.keys(patch).filter(k => k !== 'expect_ball').length && !notiz) return json({ error:'nichts zu ändern' },400);
+        const ex = vhExpect(t.expect, VH_FELDER); if (ex) patch.expect = ex;
         const r = await vhSave(v.id, patch, by, notiz, null);
         return json({ vorhaben: await vhLese(v.id), ball_geaendert: r.ball_geaendert, verlauf: r.verlauf });
       }
@@ -2812,6 +2824,7 @@ Deno.serve(async (req: Request) => {
         const { data: alt, error: e0 } = await admin.from('hh_vorhaben_punkte').select('*').eq('id', t.id).maybeSingle();
         if (e0) throw e0; if (!alt) return json({ error:'Punkt gibt es nicht' },404);
         if (!Object.keys(patch).length) return json({ error:'nichts zu ändern' },400);
+        const ex = vhExpect(t.expect, ['titel','position','stand','wer','frist','sort']); if (ex) patch.expect = ex;
         /* Ein neuer Stand ist Bewegung im Vorhaben und gehört in den Verlauf, im selben Zug wie die Änderung. */
         return json(await vhRpc('hh_punkt_save', { p_id: alt.id, p_patch: patch, p_by: by }));
       }

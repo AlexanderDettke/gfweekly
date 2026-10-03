@@ -231,14 +231,17 @@ function ballWaehlen(v, vorwahl){
     <div class="vh-dlg-b">
       <p class="vh-dlg-t"><b>${gfEsc(v.title)}</b><br>Jetzt bei ${gfEsc(gfVhBallWort(v.ball,v.ball_name))}</p>
       ${gfChips("ball", GF_VH_BALL.map(([k,l])=>[k,k==="offen"?"niemand":l]), vorwahl||v.ball, { label:"Ball an", attr:'id="vhBallWert"' })}
-      <label class="vh-fld" id="vhBallNameW" ${["team","extern"].includes(vorwahl||v.ball)?"":"hidden"}>Wer genau? (Pflicht bei Team und extern)<input type="text" id="vhBallName" maxlength="120" required aria-describedby="vhBallFehler" value="${gfEsc(["team","extern"].includes(v.ball)?v.ball_name||"":"")}" placeholder="zum Beispiel Helge oder XCeed"><span class="vh-fehler" id="vhBallFehler" hidden>Bitte einen Namen eintragen, damit klar ist, wer dran ist.</span></label>
+      <label class="vh-fld" id="vhBallNameW" ${["team","extern"].includes(vorwahl||v.ball)?"":"hidden"}>Wer genau? (Pflicht bei Team und extern)<input type="text" id="vhBallName" maxlength="120" required aria-describedby="vhBallFehler" value="${gfEsc((vorwahl||v.ball)===v.ball?v.ball_name||"":"")}" placeholder="zum Beispiel Helge oder XCeed"><span class="vh-fehler" id="vhBallFehler" hidden>Bitte einen Namen eintragen, damit klar ist, wer dran ist.</span></label>
       <label class="vh-fld">Notiz für den Verlauf (optional)<input type="text" id="vhBallNotiz" maxlength="300"></label>
     </div>
     <div class="modal-f"><button type="button" class="btn btn-brand" data-x>Abbrechen</button><button type="button" class="btn btn-primary" id="vhBallOk" style="margin-left:auto">Weitergeben</button></div>
   </div>`;
-  m.classList.add("open");
-  const wert=$("#vhBallWert"); wert.addEventListener("change",()=>{ $("#vhBallNameW").hidden=!["team","extern"].includes(wert.value); });
-  const zu=()=>{ m.classList.remove("open"); m.innerHTML=""; };
+  m.classList.add("open"); const frei=gfModalAuf(m);
+  const wert=$("#vhBallWert");
+  /* Der Name gehört zur Ballart: wer von Team (Helge) zu extern wechselt, trägt neu ein, wer es ist. */
+  wert.addEventListener("change",()=>{ const mit=["team","extern"].includes(wert.value); $("#vhBallNameW").hidden=!mit;
+    $("#vhBallName").value=(wert.value===v.ball)?(v.ball_name||""):""; $("#vhBallName").removeAttribute("aria-invalid"); $("#vhBallFehler").hidden=true; });
+  const zu=()=>{ m.classList.remove("open"); m.innerHTML=""; m.onkeydown=null; frei(); };
   m.querySelectorAll("[data-x]").forEach(b=>b.onclick=zu); m.onclick=e=>{ if(e.target===m) zu(); };
   m.onkeydown=e=>{ if(e.key==="Escape") zu(); };
   $("#vhBallOk").onclick=async()=>{
@@ -254,7 +257,7 @@ async function ballSetzen(v, ball, name, notiz){
   try{
     const d=await gfApi("vorhaben_save",{ id:v.id, ball, ball_name:name||null, expect_ball:v.ball, notiz:notiz||undefined, by:gfWho() });
     gfToast(`Ball bei ${gfVhBallWort(d.vorhaben.ball,d.vorhaben.ball_name)}`);
-    await laden(true);
+    await laden(true); if(AKTE_SLUG) oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true});
   }catch(e){ gfToast(e.message||"Nicht gespeichert"); await laden(true); }
 }
 
@@ -352,7 +355,7 @@ function verlauf(d){
 }
 async function feldSpeichern(feld, wert){
   if(!AKTE) return; const v=AKTE.vorhaben; if((v[feld]||"")===wert) return;
-  try{ const d=await gfApi("vorhaben_save",{ id:v.id, [feld]:wert, by:gfWho() }); if(AKTE && AKTE.vorhaben.id===v.id) AKTE.vorhaben={...AKTE.vorhaben, ...d.vorhaben}; gfToast(feld==="stand"?"Stand gespeichert":"Nächster Schritt gespeichert"); laden(true); }
+  try{ const d=await gfApi("vorhaben_save",{ id:v.id, [feld]:wert, expect:{ [feld]:v[feld]??null }, by:gfWho() }); if(AKTE && AKTE.vorhaben.id===v.id) AKTE.vorhaben={...AKTE.vorhaben, ...d.vorhaben}; gfToast(feld==="stand"?"Stand gespeichert":"Nächster Schritt gespeichert"); laden(true); }
   catch(e){ gfToast("Nicht gespeichert: "+(e.message||"Verbindung")); }
 }
 $("#vhAkte").addEventListener("focusout",e=>{ const t=e.target.closest("textarea[data-feld]"); if(!t) return; feldSpeichern(t.dataset.feld, t.value.trim()); });
@@ -375,8 +378,8 @@ $("#vhAkte").addEventListener("click",async e=>{
     const vid=AKTE.vorhaben.id, titel=lo.closest("li")?.querySelector("a")?.textContent||"Eintrag";
     try{ await gfApi("vorhaben_verknuepfen",{ kind:lo.dataset.loesen, id:lo.dataset.id, vorhaben_id:null, by:gfWho() }); GELOEST={ kind:lo.dataset.loesen, id:lo.dataset.id, vorhaben_id:vid, titel }; gfToast("Zuordnung gelöst"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
     catch(err){ lo.disabled=false; gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); } return; }
-  if(e.target.closest("[data-rueckgaengig]") && GELOEST){ const g=GELOEST; GELOEST=null;
-    try{ await gfApi("vorhaben_verknuepfen",{ kind:g.kind, id:g.id, vorhaben_id:g.vorhaben_id, by:gfWho() }); gfToast("Zuordnung wiederhergestellt"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
+  if(e.target.closest("[data-rueckgaengig]") && GELOEST){ const g=GELOEST;
+    try{ await gfApi("vorhaben_verknuepfen",{ kind:g.kind, id:g.id, vorhaben_id:g.vorhaben_id, by:gfWho() }); GELOEST=null; gfToast("Zuordnung wiederhergestellt"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
     catch(err){ gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); } return; }
   if(e.target.closest("[data-punkt-neu]")){ punktForm(null); return; }
   const pe=e.target.closest("[data-punkt-edit]"); if(pe){ punktForm(AKTE.punkte.find(p=>p.id===pe.dataset.punktEdit)); return; }
@@ -396,10 +399,17 @@ function punktForm(p){
   const del=form.querySelector("[data-pform-del]");
   if(del) del.onclick=async()=>{ try{ await gfApi("punkt_delete",{ id:p.id, by:gfWho() }); gfToast("Punkt gelöscht"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }catch(err){ gfToast(err.message||"Nicht gelöscht"); } };
   form.onsubmit=async ev=>{ ev.preventDefault();
-    const daten={ titel:form.titel.value.trim(), wer:form.wer.value.trim(), frist:form.frist.value||null, by:gfWho() };
+    const daten={ titel:form.titel.value.trim(), wer:form.wer.value.trim(), frist:form.frist.value||null };
     if(p) daten.stand=form.stand.value.trim();
     if(!daten.titel) return;
-    try{ await gfApi("punkt_save", p?{ id:p.id, ...daten }:{ vorhaben_id:AKTE.vorhaben.id, ...daten }); gfToast(p?"Punkt gespeichert":"Punkt hinzugefügt"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
+    /* Beim Ändern nur die geänderten Felder, jeweils mit dem Wert, den die Person gesehen hat: ändert Lea gleichzeitig
+       ein anderes Feld, bleibt es stehen; ändert sie dasselbe, kommt 409 statt eines stillen Überschreibens. */
+    let nutz;
+    if(p){ nutz={ id:p.id, expect:{}, by:gfWho() };
+      for(const k of Object.keys(daten)){ const alt=p[k]??null, neu=daten[k]===""?null:daten[k]; if((alt||null)!==(neu||null)){ nutz[k]=daten[k]; nutz.expect[k]=alt; } }
+      if(!Object.keys(nutz.expect).length){ box.innerHTML=""; return; } }
+    else nutz={ vorhaben_id:AKTE.vorhaben.id, ...daten, by:gfWho() };
+    try{ await gfApi("punkt_save", nutz); gfToast(p?"Punkt gespeichert":"Punkt hinzugefügt"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
     catch(err){ gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); }
   };
 }
