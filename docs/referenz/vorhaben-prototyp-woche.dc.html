@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Vorhaben · Wochenleiter</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#171d18}
+a{color:#b9cc8a}a:hover{color:#cddba6}
+</style>
+</helmet>
+<div style="font-family: Archivo, -apple-system, 'Segoe UI', Helvetica, sans-serif; background: #171d18; color: #f4eedc; min-height: 1300px; font-variant-numeric: tabular-nums; line-height: 1.35">
+
+<header style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 32px; background: #10150f; border-bottom: 1px solid rgba(244,238,220,0.13); flex-wrap: wrap">
+  <div style="display: flex; align-items: center; gap: 12px">
+    <img src="/_blob/cf28b8cb2f04c4a4715ea85fbb4e826f" alt="" style="width: 36px; height: 36px; object-fit: contain">
+    <div>
+      <div style="font-weight: 600; font-size: 16px">Das Hohe Haus</div>
+      <div style="font-size: 11.2px; color: rgba(244,238,220,0.55)">Geschäftsführung der Wilden Habitate</div>
+    </div>
+  </div>
+  <nav aria-label="Ansicht der Vorhaben" style="display: flex; gap: 4px; padding: 4px; border: 1px solid rgba(244,238,220,0.13); border-radius: 6px; background: #1d251d">
+    <a href="Main.dc.html" style="padding: 8px 14px; border-radius: 4px; color: rgba(244,238,220,0.7); text-decoration: none; font-size: 12.8px; font-weight: 500">Leitstand</a>
+    <a href="Wochen.dc.html" aria-current="page" style="padding: 8px 14px; border-radius: 4px; background: rgba(185,204,138,0.16); color: #f4eedc; text-decoration: none; font-size: 12.8px; font-weight: 600">Wochenleiter</a>
+    <a href="Ballfeld.dc.html" style="padding: 8px 14px; border-radius: 4px; color: rgba(244,238,220,0.7); text-decoration: none; font-size: 12.8px; font-weight: 500">Ballfeld</a>
+  </nav>
+  <div style="display: flex; align-items: center; gap: 10px">
+    <div role="group" aria-label="Person" style="display: flex; border: 1px solid rgba(244,238,220,0.2); border-radius: 6px; overflow: hidden">
+      <button type="button" style="display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: rgba(185,204,138,0.16); color: #f4eedc; border: 0; font: inherit; font-size: 12.8px"><img src="/_blob/a2cfbf187fefb91f716a8d64a6a8eb16" alt="" style="width: 22px; height: 22px; border-radius: 50%">Alex</button>
+      <button type="button" style="display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: transparent; color: rgba(244,238,220,0.7); border: 0; font: inherit; font-size: 12.8px"><img src="/_blob/36d496da64574b18fe6a28e4019a8217" alt="" style="width: 22px; height: 22px; border-radius: 50%">Lea</button>
+    </div>
+    <button type="button" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; background: #e4b85c; color: #171d18; border: 0; border-radius: 6px; font: inherit; font-weight: 600; font-size: 14px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0"></path><path d="M12 18v3"></path></svg>
+      Einwurf
+    </button>
+  </div>
+</header>
+
+<main style="max-width: 1360px; margin: 0 auto; padding: 28px 32px 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
+
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap">
+    <div>
+      <div style="font-size: 11.2px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(244,238,220,0.55); font-weight: 600">Metaphase · Systembau, Launch und Formatpartner</div>
+      <h1 style="margin: 6px 0 4px; font-size: 24px; font-weight: 600; letter-spacing: -0.01em">Was wann passiert</h1>
+      <div style="font-size: 14px; color: rgba(244,238,220,0.7)">Jede Woche eine Zeile. Darin steht, was fällig ist, wer den Ball hat und was davon abhängt.</div>
+    </div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap">
+      <button type="button" aria-pressed="true" style="min-height: 32px; padding: 0 12px; border-radius: 4px; border: 1px solid #e4b85c; background: #e4b85c; color: #171d18; font: inherit; font-size: 12.8px; font-weight: 600">Alle</button>
+      <button type="button" aria-pressed="false" style="min-height: 32px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(244,238,220,0.2); background: transparent; color: rgba(244,238,220,0.7); font: inherit; font-size: 12.8px">Nur meine</button>
+      <button type="button" aria-pressed="false" style="min-height: 32px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(244,238,220,0.2); background: transparent; color: rgba(244,238,220,0.7); font: inherit; font-size: 12.8px">Nur Konflikte · 3</button>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; border: 1px solid rgba(244,238,220,0.13); border-radius: 8px; overflow: hidden">
+    <sc-for list="{{weeks}}" as="w" hint-placeholder-count="5">
+      <section style="{{w.rowStyle}}">
+        <div style="flex: 0 0 200px; padding: 18px 20px; box-sizing: border-box">
+          <div style="font-size: 18px; font-weight: 600">{{w.kw}}</div>
+          <div style="font-size: 12.8px; color: rgba(244,238,220,0.7); margin-top: 2px">{{w.dates}}</div>
+          <div style="{{w.tagStyle}}">{{w.tag}}</div>
+        </div>
+        <div style="flex: 999 1 600px; min-width: 0; padding: 14px 20px 18px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px">
+          <sc-if value="{{w.hasBand}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 6px; background: rgba(240,167,119,0.16); border: 1px solid rgba(240,167,119,0.4); font-size: 12.8px">
+              <img src="/_blob/36d496da64574b18fe6a28e4019a8217" alt="" style="width: 22px; height: 22px; border-radius: 50%">
+              <span><strong style="font-weight: 600">{{w.band}}</strong> {{w.bandSub}}</span>
+            </div>
+          </sc-if>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px">
+            <sc-for list="{{w.items}}" as="it" hint-placeholder-count="3">
+              <article style="{{it.cardStyle}}">
+                <div style="display: flex; justify-content: space-between; gap: 8px; align-items: baseline">
+                  <span style="font-size: 12.8px; font-weight: 600">{{it.day}}</span>
+                  <span style="{{it.flagStyle}}">{{it.flag}}</span>
+                </div>
+                <div style="font-size: 14px; font-weight: 600; margin-top: 6px">{{it.title}}</div>
+                <div style="font-size: 12.8px; color: rgba(244,238,220,0.7); margin-top: 2px">{{it.what}}</div>
+                <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12.8px; color: rgba(244,238,220,0.7)">
+                  <sc-if value="{{it.hasImg}}" hint-placeholder-val="{{true}}"><img src="{{it.img}}" alt="" style="width: 20px; height: 20px; border-radius: 50%"></sc-if>
+                  <sc-if value="{{it.hasText}}" hint-placeholder-val="{{false}}"><span style="{{it.avStyle}}">{{it.avText}}</span></sc-if>
+                  <span>Ball: {{it.who}}</span>
+                </div>
+              </article>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+    </sc-for>
+  </div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var A = '/_blob/a2cfbf187fefb91f716a8d64a6a8eb16';
+    var L = '/_blob/36d496da64574b18fe6a28e4019a8217';
+    var circle = 'width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 600; box-sizing: border-box; ';
+    var cardBase = 'flex: 1 1 260px; max-width: 360px; padding: 12px 14px; border-radius: 6px; background: #242d23; box-sizing: border-box; ';
+    function it(o) {
+      var r = { day: o.day, title: o.title, what: o.what, who: o.who, flag: o.flag || '', hasImg: false, img: '', hasText: false, avText: '', avStyle: '' };
+      if (o.k === 'alex') { r.hasImg = true; r.img = A; }
+      else if (o.k === 'lea') { r.hasImg = true; r.img = L; }
+      else if (o.k === 'gf') { r.hasImg = true; r.img = A; }
+      else if (o.k === 'none') { r.hasText = true; r.avText = '?'; r.avStyle = circle + 'border: 1px dashed #d98a80; color: #e8aca4;'; }
+      else { r.hasText = true; r.avText = o.k === 'team' ? 'T' : 'E'; r.avStyle = circle + 'background: #333d2d; color: #f4eedc;'; }
+      var tone = o.tone || 'calm';
+      r.cardStyle = cardBase + (tone === 'warn' ? 'border: 1px solid rgba(240,167,119,0.5);' : tone === 'crit' ? 'border: 1px solid rgba(217,138,128,0.55);' : tone === 'key' ? 'border: 1px solid rgba(228,184,92,0.6);' : 'border: 1px solid rgba(244,238,220,0.13);');
+      r.flagStyle = tone === 'warn' ? 'font-size: 11.2px; color: #f0a777; font-weight: 600' : tone === 'crit' ? 'font-size: 11.2px; color: #e8aca4; font-weight: 600' : tone === 'key' ? 'font-size: 11.2px; color: #e4b85c; font-weight: 600' : 'font-size: 11.2px; color: rgba(244,238,220,0.55)';
+      return r;
+    }
+    var rowBase = 'display: flex; flex-wrap: wrap; border-bottom: 1px solid rgba(244,238,220,0.13); ';
+    var tagBase = 'display: inline-block; margin-top: 8px; font-size: 11.2px; font-weight: 600; ';
+    var weeks = [
+      { kw: 'KW 41', dates: '05. bis 11.10.', tag: 'diese Woche', now: true, items: [
+        it({ day: 'seit 30.09.', flag: '⚠ überfällig', tone: 'warn', title: 'GLS-Kredit', what: 'Rückmeldung zu 150.000 € für Glamping und Automaten nachfassen.', k: 'alex', who: 'Alex' }),
+        it({ day: 'Di 06.10.', title: 'Subardo', what: 'Plenum entscheidet über eine Beteiligung als Formatpartner.', k: 'lea', who: 'Lea' }),
+        it({ day: 'diese Woche', flag: 'wartet auf Alex', tone: 'warn', title: 'Infield-Ausstieg', what: 'Leas Vorschlag zur Exklusivität bis Ende Oktober entscheiden.', k: 'alex', who: 'Alex' }),
+        it({ day: 'diese Woche', title: 'Löhne Oktober', what: 'Über 50.000 € nötig, hängt an der ersten XCeed-Tranche.', k: 'lea', who: 'Lea' }),
+        it({ day: 'Sa 10.10.', flag: '★ Launch', tone: 'key', title: 'Draußenbande', what: 'Auftakt-Event, Shop öffnet, Familienpass muss stehen.', k: 'lea', who: 'Lea' })
+      ]},
+      { kw: 'KW 42', dates: '12. bis 18.10.', tag: 'Übergabe', hasBand: true, band: 'Ab Mi 14.10. ist Lea im Urlaub.', bandSub: 'Vertretung Alex · 7 Vorhaben gehen über · Übergabe am Di 13.10.', items: [
+        it({ day: 'Di 13.10.', flag: 'Ziel vor Urlaub', tone: 'warn', title: 'XCeed Ticketing-Vertrag', what: 'Unterschrift, Go-live, erste Tranche 300.000 €.', k: 'lea', who: 'Lea, danach Alex' }),
+        it({ day: 'Di 13.10.', title: 'Übergabe Lea an Alex', what: 'Sieben Vorhaben mit Stand, offenen Punkten und Kontakten.', k: 'lea', who: 'Lea' }),
+        it({ day: 'Do 15.10.', flag: '★ Launch', tone: 'key', title: 'Lusatia', what: 'Vorverkaufsstart. Website und Ticketing müssen stehen.', k: 'alex', who: 'Alex' })
+      ]},
+      { kw: 'KW 43', dates: '19. bis 25.10.', tag: 'Lea im Urlaub', hasBand: true, band: 'Lea im Urlaub bis So 25.10.', bandSub: 'Fragen an Lea sammeln sich in der Übergabe, nicht im Chat.', items: [
+        it({ day: '21. bis 25.10.', flag: '⚠ Konflikt', tone: 'crit', title: 'Subardo · Gesprächstermin', what: 'Termin liegt in Leas Urlaub. Verschieben oder Alex übernimmt.', k: 'lea', who: 'Lea' }),
+        it({ day: 'So 25.10.', title: 'Lea kommt zurück', what: 'Am Montag öffnet sich „Seit du zuletzt da warst“.', k: 'lea', who: 'Lea' })
+      ]},
+      { kw: 'KW 44', dates: '26.10. bis 01.11.', tag: '', items: [
+        it({ day: 'Sa 31.10.', title: 'Infield-Exklusivität endet', what: 'Danach läuft der ganze Verkauf über XCeed.', k: 'lea', who: 'Lea' }),
+        it({ day: 'Sa 31.10.', flag: 'Soll', title: 'Kollektive gesammelt', what: 'Alle Kollektive für alle Festivals. Erst danach wird Programm gebucht.', k: 'team', who: 'Helge und Team' }),
+        it({ day: 'So 01.11.', flag: '★ Launch', tone: 'key', title: 'by nature', what: 'Vorverkaufsstart.', k: 'team', who: 'Helge' })
+      ]},
+      { kw: 'November', dates: '02. bis 30.11.', tag: '', items: [
+        it({ day: 'So 15.11.', flag: '⚠ Ball fehlt', tone: 'crit', title: 'Pakete und Flex-Tickets mit Freude eG', what: 'Gelten für alle Festivals. Noch niemand zuständig.', k: 'none', who: 'niemand' }),
+        it({ day: 'bis Jahresende', title: 'Rolle Helge ab 2027', what: 'Proof in Q4, Rollenbeschreibung mit Befugnissen.', k: 'gf', who: 'GF gemeinsam' })
+      ]},
+      { kw: 'Ohne Datum', dates: 'laufend', tag: '', items: [
+        it({ day: 'laufend', title: 'Liquidität viertes Quartal', what: 'Rund 23.000 bis 25.000 € Einnahmen pro Woche nötig.', k: 'lea', who: 'Lea' }),
+        it({ day: 'offen', title: 'Backoffice und Buchhaltung', what: 'Entscheidung zu Beate.', k: 'lea', who: 'Lea' }),
+        it({ day: 'offen', title: 'Booking-Standards mit Jane', what: 'Paket für fünf Formate.', k: 'lea', who: 'Lea' }),
+        it({ day: 'Jahresende', title: 'Habitat Hub', what: 'Team einführen, Bereiche neu schneiden.', k: 'alex', who: 'Alex' }),
+        it({ day: 'laufend', title: 'Wilde Möhre und Fluidity', what: 'Verkauf läuft, Formatpartner ansprechen.', k: 'alex', who: 'Alex, Slawik, Annie' })
+      ]}
+    ];
+    weeks.forEach(function (w, i) {
+      w.hasBand = !!w.hasBand; w.band = w.band || ''; w.bandSub = w.bandSub || '';
+      w.rowStyle = rowBase + (w.now ? 'background: rgba(185,204,138,0.07);' : '') + (i === weeks.length - 1 ? 'border-bottom: 0;' : '');
+      w.tagStyle = tagBase + (w.tag === 'diese Woche' ? 'color: #cddba6;' : w.tag ? 'color: #f0a777;' : 'display: none;');
+    });
+    return { weeks: weeks };
+  }
+}
+</script>
+</body>
+</html>

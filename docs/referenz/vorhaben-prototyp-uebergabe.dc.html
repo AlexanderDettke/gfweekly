@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Übergabe und Wiedereinstieg</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#171d18}
+a{color:#b9cc8a}a:hover{color:#cddba6}
+</style>
+</helmet>
+<div style="font-family: Archivo, -apple-system, 'Segoe UI', Helvetica, sans-serif; background: #171d18; color: #f4eedc; min-height: 1120px; font-variant-numeric: tabular-nums; line-height: 1.35">
+
+<header style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 32px; background: #10150f; border-bottom: 1px solid rgba(244,238,220,0.13); flex-wrap: wrap">
+  <div style="display: flex; align-items: center; gap: 12px">
+    <img src="/_blob/cf28b8cb2f04c4a4715ea85fbb4e826f" alt="" style="width: 36px; height: 36px; object-fit: contain">
+    <div>
+      <div style="font-weight: 600; font-size: 16px">Das Hohe Haus</div>
+      <div style="font-size: 11.2px; color: rgba(244,238,220,0.55)">Geschäftsführung der Wilden Habitate</div>
+    </div>
+  </div>
+  <nav aria-label="Pfad" style="font-size: 12.8px; color: rgba(244,238,220,0.55)"><a href="Main.dc.html" style="color: rgba(244,238,220,0.7)">Vorhaben</a> › Übergabe</nav>
+  <span style="font-size: 12.8px; color: rgba(244,238,220,0.55)">Links: Lea übergibt. Rechts: Alex kommt zurück an den Rechner.</span>
+</header>
+
+<main style="max-width: 1376px; margin: 0 auto; padding: 24px 32px 48px; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+
+  <section aria-label="Ich übergebe" style="flex: 999 1 640px; min-width: 0; background: #1d251d; border: 1px solid rgba(244,238,220,0.2); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.3); display: flex; flex-direction: column">
+    <div style="padding: 18px 20px; border-bottom: 1px solid rgba(244,238,220,0.13); display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <img src="/_blob/36d496da64574b18fe6a28e4019a8217" alt="" style="width: 40px; height: 40px; border-radius: 50%">
+        <span style="font-size: 20px; color: rgba(244,238,220,0.55)" aria-hidden="true">→</span>
+        <img src="/_blob/a2cfbf187fefb91f716a8d64a6a8eb16" alt="" style="width: 40px; height: 40px; border-radius: 50%">
+        <div style="margin-left: 6px">
+          <div style="font-size: 11.2px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(244,238,220,0.55); font-weight: 600">Beispiel · Di 13.10., abends</div>
+          <h1 style="margin: 2px 0 0; font-size: 20px; font-weight: 600">Ich übergebe an Alex</h1>
+        </div>
+      </div>
+      <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center">
+        <div role="group" aria-label="Anlass" style="display: flex; gap: 6px">
+          <button type="button" aria-pressed="false" style="min-height: 32px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(244,238,220,0.2); background: transparent; color: rgba(244,238,220,0.7); font: inherit; font-size: 12.8px">Feierabend</button>
+          <button type="button" aria-pressed="true" style="min-height: 32px; padding: 0 12px; border-radius: 4px; border: 1px solid #e4b85c; background: #e4b85c; color: #171d18; font: inherit; font-size: 12.8px; font-weight: 600">Urlaub</button>
+          <button type="button" aria-pressed="false" style="min-height: 32px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(244,238,220,0.2); background: transparent; color: rgba(244,238,220,0.7); font: inherit; font-size: 12.8px">Krank</button>
+        </div>
+        <span style="font-size: 14px">Mi 14.10. bis So 25.10. · zurück am Mo 26.10.</span>
+      </div>
+      <div style="font-size: 12.8px; color: rgba(244,238,220,0.7)">Stand und offene Punkte setzt das System aus den Akten ein. Du entscheidest je Vorhaben nur, wohin der Ball geht.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column">
+      <sc-for list="{{items}}" as="it" hint-placeholder-count="7">
+        <div style="display: flex; flex-wrap: wrap; gap: 12px 20px; padding: 14px 20px; border-bottom: 1px solid rgba(244,238,220,0.1); align-items: flex-start">
+          <div style="flex: 999 1 360px; min-width: 0">
+            <div style="font-size: 14px; font-weight: 600">{{it.title}}</div>
+            <div style="font-size: 12.8px; color: rgba(244,238,220,0.7); margin-top: 3px"><span style="color: rgba(244,238,220,0.55)">Stand:</span> {{it.stand}}</div>
+            <div style="font-size: 12.8px; margin-top: 3px"><span style="color: rgba(244,238,220,0.55)">Für Alex:</span> {{it.todo}}</div>
+          </div>
+          <div role="group" aria-label="Wohin geht der Ball" style="display: flex; gap: 6px; flex: 0 0 auto">
+            <button type="button" style="{{it.s1}}">Alex übernimmt</button>
+            <button type="button" style="{{it.s2}}">Ruht bis 26.10.</button>
+            <button type="button" style="{{it.s3}}">Team</button>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="padding: 16px 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; background: #242d23; border-radius: 0 0 8px 8px">
+      <label style="display: flex; gap: 8px; align-items: center; font-size: 12.8px; flex: 1; min-width: 280px">
+        <input type="checkbox" checked style="accent-color: #b9cc8a">
+        Fragen an mich sammeln sich hier und kommen am 26.10. als Liste zu mir
+      </label>
+      <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 6px; border: 1px solid rgba(244,238,220,0.25); background: transparent; color: #f4eedc; font: inherit; font-size: 14px">Als Entwurf sichern</button>
+      <button type="button" style="min-height: 44px; padding: 0 20px; border-radius: 6px; border: 0; background: #e4b85c; color: #171d18; font: inherit; font-size: 14px; font-weight: 600">Übergabe senden</button>
+    </div>
+  </section>
+
+  <section aria-label="Seit du zuletzt da warst" style="flex: 1 1 420px; max-width: 520px; display: flex; flex-direction: column; gap: 14px">
+    <div style="background: #1d251d; border: 1px solid rgba(244,238,220,0.13); border-radius: 8px; padding: 18px 20px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <img src="/_blob/a2cfbf187fefb91f716a8d64a6a8eb16" alt="" style="width: 36px; height: 36px; border-radius: 50%">
+        <div>
+          <div style="font-size: 11.2px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(244,238,220,0.55); font-weight: 600">Heute · Sa 03.10., 16:20</div>
+          <h2 style="margin: 2px 0 0; font-size: 20px; font-weight: 600">Seit du zuletzt da warst</h2>
+        </div>
+      </div>
+      <div style="font-size: 14px; color: rgba(244,238,220,0.7); margin-top: 10px">Fr 02.10., 12:04 bis jetzt · 4 Vorhaben bewegt · <span style="color: #f0a777; font-weight: 600">1 wartet auf dich</span></div>
+    </div>
+
+    <sc-for list="{{since}}" as="s" hint-placeholder-count="4">
+      <article style="{{s.cardStyle}}">
+        <div style="display: flex; justify-content: space-between; gap: 10px; align-items: baseline">
+          <span style="font-size: 14px; font-weight: 600">{{s.title}}</span>
+          <span style="{{s.flagStyle}}">{{s.flag}}</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px; font-size: 12.8px">
+          <sc-for list="{{s.lines}}" as="l" hint-placeholder-count="2">
+            <div><span style="{{l.markStyle}}">{{l.mark}}</span> {{l.text}}</div>
+          </sc-for>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 10px">
+          <a href="AkteFaden.dc.html" style="display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(244,238,220,0.25); color: #f4eedc; text-decoration: none; font-size: 12px">Zur Akte</a>
+          <button type="button" style="min-height: 32px; padding: 0 10px; border-radius: 4px; border: 0; background: transparent; color: rgba(244,238,220,0.7); font: inherit; font-size: 12px">Gesehen</button>
+        </div>
+      </article>
+    </sc-for>
+
+    <button type="button" style="min-height: 44px; border-radius: 6px; border: 1px solid rgba(244,238,220,0.25); background: transparent; color: #f4eedc; font: inherit; font-size: 14px">Alles gesehen</button>
+  </section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var chip = 'min-height: 32px; padding: 0 10px; border-radius: 4px; font: inherit; font-size: 12px; ';
+    var on = chip + 'border: 1px solid #e4b85c; background: #e4b85c; color: #171d18; font-weight: 600;';
+    var off = chip + 'border: 1px solid rgba(244,238,220,0.2); background: transparent; color: rgba(244,238,220,0.7);';
+    function it(title, stand, todo, pick) {
+      return { title: title, stand: stand, todo: todo, s1: pick === 1 ? on : off, s2: pick === 2 ? on : off, s3: pick === 3 ? on : off };
+    }
+    var items = [
+      it('XCeed Ticketing-Vertrag', 'aus der Akte, z. B. unterschrieben, Go-live geplant', 'Go-live begleiten, erste Tranche 300.000 € verfolgen', 1),
+      it('Infield-Ausstieg', 'Exklusivität bis 31.10., Vorgehen entschieden', 'Freigabe nachhalten, falls Infield sich meldet', 1),
+      it('Liquidität viertes Quartal', 'Zahlungsplan Oktober steht', 'Zahlungen nach Plan freigeben', 1),
+      it('Draußenbande · Vorverkauf', 'Shop offen seit 10.10.', 'Verkauf beobachten, Christian betreut Inhalte', 3),
+      it('Subardo als Formatpartner', 'Plenum hat am 06.10. entschieden', 'Termin 21. bis 25.10. übernehmen oder verschieben', 1),
+      it('Backoffice und Buchhaltung', 'Gespräche mit Beate laufen', 'nichts, ruht bis 26.10.', 2),
+      it('Booking-Standards mit Jane', 'Jane arbeitet mit Jessi', 'nichts, läuft ohne GF', 3)
+    ];
+    var cardBase = 'padding: 14px 16px; border-radius: 8px; background: #242d23; box-sizing: border-box; ';
+    function line(kind, text) {
+      return { text: text, mark: kind === 'done' ? '✓' : kind === 'work' ? '◐' : kind === 'wait' ? '⚠' : '●',
+        markStyle: kind === 'done' ? 'color: #8fbf9f' : kind === 'work' ? 'color: #cddba6' : kind === 'wait' ? 'color: #f0a777' : 'color: rgba(244,238,220,0.55)' };
+    }
+    var since = [
+      { title: 'Infield-Ausstieg', flag: '⚠ wartet auf dich', waits: true, lines: [
+        line('wait', 'Lea hat einen Vorschlag zur Exklusivität geschickt und ist unsicher, wie ihr taktisch vorgeht.')
+      ]},
+      { title: 'XCeed Ticketing-Vertrag', flag: 'Ball bei Lea', lines: [
+        line('done', 'Finanzunterlagen von XCeed bestätigt (Niko).'),
+        line('work', 'Bürgschaftstext: Niclaas hat ab 23 Uhr daran gearbeitet.')
+      ]},
+      { title: 'Draußenbande · Vorverkauf', flag: 'Ball bei Lea', lines: [
+        line('done', 'Newsletter an den Möhre-Verteiler ist raus.'),
+        line('info', 'Christian hat die Events bei XCeed angelegt, ist aber noch nicht fertig.')
+      ]},
+      { title: 'Subardo als Formatpartner', flag: 'Ball bei Lea', lines: [
+        line('info', 'Lea hat bei Derrick und Jens nachgehakt. Plenum entscheidet am 06.10.')
+      ]}
+    ];
+    since.forEach(function (s) {
+      s.cardStyle = cardBase + (s.waits ? 'border: 1px solid rgba(240,167,119,0.55);' : 'border: 1px solid rgba(244,238,220,0.13);');
+      s.flagStyle = s.waits ? 'font-size: 11.2px; color: #f0a777; font-weight: 600' : 'font-size: 11.2px; color: rgba(244,238,220,0.55)';
+    });
+    return { items: items, since: since };
+  }
+}
+</script>
+</body>
+</html>

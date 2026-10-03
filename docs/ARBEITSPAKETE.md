@@ -119,3 +119,11 @@ am genauen Commit prüfen. Zusammenarbeit, die es nicht gibt, wird nicht behaupt
   die zurückgerollt wird.
 - **Zuständig:** frei.
 - **Stand:** offen. Voraussetzung für jede belastbare Abnahme von V24.
+
+### WP-V31 · Vorhaben: Woche, Board, Liste, Akte, Einwurf, Übergabe
+
+- **Auftrag:** `docs/PAKET-V31-VORHABEN.md`, Teilpakete 31a bis 31e, freigegeben von Alex am 03.10.2026.
+- **Zuständig:** Claude Code, Branch `paket/v31-vorhaben`. Datenmodell und Erstbefüllung aus Cowork (03.10.2026).
+- **Prüfer:** Codex CLI, read-only, je Teilpaket am genauen Commit nach `docs/reviews/V31-pruefauftrag.md`.
+- **Termin:** live bis 12.10.2026 abends, Übergabe Lea am 13.10.2026.
+- **Stand:** vorbereitet, Bau offen.
