@@ -803,7 +803,8 @@ async function gfEinwurf(o={}){
         ${v&&!istPassend&&ziel?`<div class="vh-ew-warn" role="status">${gfZustand("warn","Vorschlag passt nicht")} Der Vorschlag galt für ein anderes Vorhaben. Übernommen wird nur der Verlaufseintrag.</div>`:""}
         ${vert.includes("verlauf")?`<div class="vh-ew-warn" role="status">${gfZustand("warn","vertraulich?")} Der vorgeschlagene Text sah nach vertraulichen Angaben aus und ist leer. Bitte selbst formulieren, was in die Akte darf.</div>`:""}
         ${v&&istPassend&&!zeigeText?`<p class="vh-ew-vorschau">${gfEsc(vl.text)}</p>`:""}
-        ${zeigeText?`<label class="vh-fld">Verlaufseintrag<textarea id="gfEwVerlauf" rows="3" maxlength="2000">${gfEsc(textWert)}</textarea></label>`:""}
+        ${zeigeText?`<label class="vh-fld">Verlaufseintrag${!istPassend||!v?" (Pflicht)":""}<textarea id="gfEwVerlauf" rows="3" maxlength="2000" ${!istPassend||!v?"required":""}>${gfEsc(textWert)}</textarea></label>`:""}
+        ${!v&&ziel&&!S.laedt?`<button type="button" class="btn btn-sm btn-ghost" id="gfEwKi">Vorschlag für dieses Vorhaben holen</button>`:""}
         ${S.bearbeiten&&v&&istPassend&&v.naechster_schritt?`<label class="vh-fld">Nächster Schritt<input id="gfEwSchritt" maxlength="1000" value="${gfEsc(S.schritt_text||v.naechster_schritt)}"></label>`:""}
         ${zeilen.length?`<fieldset class="vh-ew-haken"><legend>Das ändert sich</legend>${zeilen.map(([k,l,an])=>`<label><input type="checkbox" data-aus="${k}" ${an?"checked":""}><span>${l}</span></label>`).join("")}</fieldset>`:""}
         ${v&&(v.verworfen||[]).length?`<details class="vh-ew-verw"><summary>Nicht übernommen (${v.verworfen.length})</summary><ul>${v.verworfen.map(x=>`<li>${gfEsc(x)}</li>`).join("")}</ul></details>`:""}
@@ -832,6 +833,7 @@ async function gfEinwurf(o={}){
     const a=m.querySelector("#gfEwAendern"); if(a) a.onclick=()=>{ S.aendern=!S.aendern; render(); };
     const bb=m.querySelector("#gfEwBearb"); if(bb) bb.onclick=()=>{ S.bearbeiten=!S.bearbeiten; render(); };
     const ok=m.querySelector("#gfEwOk"); if(ok) ok.onclick=uebernehmen;
+    const ki=m.querySelector("#gfEwKi"); if(ki) ki.onclick=vorschlagHolen;
     const vw=m.querySelector("#gfEwVerwerfen"); if(vw) vw.onclick=verwerfen;
     const sp=m.querySelector("#gfEwSpaeter"); if(sp) sp.onclick=()=>{ zu(); o.weiter("spaeter"); };
   }
@@ -843,19 +845,25 @@ async function gfEinwurf(o={}){
     catch(e){ S.fehler="Nicht gespeichert: "+(e.message||"Verbindung"); }
     S.laedt=false; render();
   }
+  /* Neues Ziel: die Benachrichtigung fällt auf „im Morgenbericht“ zurück, bis ein neuer Vorschlag etwas anderes sagt.
+     Ohne Vorschlag (KI ausgefallen) gilt die Wahl von Hand sofort; die KI fragt nur, wer „Vorschlag holen“ drückt. */
   async function neuesZiel(id){
     if(!id||id===S.ziel){ S.aendern=false; render(); return; }
-    S.ziel=id; S.aendern=false;
-    if(!vs()&&!S.ki_fehler){ render(); return; }
+    S.ziel=id; S.aendern=false; S.ben="morgen";
+    if(!vs()){ render(); return; }
+    await vorschlagHolen();
+  }
+  async function vorschlagHolen(){
     S.laedt=true; S.fehler=""; render();
-    try{ const d=await gfApi("einwurf_vorschlag",{ id:S.ew.id, vorhaben_id:id, by:gfWho() }); S.ew=d.einwurf; S.ki_fehler=d.ki_fehler||""; S.aus=null; S.ben=null; }
-    catch(e){ S.fehler="Kein neuer Vorschlag: "+(e.message||"Verbindung")+". Übernommen wird dann nur der Verlaufseintrag."; }
+    try{ const d=await gfApi("einwurf_vorschlag",{ id:S.ew.id, vorhaben_id:S.ziel, by:gfWho() }); S.ew=d.einwurf; S.ki_fehler=d.ki_fehler||""; S.aus=null; S.ben=null; }
+    catch(e){ S.fehler="Kein neuer Vorschlag: "+(e.message||"Verbindung")+". Übernommen wird dann nur der Verlaufseintrag."; S.ben="morgen"; }
     S.laedt=false; render();
   }
   async function uebernehmen(){
     if(!S.ziel){ S.fehler="Bitte ein Vorhaben wählen."; render(); return; }
     const v=vs(), istPassend=passt(), ziel=vhVon(S.ziel);
     const verlaufText=(m.querySelector("#gfEwVerlauf")?.value||"").trim();
+    if((!v||!istPassend) && !verlaufText){ S.fehler="Bitte den Verlaufseintrag ausfüllen."; render(); return; }
     const bearbeitet={}; if(verlaufText && (!istPassend || verlaufText!==(v?.verlauf?.text||""))) bearbeitet.verlauf_text=verlaufText;
     if(S.schritt_text && S.schritt_text.trim()!==(v?.naechster_schritt||"")) bearbeitet.naechster_schritt=S.schritt_text.trim();
     const aus=istPassend?S.aus:{ verlauf:true, punkte:[], neue_punkte:[], ball:false, naechster_schritt:false, frist:false };
@@ -867,7 +875,10 @@ async function gfEinwurf(o={}){
       gfToast(`Eingetragen in „${r.vorhaben?.title||""}“: ${teile.join(", ")}.`);
       if(r.uebersprungen?.length) setTimeout(()=>gfToast("Nicht übernommen: "+r.uebersprungen.join("; ")),2700);
       GF_VH_LISTE=null; zu(); if(o.onDone) o.onDone(r); if(o.weiter) o.weiter("uebernommen"); try{ gfVhBadge(); }catch(e){}
-    }catch(e){ S.laedt=false; S.fehler=e.message||"Nicht übernommen"; if(/inzwischen|geändert/.test(S.fehler)){ try{ liste=await gfVhListe(true); }catch(x){} } render(); }
+    }catch(e){ S.laedt=false; S.fehler=e.message||"Nicht übernommen";
+      /* Konflikt (Vorschlag neu, Ball gewandert): Einwurf und Vorhaben frisch laden, die Haken neu setzen. */
+      if(/inzwischen|geändert/.test(S.fehler)){ try{ liste=await gfVhListe(true); const l=(await gfApi("einwurf_list",{ status:"alle" })).einwuerfe||[]; const neu=l.find(x=>x.id===S.ew.id); if(neu){ S.ew=neu; S.aus=null; S.ben=null; } S.fehler+=" Der Einwurf ist neu geladen, bitte die Haken prüfen."; }catch(x){} }
+      render(); }
   }
   async function verwerfen(){
     if(!confirm("Einwurf verwerfen? Er wird nicht eingetragen.")) return;
@@ -889,7 +900,7 @@ async function gfEinwurfWarteschlange(o={}){
   const zeige=()=>{
     if(i>=liste.length){ if(o.onDone) o.onDone({ entschieden }); return; }
     const ew=liste[i];
-    gfEinwurf({ einwurf:ew, kopf:`${i+1} von ${liste.length}`, weiter:(wie)=>{ if(wie==="uebernommen"||wie==="verworfen") entschieden++; if(wie==="abbruch"){ if(o.onDone) o.onDone({ entschieden }); return; } i++; zeige(); } });
+    gfEinwurf({ einwurf:ew, kopf:`${i+1} von ${liste.length}`, weiter:(wie)=>{ if(wie==="uebernommen"||wie==="verworfen"){ entschieden++; if(o.nachJedem) o.nachJedem(); } if(wie==="abbruch"){ if(o.onDone) o.onDone({ entschieden }); return; } i++; zeige(); } });
   };
   zeige();
 }

@@ -64,6 +64,7 @@ try {
   const xc = await api('vorhaben_get', { slug: 'xceed' });
   ok(xc.punkte.length === 9, `vorhaben_get xceed liefert 9 Punkte (${xc.punkte.length})`);
   await abgelehnt('vorhaben_get', { slug: 'gibt-es-nicht-v31' }, 404, /gibt es nicht/, 'unbekannter slug');
+  if (xc.themen.length) await abgelehnt('vorhaben_verknuepfen', { kind: 'thema', id: xc.themen[0].id, vorhaben_id: null, expect_vorhaben_id: '00000000-0000-0000-0000-000000000000', by: BY }, 409, /inzwischen geändert/, 'Zuordnung mit veraltetem Bezug (ändert nichts)');
   await abgelehnt('vorhaben_save', { slug: 'xceed', stand: 'x' }, 400, /by fehlt/, 'schreiben ohne by');
   await abgelehnt('vorhaben_save', { slug: 'xceed', stand: 'x', by: 'Jemand' }, 400, /Alex oder Lea/, 'by außerhalb der GF');
   const unauth = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'vorhaben_list', password: 'falsch' }) });
@@ -114,6 +115,7 @@ try {
   ok(akte.verlauf.filter(e => e.art === 'uebergabe' && /^Ball von Lea an /.test(e.text)).length === 1, 'genau ein Verlaufseintrag für den gleichzeitigen Wechsel');
   const b3 = await api('vorhaben_save', { id: testId, ball: 'team', ball_name: 'Testperson', notiz: 'bitte prüfen', expect_ball: akte.vorhaben.ball, by: BY });
   ok(b3.vorhaben.ball === 'team' && b3.vorhaben.ball_name === 'Testperson', 'Ball an Team mit Name');
+  await abgelehnt('vorhaben_save', { id: testId, ball: 'team', ball_name: 'Jemand anderes', expect_ball: 'team', expect: { ball_name: 'Alter Name' }, by: BY }, 409, /Inzwischen geändert \(ball_name\)/, 'Teamname mit veraltetem Stand');
   const b4 = await api('vorhaben_save', { id: testId, ball: 'lea', naechster_schritt: 'Probe: nächster Schritt', by: BY });
   ok(b4.vorhaben.ball_name === null, 'Name fällt weg, wenn der Ball an Lea geht');
   akte = await api('vorhaben_get', { id: testId });

@@ -2908,8 +2908,16 @@ Deno.serve(async (req: Request) => {
       if (!table || !t.id) return json({ error:'kind (thema|kandidat) und id fehlen' },400);
       let vid: string | null = null;
       if (t.vorhaben_id) vid = (await vhLese(t.vorhaben_id.toString())).id;
-      const { data, error } = await admin.from(table).update({ vorhaben_id: vid }).eq('id', t.id).select('id,title,vorhaben_id').maybeSingle();
-      if (error) throw error; if (!data) return json({ error:'Eintrag gibt es nicht' },404);
+      /* expect_vorhaben_id: der Bezug, den die Person gesehen hat (auch null). Gilt er nicht mehr, 409 statt still umhängen. */
+      let q = admin.from(table).update({ vorhaben_id: vid }).eq('id', t.id);
+      if (t.expect_vorhaben_id !== undefined) q = t.expect_vorhaben_id === null ? q.is('vorhaben_id', null) : q.eq('vorhaben_id', String(t.expect_vorhaben_id));
+      const { data, error } = await q.select('id,title,vorhaben_id').maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        const { data: da } = await admin.from(table).select('id,vorhaben_id').eq('id', t.id).maybeSingle();
+        if (!da) return json({ error:'Eintrag gibt es nicht' },404);
+        return json({ error:'Die Zuordnung wurde inzwischen geändert, bitte neu laden.', vorhaben_id: da.vorhaben_id },409);
+      }
       return json({ item: data });
     }
     if (action === 'einwurf_add') {

@@ -402,6 +402,7 @@ export const VH_ANTWORT = {
     const v = VORHABEN.find(x => x.id === p.id || x.slug === p.slug);
     if (!v) return { __status:404, error:'Vorhaben gibt es nicht' };
     if (p.expect_ball && p.expect_ball !== v.ball) return { __status:409, error:'Der Ball liegt inzwischen bei '+v.ball+', bitte neu laden' };
+    if (p.stand === 'KONFLIKT') return { __status:409, error:'Inzwischen geändert (stand), bitte neu laden' };
     const alt = v.ball + '|' + (v.ball_name || '');
     for (const f of ['ball','ball_name','stand','naechster_schritt','frist','status']) if (p[f] !== undefined) v[f] = p[f];
     return { vorhaben:v, ball_geaendert: alt !== v.ball + '|' + (v.ball_name || ''), verlauf:1 };
@@ -411,15 +412,16 @@ export const VH_ANTWORT = {
       themen:v.slug==='xceed'?[{ id:'t1', title:'Vertrag mit dem Landkreis verlängern', board_lane:'zu_besprechen', gate:'gf' }]:[],
       kandidaten:v.slug==='xceed'?[{ id:'n3', title:'Pressefrage zur Zeltwiese', relevance:'hoch' }]:[], einwuerfe:[] }; },
   /* Einwurf: Vorschlag wie aus einwurfPruefen, mit revision und ball_gesehen. */
-  einwurf_add: (p) => ({ einwurf:{ id:'w-neu', created_at:zeit(0), von:p.von||'Alex', kanal:p.kanal||'knopf', text:p.text, vorhaben_id:'vh-xceed', status:'vorgeschlagen',
+  einwurf_add: (p) => /AUSFALL/.test(p.text||'') ? ({ einwurf:{ id:'w-aus', created_at:zeit(0), von:p.von||'Alex', kanal:'knopf', text:p.text, vorhaben_id:null, status:'neu', vorschlag:null }, ki_fehler:'Die KI hat nicht innerhalb von 20 Sekunden geantwortet.' }) : ({ einwurf:{ id:'w-neu', created_at:zeit(0), von:p.von||'Alex', kanal:p.kanal||'knopf', text:p.text, vorhaben_id:'vh-xceed', status:'vorgeschlagen',
     vorschlag:{ vorhaben_id:'vh-xceed', vorhaben_slug:'xceed', vorhaben_titel:'XCeed Ticketing-Vertrag', ball_gesehen:'lea', sicherheit:0.9, revision:'rev-1',
       verlauf:{ art:'telefon', wer:'Alex mit Victor', text:'Victor sagt Auszahlung ab Monat 1 zu, schriftlich bis Montag.', tag:null },
       punkte:[{ id:'p3', titel:'Auszahlung ab Monat 1 schriftlich', stand:'mündlich zugesagt', erledigt:false }],
       neue_punkte:[{ titel:'Bestätigung von Victor abholen', wer:'Alex', frist:tag(2) }],
       ball:'alex', ball_name:null, naechster_schritt:null, frist:tag(2), benachrichtigung:'morgen', verworfen:['Punkt x ist kein offener Punkt dieses Vorhabens'], vertraulich:[] } }, ki_fehler:null }),
-  einwurf_vorschlag: (p) => ({ einwurf:{ id:p.id, created_at:zeit(0), von:'Alex', kanal:'knopf', text:'Text', vorhaben_id:p.vorhaben_id, status:'vorgeschlagen',
+  einwurf_vorschlag: (p) => p.vorhaben_id === 'vh-gls' ? { __status:500, error:'Anthropic: überlastet' } : ({ einwurf:{ id:p.id, created_at:zeit(0), von:'Alex', kanal:'knopf', text:'Text', vorhaben_id:p.vorhaben_id, status:'vorgeschlagen',
     vorschlag:{ vorhaben_id:p.vorhaben_id, sicherheit:1, revision:'rev-2', verlauf:{ art:'notiz', wer:'Alex', text:'Neu geprüft.' }, punkte:[], neue_punkte:[], ball:null, naechster_schritt:null, frist:null, benachrichtigung:'morgen', verworfen:[] } }, ki_fehler:null }),
-  einwurf_apply: (p) => { const v = VORHABEN.find(x => x.id === p.vorhaben_id) || VORHABEN[0];
+  einwurf_apply: (p) => { if (p.vorhaben_id === 'vh-subardo') return { __status:409, error:'Der Ball liegt inzwischen bei Alex, bitte den Einwurf neu öffnen' };
+    const v = VORHABEN.find(x => x.id === p.vorhaben_id) || VORHABEN[0];
     return { ok:true, vorhaben:v, verlauf:{ id:'e-neu', text:'eingetragen', art:'telefon' }, punkte:(p.auswahl&&p.auswahl.punkte)||[], neue_punkte:[], felder:null, ticker:p.benachrichtigung==='sofort', uebersprungen:[] }; },
   einwurf_list: { einwuerfe:[ { id:'w1', created_at:zeit(-0.3), von:'Lea', kanal:'mail', text:'Mail von Niclaas: Bürgschaftstext ist fertig, liegt im Ordner.', vorhaben_id:null, status:'vorgeschlagen',
     vorschlag:{ vorhaben_id:'vh-xceed', vorhaben_slug:'xceed', vorhaben_titel:'XCeed Ticketing-Vertrag', sicherheit:0.86,

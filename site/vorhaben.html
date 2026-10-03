@@ -66,7 +66,7 @@
    Liest vorhaben_list und vorhaben_get, schreibt über vorhaben_save, punkt_*, verlauf_status, vorhaben_verknuepfen.
    Ansicht und Filter stehen in localStorage gf_vh_view und gf_vh_filter, die Akte im Link (?v=<slug>&tab=verlauf). */
 const $=s=>document.querySelector(s);
-let DATA=null, AKTE=null, AKTE_SLUG=null, TAB="prozess", VL_FILTER="alle", AKTE_LAUF=0, GELOEST=null;
+let DATA=null, AKTE=null, AKTE_SLUG=null, TAB="prozess", VL_FILTER="alle", AKTE_LAUF=0, GELOEST=null, ENTWURF={}, SPEICHERT=null;
 let VIEW=(()=>{ try{ const v=localStorage.getItem("gf_vh_view"); return ["woche","board","liste"].includes(v)?v:"woche"; }catch(e){ return "woche"; } })();
 let FILTER=(()=>{ try{ const v=localStorage.getItem("gf_vh_filter"); return ["alle","mir","bewegt","konflikte"].includes(v)?v:"alle"; }catch(e){ return "alle"; } })();
 const Q=new URLSearchParams(location.search);
@@ -255,7 +255,7 @@ function ballWaehlen(v, vorwahl){
 }
 async function ballSetzen(v, ball, name, notiz){
   try{
-    const d=await gfApi("vorhaben_save",{ id:v.id, ball, ball_name:name||null, expect_ball:v.ball, notiz:notiz||undefined, by:gfWho() });
+    const d=await gfApi("vorhaben_save",{ id:v.id, ball, ball_name:name||null, expect_ball:v.ball, expect:{ ball_name:v.ball_name??null }, notiz:notiz||undefined, by:gfWho() });
     gfToast(`Ball bei ${gfVhBallWort(d.vorhaben.ball,d.vorhaben.ball_name)}`);
     await laden(true); if(AKTE_SLUG) oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true});
   }catch(e){ gfToast(e.message||"Nicht gespeichert"); await laden(true); }
@@ -301,7 +301,7 @@ function renderAkte(){
     </div>
     ${(v.konflikt||"").trim()?`<div class="vh-a-konf">${markeHtml(["warn","⚠","Konflikt"])} ${gfEsc(v.konflikt)}</div>`:""}
     ${d.einwuerfe.length?`<button type="button" class="vh-warte klein" data-einwurf-akte>${gfZustand("warn", d.einwuerfe.length===1?"1 Einwurf wartet":d.einwuerfe.length+" Einwürfe warten")} zu diesem Vorhaben. Öffnen</button>`:""}
-    <label class="vh-schritt"><span>Nächster Schritt</span><textarea rows="2" data-feld="naechster_schritt" maxlength="1000" placeholder="Was passiert als Nächstes?">${gfEsc(v.naechster_schritt||"")}</textarea></label>
+    <label class="vh-schritt"><span>Nächster Schritt${ENTWURF[v.id+"|naechster_schritt"]!==undefined?` <em class="vh-entwurf">nicht gespeichert, gespeichert ist: ${gfEsc(v.naechster_schritt||"leer")}</em>`:""}</span><textarea rows="2" data-feld="naechster_schritt" maxlength="1000" placeholder="Was passiert als Nächstes?">${gfEsc(ENTWURF[v.id+"|naechster_schritt"]??v.naechster_schritt??"")}</textarea></label>
     <div class="vh-tabs" role="tablist" aria-label="Akte">
       <button type="button" role="tab" id="vhTabP" aria-controls="vhPanel" aria-selected="${TAB==="prozess"}" data-tab="prozess">Prozess</button>
       <button type="button" role="tab" id="vhTabV" aria-controls="vhPanel" aria-selected="${TAB==="verlauf"}" data-tab="verlauf">Verlauf <span class="n">${d.verlauf.filter(e=>e.status==="bestaetigt").length}</span>${d.verlauf.some(e=>e.status==="vorschlag")?` <span class="vh-tab-v"><i aria-hidden="true">●</i> ${d.verlauf.filter(e=>e.status==="vorschlag").length} ${d.verlauf.filter(e=>e.status==="vorschlag").length===1?"Vorschlag":"Vorschläge"}</span>`:""}</button>
@@ -311,7 +311,7 @@ function renderAkte(){
 function prozess(d){
   const v=d.vorhaben, p=d.punkte.slice().sort((a,b)=>(a.erledigt-b.erledigt)||(a.sort-b.sort));
   const sync=quellenText(v.quellen);
-  return `<label class="vh-stand"><span>Stand</span><textarea rows="3" data-feld="stand" maxlength="2000" placeholder="Wo steht das Vorhaben?">${gfEsc(v.stand||"")}</textarea></label>
+  return `<label class="vh-stand"><span>Stand${ENTWURF[v.id+"|stand"]!==undefined?` <em class="vh-entwurf">nicht gespeichert, gespeichert ist: ${gfEsc(v.stand||"leer")}</em>`:""}</span><textarea rows="3" data-feld="stand" maxlength="2000" placeholder="Wo steht das Vorhaben?">${gfEsc(ENTWURF[v.id+"|stand"]??v.stand??"")}</textarea></label>
     <div class="vh-sec-h"><h3>Checkliste</h3><button type="button" class="btn btn-sm btn-ghost" data-punkt-neu>+ Punkt hinzufügen</button></div>
     <div class="vh-punkt-neu" id="vhPunktNeu" hidden></div>
     <ul class="vh-punkte">${p.map(punktZeile).join("")||`<li class="vh-nichts">Noch keine Punkte.</li>`}</ul>
@@ -362,12 +362,15 @@ function verlauf(d){
     <ul class="vh-verlauf">${filt.map(zeile).join("")||`<li class="vh-nichts">${VL_FILTER==="neu"?"Seitdem ist nichts dazugekommen.":VL_FILTER==="entscheidungen"?"Noch keine Entscheidung eingetragen.":"Noch kein Eintrag."}</li>`}</ul>
     <button type="button" class="vh-eintragen" data-einwurf-akte>Etwas eintragen …</button>`;
 }
+/* Text, der nicht gespeichert werden konnte, bleibt als Entwurf im Feld stehen, bis er gespeichert oder verworfen ist. */
 async function feldSpeichern(feld, wert){
-  if(!AKTE) return; const v=AKTE.vorhaben; if((v[feld]||"")===wert) return;
-  try{ const d=await gfApi("vorhaben_save",{ id:v.id, [feld]:wert, expect:{ [feld]:v[feld]??null }, by:gfWho() }); if(AKTE && AKTE.vorhaben.id===v.id) AKTE.vorhaben={...AKTE.vorhaben, ...d.vorhaben}; gfToast(feld==="stand"?"Stand gespeichert":"Nächster Schritt gespeichert"); laden(true); }
-  catch(e){ gfToast("Nicht gespeichert: "+(e.message||"Verbindung")); }
+  if(!AKTE) return; const v=AKTE.vorhaben; if((v[feld]||"")===wert){ delete ENTWURF[v.id+"|"+feld]; return; }
+  try{ const d=await gfApi("vorhaben_save",{ id:v.id, [feld]:wert, expect:{ [feld]:v[feld]??null }, by:gfWho() }); delete ENTWURF[v.id+"|"+feld]; if(AKTE && AKTE.vorhaben.id===v.id) AKTE.vorhaben={...AKTE.vorhaben, ...d.vorhaben}; gfToast(feld==="stand"?"Stand gespeichert":"Nächster Schritt gespeichert"); laden(true); }
+  catch(e){ ENTWURF[v.id+"|"+feld]=wert; gfToast("Nicht gespeichert: "+(e.message||"Verbindung")+". Dein Text steht noch im Feld.");
+    if(/inzwischen/i.test(e.message||"") && AKTE_SLUG) await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); }
 }
-$("#vhAkte").addEventListener("focusout",e=>{ const t=e.target.closest("textarea[data-feld]"); if(!t) return; feldSpeichern(t.dataset.feld, t.value.trim()); });
+/* Gespeichert wird nur, was die Person im Feld geändert hat; ein stehen gebliebener Entwurf wird nicht von selbst erneut gesendet. */
+$("#vhAkte").addEventListener("focusout",e=>{ const t=e.target.closest("textarea[data-feld]"); if(!t || t.value===t.defaultValue) return; SPEICHERT=feldSpeichern(t.dataset.feld, t.value.trim()).finally(()=>{ SPEICHERT=null; }); });
 $("#vhAkte").addEventListener("change",async e=>{
   const c=e.target.closest("input[data-toggle]"); if(!c) return;
   c.disabled=true;
@@ -376,7 +379,7 @@ $("#vhAkte").addEventListener("change",async e=>{
 });
 $("#vhAkte").addEventListener("click",async e=>{
   if(e.target.closest("[data-akte-zu]")){ schliesseAkte(); return; }
-  const tab=e.target.closest("[data-tab]"); if(tab){ TAB=tab.dataset.tab; const u=new URL(location.href); if(TAB==="verlauf") u.searchParams.set("tab","verlauf"); else u.searchParams.delete("tab"); history.replaceState(null,"",u); renderAkte(); $("#"+(TAB==="prozess"?"vhTabP":"vhTabV"))?.focus(); return; }
+  const tab=e.target.closest("[data-tab]"); if(tab){ if(SPEICHERT) await SPEICHERT; TAB=tab.dataset.tab; const u=new URL(location.href); if(TAB==="verlauf") u.searchParams.set("tab","verlauf"); else u.searchParams.delete("tab"); history.replaceState(null,"",u); renderAkte(); $("#"+(TAB==="prozess"?"vhTabP":"vhTabV"))?.focus(); return; }
   const vlf=e.target.closest("[data-vlf]"); if(vlf){ VL_FILTER=vlf.dataset.vlf; renderAkte(); return; }
   if(e.target.closest("[data-einwurf-akte]")){ einwurf({ vorhaben_id:AKTE.vorhaben.id }); return; }
   const bc=e.target.closest("[data-ball-akte]"); if(bc){ const v=AKTE.vorhaben; if(bc.dataset.ballAkte==="team"||bc.dataset.ballAkte==="extern") ballWaehlen(v, bc.dataset.ballAkte); else if(bc.dataset.ballAkte!==v.ball) await ballSetzen(v, bc.dataset.ballAkte, null); if(AKTE_SLUG) oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); return; }
@@ -385,10 +388,10 @@ $("#vhAkte").addEventListener("click",async e=>{
     catch(err){ vs.disabled=false; gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); } return; }
   const lo=e.target.closest("[data-loesen]"); if(lo){ lo.disabled=true;
     const vid=AKTE.vorhaben.id, titel=lo.closest("li")?.querySelector("a")?.textContent||"Eintrag";
-    try{ await gfApi("vorhaben_verknuepfen",{ kind:lo.dataset.loesen, id:lo.dataset.id, vorhaben_id:null, by:gfWho() }); GELOEST={ kind:lo.dataset.loesen, id:lo.dataset.id, vorhaben_id:vid, titel }; gfToast("Zuordnung gelöst"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
-    catch(err){ lo.disabled=false; gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); } return; }
+    try{ await gfApi("vorhaben_verknuepfen",{ kind:lo.dataset.loesen, id:lo.dataset.id, vorhaben_id:null, expect_vorhaben_id:vid, by:gfWho() }); GELOEST={ kind:lo.dataset.loesen, id:lo.dataset.id, vorhaben_id:vid, titel }; gfToast("Zuordnung gelöst"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
+    catch(err){ lo.disabled=false; gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); if(/inzwischen/.test(err.message||"")) oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); } return; }
   if(e.target.closest("[data-rueckgaengig]") && GELOEST){ const g=GELOEST;
-    try{ await gfApi("vorhaben_verknuepfen",{ kind:g.kind, id:g.id, vorhaben_id:g.vorhaben_id, by:gfWho() }); GELOEST=null; gfToast("Zuordnung wiederhergestellt"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
+    try{ await gfApi("vorhaben_verknuepfen",{ kind:g.kind, id:g.id, vorhaben_id:g.vorhaben_id, expect_vorhaben_id:null, by:gfWho() }); GELOEST=null; gfToast("Zuordnung wiederhergestellt"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
     catch(err){ gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); } return; }
   const vst=e.target.closest("[data-vstand]"); if(vst){ const ev=AKTE.verlauf.find(x=>x.id===vst.dataset.vstand), p=ev&&vorschlagPunkt(ev); if(!p) return;
     /* Neuer Stand steht im Text nach „jetzt so steht:“ (docs/ABGLEICH-VORHABEN.md, Abschnitt F); die Person prüft ihn im Formular. */
@@ -437,7 +440,7 @@ function einwurf(o={}){
 }
 $("#vhEinwurf").onclick=()=>einwurf(AKTE?{ vorhaben_id:AKTE.vorhaben.id }:{});
 $("#vhFab").onclick=()=>einwurf(AKTE?{ vorhaben_id:AKTE.vorhaben.id }:{});
-$("#vhWarte").onclick=()=>gfEinwurfWarteschlange({ onDone:()=>laden(true) });
+$("#vhWarte").onclick=()=>gfEinwurfWarteschlange({ onDone:()=>laden(true), nachJedem:()=>laden(true) });
 $("#vhAkte").addEventListener("click",e=>{ const b=e.target.closest(".vh-warte.klein"); if(b && typeof gfEinwurfWarteschlange==="function"){ e.stopPropagation(); gfEinwurfWarteschlange({ vorhaben_id:AKTE.vorhaben.id, onDone:()=>{ laden(true); oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); } }); } }, true);
 $("#vhUebergabe").onclick=()=>vhUebergabe();
 

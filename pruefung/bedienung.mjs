@@ -62,7 +62,7 @@ const seite = async (url) => {
     if (m.type() !== 'error') return;
     /* Eine abgefangene Fehlerantwort ist gewollt (Asana ohne Token). Der Browser meldet sie trotzdem;
        das ist keine Meldung der Seite und zählt hier nicht. */
-    if (erwarteterFehler && /Failed to load resource: the server responded with a status of 40[09]/.test(m.text())) return;
+    if (erwarteterFehler && /Failed to load resource: the server responded with a status of (40[09]|500)/.test(m.text())) return;
     meldungen.push(m.text());
   });
   p.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
@@ -343,6 +343,17 @@ console.log('\n== Vorhaben (V31b): Ansichten, Akte, Punkt, Ball ==');
   await r.locator('#vhAkte textarea[data-feld="stand"]').fill('Neuer Stand'); await r.locator('#vhAkte h2').click(); await r.waitForTimeout(300);
   const vsv = letzte('vorhaben_save');
   pruefe('Stand speichert mit dem gesehenen Wert', vsv && vsv.nutzlast.stand === 'Neuer Stand' && vsv.nutzlast.expect && 'stand' in vsv.nutzlast.expect, JSON.stringify(vsv && vsv.nutzlast));
+  /* Konflikt beim Stand: der eigene Text bleibt stehen, auch nach dem Reiterwechsel. */
+  erwarteterFehler = true;
+  await r.locator('#vhAkte textarea[data-feld="stand"]').fill('KONFLIKT'); await r.locator('[data-tab="verlauf"]').click(); await r.waitForTimeout(500);
+  await r.locator('[data-tab="prozess"]').click(); await r.waitForTimeout(300);
+  erwarteterFehler = false;
+  pruefe('nach Konflikt steht der eigene Text noch im Feld, mit Hinweis', await r.locator('#vhAkte textarea[data-feld="stand"]').inputValue() === 'KONFLIKT' && await r.locator('.vh-entwurf').count() === 1);
+  /* Zuordnung lösen mit dem gesehenen Bezug */
+  await r.locator('.vh-vk summary').first().click();
+  await r.locator('[data-loesen="thema"]').first().click(); await r.waitForTimeout(300);
+  const vk = letzte('vorhaben_verknuepfen');
+  pruefe('Zuordnung lösen schickt den gesehenen Bezug', vk && vk.nutzlast.vorhaben_id === null && vk.nutzlast.expect_vorhaben_id === 'vh-xceed', JSON.stringify(vk && vk.nutzlast));
   await r.close();
 }
 
@@ -451,6 +462,42 @@ console.log('\n== Einwurf (V31c) ==');
   await p.locator('#gfEwSpaeter').click(); await p.waitForTimeout(200);
   pruefe('Später schließt ohne Entscheidung', await p.locator('#gfEwModal.open').count() === 0 && !gesendet.some(x => x.action === 'einwurf_verwerfen'));
   await p.close();
+  /* KI fällt aus: Wahl von Hand ohne neuen KI-Aufruf, Verlaufstext Pflicht. */
+  frisch();
+  const k = await seite('/vorhaben.html');
+  await k.locator('#vhEinwurf').click(); await k.waitForTimeout(300);
+  await k.locator('#gfEwText').fill('AUSFALL: Telefonat mit Jane'); await k.locator('#gfEwWeiter').click(); await k.waitForTimeout(400);
+  pruefe('ohne Vorschlag: Hinweis und Wahl von Hand', (await k.locator('#gfEwModal').innerText()).includes('ohne Vorschlag') && await k.locator('#gfEwZiel2').count() === 1);
+  await k.locator('#gfEwModal .chip[data-v="vh-booking"]').click(); await k.waitForTimeout(300);
+  pruefe('Wahl von Hand fragt die KI nicht erneut', !letzte('einwurf_vorschlag') && await k.locator('#gfEwKi').count() === 1);
+  await k.locator('#gfEwVerlauf').fill('');
+  await k.locator('#gfEwOk').click(); await k.waitForTimeout(200);
+  pruefe('leerer Verlaufstext wird nicht gesendet', !letzte('einwurf_apply') && (await k.locator('.vh-ew-fehler').innerText()).includes('Verlaufseintrag'));
+  await k.locator('#gfEwVerlauf').fill('Telefonat mit Jane über die Standards.');
+  await k.locator('#gfEwOk').click(); await k.waitForTimeout(400);
+  const ka = letzte('einwurf_apply');
+  pruefe('übernommen wird nur der Verlauf mit dem eigenen Text', ka && ka.nutzlast.vorhaben_id === 'vh-booking' && ka.nutzlast.auswahl.verlauf === true && !ka.nutzlast.auswahl.ball && ka.nutzlast.bearbeitet.verlauf_text === 'Telefonat mit Jane über die Standards.', JSON.stringify(ka && ka.nutzlast));
+  /* Zielwechsel scheitert: „sofort“ aus dem alten Vorschlag gilt nicht weiter. */
+  await k.locator('#vhEinwurf').click(); await k.waitForTimeout(300);
+  await k.locator('#gfEwText').fill('Telefonat mit Victor'); await k.locator('#gfEwWeiter').click(); await k.waitForTimeout(400);
+  await k.locator('#gfEwModal .chip[data-v="sofort"]').click();
+  erwarteterFehler = true;
+  await k.locator('#gfEwAendern').click(); await k.locator('#gfEwModal .chip[data-v="vh-gls"]').click(); await k.waitForTimeout(400);
+  pruefe('gescheiterter Zielwechsel: Fehler sichtbar, Benachrichtigung zurück auf Morgenbericht', (await k.locator('.vh-ew-fehler').innerText()).includes('Kein neuer Vorschlag') && await k.locator('#gfEwModal .chip[data-v="morgen"].on').count() === 1);
+  /* Konflikt beim Übernehmen: Meldung bleibt im Dialog. */
+  await k.locator('#gfEwAendern').click(); await k.locator('#gfEwModal .chip[data-v="vh-subardo"]').click(); await k.waitForTimeout(400);
+  await k.locator('#gfEwOk').click(); await k.waitForTimeout(400);
+  pruefe('Konflikt beim Übernehmen bleibt sichtbar im Dialog', (await k.locator('.vh-ew-fehler').innerText()).includes('inzwischen') && await k.locator('#gfEwModal.open').count() === 1);
+  erwarteterFehler = false;
+  await k.keyboard.press('Escape'); await k.close();
+  /* Handy: Dialog bei 390 px, Fokus bleibt drin. */
+  const h = await ctx.newPage(); await h.setViewportSize({ width:390, height:844 }); h.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
+  await h.goto(BASE + '/vorhaben.html'); await h.waitForTimeout(700);
+  await h.locator('#vhFab').click(); await h.waitForTimeout(300);
+  for (let i = 0; i < 15; i++) await h.keyboard.press('Tab');
+  const box = await h.locator('#gfEwModal .modal').boundingBox();
+  pruefe('Einwurf am Handy: Vollbild und Fokus bleibt im Dialog', box && box.width >= 389 && await h.evaluate(() => document.getElementById('gfEwModal').contains(document.activeElement)));
+  await h.close();
   frisch();
   const f = await seite('/index.html');
   pruefe('Für dich hat den Einwurf-Knopf', await f.locator('#fdEinwurf').isVisible());

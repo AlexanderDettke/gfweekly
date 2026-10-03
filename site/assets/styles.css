@@ -1711,3 +1711,4 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 .vh-ue-n{min-height:var(--ziel-min);padding:8px 10px;border-radius:var(--radius-s);border:var(--rahmen) solid var(--border-strong);background:var(--surface-2);color:var(--text);font:inherit;font-size:var(--stufe-2)}
 .vh-ue-n::placeholder{color:var(--text-2);opacity:1}
 .vh-ue-test{display:flex;gap:8px;align-items:center;font-size:var(--stufe-2);color:var(--text-2)}
+.vh-entwurf{font-style:normal;font-weight:500;color:var(--crit-text);margin-left:6px}
