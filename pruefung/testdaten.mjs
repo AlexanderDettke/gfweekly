@@ -437,7 +437,7 @@ export const SCHREIBEND = new Set(['add','update','delete','capture','capture_ma
   'session_start','session_end','session_delete','ritual_toggle','ritual_save','ritual_delete','milestone_save','milestone_delete','news_update','news_accept','news_delete',
   'people_save','people_delete','link_add','link_delete','sites_save','sites_delete','category_save','gate_set','gate_set_many','inbox_promote','inbox_reject','tidy_suggest',
   'absence_end','absence_tick','deputies_set','handover_build','handover_dossier','handover_log_add','launch_set',
-  'handover_set_many','vorhaben_save','punkt_save','punkt_toggle','punkt_delete','verlauf_add','verlauf_status','vorhaben_verknuepfen','einwurf_verwerfen']);
+  'handover_set_many','vorhaben_save','punkt_save','punkt_toggle','punkt_delete','verlauf_add','verlauf_status','vorhaben_verknuepfen','einwurf_verwerfen','vorschlag_stand']);
 
 /* Je Seite: Kerninhalt, der nach dem Laden gefuellt sein muss (Text laenger als 20 Zeichen).
    Ohne diese Probe wuerde eine leer gebliebene Seite als bestanden durchgehen, weil gfGate das Tor schon vorher versteckt. */

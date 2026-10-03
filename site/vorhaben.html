@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Das Hohe Haus · Vorhaben</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=29" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=29" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=29" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=29" />
-<link rel="stylesheet" href="/assets/styles.css?v=29" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=30" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=30" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=30" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=30" />
+<link rel="stylesheet" href="/assets/styles.css?v=30" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -58,9 +58,9 @@
 <button type="button" class="vh-fab" id="vhFab" aria-label="Einwurf: etwas eintragen"><span aria-hidden="true">+</span> Einwurf</button>
 <div class="modal-back" id="vhModal"></div>
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=29"></script>
-<script src="/assets/game.js?v=29"></script>
-<script src="/assets/eggs.js?v=29" defer></script>
+<script src="/assets/core.js?v=30"></script>
+<script src="/assets/game.js?v=30"></script>
+<script src="/assets/eggs.js?v=30" defer></script>
 <script>
 /* V31 · Vorhaben: eine Seite, drei Ansichten (Woche, Board, Liste), die Akte rechts (ab 1024 px) oder als Blatt.
    Liest vorhaben_list und vorhaben_get, schreibt über vorhaben_save, punkt_*, verlauf_status, vorhaben_verknuepfen.
@@ -345,7 +345,9 @@ function vorschlagPunkt(e){ const m=(e.source_ref||"").match(/vorschlag:([^:]+):
 function vorschlagKnopf(e){
   const tag=e.tag||"", p=vorschlagPunkt(e);
   if(/^Vorschlag: Punkt erledigt/i.test(tag) && p && !p.erledigt) return `<button type="button" class="btn btn-sm btn-primary" data-vstatus="bestaetigt" data-id="${e.id}">Übernehmen und „${gfEsc(p.titel.slice(0,40))}“ abhaken</button>`;
-  if(/^Vorschlag: Stand/i.test(tag) && p) return `<button type="button" class="btn btn-sm btn-primary" data-vstand="${e.id}">Stand am Punkt übernehmen …</button>`;
+  /* Ohne lesbaren neuen Stand („jetzt so steht: …“) gibt es nichts zu übernehmen außer dem Eintrag selbst. */
+  if(/^Vorschlag: Stand/i.test(tag) && p && /jetzt so steht:\s*\S/i.test(e.text||"")) return `<button type="button" class="btn btn-sm btn-primary" data-vstand="${e.id}">Stand am Punkt übernehmen …</button>`;
+  if(/^Vorschlag: Stand/i.test(tag)) return `<button type="button" class="btn btn-sm btn-primary" data-vstatus="bestaetigt" data-id="${e.id}">Nur in den Verlauf übernehmen (Stand von Hand)</button>`;
   return `<button type="button" class="btn btn-sm btn-primary" data-vstatus="bestaetigt" data-id="${e.id}">In den Verlauf übernehmen</button>`;
 }
 function verlauf(d){
@@ -405,7 +407,7 @@ function punktForm(p, vor={}){
   box.hidden=false;
   box.innerHTML=`<form class="vh-pform">
     <label class="vh-fld">Punkt<input name="titel" required maxlength="300" value="${gfEsc(p?.titel||"")}"></label>
-    ${vor.vorschlag?`<p class="vh-dlg-t">Vorschlag des Abgleichs: neuen Stand prüfen, dann speichern. Der Vorschlag gilt danach als übernommen.</p>`:""}
+    ${vor.vorschlag?`<p class="vh-dlg-t">Vorschlag des Abgleichs. Bisher: <b>${gfEsc(p.stand||"kein Stand")}</b>. Neuen Stand prüfen, dann speichern; Stand und Vorschlag werden zusammen übernommen.</p>`:""}
     ${p?`<label class="vh-fld">Stand<input name="stand" maxlength="1000" value="${gfEsc(vor.stand!==undefined&&vor.stand!==""?vor.stand:(p.stand||""))}"></label>`:""}
     <div class="vh-pform-z"><label class="vh-fld">Wer<input name="wer" maxlength="120" value="${gfEsc(p?.wer||"")}"></label>
     <label class="vh-fld">Frist<input name="frist" type="date" value="${gfEsc(p?.frist||"")}"></label></div>
@@ -421,14 +423,17 @@ function punktForm(p, vor={}){
     if(!daten.titel) return;
     /* Beim Ändern nur die geänderten Felder, jeweils mit dem Wert, den die Person gesehen hat: ändert Lea gleichzeitig
        ein anderes Feld, bleibt es stehen; ändert sie dasselbe, kommt 409 statt eines stillen Überschreibens. */
+    if(vor.vorschlag){
+      try{ await gfApi("vorschlag_stand",{ id:vor.vorschlag, stand:(daten.stand||"").trim(), expect_stand:p.stand??null, by:gfWho() }); gfToast("Stand übernommen"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
+      catch(err){ gfToast("Nicht übernommen: "+(err.message||"Verbindung")); }
+      return; }
     let nutz;
     if(p){ nutz={ id:p.id, expect:{}, by:gfWho() };
       for(const k of Object.keys(daten)){ const alt=p[k]??null, neu=daten[k]===""?null:daten[k]; if((alt||null)!==(neu||null)){ nutz[k]=daten[k]; nutz.expect[k]=alt; } }
       if(!Object.keys(nutz.expect).length){ box.innerHTML=""; return; } }
     else nutz={ vorhaben_id:AKTE.vorhaben.id, ...daten, by:gfWho() };
     try{ await gfApi("punkt_save", nutz);
-      if(vor.vorschlag) await gfApi("verlauf_status",{ id:vor.vorschlag, status:"bestaetigt", by:gfWho() });
-      gfToast(vor.vorschlag?"Stand übernommen":p?"Punkt gespeichert":"Punkt hinzugefügt"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
+      gfToast(p?"Punkt gespeichert":"Punkt hinzugefügt"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
     catch(err){ gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); }
   };
 }

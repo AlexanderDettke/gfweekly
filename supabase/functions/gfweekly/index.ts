@@ -2808,7 +2808,7 @@ Deno.serve(async (req: Request) => {
       const v = await vhLese(ref);
       const [pk, vl, th, kd, ew, sr, si] = await Promise.all([
         admin.from('hh_vorhaben_punkte').select('*').eq('vorhaben_id', v.id).order('sort').order('created_at'),
-        admin.from('hh_vorhaben_verlauf').select('*').eq('vorhaben_id', v.id).in('status', ['bestaetigt','vorschlag']).order('happened_at', { ascending:false }).limit(200),
+        admin.from('hh_vorhaben_verlauf').select('*').eq('vorhaben_id', v.id).in('status', ['bestaetigt','vorschlag']).order('happened_at', { ascending:false }).order('created_at', { ascending:false }).order('id').limit(200),
         admin.from('gfweekly_topics').select('id,title,board_lane,gate').eq('vorhaben_id', v.id).eq('archived', false).order('created_at', { ascending:false }),
         admin.from('gfweekly_news').select('id,title,relevance').eq('vorhaben_id', v.id).eq('kind', 'kandidat').eq('status', 'neu').order('happened_at', { ascending:false }),
         admin.from('hh_einwurf').select('*').eq('vorhaben_id', v.id).in('status', ['neu','vorgeschlagen']).order('created_at', { ascending:false }),
@@ -3003,8 +3003,15 @@ Deno.serve(async (req: Request) => {
       let q = admin.from('hh_einwurf').select('*, vorhaben:hh_vorhaben(id,slug,title)').order('created_at', { ascending:false }).limit(200);
       if (t.status !== 'alle') q = q.in('status', ['neu','vorgeschlagen']);
       if (t.vorhaben_id) q = q.eq('vorhaben_id', t.vorhaben_id);
+      if (t.id) q = q.eq('id', t.id);   // gezielt einen Einwurf neu laden (nach einem Konflikt), unabhängig von Status und Grenze
       const { data, error } = await q; if (error) throw error;
       return json({ einwuerfe: data || [] });
+    }
+    if (action === 'vorschlag_stand') {
+      /* Stand-Vorschlag des Abgleichs übernehmen: neuer Stand am Punkt und Bestätigung in einer Transaktion (hh_vorschlag_stand). */
+      const by = vhBy(t); if (!t.id || !VH_UUID.test(String(t.id))) return json({ error:'id fehlt' },400);
+      const stand = vhText(t.stand, 1000); if (!stand) return json({ error:'Der neue Stand ist leer' },400);
+      return json(await vhRpc('hh_vorschlag_stand', { p_verlauf: t.id, p_stand: stand, p_expect_stand: t.expect_stand ?? null, p_by: by }));
     }
     if (action === 'schicht_uebergabe') {
       const by = vhBy(t);

@@ -32,8 +32,10 @@ async function schnappschuss() {
   for (const v of liste) {
     const a = await api('vorhaben_get', { id: v.id });
     const { zustand, updated_at, ...feste } = a.vorhaben;
-    out[v.slug] = JSON.stringify({ v: feste, p: a.punkte.map(p => [p.id, p.titel, p.stand, p.wer, p.frist, p.erledigt, p.erledigt_at]),
-      e: a.verlauf.map(e => [e.id, e.status]), t: a.themen.map(x => x.id), k: a.kandidaten.map(x => x.id), w: a.einwuerfe.map(x => [x.id, x.status]) });
+    /* Als sortierte Mengen: Einträge mit gleichem Zeitstempel kommen sonst in wechselnder Reihenfolge zurück. */
+    const sortiert = (l) => l.map(x => JSON.stringify(x)).sort();
+    out[v.slug] = JSON.stringify({ v: feste, p: sortiert(a.punkte.map(p => [p.id, p.titel, p.stand, p.wer, p.frist, p.erledigt, p.erledigt_at])),
+      e: sortiert(a.verlauf.map(e => [e.id, e.status])), t: sortiert(a.themen.map(x => x.id)), k: sortiert(a.kandidaten.map(x => x.id)), w: sortiert(a.einwuerfe.map(x => [x.id, x.status])) });
   }
   return out;
 }
@@ -130,6 +132,7 @@ try {
   await api('verlauf_status', { id: v1.id, status: 'verworfen', by: BY });
   akte = await api('vorhaben_get', { id: testId });
   ok(!akte.verlauf.some(e => e.id === v1.id), 'verworfener Eintrag fehlt in der Akte');
+  await abgelehnt('vorschlag_stand', { id: v1.id, stand: 'x', by: BY }, 409, /schon entschieden/, 'Stand-Vorschlag auf einem entschiedenen Eintrag');
 
   console.log('== Einwurf mit KI ==');
   const e1 = await api('einwurf_add', { text: 'V31-Probe: Telefonat mit Testperson, Punkt Probe ist erledigt', kanal: 'knopf', von: 'Alex', by: BY, source_ref: `probe:v31:${LAUF}:1` });
@@ -244,7 +247,9 @@ try {
     if (!echt0) throw new Error('kein Anfangszustand, Vergleich nicht möglich');
     const echt1 = await schnappschuss();
     const geaendert = Object.keys(echt0).filter(k => echt0[k] !== echt1[k]);
-    ok(!geaendert.length, 'echte Akten unverändert (Felder, Punkte, Verlauf, Themen, Kandidaten, Einwürfe)', geaendert);
+    /* Bei einem Unterschied sagen, welcher Teil der Akte abweicht: v Felder, p Punkte, e Verlauf, t Themen, k Kandidaten, w Einwürfe. */
+    const teile = geaendert.map(k => { const a = JSON.parse(echt0[k]), b = JSON.parse(echt1[k]); return k + ':' + Object.keys(a).filter(x => JSON.stringify(a[x]) !== JSON.stringify(b[x])).join('+'); });
+    ok(!geaendert.length, 'echte Akten unverändert (Felder, Punkte, Verlauf, Themen, Kandidaten, Einwürfe)', teile);
     ok(!(await api('vorhaben_list')).vorhaben.some(v => TEST.includes(v.slug)), 'kein Testvorhaben unter den aktiven');
   } catch (e) { fehler++; console.log('  ✕ Aufräumen: ' + e.message); }
 }

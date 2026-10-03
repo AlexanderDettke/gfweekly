@@ -753,7 +753,8 @@ const GF_EW_KANAL={ knopf:"Knopf", sprache:"Sprache", cowork:"Cowork", whatsapp:
    o.kopf: Zusatzzeile (etwa „1 von 3“), o.weiter: Rückruf für „Später“ und nach jeder Entscheidung in der Warteschlange. */
 async function gfEinwurf(o={}){
   const m=gfEwModal(); const frei=gfModalAuf(m);
-  const S={ schritt:o.einwurf?2:1, ew:o.einwurf||null, ziel:o.einwurf?.vorhaben_id||o.vorhaben_id||null, bearbeiten:false, text:"", fehler:"", laedt:false, ki_fehler:"", ben:null, aus:null, aendern:false };
+  /* text: Eingabe in Schritt 1; vtext: bearbeiteter Verlaufstext in Schritt 2 (null = noch nicht angefasst, "" = bewusst geleert). */
+  const S={ schritt:o.einwurf?2:1, ew:o.einwurf||null, ziel:o.einwurf?.vorhaben_id||o.vorhaben_id||null, bearbeiten:false, text:"", vtext:null, fehler:"", laedt:false, ki_fehler:"", ben:null, aus:null, aendern:false };
   let liste=[]; try{ liste=await gfVhListe(true); }catch(e){}
   const vhVon=id=>liste.find(v=>v.id===id)||null;
   const vhSlug=s=>liste.find(v=>v.slug===s)||null;
@@ -782,7 +783,7 @@ async function gfEinwurf(o={}){
     } else {
       const vl=v&&v.verlauf||{}; const vert=(v&&v.vertraulich)||[];
       const zeigeText=S.bearbeiten || !istPassend || vert.includes("verlauf") || !v || !vl.text;
-      const textWert=S.text || (istPassend&&vl.text) || S.ew.text;
+      const textWert=S.vtext!==null ? S.vtext : ((istPassend&&vl.text) || S.ew.text);
       const zeilen=[];
       if(v && istPassend){
         zeilen.push(["verlauf", `Eintrag in den Verlauf · ${gfEsc(GF_VH_ART[vl.art]||vl.art||"Notiz")} · ${gfEsc(vl.wer||S.ew.von)}`, true]);
@@ -822,7 +823,7 @@ async function gfEinwurf(o={}){
     const t1=m.querySelector("#gfEwText"); if(t1){ t1.oninput=()=>{ S.text=t1.value; }; if(!S.laedt) setTimeout(()=>t1.focus(),30); }
     const z1=m.querySelector("#gfEwZiel1"); if(z1) z1.addEventListener("change",()=>{ S.ziel=z1.value||null; });
     const z2=m.querySelector("#gfEwZiel2"); if(z2) z2.addEventListener("change",()=>neuesZiel(z2.value));
-    const vt=m.querySelector("#gfEwVerlauf"); if(vt) vt.oninput=()=>{ S.text=vt.value; };
+    const vt=m.querySelector("#gfEwVerlauf"); if(vt) vt.oninput=()=>{ S.vtext=vt.value; };
     const st=m.querySelector("#gfEwSchritt"); if(st) st.oninput=()=>{ S.schritt_text=st.value; };
     const bn=m.querySelector("#gfEwBen"); if(bn) bn.addEventListener("change",()=>{ S.ben=bn.value; });
     m.querySelectorAll("[data-aus]").forEach(c=>c.onchange=()=>{ const k=c.dataset.aus;
@@ -841,7 +842,7 @@ async function gfEinwurf(o={}){
     const text=(S.text||"").trim(); if(!text){ S.fehler="Bitte kurz aufschreiben, was passiert ist."; render(); return; }
     S.fehler=""; S.laedt=true; render();
     try{ const d=await gfApi("einwurf_add",{ text, kanal:"knopf", von:gfWho(), vorhaben_id:S.ziel||undefined, by:gfWho() });
-      S.ew=d.einwurf; S.ki_fehler=d.ki_fehler||""; S.ziel=S.ew.vorhaben_id||vsZiel()||S.ziel; S.schritt=2; S.text=""; S.aus=null; S.ben=null; }
+      S.ew=d.einwurf; S.ki_fehler=d.ki_fehler||""; S.ziel=S.ew.vorhaben_id||vsZiel()||S.ziel; S.schritt=2; S.text=""; S.vtext=null; S.aus=null; S.ben=null; }
     catch(e){ S.fehler="Nicht gespeichert: "+(e.message||"Verbindung"); }
     S.laedt=false; render();
   }
@@ -849,7 +850,8 @@ async function gfEinwurf(o={}){
      Ohne Vorschlag (KI ausgefallen) gilt die Wahl von Hand sofort; die KI fragt nur, wer „Vorschlag holen“ drückt. */
   async function neuesZiel(id){
     if(!id||id===S.ziel){ S.aendern=false; render(); return; }
-    S.ziel=id; S.aendern=false; S.ben="morgen";
+    /* Bearbeitungen gehörten zum alten Ziel: Text und nächster Schritt fallen zurück auf den neuen Vorschlag. */
+    S.ziel=id; S.aendern=false; S.ben="morgen"; S.vtext=null; S.schritt_text=null; S.bearbeiten=false;
     if(!vs()){ render(); return; }
     await vorschlagHolen();
   }
@@ -876,8 +878,13 @@ async function gfEinwurf(o={}){
       if(r.uebersprungen?.length) setTimeout(()=>gfToast("Nicht übernommen: "+r.uebersprungen.join("; ")),2700);
       GF_VH_LISTE=null; zu(); if(o.onDone) o.onDone(r); if(o.weiter) o.weiter("uebernommen"); try{ gfVhBadge(); }catch(e){}
     }catch(e){ S.laedt=false; S.fehler=e.message||"Nicht übernommen";
-      /* Konflikt (Vorschlag neu, Ball gewandert): Einwurf und Vorhaben frisch laden, die Haken neu setzen. */
-      if(/inzwischen|geändert/.test(S.fehler)){ try{ liste=await gfVhListe(true); const l=(await gfApi("einwurf_list",{ status:"alle" })).einwuerfe||[]; const neu=l.find(x=>x.id===S.ew.id); if(neu){ S.ew=neu; S.aus=null; S.ben=null; } S.fehler+=" Der Einwurf ist neu geladen, bitte die Haken prüfen."; }catch(x){} }
+      /* Konflikt (Vorschlag neu, Ball gewandert): Einwurf gezielt und Vorhaben frisch laden; Übernehmen bleibt bis dahin gesperrt. */
+      if(/inzwischen|geändert/.test(S.fehler)){ S.laedt=true; render();
+        try{ liste=await gfVhListe(true); const l=(await gfApi("einwurf_list",{ status:"alle", id:S.ew.id })).einwuerfe||[];
+          if(l[0]){ S.ew=l[0]; S.aus=null; S.ben=null; S.fehler+=" Der Einwurf ist neu geladen, bitte die Haken prüfen."; }
+          else S.fehler+=" Der Einwurf ließ sich nicht neu laden; bitte den Dialog schließen und neu öffnen."; }
+        catch(x){ S.fehler+=" Neu laden misslang: "+(x.message||"Verbindung")+". Bitte den Dialog neu öffnen."; }
+        S.laedt=false; }
       render(); }
   }
   async function verwerfen(){
