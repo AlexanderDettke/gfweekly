@@ -122,7 +122,7 @@ function renderSeit(){
   for(const e of SEIT.eintraege||[]){ if(!gruppen.has(e.vorhaben_id)) gruppen.set(e.vorhaben_id,[]); gruppen.get(e.vorhaben_id).push(e); }
   const zeilen=[...gruppen.entries()].map(([id,es])=>({ v:vh.get(id), es, neu:es[0].created_at })).filter(z=>z.v)
     .sort((a,b)=>b.neu.localeCompare(a.neu));
-  const wann=gfVhSeen()?`seit ${gfNewsWhen(SEIT.seit)}`:"24 Stunden";
+  const wann=(gfVhSeen()?`seit ${gfNewsWhen(SEIT.seit)}`:"24 Stunden")+(SEIT.gekuerzt?" · nicht alles geladen":"");
   $("#fdSeitN").textContent=wann;
   ok.hidden=!zeilen.length;
   if(!zeilen.length){ $("#fdSeitL").innerHTML=`<p class="fd-empty">Nichts Neues in den Vorhaben (${wann}).</p>`; return; }
@@ -137,7 +137,13 @@ function renderSeit(){
     </a>`; }).join("")+(rest?`<a class="fd-more" href="vorhaben.html?filter=bewegt">und ${rest} weitere Vorhaben →</a>`:"");
   gfStagger($("#fdSeitL"),".fd-row");
 }
-document.getElementById("fdSeitOk").addEventListener("click",()=>{ gfVhMarkSeen(new Date().toISOString()); SEIT={ seit:new Date().toISOString(), eintraege:[], vorhaben:SEIT?.vorhaben||[] }; renderSeit(); gfToast("Alles gesehen"); });
+/* „Alles gesehen“ setzt den Zeitpunkt auf jetzt, bei einer gekürzten Liste nur bis zum ältesten geladenen Eintrag,
+   damit nichts aus dem Fenster fällt, was nie zu sehen war. */
+document.getElementById("fdSeitOk").addEventListener("click",async()=>{
+  const l=SEIT?.eintraege||[]; const bis=SEIT?.gekuerzt&&l.length?l[l.length-1].created_at:new Date().toISOString();
+  gfVhMarkSeen(bis);
+  if(SEIT?.gekuerzt){ gfToast("Gesehen bis "+gfNewsWhen(bis)+", weitere Einträge folgen"); try{ SEIT=await gfApi("vorhaben_seit",{ seit:bis, person:gfWho() }); }catch(e){} renderSeit(); return; }
+  SEIT={ seit:bis, eintraege:[], vorhaben:SEIT?.vorhaben||[] }; renderSeit(); gfToast("Alles gesehen"); });
 
 /* ---- Block 1 ---- */
 function renderEnt(){

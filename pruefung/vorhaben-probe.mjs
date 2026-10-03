@@ -48,7 +48,7 @@ async function testVorhaben(slug, titel) {
   return r.vorhaben;
 }
 
-let testId = null, zielId = null, absenceId = null, echt0 = null;
+let testId = null, zielId = null, absenceId = null, absenceId2 = null, echt0 = null;
 const LAUF = Date.now().toString(36);   // Kennung dieses Laufs in source_ref der Einwürfe
 try {
   console.log('== Grundlage ==');
@@ -219,7 +219,7 @@ try {
   }
   /* Zweite Abwesenheit: wer den Ball während der Vertretung von Hand bewegt, behält ihn, auch bei erneuter Bestätigung. */
   const ab2 = await api('absence_set', { person: 'Lea', von, bis, art: 'geplant', kontakt: 'keiner', vertretung_standard: 'Alex', test: true, note: 'V31-Probe', who: 'Alex' });
-  const absence2 = ab2.absence.id;
+  const absence2 = ab2.absence.id; absenceId2 = absence2;
   const z2 = (await api('handover_list', { absence_id: absence2 })).items.find(x => x.kind === 'vorhaben' && x.ref_id === testId);
   if (z2) {
     await api('handover_set', { id: z2.id, ampel: 'gruen', vertretung: 'Alex', by: BY });
@@ -235,7 +235,9 @@ try {
 } finally {
   console.log('== Aufräumen ==');
   try {
-    if (absenceId) { try { await api('absence_end', { id: absenceId, by: BY }); } catch (e) {} }
+    for (const id of [absenceId, absenceId2].filter(Boolean)) { try { await api('absence_end', { id, by: BY }); } catch (e) {} }
+    const uebrig = (await api('absence_list', { include_test: true })).absences.filter(a => a.test && a.note === 'V31-Probe' && a.status !== 'beendet');
+    ok(!uebrig.length, 'keine offene Testabwesenheit der Probe', uebrig.map(a => a.id));
     for (const id of [testId, zielId].filter(Boolean)) {
       const akte = await api('vorhaben_get', { id });
       for (const w of akte.einwuerfe) await api('einwurf_verwerfen', { id: w.id, by: BY });

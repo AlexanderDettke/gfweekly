@@ -1192,6 +1192,14 @@ async function vhPunktToggle(id: string, erledigt: boolean, by: string, quelle?:
 }
 
 /* ----- Einwurf: KI-Vorschlag, streng geprüft ----- */
+/* Mitternacht eines Berliner Kalendertags als UTC-Zeitpunkt (Sommer- und Winterzeit). */
+function berlinMitternacht(tag: string){
+  for (const off of ['+02:00', '+01:00']) {
+    const d = new Date(tag + 'T00:00:00' + off);
+    if (d.toLocaleString('sv-SE', { timeZone:'Europe/Berlin' }).startsWith(tag + ' 00:00')) return d.toISOString();
+  }
+  return tag + 'T00:00:00Z';
+}
 function vhHeuteText(){
   const d = new Date();
   return d.toLocaleDateString('de-DE', { timeZone:'Europe/Berlin', weekday:'long', day:'2-digit', month:'2-digit', year:'numeric' })
@@ -2748,7 +2756,7 @@ Deno.serve(async (req: Request) => {
       let q = admin.from('hh_vorhaben_lage').select('*').order('sort').order('title');
       if (t.status !== 'alle') q = q.in('status', ['aktiv','pausiert']);
       const heute = heuteBerlin();
-      let qa = admin.from('gfweekly_absences').select('id,person,von,bis,bis_geschaetzt,status,vertretung_standard,test').in('status', ['geplant','aktiv']).order('von');
+      let qa = admin.from('gfweekly_absences').select('id,person,von,bis,bis_geschaetzt,status,vertretung_standard,test,note').in('status', ['geplant','aktiv']).order('von');
       if (!t.include_test) qa = qa.eq('test', false);
       const [vh, rows, items, meta, abs, ew] = await Promise.all([
         q,
@@ -3082,17 +3090,24 @@ Deno.serve(async (req: Request) => {
       for (const r of [ho, zr, gebunden]) if (r.error) throw r.error;
       const ids = [...new Set([...(ho.data || []).map((r: any) => r.ref_id), ...(zr.data || []).map((r: any) => r.vorhaben_id), ...(gebunden.data || []).map((r: any) => r.id)])];
       if (!ids.length) return json({ absence, vorhaben: [] });
-      const [vh, vl] = await Promise.all([
-        admin.from('hh_vorhaben_lage').select('id,slug,title,ball,ball_name,stand,naechster_schritt,frist_massgeblich,zustand,absence_id').in('id', ids),
-        admin.from('hh_vorhaben_verlauf').select('id,vorhaben_id,happened_at,art,wer,text,tag').in('vorhaben_id', ids).eq('status', 'bestaetigt')
-          .gte('happened_at', addDays(absence.von, -1) + 'T22:00:00Z').order('happened_at', { ascending:false }).limit(500),
-      ]);
-      if (vh.error) throw vh.error; if (vl.error) throw vl.error;
+      const vh = await admin.from('hh_vorhaben_lage').select('id,slug,title,ball,ball_name,stand,naechster_schritt,frist_massgeblich,zustand,absence_id').in('id', ids);
+      if (vh.error) throw vh.error;
+      /* Seit Mitternacht Berliner Zeit am ersten Tag der Abwesenheit; seitenweise bis 5.000 Einträge, darüber „gekuerzt“. */
+      const beginn = berlinMitternacht(absence.von);
+      const vl: any[] = []; let gekuerzt = false;
+      for (let von = 0; von < 5000; von += 1000) {
+        const { data, error } = await admin.from('hh_vorhaben_verlauf').select('id,vorhaben_id,happened_at,art,wer,text,tag').in('vorhaben_id', ids).eq('status', 'bestaetigt')
+          .gte('happened_at', beginn).order('happened_at', { ascending:false }).order('id').range(von, von + 999);
+        if (error) throw error;
+        vl.push(...(data || []));
+        if ((data || []).length < 1000) break;
+        if (von + 1000 >= 5000) gekuerzt = true;
+      }
       const liste = (vh.data || []).map((v: any) => ({ ...v,
         korb: (ho.data || []).find((r: any) => r.ref_id === v.id) || null,
         zurueck: (zr.data || []).find((r: any) => r.vorhaben_id === v.id) || null,
-        verlauf: (vl.data || []).filter((e: any) => e.vorhaben_id === v.id) }));
-      return json({ absence, vorhaben: liste });
+        verlauf: vl.filter((e: any) => e.vorhaben_id === v.id) }));
+      return json({ absence, vorhaben: liste, beginn, gekuerzt });
     }
 
     return json({ error:'unknown action' }, 400);

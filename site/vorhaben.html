@@ -483,7 +483,7 @@ async function vhUebergabe(){
       fuss=`<button type="button" class="btn btn-brand" data-ue-zurueck>Zurück</button>${l.length?`<button type="button" class="btn btn-primary" id="vhUeOk" style="margin-left:auto" ${S.laedt?"disabled":""}>Übergabe senden</button>`:""}`;
     } else if(!S.abw && !S.neu && laufende().length){
       unter=S.anlass==="urlaub"?"Urlaub":"Krank";
-      body=`<p class="vh-dlg-t">Für welche Abwesenheit?</p><div class="vh-ue-anlass">${laufende().map(a=>`<button type="button" class="vh-ue-a" data-abw="${gfEsc(a.id)}"><b>${gfEsc(gfVhTag(a.von))}${a.bis?" bis "+gfEsc(gfVhTag(a.bis)):a.bis_geschaetzt?" bis voraussichtlich "+gfEsc(gfVhTag(a.bis_geschaetzt)):""}</b><span>${a.status==="aktiv"?"läuft":"geplant"}${a.vertretung_standard?" · Vertretung "+gfEsc(a.vertretung_standard):""}</span></button>`).join("")}
+      body=`<p class="vh-dlg-t">Für welche Abwesenheit?</p><div class="vh-ue-anlass">${laufende().map(a=>`<button type="button" class="vh-ue-a" data-abw="${gfEsc(a.id)}"><b>${gfEsc(gfVhTag(a.von))}${a.bis?" bis "+gfEsc(gfVhTag(a.bis)):a.bis_geschaetzt?" bis voraussichtlich "+gfEsc(gfVhTag(a.bis_geschaetzt)):""}</b><span>${a.status==="aktiv"?"läuft":"geplant"}${a.note?" · "+gfEsc(a.note):""}${a.vertretung_standard?" · Vertretung "+gfEsc(a.vertretung_standard):""}</span></button>`).join("")}
         <button type="button" class="vh-ue-a" data-abw-neu><b>Neue Abwesenheit anlegen</b><span>mit eigenem Zeitraum</span></button></div>`;
       fuss=`<button type="button" class="btn btn-brand" data-ue-zurueck>Zurück</button>`;
     } else if(!S.abw){
@@ -533,8 +533,8 @@ async function vhUebergabe(){
   async function waehleAnlass(k){
     S.anlass=k; S.fehler="";
     if(k==="schicht"){ render(); return; }
-    const l=laufende(); if(l.length===1){ S.laedt=true; render(); await korb(l[0]); S.laedt=false; }
-    else if(!l.length && k==="krank") S.form.von=heute;
+    /* Keine Abwesenheit wird von selbst genommen: gibt es welche, wählt die Person aus (mit Zeitraum und Anlass), sonst legt sie an. */
+    if(!laufende().length && k==="krank") S.form.von=heute;
     render();
   }
   async function korb(a){
@@ -588,7 +588,9 @@ async function vhUebergabe(){
     S.laedt=true; S.fehler=""; render();
     try{ const d=await gfApi("handover_set_many",{ items, by:ich });
       S.laedt=false;
-      if(!d.ok){ S.fehler=`${d.misslungen.length} nicht gespeichert: `+d.misslungen.map(x=>`${x.titel||"Zeile"} (${x.grund})`).join("; ")+". Der Korb ist neu geladen."; S.wahl={}; await korb(S.abw); render(); return; }
+      if(!d.ok){ S.fehler=`${d.updated} gespeichert, ${d.misslungen.length} nicht: `+d.misslungen.map(x=>`${x.titel||"Zeile"} (${x.grund})`).join("; ")+". Der Korb ist neu geladen, bitte die offenen Zeilen neu wählen.";
+        /* Alles aus dem frischen Korb: frühere Wahlen und Namen gelten nicht weiter, sonst überschriebe ein alter Teamname eine neue Entscheidung. */
+        S.wahl={}; S.name={}; S.init={}; await korb(S.abw); render(); return; }
       zu(); gfToast(`${d.updated} Vorhaben übergeben.`+(S.rest?" Den Rest des Korbs in der Übergabe entscheiden.":"")); await laden(true);
     }catch(e){ S.laedt=false; S.fehler="Nicht gespeichert: "+(e.message||"Verbindung"); render(); }
   }

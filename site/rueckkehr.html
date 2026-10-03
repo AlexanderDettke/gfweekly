@@ -145,19 +145,22 @@ async function load(){
   const [l, p]=await Promise.all([ gfApi("handover_list",{ absence_id:ABSENCE.id }), gfApi("handover_log",{ absence_id:ABSENCE.id }).catch(()=>({log:[]})) ]);
   ITEMS=l.items||[]; LOG=p.log||[];
   renderKopf(); renderKpis(); renderEnt(); renderWartet();
-  ladeVorhaben();
+  await ladeVorhaben();
 }
 /* V31d · „Deine Vorhaben zurück“: je Vorhaben, ob der Ball zurück ist oder noch bei der Vertretung liegt (Rückgabe mit
    der Rückübergabe), und was seit Beginn der Abwesenheit im Verlauf steht, höchstens fünf Einträge, der Rest in der Akte. */
 async function ladeVorhaben(){
   $("#vhSec").hidden=false; $("#vhList").innerHTML=`<div class="loading" role="status">lädt …</div>`;
+  /* Bestätigen erst, wenn „Deine Vorhaben zurück“ zu sehen ist. */
+  const end=$("#endBtn"); end.disabled=true; end.title="Erst laden die Vorhaben";
   let d; try{ d=await gfApi("vorhaben_rueckkehr",{ absence_id:ABSENCE.id }); }
   catch(e){ $("#vhList").innerHTML=`<div class="empty soft" role="alert">Die Vorhaben ließen sich nicht laden: ${gfEsc(e.message||"Verbindung")}. Vor der Rückübergabe bitte <button type="button" class="btn btn-sm btn-ghost" id="vhNochmal">noch einmal laden</button></div>`;
-    $("#vhNochmal").onclick=ladeVorhaben; return; }
+    $("#vhNochmal").onclick=ladeVorhaben; end.title="Die Vorhaben ließen sich nicht laden, bitte erst neu laden"; return; }
+  end.disabled=false; end.title="";
   const l=d.vorhaben||[]; $("#vhN").textContent=l.length||"";
   if(!l.length){ $("#vhList").innerHTML=`<div class="empty soft">Kein Vorhaben ist wegen dieser Abwesenheit gewandert oder hat geruht.</div>`; return; }
   const z=k=>l.filter(k).length;
-  const kurz=`<p class="fd-muted">${z(v=>v.zurueck)} zurückgegeben · ${z(v=>!v.zurueck&&v.absence_id)} noch in Vertretung · ${z(v=>v.korb&&v.korb.ampel==="ruht")} haben geruht</p>`;
+  const kurz=`<p class="fd-muted">${d.gekuerzt?"Nicht alle Einträge geladen. ":""}${z(v=>v.zurueck)} zurückgegeben · ${z(v=>!v.zurueck&&v.absence_id)} noch in Vertretung · ${z(v=>v.korb&&v.korb.ampel==="ruht")} haben geruht</p>`;
   $("#vhList").innerHTML=kurz+l.map(v=>{
     const zurueck=v.zurueck?gfZustand("ok","Ball zurück bei "+gfVhBallWort(v.ball,v.ball_name)):v.absence_id?gfZustand("warn","noch bei "+gfVhBallWort(v.ball,v.ball_name)+", zurück mit der Rückübergabe"):gfZustand("info","Ball bei "+gfVhBallWort(v.ball,v.ball_name));
     const ruhte=v.korb&&v.korb.ampel==="ruht"?gfZustand("offen","hat geruht"):"";

@@ -384,6 +384,8 @@ const vhVerlauf = [
   { id:'e3', vorhaben_id:'vh-xceed', happened_at:zeit(-1), art:'uebergabe', wer:'Alex', text:'Ball von Alex an Lea', tag:null, status:'bestaetigt', source_ref:null, source_url:null, created_at:zeit(-1) },
   { id:'e4', vorhaben_id:'vh-xceed', happened_at:zeit(-9), art:'entscheidung', wer:'Alex und Lea', text:'XCeed wird Ticketanbieter.', tag:'Entscheidung', status:'bestaetigt', source_ref:'seed:2', source_url:null, created_at:zeit(-9) },
 ];
+/* Schalter für Fehlerwege in den Bedienproben. */
+export const SCHALTER = { rueckkehrFehler:false };
 export const VH_ANTWORT = {
   vorhaben_list: () => ({ stand:zeit(0), heute, vorhaben:VORHABEN, metaphase:{ title:'Analyse und Retro', starts_on:tag(-12), ends_on:tag(12) },
     abwesenheiten:[A1].map(a=>({ id:a.id, person:a.person, von:a.von, bis:a.bis, bis_geschaetzt:a.bis_geschaetzt, status:a.status, vertretung_standard:a.vertretung_standard, test:a.test })),
@@ -394,7 +396,7 @@ export const VH_ANTWORT = {
     eintraege:[ { id:'s1', vorhaben_id:'vh-lusatia', happened_at:zeit(-0.1), created_at:zeit(-0.1), art:'uebergabe', wer:'Lea', text:'Ball von Lea an Alex. Seite ist fast fertig.', created_by:'Lea' },
                 { id:'s2', vorhaben_id:'vh-lusatia', happened_at:zeit(-0.3), created_at:zeit(-0.3), art:'system', wer:'Lea', text:'Stand: Website als Prototyp', created_by:'Lea' },
                 { id:'s3', vorhaben_id:'vh-xceed', happened_at:zeit(-0.5), created_at:zeit(-0.5), art:'mail', wer:'Niclaas an Lea', text:'Bürgschaftstext kommt heute Nacht.', created_by:'abgleich-lea' } ] }),
-  vorhaben_rueckkehr: () => ({ absence:A3, vorhaben:[ { ...VORHABEN[0], ball:'alex', absence_id:null, korb:{ ref_id:'vh-xceed', ampel:'gruen', vertretung:'Lea', status:'bestaetigt' },
+  vorhaben_rueckkehr: () => SCHALTER.rueckkehrFehler ? { __status:500, error:'Verbindung' } : ({ absence:A3, vorhaben:[ { ...VORHABEN[0], ball:'alex', absence_id:null, korb:{ ref_id:'vh-xceed', ampel:'gruen', vertretung:'Lea', status:'bestaetigt' },
     zurueck:{ vorhaben_id:'vh-xceed', text:'Zurück nach der Abwesenheit von Alex: Ball von Lea an Alex', happened_at:zeit(-1) },
     verlauf:[ { id:'r1', vorhaben_id:'vh-xceed', happened_at:zeit(-3), art:'telefon', wer:'Lea mit Victor', text:'Tranche bestätigt.' } ] } ] }),
   /* Ballwechsel wie das Backend: veralteter Ball ergibt 409, sonst wird wirklich geschrieben. */

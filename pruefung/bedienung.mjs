@@ -9,7 +9,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODUL || 'playwright');
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ANTWORT, FALLBACK, SCHREIBEND, TPA, zuruecksetzen } from './testdaten.mjs';
+import { ANTWORT, FALLBACK, SCHREIBEND, TPA, zuruecksetzen, SCHALTER } from './testdaten.mjs';
 
 const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'site');
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8',
@@ -385,7 +385,15 @@ console.log('\n== Für dich, Übergabe, Rückkehr (V31d) ==');
   const r = await seite('/rueckkehr.html?id=abs-3');
   pruefe('Rückkehr hat „Deine Vorhaben zurück“', await r.locator('#vhSec').isVisible() && (await r.locator('#vhList').innerText()).includes('Ball zurück bei Alex'));
   pruefe('mit den Einträgen seit Beginn der Abwesenheit', (await r.locator('#vhList').innerText()).includes('Tranche bestätigt'));
+  pruefe('Rückübergabe ist bedienbar, sobald die Vorhaben geladen sind', !(await r.locator('#endBtn').isDisabled()));
   await r.close();
+  SCHALTER.rueckkehrFehler = true; erwarteterFehler = true;
+  const r2 = await seite('/rueckkehr.html?id=abs-3');
+  pruefe('Ladefehler: Hinweis mit Neuladen, Rückübergabe gesperrt', (await r2.locator('#vhList').innerText()).includes('noch einmal laden') && await r2.locator('#endBtn').isDisabled());
+  SCHALTER.rueckkehrFehler = false;
+  await r2.locator('#vhNochmal').click(); await r2.waitForTimeout(400);
+  pruefe('nach erfolgreichem Neuladen wieder bedienbar', !(await r2.locator('#endBtn').isDisabled()));
+  erwarteterFehler = false; await r2.close();
 
   /* Übergabe-Dialog als Lea: Feierabend, dann Urlaub mit der laufenden Abwesenheit. */
   frisch();
@@ -409,8 +417,10 @@ console.log('\n== Für dich, Übergabe, Rückkehr (V31d) ==');
       && sw.nutzlast.eintraege.filter(e => e.ball === 'alex').length === 2 && sw.nutzlast.eintraege.some(e => e.ball === 'lea' && e.notiz === 'nur zur Info')
       && sw.nutzlast.eintraege.some(e => e.notiz === 'Bürgschaft liegt im Ordner'), JSON.stringify(sw && sw.nutzlast).slice(0, 300));
   await p.locator('#vhUebergabe').click(); await p.waitForTimeout(150);
-  await p.locator('[data-anlass="urlaub"]').click(); await p.waitForTimeout(400);
-  pruefe('Urlaub nimmt die laufende Abwesenheit und zeigt die Vorhaben-Zeile', await p.locator('.vh-ue-z').count() === 1 && (await p.locator('.vh-ue').innerText()).includes('weitere Einträge im Korb'));
+  await p.locator('[data-anlass="urlaub"]').click(); await p.waitForTimeout(200);
+  pruefe('Urlaub fragt nach der Abwesenheit, auch wenn es nur eine gibt', await p.locator('[data-abw]').count() === 1 && await p.locator('[data-abw-neu]').count() === 1);
+  await p.locator('[data-abw]').click(); await p.waitForTimeout(400);
+  pruefe('Urlaub nimmt die gewählte Abwesenheit und zeigt die Vorhaben-Zeile', await p.locator('.vh-ue-z').count() === 1 && (await p.locator('.vh-ue').innerText()).includes('weitere Einträge im Korb'));
   await p.locator('.vh-ue-z [data-v="team"]').click();
   await p.locator('#vhUeSenden').click(); await p.waitForTimeout(150);
   pruefe('Team ohne Namen wird nicht gesendet', !letzte('handover_set_many') && (await p.locator('.vh-ew-fehler').count()) === 1);
@@ -422,7 +432,8 @@ console.log('\n== Für dich, Übergabe, Rückkehr (V31d) ==');
   /* Bestätigte Zeile unverändert: nichts wird gesendet. */
   gesendet.length = 0;
   await p.locator('#vhUebergabe').click(); await p.waitForTimeout(150);
-  await p.locator('[data-anlass="urlaub"]').click(); await p.waitForTimeout(400);
+  await p.locator('[data-anlass="urlaub"]').click(); await p.waitForTimeout(200);
+  await p.locator('[data-abw]').click(); await p.waitForTimeout(400);
   pruefe('bestätigte Zeile zeigt ihren Stand', (await p.locator('.vh-ue-z').innerText()).includes('entschieden'));
   await p.locator('#vhUeSenden').click(); await p.waitForTimeout(300);
   pruefe('unveränderte bestätigte Zeile wird nicht gesendet', !letzte('handover_set_many'));
