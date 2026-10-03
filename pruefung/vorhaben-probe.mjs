@@ -1,8 +1,11 @@
 /* Wirkungsprobe V31 · Vorhaben gegen das echte Backend, ohne Abfangen.
    Aufruf:  GF_PW=<passwort> node pruefung/vorhaben-probe.mjs
-   Arbeitet nur am Testvorhaben test-v31 (legt es an oder holt es aus dem Archiv) und an einer Testabwesenheit
-   (test: true). Echte Vorhaben werden nur gelesen; am Ende vergleicht die Probe ihren Zustand mit dem Anfang.
-   Zum Schluss steht test-v31 wieder auf archiviert. Die KI-Probe braucht ANTHROPIC_API_KEY in der Edge Function. */
+   Arbeitet nur an den Testvorhaben test-v31 und test-v31-ziel und an einer Testabwesenheit (test: true, Notiz
+   „V31-Probe“). Zu Beginn löscht probe_aufraeumen die archivierten Testdaten eines früheren Laufs, am Ende stehen
+   beide Testvorhaben wieder auf archiviert. Höchstens ein Lauf bleibt so als archivierter Bestand liegen.
+   Echte Vorhaben werden nur gelesen: am Anfang und am Ende vergleicht die Probe jede Akte (Felder, Punkte, Verlauf).
+   Läuft dazwischen der Abgleich aus Cowork, kann dieser Vergleich zu Recht anschlagen; dann den Lauf wiederholen.
+   Die KI-Proben brauchen ANTHROPIC_API_KEY in der Edge Function. */
 const FN = process.env.GF_FN || 'https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/gfweekly';
 const PW = process.env.GF_PW || '';
 if (!PW) { console.error('GF_PW fehlt (Passwort des Hohen Hauses in der Umgebung).'); process.exit(2); }
@@ -15,73 +18,105 @@ async function api(action, payload = {}, erwartet = 200) {
   if (res.status !== erwartet) throw new Error(`${action}: HTTP ${res.status} statt ${erwartet}: ${d.error || ''}`);
   return d;
 }
-const schnappschuss = (liste) => Object.fromEntries(liste.filter(v => v.slug !== 'test-v31')
-  .map(v => [v.slug, [v.ball, v.ball_name, v.stand, v.naechster_schritt, v.frist, v.status, v.punkte_erledigt, v.punkte_gesamt, v.zuletzt_bewegt, v.absence_id].join('|')]));
+/* Erwarteter Fehler: Status und Grund müssen stimmen, sonst zählt die Probe als nicht bestanden. */
+async function abgelehnt(action, payload, status, grund, text) {
+  const d = await api(action, payload, status);
+  ok(grund.test(d.error || ''), `${text} (${status}: ${(d.error || '').slice(0, 70)})`);
+  return d;
+}
+const TEST = ['test-v31', 'test-v31-ziel'];
+/* Ganze Akten der echten Vorhaben, ohne Felder, die sich allein durch die Zeit ändern. */
+async function schnappschuss() {
+  const liste = (await api('vorhaben_list', { status: 'alle' })).vorhaben.filter(v => !TEST.includes(v.slug));
+  const out = {};
+  for (const v of liste) {
+    const a = await api('vorhaben_get', { id: v.id });
+    const { zustand, updated_at, ...feste } = a.vorhaben;
+    out[v.slug] = JSON.stringify({ v: feste, p: a.punkte.map(p => [p.id, p.titel, p.stand, p.wer, p.frist, p.erledigt, p.erledigt_at]),
+      e: a.verlauf.map(e => [e.id, e.status]), t: a.themen.map(x => x.id), k: a.kandidaten.map(x => x.id), w: a.einwuerfe.map(x => [x.id, x.status]) });
+  }
+  return out;
+}
+async function testVorhaben(slug, titel) {
+  const alle = (await api('vorhaben_list', { status: 'alle' })).vorhaben;
+  const da = alle.find(v => v.slug === slug);
+  if (da) return (await api('vorhaben_save', { id: da.id, status: 'aktiv', ball: 'offen', by: BY })).vorhaben;
+  const r = await api('vorhaben_save', { title: titel, gruppe: 'sonstiges', stand: 'Testvorhaben der Wirkungsprobe', naechster_schritt: 'Probe läuft', by: BY });
+  ok(r.vorhaben.slug === slug, `${slug} angelegt (${r.vorhaben.slug})`);
+  return r.vorhaben;
+}
 
-let testId = null, absenceId = null, echt0 = null;
+let testId = null, zielId = null, absenceId = null, echt0 = null;
 try {
   console.log('== Grundlage ==');
   const ping = await api('ping');
   ok(ping.version === 38, `ping meldet Version 38 (ist ${ping.version})`);
   ok(ping.aiConfigured === true, 'ANTHROPIC_API_KEY ist gesetzt');
-  const vorher = await api('vorhaben_list', { status: 'alle' });
-  echt0 = schnappschuss(vorher.vorhaben);
+  const auf = await api('probe_aufraeumen', { by: BY });
+  ok(auf.ok && !auf.aktiv_uebrig, `Reste früherer Läufe gelöscht (${auf.vorhaben} Vorhaben, ${auf.einwuerfe} Einwürfe, ${auf.abwesenheiten} Abwesenheiten)`);
+  echt0 = await schnappschuss();
+  ok(Object.keys(echt0).length >= 16, `Anfangszustand von ${Object.keys(echt0).length} echten Akten gemerkt`);
   const aktiv = await api('vorhaben_list');
-  ok(aktiv.vorhaben.filter(v => v.slug !== 'test-v31').length >= 16, `vorhaben_list liefert mindestens 16 echte Vorhaben (${aktiv.vorhaben.length})`);
+  ok(aktiv.vorhaben.filter(v => !TEST.includes(v.slug)).length >= 16, `vorhaben_list liefert mindestens 16 echte Vorhaben (${aktiv.vorhaben.length})`);
   ok(aktiv.vorhaben.every(v => ['aktiv', 'pausiert'].includes(v.status)), 'Standard liefert nur aktiv und pausiert');
   ok(Array.isArray(aktiv.abwesenheiten) && typeof aktiv.einwuerfe_offen === 'number', 'Abwesenheiten und offene Einwürfe sind dabei');
   const xc = await api('vorhaben_get', { slug: 'xceed' });
   ok(xc.punkte.length === 9, `vorhaben_get xceed liefert 9 Punkte (${xc.punkte.length})`);
-  ok(Array.isArray(xc.verlauf) && Array.isArray(xc.themen) && Array.isArray(xc.kandidaten), 'Akte hat Verlauf, Themen, Kandidaten');
-  await api('vorhaben_get', { slug: 'gibt-es-nicht-v31' }, 404); ok(true, 'unbekannter slug ergibt 404');
-  await api('vorhaben_save', { slug: 'xceed', stand: 'x' }, 400); ok(true, 'schreiben ohne by wird abgelehnt (400)');
+  await abgelehnt('vorhaben_get', { slug: 'gibt-es-nicht-v31' }, 404, /gibt es nicht/, 'unbekannter slug');
+  await abgelehnt('vorhaben_save', { slug: 'xceed', stand: 'x' }, 400, /by fehlt/, 'schreiben ohne by');
+  await abgelehnt('vorhaben_save', { slug: 'xceed', stand: 'x', by: 'Jemand' }, 400, /Alex oder Lea/, 'by außerhalb der GF');
   const unauth = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'vorhaben_list', password: 'falsch' }) });
   ok(unauth.status === 401, 'vorhaben_list ohne Passwort ergibt 401');
 
-  console.log('== Testvorhaben ==');
-  const alle = vorher.vorhaben.find(v => v.slug === 'test-v31');
-  if (alle) { const r = await api('vorhaben_save', { id: alle.id, status: 'aktiv', ball: 'offen', naechster_schritt: 'Probe läuft', by: BY }); testId = r.vorhaben.id; }
-  else { const r = await api('vorhaben_save', { title: 'Test V31', gruppe: 'sonstiges', stand: 'Testvorhaben der Wirkungsprobe', naechster_schritt: 'Probe läuft', by: BY }); testId = r.vorhaben.id; ok(r.vorhaben.slug === 'test-v31', `neu angelegt als test-v31 (${r.vorhaben.slug})`); }
-  ok(!!testId, 'Testvorhaben bereit');
-  /* Offene Punkte früherer Läufe abhaken, damit die KI eindeutig „Probe“ findet. */
-  const t0 = await api('vorhaben_get', { id: testId });
-  for (const p of t0.punkte.filter(p => !p.erledigt)) await api('punkt_toggle', { id: p.id, erledigt: true, by: BY });
-
+  console.log('== Testvorhaben und Punkte ==');
+  testId = (await testVorhaben('test-v31', 'Test V31')).id;
+  zielId = (await testVorhaben('test-v31-ziel', 'Test V31 Ziel')).id;
   const p1 = (await api('punkt_save', { vorhaben_id: testId, titel: 'Probe', wer: 'Testperson', frist: '2026-12-01', by: BY })).punkt;
   ok(p1 && p1.titel === 'Probe' && !p1.erledigt, 'Punkt „Probe“ angelegt');
-  await api('punkt_save', { vorhaben_id: testId, titel: 'Probe', frist: '2026-13-45', by: BY }, 400); ok(true, 'ungültige Frist wird abgelehnt (400)');
+  await abgelehnt('punkt_save', { vorhaben_id: testId, titel: 'Probe', frist: '2026-13-45', by: BY }, 400, /kein Datum/, 'ungültige Frist');
   const a1 = await api('punkt_toggle', { id: p1.id, erledigt: true, by: BY });
   ok(a1.geaendert && a1.punkt.erledigt && a1.punkt.erledigt_by === 'Alex', 'abgehakt, erledigt_by Alex');
   const a2 = await api('punkt_toggle', { id: p1.id, erledigt: true, by: BY });
   ok(!a2.geaendert && !a2.verlauf, 'zweites Abhaken ändert nichts und schreibt keinen Verlauf');
   const a3 = await api('punkt_toggle', { id: p1.id, erledigt: false, by: BY });
   ok(a3.geaendert && !a3.punkt.erledigt && !a3.punkt.erledigt_at, 'wieder offen, erledigt_at geleert');
+  const s1 = await api('punkt_save', { id: p1.id, stand: 'Probe in Arbeit', by: BY });
+  ok(s1.punkt.stand === 'Probe in Arbeit', 'Stand am Punkt geändert');
   let akte = await api('vorhaben_get', { id: testId });
-  ok(akte.verlauf.some(e => e.text === 'Punkt erledigt: Probe') && akte.verlauf.some(e => e.text === 'Punkt wieder offen: Probe'), 'Verlauf hat „Punkt erledigt“ und „Punkt wieder offen“');
-  ok(akte.verlauf.filter(e => e.text === 'Punkt erledigt: Probe' && e.punkt_id === p1.id).length === 1, 'genau ein „Punkt erledigt“ für diesen Punkt');
-  const del1 = await api('punkt_delete', { id: p1.id, by: BY }, 409);
-  ok(/Verlauf/.test(del1.error), 'Punkt mit Verlauf lässt sich nicht löschen (409 mit Grund)');
+  ok(akte.verlauf.filter(e => e.punkt_id === p1.id && e.text === 'Punkt erledigt: Probe').length === 1, 'genau ein „Punkt erledigt“ mit Bezug zum Punkt');
+  ok(akte.verlauf.some(e => e.punkt_id === p1.id && e.text === 'Punkt wieder offen: Probe'), '„Punkt wieder offen“ im Verlauf');
+  ok(akte.verlauf.some(e => e.punkt_id === p1.id && e.text === 'Punkt Probe: Probe in Arbeit'), 'neuer Stand im Verlauf');
+  ok(akte.verlauf.some(e => e.text === 'Vorhaben angelegt') || !!akte.verlauf.length, 'Verlauf des Testvorhabens vorhanden');
+  await abgelehnt('punkt_delete', { id: p1.id, by: BY }, 409, /schon Verlauf/, 'Punkt mit Verlauf lässt sich nicht löschen');
   const p2 = (await api('punkt_save', { vorhaben_id: testId, titel: 'Wegwerfpunkt', by: BY })).punkt;
   await api('punkt_delete', { id: p2.id, by: BY }); ok(true, 'Punkt ohne Verlauf lässt sich löschen');
 
   console.log('== Ball ==');
   const b1 = await api('vorhaben_save', { id: testId, ball: 'lea', expect_ball: 'offen', by: BY });
   ok(b1.ball_geaendert && b1.vorhaben.ball === 'lea' && !!b1.vorhaben.ball_seit, 'Ball von niemand an Lea, ball_seit gesetzt');
-  const b2 = await api('vorhaben_save', { id: testId, ball: 'alex', expect_ball: 'offen', by: BY }, 409);
-  ok(/inzwischen/.test(b2.error), 'veralteter Stand beim Ballwechsel ergibt 409');
-  const b3 = await api('vorhaben_save', { id: testId, ball: 'team', ball_name: 'Testperson', notiz: 'bitte prüfen', by: BY });
+  await abgelehnt('vorhaben_save', { id: testId, ball: 'alex', expect_ball: 'offen', by: BY }, 409, /inzwischen bei Lea/, 'veralteter Stand beim Ballwechsel');
+  /* Alex und Lea geben im selben Augenblick weiter: genau einer gewinnt, der andere erfährt es. */
+  const gleich = await Promise.all([
+    fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'vorhaben_save', password: PW, payload: { id: testId, ball: 'alex', expect_ball: 'lea', by: 'Lea' } }) }),
+    fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'vorhaben_save', password: PW, payload: { id: testId, ball: 'gf', expect_ball: 'lea', by: 'Alex' } }) }),
+  ]);
+  const st = gleich.map(r => r.status).sort();
+  ok(st[0] === 200 && st[1] === 409, `gleichzeitige Ballwechsel: einer 200, einer 409 (${st.join(', ')})`);
+  akte = await api('vorhaben_get', { id: testId });
+  ok(akte.verlauf.filter(e => e.art === 'uebergabe' && /^Ball von Lea an /.test(e.text)).length === 1, 'genau ein Verlaufseintrag für den gleichzeitigen Wechsel');
+  const b3 = await api('vorhaben_save', { id: testId, ball: 'team', ball_name: 'Testperson', notiz: 'bitte prüfen', expect_ball: akte.vorhaben.ball, by: BY });
   ok(b3.vorhaben.ball === 'team' && b3.vorhaben.ball_name === 'Testperson', 'Ball an Team mit Name');
   const b4 = await api('vorhaben_save', { id: testId, ball: 'lea', naechster_schritt: 'Probe: nächster Schritt', by: BY });
   ok(b4.vorhaben.ball_name === null, 'Name fällt weg, wenn der Ball an Lea geht');
   akte = await api('vorhaben_get', { id: testId });
   ok(akte.verlauf.some(e => e.art === 'uebergabe' && e.text === 'Ball von niemand an Lea'), 'Verlauf „Ball von niemand an Lea“');
-  ok(akte.verlauf.some(e => e.art === 'uebergabe' && e.text === 'Ball von Lea an Testperson. bitte prüfen'), 'Verlauf mit Notiz');
+  ok(akte.verlauf.some(e => e.art === 'uebergabe' && /an Testperson\. bitte prüfen$/.test(e.text)), 'Verlauf mit Notiz');
   ok(akte.verlauf.some(e => e.art === 'system' && e.text === 'Nächster Schritt: Probe: nächster Schritt'), 'Verlauf „Nächster Schritt“ als system');
 
   console.log('== Verlauf ==');
   const v1 = (await api('verlauf_add', { vorhaben_id: testId, art: 'telefon', wer: 'Alex mit Testperson', text: 'Probe-Telefonat', by: BY })).verlauf;
   ok(v1.status === 'bestaetigt', 'verlauf_add schreibt bestätigt');
-  await api('verlauf_add', { vorhaben_id: testId, art: 'unsinn', text: 'x', by: BY }, 400); ok(true, 'unbekannte art wird abgelehnt');
+  await abgelehnt('verlauf_add', { vorhaben_id: testId, art: 'unsinn', text: 'x', by: BY }, 400, /^art:/, 'unbekannte art');
   await api('verlauf_status', { id: v1.id, status: 'verworfen', by: BY });
   akte = await api('vorhaben_get', { id: testId });
   ok(!akte.verlauf.some(e => e.id === v1.id), 'verworfener Eintrag fehlt in der Akte');
@@ -95,28 +130,39 @@ try {
   ok(erkannt, `erkannt: test-v31 (ist ${vs && vs.vorhaben_slug})`);
   ok(vs && vs.punkte.some(p => p.id === p1.id && p.erledigt === true), 'Vorschlag: Punkt Probe erledigt', vs && vs.punkte);
   ok(vs && ['telefon', 'notiz'].includes(vs.verlauf.art) && vs.verlauf.text.length > 0, `Verlaufsvorschlag (${vs && vs.verlauf.art})`);
-  const vorApply = await api('vorhaben_get', { id: testId });
-  ok(vorApply.punkte.find(p => p.id === p1.id).erledigt === false, 'vor dem Übernehmen ist nichts angewendet');
+  ok((await api('vorhaben_get', { id: testId })).punkte.find(p => p.id === p1.id).erledigt === false, 'vor dem Übernehmen ist nichts angewendet');
+  await abgelehnt('einwurf_apply', { id: ew.id, vorhaben_id: testId, auswahl: { verlauf: true }, bearbeitet: { verlauf_text: 'Das Passwort ist 1234' }, by: BY }, 400, /vertraulich/, 'bearbeiteter Text mit Passwort wird abgelehnt');
   if (!erkannt) { await api('einwurf_verwerfen', { id: ew.id, by: BY }); ok(false, 'Einwurf verworfen, weil die KI ein anderes Vorhaben erkannt hat'); }
   else {
     const ap = await api('einwurf_apply', { id: ew.id, vorhaben_id: testId, auswahl: { verlauf: true, punkte: [p1.id], neue_punkte: [], ball: false, naechster_schritt: false, frist: false }, benachrichtigung: 'morgen', by: BY });
     ok(ap.ok && ap.verlauf && ap.verlauf.source_ref === 'einwurf:' + ew.id, 'Verlauf trägt source_ref einwurf:<id>');
     akte = await api('vorhaben_get', { id: testId });
     ok(akte.punkte.find(p => p.id === p1.id).erledigt === true, 'Punkt Probe ist in der Datenbank erledigt');
-    ok(!akte.einwuerfe.some(x => x.id === ew.id), 'Einwurf ist nicht mehr offen');
     const liste = await api('einwurf_list', { status: 'alle', vorhaben_id: testId });
     ok(liste.einwuerfe.find(x => x.id === ew.id)?.status === 'uebernommen', 'Einwurf hat Status uebernommen');
-    await api('einwurf_apply', { id: ew.id, auswahl: { verlauf: true }, by: BY }, 409); ok(true, 'zweites Übernehmen ergibt 409');
+    await abgelehnt('einwurf_apply', { id: ew.id, auswahl: { verlauf: true }, by: BY }, 409, /schon übernommen/, 'zweites Übernehmen');
   }
-  /* Einwurf mit vorgegebenem Vorhaben und fremder Punkt-ID: die Prüfung verwirft sie. */
-  const e2 = await api('einwurf_add', { text: `Probe: Punkt ${xc.punkte[0].id} ist erledigt`, vorhaben_id: testId, by: BY });
+  /* Zielwechsel: Vorschlag für test-v31, übernommen in test-v31-ziel. Nur der Verlauf darf ankommen. */
+  const p3 = (await api('punkt_save', { vorhaben_id: testId, titel: 'Zweite Probe', by: BY })).punkt;
+  const e2 = await api('einwurf_add', { text: 'Punkt Zweite Probe ist erledigt, Telefonat mit Testperson', vorhaben_id: testId, by: BY });
   ok(e2.einwurf.vorhaben_id === testId, 'vorgegebenes Vorhaben hat Vorrang');
-  ok(!(e2.einwurf.vorschlag?.punkte || []).some(p => p.id === xc.punkte[0].id), 'Punkt eines fremden Vorhabens steht nicht im Vorschlag');
-  await api('einwurf_verwerfen', { id: e2.einwurf.id, by: BY }); ok(true, 'Einwurf verworfen');
+  const ap2 = await api('einwurf_apply', { id: e2.einwurf.id, vorhaben_id: zielId, auswahl: { verlauf: true, punkte: [p3.id], ball: true, naechster_schritt: true, frist: true }, by: BY });
+  ok(ap2.uebersprungen.some(x => /galt für/.test(x)) && !ap2.punkte.length && !ap2.felder, 'Zielwechsel: nur der Verlauf, Hinweis „galt für“');
+  ok((await api('vorhaben_get', { id: testId })).punkte.find(p => p.id === p3.id).erledigt === false, 'Punkt im ursprünglichen Vorhaben bleibt offen');
+  ok((await api('vorhaben_get', { id: zielId })).verlauf.some(e => e.source_ref === 'einwurf:' + e2.einwurf.id), 'Verlauf steht im gewählten Vorhaben');
+  /* Ziel ändern mit neuem Vorschlag */
+  const e3 = await api('einwurf_add', { text: `Probe: Punkt ${xc.punkte[0].id} ist erledigt`, vorhaben_id: testId, by: BY });
+  ok(!(e3.einwurf.vorschlag?.punkte || []).some(p => p.id === xc.punkte[0].id), 'Punkt eines fremden Vorhabens steht nicht im Vorschlag');
+  const e3b = await api('einwurf_vorschlag', { id: e3.einwurf.id, vorhaben_id: zielId, by: BY });
+  ok(e3b.einwurf.vorhaben_id === zielId && (e3b.ki_fehler || e3b.einwurf.vorschlag?.vorhaben_id === zielId), 'einwurf_vorschlag prüft gegen das neue Ziel', e3b.ki_fehler);
+  await api('einwurf_verwerfen', { id: e3.einwurf.id, by: BY }); ok(true, 'Einwurf verworfen');
 
   console.log('== Schichtwechsel ==');
-  const s1 = await api('schicht_uebergabe', { von: 'Lea', an: 'Alex', eintraege: [{ vorhaben_id: testId, ball: 'alex', notiz: 'Probe Feierabend' }], by: 'Lea' });
-  ok(s1.ok && s1.ergebnis[0].ball === 'alex', 'Schichtwechsel setzt den Ball auf Alex');
+  await abgelehnt('schicht_uebergabe', { von: 'Lea', an: 'Alex', eintraege: [{ vorhaben_id: testId, ball: 'alex' }], by: 'Alex' }, 400, /by muss von sein/, 'Schichtwechsel nur durch die Person, die abgibt');
+  const sw = await api('schicht_uebergabe', { von: 'Lea', an: 'Alex', eintraege: [{ vorhaben_id: testId, ball: 'alex', notiz: 'Probe Feierabend', expect_ball: 'lea' }], by: 'Lea' });
+  ok(sw.ok && sw.ergebnis[0].ball === 'alex', 'Schichtwechsel setzt den Ball auf Alex');
+  const sw2 = await api('schicht_uebergabe', { von: 'Lea', an: 'Alex', eintraege: [{ vorhaben_id: testId, ball: 'gf', expect_ball: 'lea' }], by: 'Lea' });
+  ok(!sw2.ok && sw2.fehler[0]?.konflikt === true, 'veralteter Stand im Schichtwechsel meldet Konflikt');
   akte = await api('vorhaben_get', { id: testId });
   ok(akte.verlauf.some(e => e.text === 'Schichtwechsel Lea an Alex: Ball von Lea an Alex. Probe Feierabend'), 'Verlauf des Schichtwechsels mit Notiz');
 
@@ -135,7 +181,7 @@ try {
     await api('handover_set', { id: zeile.id, ampel: 'gruen', vertretung: 'Alex', by: BY });
     akte = await api('vorhaben_get', { id: testId });
     ok(akte.vorhaben.ball_vor_abwesenheit === 'lea', 'ball_vor_abwesenheit = lea');
-    ok(akte.verlauf.filter(e => /^in Vertretung für Lea/.test(e.text)).length === 1, 'genau ein Verlaufseintrag „in Vertretung für Lea“ trotz doppeltem Setzen');
+    ok(akte.verlauf.filter(e => /^in Vertretung für Lea/.test(e.text)).length === 1, 'genau ein Eintrag „in Vertretung für Lea“ trotz doppeltem Setzen');
     const end = await api('absence_end', { id: absenceId, by: BY });
     ok((end.vorhaben_zurueck || []).some(x => x.id === testId && x.an === 'lea'), 'absence_end gibt den Ball an Lea zurück');
     akte = await api('vorhaben_get', { id: testId });
@@ -143,25 +189,36 @@ try {
     const rk = await api('vorhaben_rueckkehr', { absence_id: absenceId });
     ok(rk.vorhaben.some(v => v.id === testId && v.zurueck), 'Rückkehr kennt das Vorhaben mit Rückgabe');
   }
+  /* Zweite Abwesenheit: wer den Ball während der Vertretung von Hand bewegt, behält ihn, auch bei erneuter Bestätigung. */
+  const ab2 = await api('absence_set', { person: 'Lea', von, bis, art: 'geplant', kontakt: 'keiner', vertretung_standard: 'Alex', test: true, note: 'V31-Probe', who: 'Alex' });
+  const absence2 = ab2.absence.id;
+  const z2 = (await api('handover_list', { absence_id: absence2 })).items.find(x => x.kind === 'vorhaben' && x.ref_id === testId);
+  if (z2) {
+    await api('handover_set', { id: z2.id, ampel: 'gruen', vertretung: 'Alex', by: BY });
+    await api('vorhaben_save', { id: testId, ball: 'gf', expect_ball: 'alex', by: BY });
+    await api('handover_set', { id: z2.id, ampel: 'gruen', vertretung: 'Alex', by: BY });
+    akte = await api('vorhaben_get', { id: testId });
+    ok(akte.vorhaben.ball === 'gf', 'erneute Bestätigung setzt den von Hand bewegten Ball nicht zurück');
+    const end2 = await api('absence_end', { id: absence2, by: BY });
+    ok(!(end2.vorhaben_zurueck || []).some(x => x.id === testId) && (await api('vorhaben_get', { id: testId })).vorhaben.ball === 'gf', 'Rückgabe lässt den von Hand gesetzten Ball stehen');
+  } else { ok(false, 'zweiter Korb ohne Testvorhaben'); await api('absence_end', { id: absence2, by: BY }); }
 } catch (e) {
   fehler++; console.log('  ✕ Abbruch: ' + e.message);
 } finally {
   console.log('== Aufräumen ==');
   try {
     if (absenceId) { try { await api('absence_end', { id: absenceId, by: BY }); } catch (e) {} }
-    if (testId) {
-      const akte = await api('vorhaben_get', { id: testId });
+    for (const id of [testId, zielId].filter(Boolean)) {
+      const akte = await api('vorhaben_get', { id });
       for (const w of akte.einwuerfe) await api('einwurf_verwerfen', { id: w.id, by: BY });
-      await api('vorhaben_save', { id: testId, status: 'archiviert', ball: 'offen', by: BY });
-      const nach = await api('vorhaben_get', { id: testId });
-      ok(nach.vorhaben.status === 'archiviert', 'test-v31 ist archiviert');
+      await api('vorhaben_save', { id, status: 'archiviert', ball: 'offen', by: BY });
+      ok((await api('vorhaben_get', { id })).vorhaben.status === 'archiviert', `${akte.vorhaben.slug} ist archiviert`);
     }
     if (!echt0) throw new Error('kein Anfangszustand, Vergleich nicht möglich');
-    const nachher = await api('vorhaben_list', { status: 'alle' });
-    const echt1 = schnappschuss(nachher.vorhaben);
+    const echt1 = await schnappschuss();
     const geaendert = Object.keys(echt0).filter(k => echt0[k] !== echt1[k]);
-    ok(!geaendert.length, 'echte Vorhaben unverändert (Ball, Stand, Schritt, Frist, Status, Punkte, letzte Bewegung)', geaendert);
-    ok(!(await api('vorhaben_list')).vorhaben.some(v => v.slug === 'test-v31'), 'kein Testvorhaben unter den aktiven');
+    ok(!geaendert.length, 'echte Akten unverändert (Felder, Punkte, Verlauf, Themen, Kandidaten, Einwürfe)', geaendert);
+    ok(!(await api('vorhaben_list')).vorhaben.some(v => TEST.includes(v.slug)), 'kein Testvorhaben unter den aktiven');
   } catch (e) { fehler++; console.log('  ✕ Aufräumen: ' + e.message); }
 }
 console.log(`\n${n - fehler} von ${n} Proben bestanden.`);

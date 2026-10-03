@@ -1144,14 +1144,20 @@ async function vhLese(ref: string){
   if (!data) throw new VhFehler('Vorhaben ' + ref + ' gibt es nicht', 404);
   return data;
 }
-async function vhSave(id: string, patch: Record<string, unknown>, by: string, notiz?: string | null, anlass?: string | null){
-  const { data, error } = await admin.rpc('hh_vorhaben_save', { p_id: id, p_patch: patch, p_by: by, p_notiz: notiz || null, p_anlass: anlass || null });
+/* Datenbankfunktionen der Vorhaben melden Eingabefehler mit PT400, PT404, PT409 (PostgREST antwortet mit diesem
+   HTTP-Status); daraus wird hier ein VhFehler mit demselben Status. */
+async function vhRpc(name: string, args: Record<string, unknown>){
+  const { data, error } = await admin.rpc(name, args);
   if (error) {
-    if (error.code === 'PT409' || /inzwischen/.test(error.message || '')) throw new VhFehler(error.message, 409);
+    const m = /^PT(\d{3})$/.exec(error.code || '');
+    if (m) throw new VhFehler(error.message, parseInt(m[1]));
     if (error.code === 'P0002') throw new VhFehler(error.message, 404);
     throw error;
   }
-  return data as { vorhaben: any, ball_geaendert: boolean, verlauf: number };
+  return data as any;
+}
+async function vhSave(id: string, patch: Record<string, unknown>, by: string, notiz?: string | null, anlass?: string | null){
+  return await vhRpc('hh_vorhaben_save', { p_id: id, p_patch: patch, p_by: by, p_notiz: notiz || null, p_anlass: anlass || null }) as { vorhaben: any, ball_geaendert: boolean, verlauf: number };
 }
 async function vhVerlaufAdd(row: Record<string, unknown>){
   const { data, error } = await admin.from('hh_vorhaben_verlauf').insert(row).select().single();
@@ -1169,20 +1175,9 @@ async function vhSlug(title: string){
 /* Abhaken und Wieder-Öffnen. Nur wer den Zustand wirklich ändert, schreibt Verlauf: ein doppelter Klick oder
    Alex und Lea gleichzeitig ergeben einen Eintrag, nicht zwei. */
 async function vhPunktToggle(id: string, erledigt: boolean, by: string, quelle?: string | null){
-  const jetzt = new Date().toISOString();
-  const { data, error } = await admin.from('hh_vorhaben_punkte')
-    .update({ erledigt, erledigt_at: erledigt ? jetzt : null, erledigt_by: erledigt ? by : null })
-    .eq('id', id).eq('erledigt', !erledigt).select().maybeSingle();
-  if (error) throw error;
-  if (!data) {
-    const { data: da, error: e2 } = await admin.from('hh_vorhaben_punkte').select('*').eq('id', id).maybeSingle();
-    if (e2) throw e2;
-    if (!da) throw new VhFehler('Punkt ' + id + ' gibt es nicht', 404);
-    return { punkt: da, geaendert: false, verlauf: null };
-  }
-  const verlauf = await vhVerlaufAdd({ vorhaben_id: data.vorhaben_id, punkt_id: data.id, art: 'system', wer: by,
-    text: (erledigt ? 'Punkt erledigt: ' : 'Punkt wieder offen: ') + data.titel, source_ref: quelle || null, created_by: by });
-  return { punkt: data, geaendert: true, verlauf };
+  /* Punkt und Verlauf in einer Transaktion (hh_punkt_toggle, Review 31a Befund 4). */
+  if (!VH_UUID.test(id)) throw new VhFehler('Punkt ' + id + ' gibt es nicht', 404);
+  return await vhRpc('hh_punkt_toggle', { p_id: id, p_erledigt: erledigt, p_by: by, p_quelle: quelle || null });
 }
 
 /* ----- Einwurf: KI-Vorschlag, streng geprüft ----- */
@@ -1245,6 +1240,12 @@ Regeln:
     return { roh: tool.input, model };
   } finally { clearTimeout(timer); }
 }
+/* Vertraulichkeit (Review 31a Befund 7): Texte der KI, die nach Zugangsdaten, Konto- oder Kartennummern oder
+   Gesundheit und Befinden aussehen, werden nicht übernommen. Der Verlaufstext bleibt leer und ist als vertraulich
+   markiert; einwurf_apply verlangt dann einen bearbeiteten Text. Das ist ein Wortfilter, kein Verständnis: er fängt
+   die offensichtlichen Fälle, nicht jede Umschreibung. */
+const VH_VERTRAULICH = /(passwort|kennwort|zugangsdaten|\bpin\b|\btan\b|\biban\b|\bDE\d{2}(?:\s?\d{4}){4}|\b(?:\d{4}[ -]?){3}\d{4}\b|krank|diagnose|therapie|psychisch|depress|burn-?out|schwanger|\barzt|klinik|gesundheit|befinden)/i;
+function vhVertraulich(x: unknown){ return typeof x === 'string' && VH_VERTRAULICH.test(x); }
 /* Die Antwort der KI gilt als fremde Eingabe: jedes Feld wird geprüft, Unbekanntes verworfen und benannt. */
 function einwurfPruefen(roh: any, kontext: any[], vorgabeId: string | null, person: string){
   const verworfen: string[] = [];
@@ -1285,8 +1286,16 @@ function einwurfPruefen(roh: any, kontext: any[], vorgabeId: string | null, pers
   if (naechster_schritt && vh && naechster_schritt === (vh.naechster_schritt || '').trim()) naechster_schritt = null;
   const benachrichtigung = roh?.benachrichtigung === 'sofort' ? 'sofort' : 'morgen';
   if (!vh) { punkte.length = 0; neue.length = 0; ball = null; frist = null; naechster_schritt = null; }
+  const vertraulich: string[] = [];
+  if (vhVertraulich(verlauf.text) || vhVertraulich(verlauf.wer) || vhVertraulich(verlauf.tag)) {
+    vertraulich.push('verlauf'); verlauf.text = ''; verlauf.tag = null; if (vhVertraulich(verlauf.wer)) verlauf.wer = person;
+    verworfen.push('Der Verlaufstext enthält möglicherweise vertrauliche Angaben und muss bearbeitet werden');
+  }
+  for (const p of punkte) if (vhVertraulich(p.stand)) { p.stand = null; vertraulich.push('punkt:' + p.id); verworfen.push(`Stand zu „${p.titel}“ möglicherweise vertraulich, weggelassen`); }
+  for (let i = neue.length - 1; i >= 0; i--) if (vhVertraulich(neue[i].titel) || vhVertraulich(neue[i].wer)) { verworfen.push('ein neuer Punkt war möglicherweise vertraulich und ist weggelassen'); vertraulich.push('neuer_punkt'); neue.splice(i, 1); }
+  if (vhVertraulich(naechster_schritt)) { naechster_schritt = null; vertraulich.push('naechster_schritt'); verworfen.push('Nächster Schritt möglicherweise vertraulich, weggelassen'); }
   return { vorhaben_id: vh?.id || null, vorhaben_slug: vh?.slug || null, vorhaben_titel: vh?.title || null, sicherheit,
-    verlauf, punkte, neue_punkte: neue, ball, ball_name, naechster_schritt, frist, benachrichtigung, verworfen };
+    verlauf, punkte: punkte.filter(p => p.stand || p.erledigt), neue_punkte: neue, ball, ball_name, naechster_schritt, frist, benachrichtigung, verworfen, vertraulich };
 }
 
 /* ----- Übergabe: Vorhaben als Korbzeilen ----- */
@@ -2785,14 +2794,11 @@ Deno.serve(async (req: Request) => {
       let neu: any = null;
       for (let versuch = 0; versuch < 3 && !neu; versuch++) {
         const slug = await vhSlug(patch.title as string);
-        const row: Record<string, unknown> = { gruppe:'sonstiges', ball:'offen', ...patch, slug, updated_by: by };
-        if (row.ball && row.ball !== 'offen') row.ball_seit = new Date().toISOString();
-        const { data, error } = await admin.from('hh_vorhaben').insert(row).select().single();
+        const { data, error } = await admin.rpc('hh_vorhaben_neu', { p_row: { ...patch, slug }, p_by: by, p_notiz: notiz });
         if (error && error.code === '23505') continue;   // slug gleichzeitig vergeben: neuer Versuch
-        if (error) throw error; neu = data;
+        if (error) throw error; neu = (data as any).vorhaben;
       }
       if (!neu) return json({ error:'Kein freier slug gefunden' },409);
-      await vhVerlaufAdd({ vorhaben_id: neu.id, art:'system', wer: by, text: 'Vorhaben angelegt' + (notiz ? ': ' + notiz : ''), created_by: by });
       return json({ vorhaben: await vhLese(neu.id), angelegt: true });
     }
     if (action === 'punkt_save') {
@@ -2806,11 +2812,8 @@ Deno.serve(async (req: Request) => {
         const { data: alt, error: e0 } = await admin.from('hh_vorhaben_punkte').select('*').eq('id', t.id).maybeSingle();
         if (e0) throw e0; if (!alt) return json({ error:'Punkt gibt es nicht' },404);
         if (!Object.keys(patch).length) return json({ error:'nichts zu ändern' },400);
-        const { data, error } = await admin.from('hh_vorhaben_punkte').update(patch).eq('id', t.id).select().single(); if (error) throw error;
-        /* Ein neuer Stand ist Bewegung im Vorhaben und gehört in den Verlauf. */
-        if (patch.stand !== undefined && (patch.stand || '') !== (alt.stand || ''))
-          await vhVerlaufAdd({ vorhaben_id: data.vorhaben_id, punkt_id: data.id, art:'system', wer: by, text: `Punkt ${data.titel}: ${data.stand || 'Stand gestrichen'}`, created_by: by });
-        return json({ punkt: data });
+        /* Ein neuer Stand ist Bewegung im Vorhaben und gehört in den Verlauf, im selben Zug wie die Änderung. */
+        return json(await vhRpc('hh_punkt_save', { p_id: alt.id, p_patch: patch, p_by: by }));
       }
       if (!t.vorhaben_id || !patch.titel) return json({ error:'vorhaben_id und titel fehlen' },400);
       const v = await vhLese(t.vorhaben_id.toString());
@@ -2852,20 +2855,10 @@ Deno.serve(async (req: Request) => {
     if (action === 'verlauf_status') {
       const by = vhBy(t);
       if (!t.id || !['bestaetigt','verworfen'].includes(t.status)) return json({ error:'id und status (bestaetigt|verworfen) fehlen' },400);
-      const { data: alt, error: e0 } = await admin.from('hh_vorhaben_verlauf').select('*').eq('id', t.id).maybeSingle();
-      if (e0) throw e0; if (!alt) return json({ error:'Eintrag gibt es nicht' },404);
-      const { data, error } = await admin.from('hh_vorhaben_verlauf').update({ status: t.status }).eq('id', t.id).select().single(); if (error) throw error;
-      /* Übernimmt jemand einen Vorschlag des Abgleichs „Punkt erledigt“, wird der Punkt auch abgehakt. Die Punkt-ID steht
-         im source_ref (abgleich:<person>:vorschlag:<Punkt-ID>:<Quelle>), so legt docs/ABGLEICH-VORHABEN.md es fest. */
-      let angewendet: any = null;
-      if (alt.status === 'vorschlag' && t.status === 'bestaetigt' && /^Vorschlag: Punkt erledigt/i.test(alt.tag || '')) {
-        const m = (alt.source_ref || '').match(/vorschlag:([0-9a-f-]{36})/i);
-        if (m) {
-          const { data: p } = await admin.from('hh_vorhaben_punkte').select('id,vorhaben_id').eq('id', m[1]).maybeSingle();
-          if (p && p.vorhaben_id === alt.vorhaben_id) angewendet = await vhPunktToggle(p.id, true, by, null);
-        }
-      }
-      return json({ verlauf: data, angewendet });
+      if (!VH_UUID.test(String(t.id))) return json({ error:'Eintrag gibt es nicht' },404);
+      /* Übernimmt jemand einen Vorschlag des Abgleichs „Punkt erledigt“, hakt hh_verlauf_status den Punkt im selben Zug ab.
+         Die Punkt-ID steht im source_ref (abgleich:<person>:vorschlag:<Punkt-ID>:<Quelle>), so legt docs/ABGLEICH-VORHABEN.md es fest. */
+      return json(await vhRpc('hh_verlauf_status', { p_id: t.id, p_status: t.status, p_by: by }));
     }
     if (action === 'vorhaben_verknuepfen') {
       vhBy(t);
@@ -2900,83 +2893,50 @@ Deno.serve(async (req: Request) => {
       return json({ einwurf, ki_fehler });
     }
     if (action === 'einwurf_apply') {
-      const by = vhBy(t); if (!t.id) return json({ error:'id fehlt' },400);
-      const { data: ew, error: e0 } = await admin.from('hh_einwurf').select('*').eq('id', t.id).maybeSingle();
+      /* Alles oder nichts in hh_einwurf_apply (Review 31a Befunde 1 und 2). Hier wird nur das Ziel bestimmt und die
+         Bearbeitung geprüft. Gilt der Vorschlag für ein anderes Vorhaben, übernimmt die Funktion nur den Verlaufseintrag. */
+      const by = vhBy(t); if (!t.id || !VH_UUID.test(String(t.id))) return json({ error:'id fehlt' },400);
+      const { data: ew, error: e0 } = await admin.from('hh_einwurf').select('id,vorhaben_id,vorschlag,status').eq('id', t.id).maybeSingle();
       if (e0) throw e0; if (!ew) return json({ error:'Einwurf gibt es nicht' },404);
-      if (!['neu','vorgeschlagen'].includes(ew.status)) return json({ error:`Der Einwurf ist schon ${ew.status === 'uebernommen' ? 'übernommen' : 'verworfen'}.` },409);
-      const vs: any = ew.vorschlag || null;
-      const zielRef = (t.vorhaben_id || ew.vorhaben_id || vs?.vorhaben_id || '').toString();
+      const zielRef = (t.vorhaben_id || ew.vorhaben_id || ew.vorschlag?.vorhaben_id || '').toString();
       if (!zielRef) return json({ error:'Bitte ein Vorhaben wählen.' },400);
       const vh = await vhLese(zielRef);
-      const a = t.auswahl || {}; const bearbeitet = t.bearbeitet || {};
-      const jetzt = new Date().toISOString();
-      /* Erst den Einwurf für sich beanspruchen: wer zweimal tippt oder gleichzeitig übernimmt, wendet nichts doppelt an. */
-      const { data: claim, error: ce } = await admin.from('hh_einwurf')
-        .update({ status:'uebernommen', vorhaben_id: vh.id, entschieden_by: by, entschieden_at: jetzt })
-        .eq('id', ew.id).in('status', ['neu','vorgeschlagen']).select().maybeSingle();
-      if (ce) throw ce; if (!claim) return json({ error:'Der Einwurf wurde gerade schon entschieden.' },409);
-      const erg: any = { verlauf:null, punkte:[], neue_punkte:[], felder:null, ticker:null, uebersprungen:[] };
-      const quelle = 'einwurf:' + ew.id;
-      try {
-        if (!vs || a.verlauf) {
-          const art = ew.kanal === 'mail' ? 'mail' : (vs?.verlauf?.art || 'einwurf');
-          const text = vhText(bearbeitet.verlauf_text, 2000) || vs?.verlauf?.text || ew.text.slice(0, 2000);
-          const row = { vorhaben_id: vh.id, art, wer: vs?.verlauf?.wer || ew.von, text, tag: vs?.verlauf?.tag || null,
-            happened_at: ew.created_at, source_ref: quelle, status:'bestaetigt', created_by: by };
-          const { error: ve } = await admin.from('hh_vorhaben_verlauf').upsert(row, { onConflict:'source_ref', ignoreDuplicates:true });
-          if (ve) throw ve;
-          const { data: vr } = await admin.from('hh_vorhaben_verlauf').select('*').eq('source_ref', quelle).maybeSingle();
-          erg.verlauf = vr;
-        }
-        if (vs && Array.isArray(a.punkte) && a.punkte.length) {
-          const { data: alle, error: pe } = await admin.from('hh_vorhaben_punkte').select('id,titel,stand,erledigt').eq('vorhaben_id', vh.id);
-          if (pe) throw pe;
-          for (const pid of a.punkte) {
-            const p = (vs.punkte || []).find((x: any) => x.id === pid); const da = (alle || []).find((x: any) => x.id === pid);
-            if (!p || !da) { erg.uebersprungen.push(`Punkt ${p?.titel || pid} gehört nicht zu ${vh.title}`); continue; }
-            if (p.stand && p.stand !== (da.stand || '')) {
-              const { error: se } = await admin.from('hh_vorhaben_punkte').update({ stand: p.stand }).eq('id', pid); if (se) throw se;
-              await vhVerlaufAdd({ vorhaben_id: vh.id, punkt_id: pid, art:'system', wer: by, text: `Punkt ${da.titel}: ${p.stand}`, created_by: by });
-            }
-            if (p.erledigt && !da.erledigt) await vhPunktToggle(pid, true, by, null);
-            erg.punkte.push(pid);
-          }
-        }
-        if (vs && Array.isArray(a.neue_punkte) && a.neue_punkte.length) {
-          const { data: letzte } = await admin.from('hh_vorhaben_punkte').select('sort').eq('vorhaben_id', vh.id).order('sort', { ascending:false }).limit(1);
-          let sort = ((letzte || [])[0]?.sort ?? 0) + 10;
-          for (const i of a.neue_punkte) {
-            const n = (vs.neue_punkte || [])[parseInt(i)]; if (!n) { erg.uebersprungen.push(`neuer Punkt Nr. ${i} fehlt im Vorschlag`); continue; }
-            const { data: np, error: ne } = await admin.from('hh_vorhaben_punkte')
-              .insert({ vorhaben_id: vh.id, titel: n.titel, wer: n.wer, frist: n.frist, quelle, sort }).select().single();
-            if (ne) throw ne; erg.neue_punkte.push(np); sort += 10;
-          }
-        }
-        const patch: Record<string, unknown> = {};
-        if (vs && a.ball && vs.ball) { patch.ball = vs.ball; patch.ball_name = ['team','extern'].includes(vs.ball) ? (vs.ball_name || null) : null; }
-        const schritt = vhText(bearbeitet.naechster_schritt, 1000) || vs?.naechster_schritt;
-        if (vs && a.naechster_schritt && schritt) patch.naechster_schritt = schritt;
-        const fristB = vhDatum(bearbeitet.frist);
-        if (vs && a.frist && (fristB || vs.frist)) patch.frist = fristB || vs.frist;
-        if (Object.keys(patch).length) erg.felder = await vhSave(vh.id, patch, by, null, 'Einwurf');
-        const ben = ['sofort','morgen'].includes(t.benachrichtigung) ? t.benachrichtigung : (vs?.benachrichtigung || 'morgen');
-        if (ben === 'sofort') {
-          const andere = by === 'Alex' ? 'Lea' : 'Alex';
-          const text = erg.verlauf?.text || ew.text;
-          const { error: te } = await admin.from('gfweekly_news').upsert({ kind:'ticker', source:'manuell', who: andere,
-            title: `${vh.title}: ${firstSentence(text, 160)}`.slice(0, 500), body: `${text}\n\nEinwurf von ${ew.von}, übernommen von ${by}.`.slice(0, 6000),
-            happened_at: jetzt, relevance:'mittel', status:'neu', source_ref: quelle, vorhaben_id: vh.id }, { onConflict:'source_ref', ignoreDuplicates:true });
-          if (te) throw te; erg.ticker = true;
-        }
-        await admin.from('hh_einwurf').update({ vorschlag: { ...(vs || {}), benachrichtigung_gewaehlt: ben,
-          angewendet: { auswahl: a, vorhaben_id: vh.id, uebersprungen: erg.uebersprungen } } }).eq('id', ew.id);
-      } catch (e) {
-        /* Teilweise angewendet: der Einwurf geht zurück in die Warteschlange, damit er nicht als erledigt gilt.
-           Verlauf und Ticker tragen den Einwurf als source_ref und entstehen beim nächsten Versuch nicht doppelt. */
-        await admin.from('hh_einwurf').update({ status: ew.status, entschieden_by: null, entschieden_at: null }).eq('id', ew.id);
-        return json({ error: 'Einwurf nur teilweise übernommen: ' + String((e as Error).message || e).slice(0,200), teilweise: erg },500);
-      }
+      const b = t.bearbeitet || {};
+      const fristB = vhDatum(b.frist); if (fristB === undefined) return json({ error:'Frist ist kein Datum (JJJJ-MM-TT)' },400);
+      const bearbeitet = { verlauf_text: vhText(b.verlauf_text, 2000) || null, naechster_schritt: vhText(b.naechster_schritt, 1000) || null, frist: fristB };
+      if (vhVertraulich(bearbeitet.verlauf_text)) return json({ error:'Der Text enthält möglicherweise vertrauliche Angaben (Zugangsdaten, Kontonummer, Gesundheit). Bitte so formulieren, dass er in die Akte darf.' },400);
+      const a = t.auswahl || {};
+      const auswahl = { verlauf: !!a.verlauf, ball: !!a.ball, naechster_schritt: !!a.naechster_schritt, frist: !!a.frist,
+        punkte: Array.isArray(a.punkte) ? a.punkte.map(String).filter((x: string) => VH_UUID.test(x)).slice(0, 50) : [],
+        neue_punkte: Array.isArray(a.neue_punkte) ? a.neue_punkte.map((x: unknown) => parseInt(String(x))).filter((x: number) => x >= 0 && x < 50) : [] };
+      const ben = ['sofort','morgen'].includes(t.benachrichtigung) ? t.benachrichtigung : null;
+      const erg = await vhRpc('hh_einwurf_apply', { p_id: ew.id, p_vorhaben: vh.id, p_auswahl: auswahl, p_bearbeitet: bearbeitet, p_benachrichtigung: ben, p_by: by });
       return json({ ok:true, vorhaben: await vhLese(vh.id), ...erg });
+    }
+    if (action === 'einwurf_vorschlag') {
+      /* Wer im Einwurf das Vorhaben ändert, bekommt einen neuen, gegen dieses Vorhaben geprüften Vorschlag. */
+      const by = vhBy(t); if (!t.id || !t.vorhaben_id) return json({ error:'id und vorhaben_id fehlen' },400);
+      const { data: ew, error: e0 } = await admin.from('hh_einwurf').select('*').eq('id', t.id).maybeSingle();
+      if (e0) throw e0; if (!ew) return json({ error:'Einwurf gibt es nicht' },404);
+      if (!['neu','vorgeschlagen'].includes(ew.status)) return json({ error:'Der Einwurf ist schon entschieden.' },409);
+      const vh = await vhLese(t.vorhaben_id.toString());
+      let ki_fehler: string | null = null; let einwurf = ew;
+      try {
+        const kontext = await vhKontext(vh.id);
+        if (!kontext.length) throw new Error('Das Vorhaben ist nicht aktiv');
+        const { roh, model } = await einwurfKI(ew.text, ew.von, kontext);
+        const vs: any = einwurfPruefen(roh, kontext, vh.id, ew.von); vs.model = model; vs.neu_geprueft_von = by;
+        const { data: up, error: ue } = await admin.from('hh_einwurf').update({ vorschlag: vs, status:'vorgeschlagen', vorhaben_id: vh.id })
+          .eq('id', ew.id).in('status', ['neu','vorgeschlagen']).select().maybeSingle();
+        if (ue) throw ue; if (!up) return json({ error:'Der Einwurf wurde gerade entschieden.' },409);
+        einwurf = up;
+      } catch (e) {
+        ki_fehler = (e as Error).name === 'AbortError' ? 'Die KI hat nicht innerhalb von 20 Sekunden geantwortet.' : String((e as Error).message || e).slice(0,300);
+        /* Ohne neuen Vorschlag gilt das gewählte Ziel trotzdem; übernommen wird dann nur der Verlaufseintrag. */
+        await admin.from('hh_einwurf').update({ vorhaben_id: vh.id }).eq('id', ew.id).in('status', ['neu','vorgeschlagen']);
+        einwurf = { ...ew, vorhaben_id: vh.id };
+      }
+      return json({ einwurf, ki_fehler });
     }
     if (action === 'einwurf_verwerfen') {
       const by = vhBy(t); if (!t.id) return json({ error:'id fehlt' },400);
@@ -2996,6 +2956,7 @@ Deno.serve(async (req: Request) => {
       const by = vhBy(t);
       const von = whoNorm(t.von), an = whoNorm(t.an);
       if (!['Alex','Lea'].includes(von) || !['Alex','Lea'].includes(an)) return json({ error:'von und an müssen Alex oder Lea sein' },400);
+      if (by !== von) return json({ error:'Übergeben kann nur, wer die Schicht abgibt (by muss von sein).' },400);
       const eintraege = Array.isArray(t.eintraege) ? t.eintraege.slice(0, 100) : [];
       if (!eintraege.length) return json({ error:'eintraege fehlen' },400);
       const ergebnis: any[] = [], fehler: any[] = [];
@@ -3007,11 +2968,33 @@ Deno.serve(async (req: Request) => {
           const patch: Record<string, unknown> = { ball: e.ball, ball_name: ['team','extern'].includes(e.ball) ? (vhText(e.ball_name, 120) || null) : null };
           const bleibt = v.ball === e.ball && (v.ball_name || '') === ((patch.ball_name as string) || '');
           const notiz = vhText(e.notiz, 1000) || (bleibt ? 'Ball bleibt bei ' + vhBallWort(v.ball, v.ball_name) : null);
+          /* Der Ball, den die Person im Dialog gesehen hat. Liegt er inzwischen woanders, meldet die Zeile 409. */
+          patch.expect_ball = VH_BALL.includes(e.expect_ball) ? e.expect_ball : v.ball;
           const r = await vhSave(v.id, patch, by, notiz, `Schichtwechsel ${von} an ${an}`);
           ergebnis.push({ vorhaben_id: v.id, title: v.title, ball: r.vorhaben.ball, ball_geaendert: r.ball_geaendert });
-        } catch (err) { fehler.push({ vorhaben_id: e?.vorhaben_id || null, grund: String((err as Error).message || err).slice(0,200) }); }
+        } catch (err) { fehler.push({ vorhaben_id: e?.vorhaben_id || null, konflikt: err instanceof VhFehler && err.status === 409, grund: String((err as Error).message || err).slice(0,200) }); }
       }
       return json({ ok: fehler.length === 0, ergebnis, fehler });
+    }
+    if (action === 'probe_aufraeumen') {
+      /* Nur für pruefung/vorhaben-probe.mjs: löscht das Testvorhaben test-v31 eines früheren Laufs (nur wenn archiviert)
+         mit Punkten, Verlauf und Einwürfen, und beendete Testabwesenheiten mit der Notiz „V31-Probe“ samt Korb.
+         Echte Vorhaben und echte Abwesenheiten erreicht diese Aktion nicht: slug, Status, test und Notiz sind fest. */
+      vhBy(t);
+      const { data: alte, error: e0 } = await admin.from('hh_vorhaben').select('id,slug,status').in('slug', ['test-v31','test-v31-ziel']);
+      if (e0) throw e0;
+      let vorhaben = 0, einwuerfe = 0, abwesenheiten = 0;
+      for (const alt of (alte || [])) {
+        if (alt.status !== 'archiviert') continue;
+        const { data: ew, error: e1 } = await admin.from('hh_einwurf').delete().eq('vorhaben_id', alt.id).select('id'); if (e1) throw e1; einwuerfe += (ew || []).length;
+        const { error: e2 } = await admin.from('gfweekly_news').delete().like('source_ref', 'einwurf:%').eq('vorhaben_id', alt.id); if (e2) throw e2;
+        const { error: e5 } = await admin.from('gfweekly_handover').delete().eq('kind', 'vorhaben').eq('ref_id', alt.id); if (e5) throw e5;
+        const { error: e3 } = await admin.from('hh_vorhaben').delete().eq('id', alt.id).in('slug', ['test-v31','test-v31-ziel']).eq('status', 'archiviert'); if (e3) throw e3; vorhaben++;
+      }
+      const alt = (alte || []).find((x: any) => x.status !== 'archiviert');
+      const { data: ab, error: e4 } = await admin.from('gfweekly_absences').delete().eq('test', true).eq('note', 'V31-Probe').eq('status', 'beendet').select('id');
+      if (e4) throw e4; abwesenheiten = (ab || []).length;
+      return json({ ok:true, vorhaben, einwuerfe, abwesenheiten, aktiv_uebrig: !!(alt && alt.status !== 'archiviert') });
     }
     if (action === 'vorhaben_rueckkehr') {
       /* Für rueckkehr.html: Vorhaben, die in dieser Abwesenheit übergeben waren oder ruhten, mit ihrem Verlauf seit Beginn. */
