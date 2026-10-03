@@ -120,11 +120,13 @@ function renderSeit(){
   const me=meWho(), vh=new Map((SEIT.vorhaben||[]).map(v=>[v.id,v]));
   const gruppen=new Map();
   for(const e of SEIT.eintraege||[]){ if(!gruppen.has(e.vorhaben_id)) gruppen.set(e.vorhaben_id,[]); gruppen.get(e.vorhaben_id).push(e); }
+  /* Was jetzt bei mir liegt und dorthin gewandert ist, steht zuerst; danach nach jüngster Bewegung. */
+  const zuMirW=(v,es)=>v.ball===me && es.some(e=>e.art==="uebergabe");
   const zeilen=[...gruppen.entries()].map(([id,es])=>({ v:vh.get(id), es, neu:es[0].created_at })).filter(z=>z.v)
-    .sort((a,b)=>b.neu.localeCompare(a.neu));
-  const wann=(gfVhSeen()?`seit ${gfNewsWhen(SEIT.seit)}`:"24 Stunden")+(SEIT.gekuerzt?" · nicht alles geladen":"");
+    .sort((a,b)=>(zuMirW(b.v,b.es)-zuMirW(a.v,a.es)) || b.neu.localeCompare(a.neu));
+  const wann=(gfVhSeen()?`seit ${gfNewsWhen(SEIT.seit)}`:"24 Stunden")+(SEIT.gekuerzt?" · über 2.000 Einträge, nur die neuesten geladen, bitte in den Akten lesen":"");
   $("#fdSeitN").textContent=wann;
-  ok.hidden=!zeilen.length;
+  ok.hidden=!zeilen.length || !!SEIT.gekuerzt;
   if(!zeilen.length){ $("#fdSeitL").innerHTML=`<p class="fd-empty">Nichts Neues in den Vorhaben (${wann}).</p>`; return; }
   const show=zeilen.slice(0,6), rest=zeilen.length-show.length;
   $("#fdSeitL").innerHTML=show.map(({v,es})=>{
@@ -137,13 +139,9 @@ function renderSeit(){
     </a>`; }).join("")+(rest?`<a class="fd-more" href="vorhaben.html?filter=bewegt">und ${rest} weitere Vorhaben →</a>`:"");
   gfStagger($("#fdSeitL"),".fd-row");
 }
-/* „Alles gesehen“ setzt den Zeitpunkt auf jetzt, bei einer gekürzten Liste nur bis zum ältesten geladenen Eintrag,
-   damit nichts aus dem Fenster fällt, was nie zu sehen war. */
-document.getElementById("fdSeitOk").addEventListener("click",async()=>{
-  const l=SEIT?.eintraege||[]; const bis=SEIT?.gekuerzt&&l.length?l[l.length-1].created_at:new Date().toISOString();
-  gfVhMarkSeen(bis);
-  if(SEIT?.gekuerzt){ gfToast("Gesehen bis "+gfNewsWhen(bis)+", weitere Einträge folgen"); try{ SEIT=await gfApi("vorhaben_seit",{ seit:bis, person:gfWho() }); }catch(e){} renderSeit(); return; }
-  SEIT={ seit:bis, eintraege:[], vorhaben:SEIT?.vorhaben||[] }; renderSeit(); gfToast("Alles gesehen"); });
+/* „Alles gesehen“ setzt den Zeitpunkt auf jetzt. Bei einer gekürzten Liste (über 2.000 Einträge) gibt es den Knopf nicht. */
+document.getElementById("fdSeitOk").addEventListener("click",()=>{ if(SEIT?.gekuerzt) return; const jetzt=new Date().toISOString(); gfVhMarkSeen(jetzt);
+  SEIT={ seit:jetzt, eintraege:[], vorhaben:SEIT?.vorhaben||[] }; renderSeit(); gfToast("Alles gesehen"); });
 
 /* ---- Block 1 ---- */
 function renderEnt(){
@@ -249,11 +247,14 @@ function renderVt(){
   sec.hidden=true;
 }
 function renderAll(){ renderVh(); renderSeit(); renderEnt(); renderVt(); renderNeu(); renderFr(); }
+let LADE_LAUF=0;
 async function load(){
+  const lauf=++LADE_LAUF, fuer=gfWho();
   const [vh, seit]=await Promise.all([
     gfApi("vorhaben_list").catch(()=>null),
     gfApi("vorhaben_seit",{ seit:gfVhSeen()||undefined, person:gfWho() }).catch(()=>null),
   ]);
+  if(lauf!==LADE_LAUF || fuer!==gfWho()) return;   // eine ältere Antwort oder die andere Person: verwerfen
   VH=vh?vh.vorhaben||[]:null; SEIT=seit;
   const [gl, lg, cal, dig, ms, cyc, abs]=await Promise.all([
     gfApi("gate_list",{limit:1000}),

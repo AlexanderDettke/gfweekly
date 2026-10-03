@@ -16,7 +16,7 @@ Geschäftsführung der Wilden Habitate: internes Cockpit von Alex und Lea. Live:
   - `cockpit.html` Themen-Cockpit · `checkin.html` · `capture.html` · `inbox.html` · `bearbeiten.html`
   - `assets/core.js` gemeinsamer Kern (API, Login-Gate, Navigation, Theme) · `assets/game.js` Habitat-Punkte · `assets/eggs.js` Easter Eggs · `assets/styles.css` Design
   - `_headers` Sicherheits-Header
-- `supabase/functions/gfweekly/index.ts` – Edge Function (Supabase-Projekt bnfmupnmqyrcltrphfak). Enthält das Zugangspasswort, gehört deshalb nie in `site/`.
+- `supabase/functions/gfweekly/index.ts` – Edge Function (Supabase-Projekt bnfmupnmqyrcltrphfak). Liest das Zugangspasswort seit v15 aus dem Secret `GFWEEKLY_PASSWORD` (fail closed); der Quelltext gehört trotzdem nie in `site/`.
 - `netlify.toml` – veröffentlicht nur `site/`.
 
 ## Design
@@ -40,7 +40,7 @@ Der Wächter läuft dreifach: in `abnahme.sh`, bei jedem Push über `.github/wor
 Arbeitspakete und Rollen stehen in `docs/ARBEITSPAKETE.md`, offene Befunde in `docs/BEKANNTE-MAENGEL.md`.
 
 ## Deploy
-Repo: <https://github.com/AlexanderDettke/gfweekly> (privat — `supabase/functions/gfweekly/index.ts` enthält das Zugangspasswort und gehört nie in `site/`).
+Repo: <https://github.com/AlexanderDettke/gfweekly> (privat — `supabase/functions/gfweekly/index.ts` liest das Zugangspasswort aus einem Supabase-Secret und gehört nie in `site/`).
 
 **Continuous Deployment ist eingerichtet** (13.09.2026). Netlify baut aus dem Git-Repo: Branch `main`, Build command leer, Publish directory `site` (aus `netlify.toml`). Jeder Push auf `main` deployt automatisch; ein Lauf dauert rund eine Minute. Kontrolle im Deploy-Datensatz über `commit_ref` und `branch` — Git-Deploys tragen den Commit-Hash, manuelle Uploads nicht.
 

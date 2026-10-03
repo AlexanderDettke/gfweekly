@@ -11,15 +11,18 @@
 ## V31: zu entscheiden
 
 6. **Doppeltes auf Für dich.** Ich habe nichts entfernt: „Deine Entscheidung“ zeigt Themen und Kandidaten, die Akte zählt verknüpfte Themen nur. Sollen Themen, die an einem Vorhaben hängen, aus „Deine Entscheidung“ verschwinden? Dann wäre die Startseite kürzer, aber Entscheidungen stünden nur noch in der Akte.
-7. **„Erfährt es im Morgenbericht“.** Die Wahl im Einwurf steuert bisher nur, ob sofort ein Ticker entsteht. Den Morgenbericht schreibt der tägliche Cowork-Auftrag; der liest den Verlauf der Vorhaben noch nicht. Bis dahin sieht die andere Person den Eintrag unter „Seit du zuletzt da warst“. Soll der tägliche Auftrag einen Absatz „Vorhaben seit gestern“ bekommen?
+7. **„Erfährt es im Morgenbericht“.** Die Wahl im Einwurf heißt jetzt „in Für dich“ oder „sofort im Laufband“, weil der Morgenbericht nicht angebunden ist. Den Morgenbericht schreibt der tägliche Cowork-Auftrag; der liest den Verlauf der Vorhaben noch nicht. Bis dahin sieht die andere Person den Eintrag unter „Seit du zuletzt da warst“. Soll der tägliche Auftrag einen Absatz „Vorhaben seit gestern“ bekommen?
 8. **Stand-Vorschläge des Abgleichs strukturiert schreiben?** Heute steht der neue Stand im Text nach „jetzt so steht:“, die Akte liest ihn dort heraus und lässt ihn prüfen. Sauberer wäre ein eigenes Feld; das hieße, den Abgleich-Text und die Tabelle zu ändern.
 9. **Stufen für Verträge** (Angebot, Verhandlung, Rechtsprüfung … im Prototyp der XCeed-Akte) sind weggelassen, wie das Paket es für V31 erlaubt.
 10. **XCeed-Schlüssel.** Für die Partner Tickets API vergibt XCeed einen API-Schlüssel (partners@xceed.me); drei Fragen an XCeed stehen in `docs/XCEED-SCHNITTSTELLE.md`.
 
+11. **Abschluss der Übergabe im Dialog.** Der Urlaubsdialog zeigt die Vorhaben des Korbs und verlinkt den Rest (Themen, Kandidaten, Termine) auf die Übergabeseite. Soll der Dialog am Ende alle noch offenen Korbzeilen zeigen?
+12. **Ansicht „Vor dem 14.10. entscheiden“.** Codex schlägt einen Filter vor, der offene Korbzeilen und Vorhaben mit Frist im Urlaub zusammenführt. Ich habe ihn nicht gebaut, weil der Übergabekorb genau diese Fälle sammelt. Lohnt ein zweiter Ort?
+
 ## V31: gut zu wissen
 
 - Die KI im Einwurf ist Claude Sonnet 5 über `ANTHROPIC_API_KEY` (gesetzt); ein anderes Modell geht über das Secret `GFWEEKLY_EINWURF_MODEL`.
-- Testbestand: `test-v31` und `test-v31-ziel` stehen archiviert in der Datenbank, dazu beendete Testabwesenheiten; der nächste Lauf der Wirkungsprobe räumt sie ab. In der XCeed-Akte stehen acht verworfene Einträge aus dem Durchspiel (Haken und Ball hin und zurück), sie sind in der Akte nicht sichtbar; `ball_seit` ist zurückgesetzt.
+- Testbestand: die Wirkungsprobe löscht am Ende alles, was sie angelegt hat (Stand nach dem letzten Lauf: kein Testvorhaben, keine Testabwesenheit). In der XCeed-Akte stehen acht verworfene Einträge aus dem Durchspiel (Haken und Ball hin und zurück), sie sind in der Akte nicht sichtbar; `ball_seit` ist zurückgesetzt.
 - Das Passwort der Edge Function ist in dieser Sitzung nicht gefallen; die Proben holen es aus dem Vault in eine Umgebungsvariable.
 
 ---

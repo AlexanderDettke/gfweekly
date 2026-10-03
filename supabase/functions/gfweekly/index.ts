@@ -1287,7 +1287,7 @@ function einwurfPruefen(roh: any, kontext: any[], vorgabeId: string | null, pers
     const stand = vhText(p.stand, 500) || null, erledigt = p.erledigt === true;
     if (!stand && !erledigt) continue;
     if (punkte.some(x => x.id === da.id)) continue;
-    punkte.push({ id: da.id, titel: da.titel, stand, erledigt });
+    punkte.push({ id: da.id, titel: da.titel, stand, erledigt, stand_gesehen: da.stand ?? null });
   }
   const neue: any[] = [];
   for (const n of (Array.isArray(roh?.neue_punkte) ? roh.neue_punkte.slice(0, 10) : [])) {
@@ -1313,7 +1313,8 @@ function einwurfPruefen(roh: any, kontext: any[], vorgabeId: string | null, pers
   for (const p of punkte) if (vhVertraulich(p.stand)) { p.stand = null; vertraulich.push('punkt:' + p.id); verworfen.push(`Stand zu „${p.titel}“ möglicherweise vertraulich, weggelassen`); }
   for (let i = neue.length - 1; i >= 0; i--) if (vhVertraulich(neue[i].titel) || vhVertraulich(neue[i].wer)) { verworfen.push('ein neuer Punkt war möglicherweise vertraulich und ist weggelassen'); vertraulich.push('neuer_punkt'); neue.splice(i, 1); }
   if (vhVertraulich(naechster_schritt)) { naechster_schritt = null; vertraulich.push('naechster_schritt'); verworfen.push('Nächster Schritt möglicherweise vertraulich, weggelassen'); }
-  return { vorhaben_id: vh?.id || null, vorhaben_slug: vh?.slug || null, vorhaben_titel: vh?.title || null, ball_gesehen: vh?.ball || null, sicherheit,
+  return { vorhaben_id: vh?.id || null, vorhaben_slug: vh?.slug || null, vorhaben_titel: vh?.title || null, ball_gesehen: vh?.ball || null,
+    schritt_gesehen: vh ? (vh.naechster_schritt ?? null) : null, frist_gesehen: vh ? (vh.frist ?? null) : null, sicherheit,
     verlauf, punkte: punkte.filter(p => p.stand || p.erledigt), neue_punkte: neue, ball, ball_name, naechster_schritt, frist, benachrichtigung, verworfen, vertraulich };
 }
 
@@ -1913,27 +1914,12 @@ Deno.serve(async (req: Request) => {
       return json({ absences: data, zaehler });
     }
     if (action === 'absence_end') {
+      /* v38 (Review 31d, Runde 3): Ende, Rückgabe der Themen und der Vorhaben-Bälle und Protokoll in einer Transaktion
+         (hh_absence_end). Scheitert etwas, bleibt die Abwesenheit, wie sie war. Asana wird danach archiviert. */
       if (!t.id) return json({ error:'id fehlt' },400);
-      const { data: absence, error } = await admin.from('gfweekly_absences')
-        .update({ status:'beendet', updated_at:new Date().toISOString() }).eq('id', t.id).select().single();
-      if (error) throw error;
-      const { data: rows } = await admin.from('gfweekly_handover').select('id,ref_id,kind').eq('absence_id', t.id).eq('kind','thema');
-      const nichtGeleert: string[] = [];
-      for (const r of (rows || [])) {
-        /* v38: nur Themen, die an genau dieser Korbzeile hängen. Sonst leert das Ende einer Testabwesenheit die
-           Vertretung einer echten, die dasselbe Thema im Korb hat. */
-        const { error } = await admin.from('gfweekly_topics').update({ owner_backup:null }).eq('id', r.ref_id).eq('handover_id', r.id);
-        if (error) nichtGeleert.push(r.ref_id);
-      }
-      if (nichtGeleert.length) return json({ error:`Die Abwesenheit ist beendet, aber ${nichtGeleert.length} Themen tragen noch eine Vertretung.`, themen:nichtGeleert },500);
-      /* v38: Vorhaben, deren Ball wegen dieser Abwesenheit gewandert ist, gehen zurück (hh_vorhaben_zurueck). */
-      const { data: vz, error: vze } = await admin.rpc('hh_vorhaben_zurueck', { p_absence: t.id, p_by: (t.by ?? WHO).toString().slice(0,60) });
-      if (vze) return json({ error:'Die Abwesenheit ist beendet, aber die Bälle der Vorhaben ließen sich nicht zurückgeben: '+vze.message },500);
-      const vorhabenZurueck = (vz as any)?.zurueck || [];
-      await handoverLog(t.id, 'notiz', `Rückübergabe bestätigt, ${(rows||[]).length} Themen wieder bei ${absence.person}`
-        + (vorhabenZurueck.length ? `, ${vorhabenZurueck.length} Vorhaben zurück.` : '.'), WHO);
-      const archiviert = await asanaArchivieren(absence);
-      return json({ absence, asana_archiviert: archiviert, vorhaben_zurueck: vorhabenZurueck });
+      const r = await vhRpc('hh_absence_end', { p_id: t.id, p_by: whoNorm(t.by ?? WHO) });
+      const archiviert = await asanaArchivieren(r.absence);
+      return json({ absence: r.absence, asana_archiviert: archiviert, vorhaben_zurueck: r.vorhaben_zurueck || [], themen: r.themen });
     }
     if (action === 'deputies_list') {
       let q = admin.from('gfweekly_deputies').select('*').order('person').order('sort');
@@ -1992,7 +1978,7 @@ Deno.serve(async (req: Request) => {
       /* v30 (Befund 7.1): Korbzeile, Vorgang und Protokoll wandern in einem Zug über die Datenbankfunktion
          hh_handover_set. Entweder alles oder nichts; eine bestätigte Zeile ohne Wirkung kann es nicht mehr geben. */
       const liste = action === 'handover_set' ? [t] : (Array.isArray(t.items) ? t.items.slice(0,500) : []);
-      const by = (t.by ?? WHO).toString().slice(0,60);
+      const by = vhBy(t);   // v38: by Pflicht, Alex oder Lea (steht im Verlauf der Vorhaben und im Übergabeprotokoll)
       const ergebnis: any[] = []; const misslungen: any[] = []; let n = 0;
       for (const it of liste) {
         if (!it.id) { misslungen.push({ id:null, titel:null, grund:'ohne id' }); continue; }
@@ -2963,7 +2949,15 @@ Deno.serve(async (req: Request) => {
       const vh = await vhLese(zielRef);
       const b = t.bearbeitet || {};
       const fristB = vhDatum(b.frist); if (fristB === undefined) return json({ error:'Frist ist kein Datum (JJJJ-MM-TT)' },400);
-      const bearbeitet = { verlauf_text: vhText(b.verlauf_text, 2000) || null, naechster_schritt: vhText(b.naechster_schritt, 1000) || null, frist: fristB };
+      const bearbeitet: Record<string, unknown> = { verlauf_text: vhText(b.verlauf_text, 2000) || null, naechster_schritt: vhText(b.naechster_schritt, 1000) || null, frist: fristB };
+      /* Was der Dialog gerade anzeigt: nächster Schritt, Frist, Punktstände. Die Datenbank vergleicht es unter der Sperre. */
+      if (b.expect && typeof b.expect === 'object' && !Array.isArray(b.expect)) {
+        const ex: Record<string, unknown> = {};
+        if (b.expect.naechster_schritt !== undefined) ex.naechster_schritt = b.expect.naechster_schritt === null ? null : String(b.expect.naechster_schritt);
+        if (b.expect.frist !== undefined) { const d = vhDatum(b.expect.frist); if (d !== undefined) ex.frist = d; }
+        if (b.expect.punkte && typeof b.expect.punkte === 'object') ex.punkte = Object.fromEntries(Object.entries(b.expect.punkte).filter(([k]) => VH_UUID.test(k)).map(([k, v]) => [k, v === null ? null : String(v)]));
+        bearbeitet.expect = ex;
+      }
       if (vhVertraulich(bearbeitet.verlauf_text) || vhVertraulich(bearbeitet.naechster_schritt)) return json({ error:'Der Text enthält möglicherweise vertrauliche Angaben (Zugangsdaten, Kontonummer, Gesundheit). Bitte so formulieren, dass er in die Akte darf.' },400);
       const a = t.auswahl || {};
       const auswahl = { verlauf: !!a.verlauf, ball: !!a.ball, naechster_schritt: !!a.naechster_schritt, frist: !!a.frist,
@@ -3039,6 +3033,8 @@ Deno.serve(async (req: Request) => {
           const notiz = vhText(e.notiz, 1000) || (bleibt ? 'Ball bleibt bei ' + vhBallWort(v.ball, v.ball_name) : null);
           /* Der Ball, den die Person im Dialog gesehen hat, ist Pflicht. Liegt er inzwischen woanders, meldet die Zeile einen Konflikt. */
           if (!VH_BALL.includes(e.expect_ball)) throw new VhFehler('expect_ball fehlt: welcher Ball war im Dialog zu sehen?');
+          /* Übergeben wird nur, was bei der abgebenden Person liegt; die Datenbank prüft, dass es noch dort liegt. */
+          if (e.expect_ball !== absGate(von)) throw new VhFehler(`Der Ball liegt nicht bei ${von}, das ist kein Schichtwechsel von ${von}`);
           patch.expect_ball = e.expect_ball;
           const r = await vhSave(v.id, patch, by, notiz, `Schichtwechsel ${von} an ${an}`);
           ergebnis.push({ vorhaben_id: v.id, title: v.title, ball: r.vorhaben.ball, ball_geaendert: r.ball_geaendert });
@@ -3075,7 +3071,7 @@ Deno.serve(async (req: Request) => {
       const alt = (alte || []).find((x: any) => x.status !== 'archiviert');
       const { data: ab, error: e4 } = await admin.from('gfweekly_absences').delete().eq('test', true).eq('note', 'V31-Probe').eq('status', 'beendet').select('id');
       if (e4) throw e4; abwesenheiten = (ab || []).length;
-      return json({ ok:true, vorhaben, einwuerfe, abwesenheiten, aktiv_uebrig: !!(alt && alt.status !== 'archiviert') });
+      return json({ ok:true, vorhaben, einwuerfe, ticker, abwesenheiten, aktiv_uebrig: !!(alt && alt.status !== 'archiviert') });
     }
     if (action === 'vorhaben_rueckkehr') {
       /* Für rueckkehr.html: Vorhaben, die in dieser Abwesenheit übergeben waren oder ruhten, mit ihrem Verlauf seit Beginn. */

@@ -752,10 +752,16 @@ const GF_EW_KANAL={ knopf:"Knopf", sprache:"Sprache", cowork:"Cowork", whatsapp:
 /* Öffnet den Einwurf. o.vorhaben_id wählt vor, o.einwurf öffnet einen vorhandenen (Warteschlange), o.onDone(ergebnis) nach dem Übernehmen,
    o.kopf: Zusatzzeile (etwa „1 von 3“), o.weiter: Rückruf für „Später“ und nach jeder Entscheidung in der Warteschlange. */
 async function gfEinwurf(o={}){
-  const m=gfEwModal(); const frei=gfModalAuf(m);
+  const m=gfEwModal();
+  /* Der Dialog steht sofort da, mit Ladehinweis und Schließen; die Seite wird erst danach inert. */
+  m.innerHTML=`<div class="modal vh-dlg vh-ew" role="dialog" aria-modal="true" aria-label="Einwurf"><div class="modal-h"><h3>Einwurf</h3><button type="button" class="icon-btn" data-ew-x0 aria-label="Schließen">✕</button></div><div class="vh-dlg-b"><div class="loading" role="status">lädt …</div></div></div>`;
+  m.classList.add("open"); let abgebrochen=false;
+  m.querySelector("[data-ew-x0]").onclick=()=>{ abgebrochen=true; m.classList.remove("open"); m.innerHTML=""; };
+  const frei=gfModalAuf(m);
   /* text: Eingabe in Schritt 1; vtext: bearbeiteter Verlaufstext in Schritt 2 (null = noch nicht angefasst, "" = bewusst geleert). */
   const S={ schritt:o.einwurf?2:1, ew:o.einwurf||null, ziel:o.einwurf?.vorhaben_id||o.vorhaben_id||null, bearbeiten:false, text:"", vtext:null, fehler:"", laedt:false, ki_fehler:"", ben:null, aus:null, aendern:false };
   let liste=[]; try{ liste=await gfVhListe(true); }catch(e){}
+  if(abgebrochen){ frei(); return; }
   const vhVon=id=>liste.find(v=>v.id===id)||null;
   const vhSlug=s=>liste.find(v=>v.slug===s)||null;
   const zu=(ergebnis)=>{ m.classList.remove("open"); m.innerHTML=""; document.removeEventListener("keydown",esc); frei(); return ergebnis; };
@@ -809,7 +815,7 @@ async function gfEinwurf(o={}){
         ${S.bearbeiten&&v&&istPassend&&v.naechster_schritt?`<label class="vh-fld">Nächster Schritt<input id="gfEwSchritt" maxlength="1000" value="${gfEsc(S.schritt_text||v.naechster_schritt)}"></label>`:""}
         ${zeilen.length?`<fieldset class="vh-ew-haken"><legend>Das ändert sich</legend>${zeilen.map(([k,l,an])=>`<label><input type="checkbox" data-aus="${k}" ${an?"checked":""}><span>${l}</span></label>`).join("")}</fieldset>`:""}
         ${v&&(v.verworfen||[]).length?`<details class="vh-ew-verw"><summary>Nicht übernommen (${v.verworfen.length})</summary><ul>${v.verworfen.map(x=>`<li>${gfEsc(x)}</li>`).join("")}</ul></details>`:""}
-        <div class="vh-fld"><span>${gfEsc(gfVhAndere())} erfährt es</span>${gfChips("gfEwBen", [["morgen","im Morgenbericht"],["sofort","sofort"]], S.ben, { cls:"compact", label:"Benachrichtigung", attr:'id="gfEwBen"' })}</div>`;
+        <div class="vh-fld"><span>${gfEsc(gfVhAndere())} sieht es</span>${gfChips("gfEwBen", [["morgen","in Für dich, beim nächsten Besuch"],["sofort","sofort im Laufband"]], S.ben, { cls:"compact", label:"Benachrichtigung", attr:'id="gfEwBen"' })}<small class="vh-ew-hint">„Sofort“ braucht den Verlaufseintrag; ohne ihn bleibt es bei Für dich.</small></div>`;
     }
     m.innerHTML=`<div class="modal vh-dlg vh-ew" role="dialog" aria-modal="true" aria-labelledby="gfEwH">
       <div class="modal-h"><h3 id="gfEwH">Einwurf${o.kopf?` <small>${gfEsc(o.kopf)}</small>`:""}</h3><button type="button" class="icon-btn" data-ew-x aria-label="Schließen">✕</button></div>
@@ -872,8 +878,9 @@ async function gfEinwurf(o={}){
     if(!aus.verlauf && !aus.punkte.length && !aus.neue_punkte.length && !aus.ball && !aus.naechster_schritt && !aus.frist){ S.fehler="Nichts angehakt. Zum Wegwerfen „Verwerfen“ wählen."; render(); return; }
     S.laedt=true; S.fehler=""; render();
     try{
+      if(ziel) bearbeitet.expect={ naechster_schritt:ziel.naechster_schritt??null, frist:ziel.frist??null };
       const r=await gfApi("einwurf_apply",{ id:S.ew.id, vorhaben_id:S.ziel, auswahl:aus, bearbeitet, benachrichtigung:S.ben, revision:v?.revision||undefined, expect_ball:ziel?.ball, by:gfWho() });
-      const teile=[r.verlauf?"Verlauf ergänzt":"", r.punkte?.length?`${r.punkte.length} ${r.punkte.length===1?"Punkt":"Punkte"} aktualisiert`:"", r.neue_punkte?.length?`${r.neue_punkte.length} neue ${r.neue_punkte.length===1?"Punkt":"Punkte"}`:"", r.felder?"Felder geändert":"", r.ticker?`${gfVhAndere()} sofort benachrichtigt`:`${gfVhAndere()} erfährt es im Morgenbericht`].filter(Boolean);
+      const teile=[r.verlauf?"Verlauf ergänzt":"", r.punkte?.length?`${r.punkte.length} ${r.punkte.length===1?"Punkt":"Punkte"} aktualisiert`:"", r.neue_punkte?.length?`${r.neue_punkte.length} neue ${r.neue_punkte.length===1?"Punkt":"Punkte"}`:"", r.felder?"Felder geändert":"", r.ticker?`${gfVhAndere()} sofort im Laufband`:`${gfVhAndere()} sieht es in Für dich`].filter(Boolean);
       gfToast(`Eingetragen in „${r.vorhaben?.title||""}“: ${teile.join(", ")}.`);
       if(r.uebersprungen?.length) setTimeout(()=>gfToast("Nicht übernommen: "+r.uebersprungen.join("; ")),2700);
       GF_VH_LISTE=null; zu(); if(o.onDone) o.onDone(r); if(o.weiter) o.weiter("uebernommen"); try{ gfVhBadge(); }catch(e){}

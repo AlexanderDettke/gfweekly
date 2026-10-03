@@ -444,7 +444,7 @@ console.log('\n== Einwurf (V31c) ==');
 {
   frisch();
   const p = await seite('/vorhaben.html');
-  await p.locator('#vhEinwurf').click();
+  await p.locator('#vhEinwurf').click(); await p.waitForSelector('#gfEwText');
   pruefe('Dialog fragt „Was ist passiert?“ mit Diktier-Hinweis', (await p.locator('#gfEwModal .vh-ew').innerText()).includes('Mikrofon der Tastatur'));
   await p.locator('#gfEwWeiter').click(); await p.waitForTimeout(150);
   pruefe('ohne Text geht nichts weiter', !letzte('einwurf_add') && (await p.locator('.vh-ew-fehler').count()) === 1);

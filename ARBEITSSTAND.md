@@ -6,10 +6,11 @@ Auftrag `docs/PAKET-V31-VORHABEN.md`, Teilpakete 31a bis 31e in einem Zug, Branc
 |---|---|---|
 | 31a Backend | gebaut, Migrationen angewendet, v38 deployt | Wirkungsprobe gegen das echte Backend, drei Codex-Runden |
 | 31b Seite Vorhaben | gebaut | Schirme und Bedienung (Oberflächentest), drei Codex-Runden |
-| 31c Einwurf | gebaut | Bedienung (Oberflächentest), Codex-Runden siehe `docs/reviews/` |
-| 31d Für dich, Übergabe, Rückkehr | gebaut | Bedienung, Live-Durchspiel, Codex-Runden siehe `docs/reviews/` |
-| 31e Abgleich, XCeed | Abgleich-Lauf mit Wirkung belegt, XCeed recherchiert | Codex-Runden siehe `docs/reviews/` |
+| 31c Einwurf | gebaut | Bedienung (Oberflächentest), Wirkungsprobe, drei Codex-Runden |
+| 31d Für dich, Übergabe, Rückkehr | gebaut | Bedienung, Live-Durchspiel, Wirkungsprobe, drei Codex-Runden |
+| 31e Abgleich, XCeed | Abgleich-Lauf mit Wirkung belegt (alter Auftragstext), XCeed recherchiert | drei Codex-Runden; neuer Auftragstext noch nicht eingesetzt |
 
+Dazu die Gesamtprüfung (`docs/reviews/V31-gesamtpruefung.md`, Antwort `V31-antwort-schluss.md`). Wirkungsprobe 97 von 97, Abnahme bestanden.
 Belege, Zahlen und Grenzen stehen in `docs/TECHNIKSTAND.md`, Abschnitt V31, die Reviews mit Antworten in `docs/reviews/V31*`,
 was offen ist in `FRAGEN_FUER_MORGEN.md` und `docs/BEKANNTE-MAENGEL.md`.
 

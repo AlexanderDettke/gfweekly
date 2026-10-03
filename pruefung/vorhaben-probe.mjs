@@ -1,8 +1,8 @@
 /* Wirkungsprobe V31 · Vorhaben gegen das echte Backend, ohne Abfangen.
    Aufruf:  GF_PW=<passwort> node pruefung/vorhaben-probe.mjs
-   Arbeitet nur an den Testvorhaben test-v31 und test-v31-ziel und an einer Testabwesenheit (test: true, Notiz
-   „V31-Probe“). Zu Beginn löscht probe_aufraeumen die archivierten Testdaten eines früheren Laufs, am Ende stehen
-   beide Testvorhaben wieder auf archiviert. Höchstens ein Lauf bleibt so als archivierter Bestand liegen.
+   Arbeitet nur an den Testvorhaben test-v31 und test-v31-ziel und an Testabwesenheiten (test: true, Notiz
+   „V31-Probe“). Am Ende archiviert die Probe beide Testvorhaben und löscht dann allen Testbestand über
+   probe_aufraeumen (auch zu Beginn, für Reste eines abgebrochenen Laufs).
    Echte Vorhaben werden nur gelesen: am Anfang und am Ende vergleicht die Probe jede Akte (Felder, Punkte, Verlauf).
    Läuft dazwischen der Abgleich aus Cowork, kann dieser Vergleich zu Recht anschlagen; dann den Lauf wiederholen.
    Die KI-Proben brauchen ANTHROPIC_API_KEY in der Edge Function. */
@@ -170,6 +170,15 @@ try {
   ok(ap4.verlauf?.text === 'Termin mit Testperson verschiebt sich.' && ap4.ticker === true, 'bearbeiteter Text wird eingetragen, ausdrücklich „sofort“ legt den Ticker an');
   ok((await api('vorhaben_get', { id: testId })).punkte.find(p => p.id === p3.id).erledigt === false, 'Punkt im ursprünglichen Vorhaben bleibt offen');
   ok((await api('vorhaben_get', { id: zielId })).verlauf.some(e => e.source_ref === 'einwurf:' + e2.einwurf.id), 'Verlauf steht im gewählten Vorhaben');
+  /* Der Punkt ändert sich, während der Einwurf auf Prüfung wartet: Übernehmen bricht ab, statt die Änderung zu überschreiben. */
+  const p4 = (await api('punkt_save', { vorhaben_id: testId, titel: 'Dritte Probe', stand: 'offen', by: BY })).punkt;
+  const e5 = await api('einwurf_add', { text: 'V31-Probe: Dritte Probe ist erledigt, Stand fertig', vorhaben_id: testId, by: BY, source_ref: `probe:v31:${LAUF}:5` });
+  if ((e5.einwurf.vorschlag?.punkte || []).some(p => p.id === p4.id)) {
+    await api('punkt_save', { id: p4.id, stand: 'von Lea geändert', expect: { stand: 'offen' }, by: 'Lea' });
+    await abgelehnt('einwurf_apply', { id: e5.einwurf.id, vorhaben_id: testId, auswahl: { verlauf: true, punkte: [p4.id] }, revision: e5.einwurf.vorschlag.revision, by: BY }, 409, /inzwischen geändert/, 'Einwurf gegen einen inzwischen geänderten Punkt');
+    ok((await api('vorhaben_get', { id: testId })).punkte.find(p => p.id === p4.id).stand === 'von Lea geändert', 'Leas Stand bleibt stehen');
+  } else ok(true, 'KI hat den Punkt nicht vorgeschlagen, Konfliktprobe übersprungen');
+  await api('einwurf_verwerfen', { id: e5.einwurf.id, by: BY });
   /* Ziel ändern mit neuem Vorschlag */
   const e3 = await api('einwurf_add', { text: `V31-Probe: Punkt ${xc.punkte[0].id} ist erledigt`, vorhaben_id: testId, by: BY, source_ref: `probe:v31:${LAUF}:4` });
   ok(!(e3.einwurf.vorschlag?.punkte || []).some(p => p.id === xc.punkte[0].id), 'Punkt eines fremden Vorhabens steht nicht im Vorschlag');
@@ -180,6 +189,8 @@ try {
 
   console.log('== Schichtwechsel ==');
   await abgelehnt('schicht_uebergabe', { von: 'Lea', an: 'Alex', eintraege: [{ vorhaben_id: testId, ball: 'alex' }], by: 'Alex' }, 400, /by muss von sein/, 'Schichtwechsel nur durch die Person, die abgibt');
+  const swf = await api('schicht_uebergabe', { von: 'Alex', an: 'Lea', eintraege: [{ vorhaben_id: testId, ball: 'lea', expect_ball: 'lea' }], by: 'Alex' });
+  ok(!swf.ok && /liegt nicht bei Alex/.test(swf.fehler[0]?.grund || ''), 'Schichtwechsel gibt keinen fremden Ball weiter');
   const swx = await api('schicht_uebergabe', { von: 'Lea', an: 'Alex', eintraege: [{ vorhaben_id: testId, ball: 'alex' }], by: 'Lea' });
   ok(!swx.ok && /expect_ball fehlt/.test(swx.fehler[0]?.grund || ''), 'Schichtwechsel ohne gesehenen Ball wird je Zeile abgelehnt');
   const sw = await api('schicht_uebergabe', { von: 'Lea', an: 'Alex', eintraege: [{ vorhaben_id: testId, ball: 'alex', notiz: 'Probe Feierabend', expect_ball: 'lea' }], by: 'Lea' });
@@ -203,6 +214,7 @@ try {
   if (zeile) {
     const h1 = await api('handover_set', { id: zeile.id, ampel: 'gruen', vertretung: 'Alex', by: BY });
     ok(h1.vorgang && h1.vorgang.ball === 'alex' && h1.vorgang.absence_id === absenceId, 'Vertretung: Ball bei Alex, absence_id gesetzt');
+    await abgelehnt('handover_set', { id: zeile.id, ampel: 'gruen', vertretung: 'Alex' }, 400, /by fehlt/, 'Übergabe ohne by');
     await api('handover_set', { id: zeile.id, ampel: 'gruen', vertretung: 'Alex', by: BY });
     await abgelehnt('handover_set', { id: zeile.id, ampel: 'ruht', expect: { status: 'vorschlag', ampel: zeile.ampel, vertretung: null }, by: 'Lea' }, 409, /inzwischen geändert/, 'Korbzeile mit veraltetem Stand');
     akte = await api('vorhaben_get', { id: testId });
@@ -242,10 +254,13 @@ try {
       const akte = await api('vorhaben_get', { id });
       for (const w of akte.einwuerfe) await api('einwurf_verwerfen', { id: w.id, by: BY });
       await api('vorhaben_save', { id, status: 'archiviert', ball: 'offen', by: BY });
-      ok((await api('vorhaben_get', { id })).vorhaben.status === 'archiviert', `${akte.vorhaben.slug} ist archiviert`);
+      ok((await api('vorhaben_get', { id })).vorhaben.status === 'archiviert', `${akte.vorhaben.slug} ist archiviert, dann gelöscht`);
     }
-    const rest = await api('probe_aufraeumen', { nur_einwuerfe: true, by: BY });
-    ok(rest.ok && rest.ticker >= 1, `Einwürfe und Ticker der Probe gelöscht (${rest.einwuerfe} Einwürfe, ${rest.ticker} Ticker)`);
+    /* Archivieren wie im Paket, dann vollständig löschen: Testvorhaben, Einwürfe, Ticker, beendete Testabwesenheiten. */
+    const rest = await api('probe_aufraeumen', { by: BY });
+    ok(rest.ok && rest.vorhaben === 2 && rest.abwesenheiten >= 2, `Testbestand gelöscht (${rest.vorhaben} Vorhaben, ${rest.einwuerfe} Einwürfe, ${rest.ticker} Ticker, ${rest.abwesenheiten} Abwesenheiten)`);
+    const da = (await api('vorhaben_list', { status: 'alle' })).vorhaben.filter(v => TEST.includes(v.slug));
+    ok(!da.length, 'kein Testvorhaben mehr in der Datenbank', da.map(v => v.slug));
     if (!echt0) throw new Error('kein Anfangszustand, Vergleich nicht möglich');
     const echt1 = await schnappschuss();
     const geaendert = Object.keys(echt0).filter(k => echt0[k] !== echt1[k]);

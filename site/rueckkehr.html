@@ -149,6 +149,7 @@ async function load(){
 }
 /* V31d · „Deine Vorhaben zurück“: je Vorhaben, ob der Ball zurück ist oder noch bei der Vertretung liegt (Rückgabe mit
    der Rückübergabe), und was seit Beginn der Abwesenheit im Verlauf steht, höchstens fünf Einträge, der Rest in der Akte. */
+const zeileVl=x=>`<li>${gfEsc(gfNewsWhen(x.happened_at))} · ${gfEsc(GF_VH_ART[x.art]||x.art)}${x.wer?" · "+gfEsc(x.wer):""}: ${gfEsc(x.text)}</li>`;
 async function ladeVorhaben(){
   $("#vhSec").hidden=false; $("#vhList").innerHTML=`<div class="loading" role="status">lädt …</div>`;
   /* Bestätigen erst, wenn „Deine Vorhaben zurück“ zu sehen ist. */
@@ -168,7 +169,7 @@ async function ladeVorhaben(){
     return `<article class="rk-row">
       <span class="t"><a href="vorhaben.html?v=${encodeURIComponent(v.slug)}&tab=verlauf">${gfEsc(v.title)}</a></span>${zurueck} ${ruhte}
       <span class="m">${e.length?`${e.length} ${e.length===1?"Eintrag":"Einträge"} seit ${gfEsc(gfFmtShort(ABSENCE.von))}:`:"Seitdem nichts im Verlauf."}</span>
-      ${e.length?`<ul class="rk-vl">${e.slice(0,5).map(x=>`<li>${gfEsc(gfNewsWhen(x.happened_at))} · ${gfEsc(GF_VH_ART[x.art]||x.art)}${x.wer?" · "+gfEsc(x.wer):""}: ${gfEsc(x.text)}</li>`).join("")}${e.length>5?`<li><a href="vorhaben.html?v=${encodeURIComponent(v.slug)}&tab=verlauf">und ${e.length-5} weitere in der Akte →</a></li>`:""}</ul>`:""}
+      ${e.length?`<ul class="rk-vl">${e.slice(0,5).map(zeileVl).join("")}</ul>${e.length>5?`<details class="rk-mehr"><summary>${e.length-5} weitere Einträge seit Beginn der Abwesenheit</summary><ul class="rk-vl">${e.slice(5).map(zeileVl).join("")}</ul></details>`:""}`:""}
     </article>`; }).join("");
 }
 function whoGleich(p){ return (p||"").toLowerCase()===gfWho().toLowerCase(); }

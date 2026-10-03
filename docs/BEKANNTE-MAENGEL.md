@@ -1,4 +1,20 @@
-# Bekannte Mängel · Stand 22.09.2026, Commit ad5719e
+# Bekannte Mängel
+
+## V31 Vorhaben · offen nach drei Runden je Teilpaket und der Gesamtprüfung · Stand 03.10.2026
+
+Begründungen und Belege in `docs/reviews/V31-antwort-schluss.md`.
+
+1. **Abgleich-Auftrag in Cowork trägt den alten Text.** Der neue Text steht in `docs/ABGLEICH-VORHABEN.md` (Einwurf-Adressen aus B und C, Quelle C2 für XCeed-Berichte, `hh_vorhaben_quelle`). Bis Alex ihn einsetzt, kann eine Weiterleitung an die Einwurf-Adresse zusätzlich als Mail im Verlauf landen, und zwei gleichzeitige Läufe können sich den Quellenstand überschreiben. Leas Lauf ist nicht eingerichtet.
+2. **„Morgenbericht“ ist nicht angebunden.** Die Wahl im Einwurf heißt deshalb „in Für dich“ oder „sofort im Laufband“. Den Morgenbericht schreibt der tägliche Cowork-Auftrag; er liest den Verlauf der Vorhaben noch nicht.
+3. **Abnahme Punkt 3, Einwurf an XCeed:** technisch bis zum Vorschlag für XCeed durchgespielt und am Testvorhaben übernommen, in der echten Akte nicht, solange die Zusage von Victor nicht bestätigt ist.
+4. **`handover_set_many` ist je Zeile atomar, nicht als Ganzes.** Scheitert eine Zeile, sind die übrigen gespeichert; der Dialog nennt gespeicherte und fehlgeschlagene Zeilen und lädt den Korb neu.
+5. **`hh_vorhaben_quelle` ist bei zwei gleichzeitigen Läufen nicht live geprüft** (Zeilensperre im Code).
+6. **Vorschläge des Abgleichs** tragen keine Revision und keine gesehenen Werte, der neue Stand steht im Freitext nach „jetzt so steht:“. Die Akte prüft ihn im Formular, der Einwurf-Dialog schickt die gesehenen Werte von nächstem Schritt und Frist; Punktstände aus Mail-Vorschlägen prüft die Datenbank gegen den Stand beim Übernehmen.
+7. **Über 2.000 neue Einträge** zeigt „Seit du zuletzt da warst“ nur die neuesten und bietet „Alles gesehen“ nicht an.
+
+---
+
+## V23 und V24 · Stand 22.09.2026, Commit ad5719e
 
 Unabhängige Prüfung durch Codex (read-only) über den vollständigen Umfang `5db861d..ad5719e`, also V23 und
 V24a bis V24d, geprüft gegen die Paketdatei `docs/PAKETE-V23-V24.md`. Der Bericht steht unten unverändert.

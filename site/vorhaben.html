@@ -413,7 +413,9 @@ function punktForm(p, vor={}){
     <label class="vh-fld">Frist<input name="frist" type="date" value="${gfEsc(p?.frist||"")}"></label></div>
     <div class="vh-pform-a"><button type="submit" class="btn btn-sm btn-primary">${p?"Speichern":"Hinzufügen"}</button><button type="button" class="btn btn-sm btn-ghost" data-pform-x>Abbrechen</button>${p?`<button type="button" class="btn btn-sm btn-ghost" data-pform-del style="margin-left:auto">Löschen</button>`:""}</div>
   </form>`;
-  const form=box.querySelector("form"); form.titel.focus();
+  const form=box.querySelector("form");
+  /* Beim Stand-Vorschlag wird nur der Stand übernommen; die übrigen Felder stehen zur Ansicht da. */
+  if(vor.vorschlag){ for(const n of ["titel","wer","frist"]) { form[n].readOnly=true; form[n].setAttribute("aria-readonly","true"); } form.stand.focus(); } else form.titel.focus();
   form.querySelector("[data-pform-x]").onclick=()=>{ box.innerHTML=""; if(!p) box.hidden=true; };
   const del=form.querySelector("[data-pform-del]");
   if(del) del.onclick=async()=>{ try{ await gfApi("punkt_delete",{ id:p.id, by:gfWho() }); gfToast("Punkt gelöscht"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }catch(err){ gfToast(err.message||"Nicht gelöscht"); } };
