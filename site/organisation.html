@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#171d18" />
+<title>Das Hohe Haus · Organisation</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=31" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=31" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=31" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=31" />
+<link rel="stylesheet" href="/assets/styles.css?v=31" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
+<style>
+/* V32 · Organisation. Farben nur über Tokens; Ebenen: Haus Ocker, Operations Akzent, Formate Koralle. */
+:root{--og-haus:var(--ht-ocker);--og-ops:var(--accent);--og-fmt:var(--chart-coral)}
+.og-kopf{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+.og-eyebrow{font-size:var(--stufe-1);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-2)}
+.og-kopf h2{margin:4px 0 2px;font-size:var(--stufe-5);font-weight:600;letter-spacing:-.01em}
+.og-lage{font-size:var(--stufe-2);color:var(--text-2)}
+.og-kopf-a{display:flex;gap:8px;flex-wrap:wrap}
+.og-hero{margin:0;border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);overflow:hidden;background:var(--photo-bg)}
+.og-hero img{display:block;width:100%;aspect-ratio:5/1;max-height:240px;min-height:120px;object-fit:cover;object-position:center 62%}
+.og-track{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:8px 0 20px}
+.og-track button{display:flex;flex-direction:column;gap:4px;text-align:left;padding:8px 10px;min-height:var(--ziel-min);border-radius:var(--radius-m);border:1px solid transparent;background:transparent;color:var(--text);cursor:pointer}
+.og-track button[aria-pressed="true"]{background:var(--surface-2);border-color:var(--border-strong)}
+.og-track .bar{display:block;height:4px;border-radius:2px;background:var(--fill)}
+.og-track .bar i{display:block;height:100%;border-radius:2px;background:var(--action)}
+.og-track .bar.voll i{background:var(--accent)}
+.og-track b{font-size:var(--stufe-2);font-weight:600}
+.og-track .mk{font-size:var(--stufe-1);font-weight:600;color:var(--on-action);background:var(--action);padding:0 5px;border-radius:var(--radius-s);margin-left:6px}
+.og-track .mk.ok{color:var(--accent-strong);background:var(--accent-soft)}
+.og-track small{font-size:var(--stufe-1);color:var(--text-2)}
+.og-zug{background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-l);padding:16px 18px;margin-bottom:20px;box-shadow:var(--shadow-card)}
+.og-zug-k{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.og-zug-k img{width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--action)}
+.og-zug-k b{display:block;font-size:var(--stufe-4);font-weight:600}
+.og-zug-k span{font-size:var(--stufe-2);color:var(--text-3)}
+.og-zug-l{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px}
+.og-zi{display:flex;gap:10px;align-items:center;padding:10px 10px 10px 12px;border-radius:var(--radius-m);background:var(--fill-soft);border:1px solid var(--border)}
+.og-zi .dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.og-zi .dot.eilt{background:var(--action)}
+.og-zi .txt{flex:1;min-width:0;display:flex;flex-direction:column;text-align:left;background:none;border:0;padding:0;color:var(--text);cursor:pointer}
+.og-zi .txt b{font-size:var(--stufe-2);font-weight:600}
+.og-zi .txt span{font-size:var(--stufe-2);color:var(--text-2)}
+.og-zi .btn{min-height:36px;padding:4px 12px;font-size:var(--stufe-2);white-space:nowrap}
+.og-grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start}
+.og-sec-k{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+.og-sec-k h3{margin:0;font-size:var(--stufe-4);font-weight:600}
+.og-sec-k span{font-size:var(--stufe-2);color:var(--text-3)}
+.og-decs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:20px}
+.og-dec{display:flex;flex-direction:column;gap:6px;text-align:left;padding:12px;border-radius:var(--radius-l);background:var(--surface);border:1px solid var(--border);color:var(--text);cursor:pointer;min-height:var(--ziel-min)}
+.og-dec:hover{border-color:var(--border-strong)}
+.og-dec.ok{border-color:var(--accent)}
+.og-dec.sel{border-color:var(--action);background:var(--surface-2)}
+.og-dec .r1{display:flex;align-items:center;gap:8px}
+.og-dec .nr{font-size:var(--stufe-4);font-weight:700;color:var(--action);line-height:1}
+.og-dec .t{font-size:var(--stufe-2);font-weight:600;line-height:1.3}
+.og-dec small{font-size:var(--stufe-1);color:var(--text-2)}
+.og-avs{margin-left:auto;display:flex}
+.og-avs img{width:22px;height:22px;border-radius:50%;object-fit:cover;margin-left:-4px;border:2px solid var(--surface)}
+.og-avs img.aus{filter:grayscale(1);opacity:.35}
+.og-st{font-size:var(--stufe-1);font-weight:600;padding:2px 8px;border-radius:var(--radius-s);background:var(--fill);color:var(--text-2)}
+.og-st.ok{background:var(--accent-soft);color:var(--accent-strong)}
+.og-st.halb{background:var(--action-soft,rgba(228,184,92,.16));color:var(--text)}
+.og-steuer{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.og-seg{display:flex;gap:4px;padding:3px;border:1px solid var(--border-strong);border-radius:var(--radius-m)}
+.og-fil{display:flex;gap:6px;flex-wrap:wrap}
+.og-fil button{min-height:36px;padding:0 12px;border-radius:var(--radius-m);font-size:var(--stufe-2);border:1px solid var(--border-strong);background:transparent;color:var(--text-2);cursor:pointer}
+.og-fil button[aria-pressed="true"]{background:var(--accent-soft);color:var(--text);border-color:var(--accent)}
+.og-fil small{margin-left:4px}
+.og-stufen{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.og-stufe{display:flex;flex-direction:column;gap:10px;border-radius:var(--radius-l);overflow:hidden;background:var(--surface);border:1px solid var(--border)}
+.og-stufe.jetzt{border-color:var(--action)}
+.og-stufe>img{display:block;width:100%;height:86px;object-fit:cover;object-position:center 60%}
+.og-stufe.spaeter>img{filter:saturate(.35) brightness(.8);opacity:.75}
+.og-stufe .k{padding:0 12px}
+.og-stufe .k h4{margin:0;font-size:var(--stufe-3);font-weight:600}
+.og-stufe .rl{padding:0 12px;display:flex;flex-direction:column;gap:6px}
+.og-stufe .leer{font-size:var(--stufe-2);color:var(--text-3)}
+.og-rk{display:flex;flex-direction:column;gap:6px;text-align:left;padding:9px 10px;border-radius:var(--radius-m);background:var(--panel);border:1px solid var(--border);color:var(--text);cursor:pointer;min-height:var(--ziel-min)}
+.og-rk.lock{border-style:dashed;border-color:var(--border-strong);background:var(--fill-soft)}
+.og-rk.krit{box-shadow:inset 3px 0 0 var(--action)}
+.og-rk.sel{border-color:var(--action)}
+.og-rk .n{display:flex;gap:8px;align-items:flex-start;font-size:var(--stufe-2);font-weight:600;line-height:1.3}
+.og-rk .n i{flex:none;margin-top:5px;width:8px;height:8px;border-radius:50%}
+.og-slots{display:grid;grid-template-columns:18px minmax(0,1fr) 18px minmax(0,1fr);gap:6px;align-items:center;font-size:var(--stufe-1);color:var(--text-2)}
+.og-slots span:nth-child(even){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.og-slot{width:18px;height:18px;border-radius:50%;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;border:1px dashed var(--text-3);color:var(--text-3)}
+.og-slot.voll{border:0;color:var(--bg)}
+.og-segs{display:flex;gap:3px}
+.og-segs i{flex:1;height:4px;border-radius:2px;background:var(--fill)}
+.og-rk small{font-size:var(--stufe-1);color:var(--text-2)}
+.og-rk.lock small{color:var(--text-2)}
+.og-tor{margin:auto 12px 12px;padding:10px 12px;border-radius:var(--radius-m);background:var(--fill-soft);border:1px solid var(--border-strong);display:flex;flex-direction:column;gap:4px}
+.og-tor b{font-size:var(--stufe-2);color:var(--text)}
+.og-tor b.ok{color:var(--accent-strong)}
+.og-tor button{display:flex;gap:8px;align-items:flex-start;text-align:left;min-height:32px;padding:3px 0;background:none;border:0;color:var(--text);font-size:var(--stufe-2);line-height:1.35;cursor:pointer}
+.og-box{flex:none;margin-top:2px;width:16px;height:16px;border-radius:var(--radius-s);border:1px solid var(--text-3)}
+.og-box.on{background:var(--accent);border-color:var(--accent)}
+.og-zeit{overflow-x:auto;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-l)}
+.og-zeit-in{min-width:900px;padding:10px 14px 14px}
+.og-zr{display:grid;grid-template-columns:250px repeat(9,minmax(56px,1fr));align-items:center}
+.og-zr.kopf{font-size:var(--stufe-1);color:var(--text-3);padding-bottom:6px}
+.og-zr.kopf.q{border-bottom:1px solid var(--border-strong)}
+.og-zr.row{min-height:40px;border-top:1px solid var(--fill)}
+.og-zr .st{padding:5px 8px;margin:0 2px;border-radius:var(--radius-s);display:flex;justify-content:space-between}
+.og-zr .nm{text-align:left;background:none;border:0;padding:6px 8px 6px 0;min-height:40px;font-size:var(--stufe-2);color:var(--text);cursor:pointer}
+.og-zr .nm.sel{color:var(--action);font-weight:600}
+.og-zr .bal{margin:0 2px;height:26px;border-radius:var(--radius-s);font-size:var(--stufe-1);font-weight:600;display:flex;align-items:center;padding:0 8px;white-space:nowrap;overflow:hidden;cursor:pointer;border:1px solid var(--border-strong);color:var(--text-2);border-style:dashed;background:transparent}
+.og-zr .bal.frei{background:var(--fill-soft);color:var(--text)}
+.og-zr .bal.lauf{color:var(--bg)}
+.og-zr .bal.fertig{background:var(--text);border-color:var(--text);color:var(--bg)}
+.og-zr .bal.krit{box-shadow:0 0 0 2px var(--action)}
+.og-zgr{margin-top:12px;padding:4px 0;font-size:var(--stufe-2);font-weight:600}
+.og-hinweis{font-size:var(--stufe-1);color:var(--text-2);padding-top:10px}
+.og-akte{position:sticky;top:16px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-l);padding:18px;display:flex;flex-direction:column;gap:12px}
+.og-akte h3{margin:0;font-size:var(--stufe-4);font-weight:600;line-height:1.3}
+.og-akte .why{font-size:var(--stufe-2);color:var(--text-2)}
+.og-opts{display:flex;flex-direction:column;gap:6px}
+.og-opt{display:flex;gap:10px;align-items:flex-start;text-align:left;min-height:var(--ziel-min);padding:9px 12px;border-radius:var(--radius-m);font-size:var(--stufe-2);color:var(--text);background:var(--panel);border:1px solid var(--border);cursor:pointer}
+.og-opt[aria-checked="true"]{background:var(--action-soft,rgba(228,184,92,.16));border-color:var(--action)}
+.og-opt i{flex:none;margin-top:3px;width:14px;height:14px;border-radius:50%;border:1px solid var(--text-3)}
+.og-opt[aria-checked="true"] i{border:4px solid var(--action)}
+.og-akte label{display:flex;flex-direction:column;gap:4px;font-size:var(--stufe-1);color:var(--text-3)}
+.og-akte textarea,.og-akte input{background:var(--panel);color:var(--text);border:1px solid var(--border-strong);border-radius:var(--radius-m);padding:8px 10px;font:inherit;font-size:var(--stufe-2)}
+.og-akte input{min-height:40px}
+.og-akte textarea::placeholder,.og-akte input::placeholder{color:var(--text-2)}
+.og-apps{display:flex;gap:8px}
+.og-app{flex:1;display:flex;align-items:center;gap:8px;min-height:52px;padding:6px 10px;border-radius:var(--radius-m);font-size:var(--stufe-2);text-align:left;cursor:pointer;background:transparent;color:var(--text-2);border:1px dashed var(--border-strong)}
+.og-app img{width:24px;height:24px;border-radius:50%;object-fit:cover}
+.og-app span{display:flex;flex-direction:column;line-height:1.2}
+.og-app small{font-size:11.5px}
+.og-app.mein{background:var(--action);color:var(--on-action);border:1px solid var(--action)}
+.og-app.frei{background:var(--accent-soft);color:var(--text);border:1px solid var(--accent)}
+.og-app.mein.gesperrt{background:transparent;color:var(--text-2);border:1px dashed var(--border-strong)}
+.og-sub{font-size:var(--stufe-1);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
+.og-chips{display:flex;flex-wrap:wrap;gap:6px}
+.og-chips button{min-height:32px;padding:3px 9px;border-radius:var(--radius-s);font-size:var(--stufe-2);text-align:left;cursor:pointer;border:1px solid var(--border);color:var(--text);background:var(--fill-soft)}
+.og-chips button.ok{background:var(--accent-soft)}
+.og-zst{align-self:flex-start;font-size:var(--stufe-2);font-weight:600;padding:3px 10px;border-radius:var(--radius-s);background:var(--fill);color:var(--text-2)}
+.og-zst.frei{background:var(--accent-soft);color:var(--accent-strong)}
+.og-zst.fertig{background:var(--pos-bg);color:var(--pos)}
+.og-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.og-steps{display:flex;flex-direction:column;gap:5px}
+.og-step{display:flex;gap:10px;align-items:center;text-align:left;min-height:40px;padding:5px 10px;border-radius:var(--radius-m);font-size:var(--stufe-2);color:var(--text);background:var(--panel);border:1px solid var(--border);cursor:pointer}
+.og-step.done{background:var(--accent-soft)}
+.og-step.naechst{border-color:var(--action)}
+.og-step.lock{color:var(--text-3);cursor:not-allowed}
+.og-step b{flex:none;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;border:1px solid var(--text-3);color:var(--text-2)}
+.og-step.done b{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.og-dl{margin:0;display:grid;grid-template-columns:112px 1fr;gap:6px 10px;font-size:var(--stufe-2);border-top:1px solid var(--border);padding-top:10px}
+.og-dl dt{color:var(--text-3)}.og-dl dd{margin:0}
+.og-meldung{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:60;display:none;align-items:center;gap:12px;padding:12px 18px;border-radius:var(--radius-l);background:var(--surface-2);border:1px solid var(--action);color:var(--text);box-shadow:var(--shadow-pop);font-size:var(--stufe-3);max-width:calc(100vw - 32px)}
+.og-meldung.show{display:flex}
+.og-meldung img{width:64px;height:36px;border-radius:var(--radius-s);object-fit:cover}
+@media (prefers-reduced-motion:no-preference){
+  .og-hero img{animation:ogFade 420ms var(--motion-ease)}
+  .og-meldung.show,.og-zi{animation:ogRise 200ms var(--motion-ease)}
+}
+@keyframes ogFade{from{opacity:.25}to{opacity:1}}
+@keyframes ogRise{from{opacity:0;transform:translate(var(--og-x,0),8px)}to{opacity:1;transform:translate(var(--og-x,0),0)}}
+.og-meldung{--og-x:-50%}
+@media (max-width:1180px){ .og-grid{grid-template-columns:minmax(0,1fr)} .og-akte{position:static;order:-1} }
+@media (max-width:640px){ .og-stufen{grid-template-columns:minmax(0,1fr)} .og-track{grid-template-columns:repeat(5,minmax(96px,1fr));overflow-x:auto} .og-zug-l{grid-template-columns:minmax(0,1fr)} .og-2{grid-template-columns:minmax(0,1fr)} .og-apps{flex-direction:column} }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Das Hohe Haus</h1>
+    <div class="sub">Organisation · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app" style="--maxw:1376px">
+  <header id="topbar"></header>
+
+  <div class="og-kopf">
+    <div>
+      <div class="og-eyebrow">Vorhaben · Organisationsarchitektur</div>
+      <h2>Das Haus wächst</h2>
+      <div class="og-lage" id="ogLage" role="status">lädt …</div>
+    </div>
+    <div class="og-kopf-a">
+      <a class="btn btn-brand" href="https://claude.ai/code/artifact/5f7a5593-d820-4cea-92a9-1046d4a76ca8" target="_blank" rel="noopener">Architektur lesen</a>
+      <button type="button" class="btn btn-primary" id="ogNext">Nächster Zug</button>
+    </div>
+  </div>
+
+  <figure class="og-hero"><img id="ogHeroImg" src="/assets/game/habitat-1-lichtung.webp" alt="" width="1600" height="900" decoding="async"></figure>
+  <div class="og-track" id="ogTrack" role="group" aria-label="Wachstum des Hauses"></div>
+
+  <section class="og-zug" id="ogZug" aria-label="Dein Zug"></section>
+
+  <div class="og-grid">
+    <div>
+      <section aria-label="Entscheidungen">
+        <div class="og-sec-k"><h3>Acht Entscheidungen vor Stufe 1</h3><span id="ogDecSum"></span></div>
+        <div class="og-decs" id="ogDecs"></div>
+      </section>
+      <div class="og-steuer">
+        <div class="og-seg" role="group" aria-label="Ansicht" id="ogViews"></div>
+        <div class="og-fil" role="group" aria-label="Filter" id="ogFil"></div>
+      </div>
+      <div id="ogMain"><div class="loading">lädt …</div></div>
+    </div>
+    <aside class="og-akte" id="ogAkte" aria-label="Akte" aria-live="polite"></aside>
+  </div>
+</div>
+
+<div class="og-meldung" id="ogMeldung" role="status"><img id="ogMeldungImg" src="/assets/game/habitat-2-lagerplatz.webp" alt="" width="64" height="36"><span id="ogMeldungTxt"></span></div>
+<div class="toast" id="toast"></div>
+<script src="/assets/core.js?v=31"></script>
+<script src="/assets/game.js?v=31"></script>
+<script src="/assets/eggs.js?v=31" defer></script>
+<script>
+/* V32 · Organisation: acht Entscheidungen (Wahl, Freigabe Alex und Lea, Begründung), daraus Leas Teamaufbau je Rolle
+   (sechs Schritte, Leitung, Stellvertretung) und die Tore der vier Aufbaustufen. Grundlage: Claude-Dokument
+   „Wilde Habitate · Organisationsarchitektur“ (05.10.2026). Termine „besetzt bis“ sind Vorschläge.
+   Stand über die Edge Function „organisation“; wird eine Entscheidung von beiden freigegeben, schreibt die Seite
+   einen Eintrag ins Entscheidungslog (gfweekly/decision_add, mit Habitat-Talern) und vermerkt ihn (log_verknuepfen).
+   Ansicht und Filter in localStorage gf_og_view und gf_og_filter, die Akte im Link (?d=4 oder ?r=prod). */
+const $=s=>document.querySelector(s);
+const OG_FN="https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/organisation";
+async function ogApi(action,payload){
+  const res=await fetch(OG_FN,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,password:gfPW(),payload:Object.assign({who:gfWho()},payload||{})})});
+  let d={}; try{ d=await res.json(); }catch(e){}
+  if(res.status===401) throw {auth:true,message:"Passwort abgelaufen. Bitte neu entsperren."};
+  if(!res.ok){ const e=new Error(d.error||("HTTP "+res.status)); e.status=res.status; e.data=d; throw e; }
+  return d;
+}
+
+/* ---------- Inhalt (Quelle: Organisationsarchitektur; Rollen und Abhängigkeiten gespiegelt in der Edge Function) ---------- */
+const HEUTE="2026-10-05";
+const D=[
+  {id:1,t:"Zielarchitektur als Leitbild",bis:"15.11.2026",due:"2026-11-15",opts:["bestätigen","ändern","anderen Weg wählen"],why:"Jede Besetzung danach folgt diesem Bild."},
+  {id:2,t:"Eure eigenen Rollen im Haus",bis:"15.11.2026",due:"2026-11-15",opts:["Geschäftsführung zu zweit","eine Person Geschäftsführung, eine Person Beirat oder Hauspartner"],why:"Bestimmt, welche Rollen extern besetzt werden müssen."},
+  {id:3,t:"Formatleitung der Wilden Möhre neben euch",bis:"31.12.2026 Stellvertretung, 2028 Leitung",due:"2026-12-31",opts:["interne Nachfolge aufbauen","externe Leitung","Formatpartner aus dem Kollektivkreis"],why:"Größte Abhängigkeit im ganzen System."},
+  {id:4,t:"Produktionsleitung mit Stellvertretung",bis:"31.12.2026",due:"2026-12-31",opts:["Entscheidung im Vorhaben „Rolle Helge ab 2027“","externe Besetzung","Tandem"],why:"Produktion beginnt im März; Sanitär ist der Qualitätshebel."},
+  {id:5,t:"Phase und Rechte je Format",bis:"30.11.2026",due:"2026-11-30",opts:["Phasen wie in der Architektur eingeschätzt festhalten","einzelne Formate anders einordnen"],why:"Voraussetzung für Erprobung 2027, Wert und Verkauf."},
+  {id:6,t:"Fertigungstiefe je Gewerk",bis:"31.01.2027",due:"2027-01-31",opts:["überwiegend selbst","überwiegend über Operations Partner","überwiegend über Dienstleister","je Gewerk gemischt (Modelle A bis L)"],why:"Bestimmt Größe von Operations und Kosten."},
+  {id:7,t:"Verhältnis von mit Freude eG und GmbH",bis:"Generalversammlung",due:null,opts:["eG als Hauspartnerin","eG mit Mitsprache ohne Beteiligung am Haus","Klärung vertagen"],why:"Eine offene Beteiligungsfrage belastet jede Bewertung."},
+  {id:8,t:"Instrumente und Partnerverträge",bis:"31.01.2027",due:"2027-01-31",opts:["alle drei Instrumente prüfen lassen","zuerst nur formatbezogene Erfolgsbeteiligung"],why:"Fluidity hat eine Erfolgsbeteiligung ab 2027 zugesagt bekommen."}
+];
+const FSTEPS=["Ideengeber und Beiträge geklärt","Phase auf dem Weg und Nutzungslizenz festgehalten","Formatpartner gefunden","Vertrag mit formatbezogener Erfolgsbeteiligung","Stellvertretung benannt","Briefing an Operations steht"];
+const OSTEPS=["Profil und Anforderungen geschrieben","Weg gewählt: angestellt, Operations Partner oder Dienstleister","Suche und Gespräche","Zusage und Vertrag mit Instrument","Stellvertretung benannt","Eingearbeitet, Wissen im Handbuch"];
+const HSTEPS=["Rollenbeschreibung geschrieben","Weg gewählt: angestellt, Operations Partner oder Mandat","Suche und Gespräche","Zusage und Vertrag","Stellvertretung benannt","Eingearbeitet, Wissen im Handbuch"];
+const R=[
+  {id:"gf",e:"Haus",t:"Geschäftsführung (zwei Personen)",heute:"Alexander und Lea",partner:"Organ; Hauspartner mit atypisch stiller Beteiligung möglich",umfang:"2 VZÄ",stv:"gegenseitig, Vier-Augen-Prinzip",anf:"Organerfahrung, Finanz- und Vertragsführung, Moderation zwischen Formaten",dep:[1,2],q0:0,q1:0,stufe:1,pflicht:true,steps:["Rollen von Alexander und Lea beschlossen","Aufgaben ohne Formatbezug abgegeben","Vertretungsregeln schriftlich","Bürgschaften und Verträge auf das Haus übertragen","Vier-Augen-Prinzip in Kraft","Abwesenheitstest geplant"]},
+  {id:"daten",e:"Haus",t:"Daten und Systeme",heute:"Systeme liegen bei Alexander",partner:"Operations Partner",umfang:"1 VZÄ",stv:"zweite Person mit Admin-Rechten",anf:"Datenmodell, DSGVO, Plattformbetrieb",dep:[1],q0:0,q1:1,stufe:1,pflicht:true,note:"zweite Person mit Admin-Rechten sofort"},
+  {id:"wm",e:"Formate",t:"Formatleitung Wilde Möhre",heute:"Alexander allein",partner:"Formatpartner mit formatbezogener Erfolgsbeteiligung",umfang:"0,4 bis 1 VZÄ",stv:"bis 31.12.2026, oft aus dem Kollektivkreis",anf:"Szene und Netzwerk, Ergebnisdenken, Briefing von Operations; zwölf Jahre Wissen übernehmen",dep:[3,5,8],q0:0,q1:5,stufe:1,pflicht:true,phase:"Verankerung",note:"Stellvertretung bis 31.12.2026, Leitung 2028",fmt:true},
+  {id:"flu",e:"Formate",t:"Formatleitung Fluidity",heute:"zwei Freie, Erfolgsbeteiligung ab 2027 zugesagt",partner:"Formatpartner mit formatbezogener Erfolgsbeteiligung",umfang:"0,4 bis 1 VZÄ",stv:"zwischen den beiden Formatpartnern",anf:"Kuration Nachtkultur, Consent, English first",dep:[5,8],q0:0,q1:1,stufe:1,pflicht:true,phase:"Verankerung",fmt:true},
+  {id:"lus",e:"Formate",t:"Formatleitung Lusatia",heute:"Subardo als möglicher Formatpartner, dazu ihr beide",partner:"Formatpartner mit formatbezogener Erfolgsbeteiligung",umfang:"0,4 bis 1 VZÄ",stv:"offen",anf:"Region als Inhalt, Kunst, Architektur, Hochschulen, international",dep:[5,8],q0:0,q1:1,stufe:1,pflicht:true,phase:"Ursprung, 2027 Erprobung",fmt:true},
+  {id:"mal",e:"Formate",t:"Formatleitung Malina, Morio & die Draußenbande",heute:"Lea als Formatpartnerin; Ideengeber-Frage offen",partner:"Formatpartner mit formatbezogener Erfolgsbeteiligung",umfang:"0,4 bis 1 VZÄ",stv:"offen",anf:"Familienformat ohne Kinderanimation, Pädagogik, Community",dep:[5,8],q0:0,q1:1,stufe:1,pflicht:true,phase:"Ursprung, 2027 Erprobung",fmt:true},
+  {id:"byn",e:"Formate",t:"Formatleitung by nature",heute:"Helge; der frühere Partner sucht eine neue Struktur",partner:"Formatpartner mit formatbezogener Erfolgsbeteiligung",umfang:"0,4 bis 1 VZÄ",stv:"offen",anf:"Retreat und Festival, Zielgruppe 30 bis 55",dep:[5,8],q0:0,q1:1,stufe:1,pflicht:true,phase:"Ursprung, 2027 Erprobung, falls es stattfindet",fmt:true,note:"zuerst entscheiden, ob 2027 stattfindet"},
+  {id:"prod",e:"Operations",t:"Produktionsleitung",heute:"Vorhaben „Rolle Helge ab 2027“ offen",partner:"Operations Partner mit erfolgsbezogener Operations Perspektive",umfang:"1 + 1 VZÄ",stv:"feste Stellvertretung",anf:"mehrjährige Festivalproduktion, Budgetführung, Führung wechselnder Teams",dep:[4],q0:0,q1:1,stufe:1,pflicht:true,note:"Produktion beginnt im März"},
+  {id:"tech",e:"Operations",t:"Technische Leitung Gelände",heute:"Fertigungstiefe offen",partner:"Operations Partner",umfang:"1 VZÄ",stv:"Gewerkeleitung Technik",anf:"Meister Veranstaltungstechnik oder gleichwertig, Bau und Abnahmen",dep:[6],q0:1,q1:1,stufe:1,pflicht:true},
+  {id:"sich",e:"Operations",t:"Sicherheit und Genehmigungen",heute:"Pool der Veranstaltungsleitungen nicht benannt",partner:"Operations Partner",umfang:"1 VZÄ",stv:"externe Sicherheitsberatung",anf:"Behördenpraxis, BbgVStättV; mindestens vier Veranstaltungsleitungen für fünf Festivals",dep:[6],q0:1,q1:1,stufe:1,pflicht:true},
+  {id:"tick",e:"Operations",t:"Ticketing, Vertrieb, Gästeservice",heute:"Bürgschaft für den Ticketingvertrag bei Alexander",partner:"Operations Partner",umfang:"1 VZÄ",stv:"Kanalverantwortung Vermarktung",anf:"Ticketing-Systeme, Vertrieb",dep:[6],q0:0,q1:1,stufe:1,pflicht:true},
+  {id:"crew",e:"Operations",t:"Crew, Kollektive und Care",heute:"Crew-Leitungen leer",partner:"Operations Partner",umfang:"1 VZÄ",stv:"Crew-Leitungen",anf:"Freiwilligenarbeit, Awareness, Konfliktfähigkeit; rund 300 Helfende pro Woche",dep:[6],q0:1,q1:2,stufe:1,pflicht:true},
+  {id:"gastro",e:"Operations",t:"Gäste und Gastronomie",heute:"2027 saisonal oder über Dienstleister (Vorschlag)",partner:"Operations Partner",umfang:"1 VZÄ",stv:"Schichtleitung Gastro",anf:"Gastronomie im Großformat, Einkauf; 35 % des Umsatzes",dep:[6],q0:3,q1:4,stufe:2},
+  {id:"verm",e:"Operations",t:"Vermarktung und Content",heute:"2027 im heutigen Zuschnitt (Vorschlag)",partner:"Operations Partner",umfang:"1,5 bis 2 VZÄ",stv:"Content-Produktion",anf:"Kampagnen für mehrere Marken, Redaktion",dep:[6],q0:3,q1:4,stufe:2},
+  {id:"prog",e:"Operations",t:"Programm-Abwicklung",heute:"2027 je Format (Vorschlag)",partner:"Operations Partner",umfang:"1 VZÄ",stv:"zweite Person im Team",anf:"Booking-Praxis, Vertragsrecht, Künstlersozialabgabe",dep:[6],q0:3,q1:4,stufe:2},
+  {id:"kfm",e:"Haus",t:"Kaufmännische Leitung",heute:"noch keine Ergebnisrechnung je Format",partner:"angestellt oder Operations Partner",umfang:"1 VZÄ",stv:"Steuerberatung mit Mandat",anf:"Controlling, Ergebnisrechnung je Format als Grundlage jeder Erfolgsbeteiligung",dep:[2],q0:2,q1:4,stufe:2},
+  {id:"recht",e:"Haus",t:"Recht, Verträge und Marken",heute:"Kanzlei-Mandat für Entscheidung 5 und 8 nötig",partner:"angestellt oder Operations Partner",umfang:"0,5 bis 1 VZÄ",stv:"Kanzlei mit Mandat",anf:"Vertrags- und Markenrecht, Sozialversicherungsrecht",dep:[5,8],q0:3,q1:4,stufe:2,note:"Mandat sofort, Rolle ab Stufe 2"},
+  {id:"beirat",e:"Haus",t:"Beirat mit Hauspartnern",heute:"nicht vorhanden",partner:"Hauspartner, externe Personen, eG nach Klärung",umfang:"Gremium, quartalsweise",stv:"entfällt",anf:"zwei bis drei externe Personen",dep:[7],q0:4,q1:5,stufe:2},
+  {id:"studio",e:"Haus",t:"Studio für neue Formate",heute:"nicht vorhanden",partner:"Operations Partner",umfang:"0,5 VZÄ",stv:"Geschäftsführung",anf:"Konzept, Markt- und Machbarkeitsprüfung; begleitet Formate von Ursprung bis Erprobung",dep:[1],q0:8,q1:8,stufe:3}
+];
+R.forEach(r=>{ if(!r.steps) r.steps = r.fmt?FSTEPS:(r.e==="Haus"?HSTEPS:OSTEPS); });
+const Q=["Q4 26","Q1 27","Q2 27","Q3 27","Q4 27","Q1 28","Q2 28","Q3 28","ab Q4 28"];
+const S=[
+  {n:1,t:"Fundament sichern",z:"Okt. 2026 bis Sept. 2027",tor:["Saison 2027 ohne Ausfall einer Pflichtrolle","Phase und Rechte je Format vertraglich geregelt","gemeinsame Auswertung jedes Formats geschrieben"]},
+  {n:2,t:"Operations formalisieren",z:"Okt. 2027 bis Sept. 2028",tor:["vier Wochen Abwesenheit von euch beiden ohne Rückfragen","erstes volles Jahr Zahlen je Format","Entscheidung über Verankerung nach zwei Ausgaben"]},
+  {n:3,t:"Skalieren",z:"Okt. 2028 bis Sept. 2029",tor:["neues Format startet ohne zusätzliche Stelle in Operations"]},
+  {n:4,t:"Verkaufsfähig",z:"Okt. 2029 bis 2030",tor:["90 Tage Abwesenheitstest bestanden","Due-Diligence-Checkliste vollständig"]}
+];
+const IMG=[
+  {src:"/assets/game/habitat-1-lichtung.webp",t:"Lichtung",sub:"heute · acht Entscheidungen",alt:"Leere Lichtung im Wald mit einem Wimpel",art:"Die Lichtung"},
+  {src:"/assets/game/habitat-2-lagerplatz.webp",t:"Lagerplatz",sub:"Tor 1 · Fundament",alt:"Lagerplatz mit Zelten und Wegweiser",art:"Der Lagerplatz"},
+  {src:"/assets/game/habitat-3-dorf.webp",t:"Dorf",sub:"Tor 2 · Operations",alt:"Kleines Dorf aus Zelten und Ständen",art:"Das Dorf"},
+  {src:"/assets/game/habitat-4-festival.webp",t:"Festival",sub:"Tor 3 · Skalieren",alt:"Festivalgelände mit Bühne und Lichterketten",art:"Das Festival"},
+  {src:"/assets/game/habitat-5-habitat.webp",t:"Habitat",sub:"Tor 4 · verkaufsfähig",alt:"Ausgebautes Habitat mit Baumhaus am See",art:"Das Habitat"}
+];
+const AV={Alex:"/assets/img/avatar-alex.webp",Lea:"/assets/img/avatar-lea.webp"};
+const EC={Haus:"var(--og-haus)",Operations:"var(--og-ops)",Formate:"var(--og-fmt)"};
+
+/* ---------- Zustand ---------- */
+let ST={dec:{},rolle:{},tor:{}}, GELADEN=false;
+const UI={
+  view:(()=>{ try{ const v=localStorage.getItem("gf_og_view"); return v==="zeit"?"zeit":"stufen"; }catch(e){ return "stufen"; } })(),
+  filter:(()=>{ try{ const v=localStorage.getItem("gf_og_filter"); return ["alle","pflicht","frei","wartet"].includes(v)?v:"alle"; }catch(e){ return "alle"; } })(),
+  sel:{k:"dec",id:1}, peek:null
+};
+(()=>{ const q=new URLSearchParams(location.search); if(q.get("d")&&D.find(x=>x.id===+q.get("d"))) UI.sel={k:"dec",id:+q.get("d")}; else if(q.get("r")&&R.find(x=>x.id===q.get("r"))) UI.sel={k:"rolle",id:q.get("r")}; })();
+const ich=()=>gfWho()==="Lea"?"Lea":"Alex";
+const dec=id=>ST.dec[id]||{id,wahl:null,alex_frei:false,lea_frei:false,rev:0};
+const rol=id=>ST.rolle[id]||{id,schritt:0,leitung:null,stellvertretung:null,rev:0};
+const decOk=id=>!!dec(id).freigegeben_am;
+const fehlt=r=>r.dep.filter(id=>!decOk(id));
+const tage=iso=>Math.round((Date.UTC(+iso.slice(0,4),+iso.slice(5,7)-1,+iso.slice(8,10))-Date.UTC(+HEUTE.slice(0,4),+HEUTE.slice(5,7)-1,+HEUTE.slice(8,10)))/864e5);
+const heuteIso=()=>new Date().toLocaleDateString("sv-SE",{timeZone:"Europe/Berlin"});
+const frist=d=>{ if(!d.due) return "bis "+d.bis; const n=Math.round((Date.parse(d.due)-Date.parse(heuteIso()))/864e5); return n>=0?"noch "+n+" Tage":"überfällig"; };
+function rolleZst(r){
+  const f=fehlt(r), s=rol(r.id).schritt||0;
+  if(f.length) return {k:"lock",l:"wartet auf Entscheidung "+f.join(", ")};
+  if(s>=r.steps.length) return {k:"fertig",l:"besetzt, mit Stellvertretung"};
+  if(s===0) return {k:"frei",l:"kann starten"};
+  return {k:"lauf",l:"Schritt "+s+" von "+r.steps.length};
+}
+function torVoll(s){ return s.tor.every((x,j)=>ST.tor[s.n+"-"+j]); }
+function stufe(){ let l=0; for(const s of S){ if(torVoll(s)) l=s.n; else break; } return l; }
+function decZst(id){
+  const d=dec(id);
+  if(d.freigegeben_am) return {k:"ok",l:"freigegeben"};
+  if(d.wahl===null||d.wahl===undefined) return {k:"offen",l:"offen"};
+  if(d.alex_frei) return {k:"halb",l:"Lea fehlt"};
+  if(d.lea_frei) return {k:"halb",l:"Alex fehlt"};
+  return {k:"halb",l:"Freigabe fehlt"};
+}
+const fpass=(r,f)=>{ f=f||UI.filter; const s=rol(r.id).schritt||0;
+  return f==="alle"||(f==="pflicht"&&r.pflicht)||(f==="wartet"&&fehlt(r).length>0)||(f==="frei"&&!fehlt(r).length&&s<r.steps.length); };
+
+function zugListe(){
+  const w=ich(), mk=w==="Alex"?"alex_frei":"lea_frei", out=[];
+  D.filter(d=>!decOk(d.id)).sort((a,b)=>(a.due||"9")<(b.due||"9")?-1:1).forEach(d=>{
+    const x=dec(d.id), eilt=d.due&&tage(d.due)<45;
+    if(x.wahl===null||x.wahl===undefined) out.push({k:"dec",id:d.id,head:d.id+" · "+d.t,body:"Möglichkeit wählen · "+frist(d),btn:"Öffnen",eilt,act:"open"});
+    else if(!x[mk]) out.push({k:"dec",id:d.id,head:d.id+" · "+d.t,body:"Deine Freigabe fehlt: "+d.opts[x.wahl],btn:"Freigeben",eilt:true,act:"frei"});
+  });
+  if(w==="Lea") R.filter(r=>!fehlt(r).length&&(rol(r.id).schritt||0)<r.steps.length).sort((a,b)=>a.q1-b.q1||a.q0-b.q0).forEach(r=>{
+    const s=rol(r.id).schritt||0;
+    out.push({k:"rolle",id:r.id,head:r.t,body:"Als Nächstes: "+r.steps[s]+" · bis "+Q[r.q1],btn:"Erledigt",eilt:r.q1<=1,act:"schritt"});
+  });
+  return out;
+}
+
+/* ---------- Zeichnen ---------- */
+function render(){
+  if(!GELADEN) return;
+  const w=ich(), nOk=D.filter(d=>decOk(d.id)).length, lvl=stufe();
+  const pfl=R.filter(r=>r.pflicht), pflOk=pfl.filter(r=>{ const x=rol(r.id); return (x.schritt||0)>=5||(x.leitung&&x.stellvertretung); }).length;
+  const offen=D.filter(d=>!decOk(d.id)&&d.due).sort((a,b)=>a.due<b.due?-1:1)[0];
+  $("#ogLage").textContent = nOk===8
+    ? "Stufe "+Math.min(4,lvl+1)+" · "+S[Math.min(3,lvl)].t+" · "+pflOk+" von "+pfl.length+" Pflichtrollen mit Stellvertretung"
+    : nOk+" von 8 Entscheidungen freigegeben"+(offen?" · nächste Frist "+offen.bis.split(" ")[0]:"")+" · "+pflOk+" von "+pfl.length+" Pflichtrollen mit Stellvertretung";
+
+  const zeig=UI.peek!==null?UI.peek:lvl;
+  const img=$("#ogHeroImg"); if(img.getAttribute("src")!==IMG[zeig].src){ img.src=IMG[zeig].src; } img.alt=IMG[zeig].alt;
+  $("#ogTrack").innerHTML=IMG.map((m,i)=>{
+    const erreicht=i<=lvl, jetzt=i===lvl;
+    let p=0; if(i===0) p=nOk/8; else if(erreicht) p=1; else if(i===lvl+1) p=S[i-1].tor.filter((x,j)=>ST.tor[i+"-"+j]).length/S[i-1].tor.length;
+    return `<button type="button" data-peek="${i}" aria-pressed="${zeig===i}"><span class="bar${erreicht&&i>0||p===1?" voll":""}"><i style="width:${Math.round(p*100)}%"></i></span><span><b>${m.t}</b>${jetzt?'<span class="mk">hier</span>':(erreicht?'<span class="mk ok">erreicht</span>':"")}</span><small>${m.sub}</small></button>`;
+  }).join("");
+
+  const z=zugListe();
+  $("#ogZug").innerHTML=`<div class="og-zug-k"><img src="${AV[w]}" alt="" width="36" height="36"><div><b>${z.length?"Dein Zug, "+w+" · "+z.length+(z.length===1?" Sache":" Sachen"):"Nichts bei dir, "+w}</b><span>${w==="Lea"?"Freigaben, die auf dich warten, und die nächsten Schritte im Teamaufbau, nach Frist.":"Freigaben und Entscheidungen, die auf dich warten. Den Teamaufbau führt Lea."}</span></div></div>`+
+    (z.length?`<div class="og-zug-l">${z.slice(0,6).map(x=>`<div class="og-zi"><span class="dot${x.eilt?" eilt":""}"></span><button type="button" class="txt" data-open="${x.k}:${x.id}"><b>${gfEsc(x.head)}</b><span>${gfEsc(x.body)}</span></button><button type="button" class="btn btn-ghost" data-zug="${x.act}:${x.k}:${x.id}">${x.btn}</button></div>`).join("")}</div>`:"");
+  const b=document.getElementById("orgBadge"); if(b){ b.textContent=z.length; b.style.display=z.length?"inline-flex":"none"; }
+
+  $("#ogDecSum").textContent=nOk+" von 8 freigegeben · jede gilt erst mit Alex und Lea";
+  $("#ogDecs").innerHTML=D.map(d=>{
+    const x=dec(d.id), s=decZst(d.id), sel=UI.sel.k==="dec"&&UI.sel.id===d.id;
+    return `<button type="button" class="og-dec${s.k==="ok"?" ok":""}${sel?" sel":""}" data-open="dec:${d.id}"><span class="r1"><span class="nr">${d.id}</span><span class="og-st ${s.k}">${s.l}</span><span class="og-avs"><img class="${x.alex_frei?"":"aus"}" src="${AV.Alex}" alt="${x.alex_frei?"Alex hat freigegeben":"Alex offen"}" width="22" height="22"><img class="${x.lea_frei?"":"aus"}" src="${AV.Lea}" alt="${x.lea_frei?"Lea hat freigegeben":"Lea offen"}" width="22" height="22"></span></span><span class="t">${gfEsc(d.t)}</span><small>${d.due?"bis "+d.bis.split(" ")[0]+" · "+frist(d):"bis Generalversammlung"}</small></button>`;
+  }).join("");
+
+  $("#ogViews").innerHTML=[["stufen","Stufen und Tore"],["zeit","Zeitachse"]].map(([k,l])=>`<button type="button" class="seg${UI.view===k?" on":""}" data-view="${k}" aria-pressed="${UI.view===k}">${l}</button>`).join("");
+  $("#ogFil").innerHTML=[["alle","Alle"],["pflicht","Pflichtrollen"],["frei","Startklar"],["wartet","Wartet"]].map(([k,l])=>`<button type="button" data-fil="${k}" aria-pressed="${UI.filter===k}">${l}<small>${R.filter(r=>fpass(r,k)).length}</small></button>`).join("");
+
+  $("#ogMain").innerHTML = UI.view==="zeit" ? zeitHtml() : stufenHtml(lvl);
+  $("#ogAkte").innerHTML = UI.sel.k==="dec" ? decAkte(UI.sel.id) : rolleAkte(UI.sel.id);
+}
+function karte(r){
+  const z=rolleZst(r), x=rol(r.id), s=x.schritt||0, sel=UI.sel.k==="rolle"&&UI.sel.id===r.id;
+  const lN=x.leitung||(r.id==="gf"?"Alexander und Lea":""), sN=x.stellvertretung||"";
+  const krit=r.pflicht&&r.stufe===1&&s<r.steps.length&&z.k!=="lock";
+  const slot=(f,l)=>`<span class="og-slot${f?" voll":""}"${f?` style="background:${EC[r.e]}"`:""}>${l}</span>`;
+  return `<button type="button" class="og-rk${z.k==="lock"?" lock":""}${krit?" krit":""}${sel?" sel":""}" data-open="rolle:${r.id}"><span class="n"><i style="background:${EC[r.e]}"></i>${gfEsc(r.t)}</span><span class="og-slots">${slot(lN,"L")}<span>${gfEsc(lN||"offen")}</span>${slot(sN,"S")}<span>${gfEsc(sN||"offen")}</span></span><span class="og-segs">${r.steps.map((q,i)=>`<i${i<s?` style="background:${EC[r.e]}"`:""}></i>`).join("")}</span><small>${z.l}</small></button>`;
+}
+function stufenHtml(lvl){
+  return `<div class="og-stufen">${S.map((s,i)=>{
+    const rl=R.filter(r=>r.stufe===s.n&&fpass(r)), voll=torVoll(s), n=s.tor.filter((x,j)=>ST.tor[s.n+"-"+j]).length;
+    const leer=R.some(r=>r.stufe===s.n)?"Keine Rolle in diesem Filter.":"Keine neue Rolle. Übergaben, Handbücher und Gremien ohne euren Vorsitz.";
+    return `<section class="og-stufe${i===lvl?" jetzt":""}${!voll&&i!==lvl?" spaeter":""}"><img src="${IMG[s.n].src}" alt="" width="1600" height="900" loading="lazy"><div class="k"><div class="og-eyebrow">Stufe ${s.n} · ${s.z}</div><h4>${s.t}</h4></div><div class="rl">${rl.length?rl.map(karte).join(""):`<div class="leer">${leer}</div>`}</div><div class="og-tor"><b class="${voll?"ok":""}">${voll?"Tor "+s.n+" erreicht":"Tor "+s.n+" · "+n+" von "+s.tor.length}</b>${s.tor.map((t,j)=>{ const on=!!ST.tor[s.n+"-"+j]; return `<button type="button" data-tor="${s.n}-${j}" aria-pressed="${on}"><span class="og-box${on?" on":""}"></span><span>${gfEsc(t)}</span></button>`; }).join("")}</div></section>`;
+  }).join("")}</div>`;
+}
+function zeitHtml(){
+  const grp=e=>e==="Haus"?"Haus · besitzt · Hauspartner":e==="Operations"?"Operations · stellt her · Operations Partner":"Formate · prägen · Formatpartner";
+  let h=`<div class="og-zeit"><div class="og-zeit-in"><div class="og-zr kopf"><div></div><div class="st" style="grid-column:2/6;background:var(--action-soft,rgba(228,184,92,.16));color:var(--text)"><span>Stufe 1 · Fundament</span><span>Tor 1</span></div><div class="st" style="grid-column:6/10;background:var(--fill)"><span>Stufe 2 · Operations</span><span>Tor 2</span></div><div class="st" style="grid-column:10/11;background:var(--fill-soft)">Stufe 3</div></div><div class="og-zr kopf q"><div>Rolle</div>${Q.map((q,i)=>`<div style="padding-left:4px${i===0?";color:var(--action);font-weight:600":""}">${q}</div>`).join("")}</div>`;
+  ["Haus","Operations","Formate"].forEach(e=>{
+    const rows=R.filter(r=>r.e===e&&fpass(r)); if(!rows.length) return;
+    h+=`<div class="og-zgr" style="color:${EC[e]}">${grp(e)}</div>`;
+    rows.forEach(r=>{
+      const z=rolleZst(r), s=rol(r.id).schritt||0, sel=UI.sel.k==="rolle"&&UI.sel.id===r.id;
+      const krit=r.pflicht&&r.stufe===1&&s<r.steps.length;
+      const cls=z.k==="frei"?"frei":z.k==="lauf"?"lauf":z.k==="fertig"?"fertig":"";
+      const st=z.k==="frei"?`border-color:${EC[r.e]}`:z.k==="lauf"?`background:${EC[r.e]};border-color:${EC[r.e]}`:"";
+      const lab=z.k==="lock"?"E "+fehlt(r).join(", "):z.k==="frei"?"startklar":z.k==="fertig"?"besetzt":s+"/"+r.steps.length;
+      h+=`<div class="og-zr row"><button type="button" class="nm${sel?" sel":""}" data-open="rolle:${r.id}">${gfEsc(r.t)}</button><button type="button" class="bal ${cls}${krit?" krit":""}" style="grid-column:${r.q0+2}/${r.q1+3};${st}" data-open="rolle:${r.id}" title="${gfEsc(z.l+(r.note?" · "+r.note:""))}">${lab}</button></div>`;
+    });
+  });
+  return h+`<div class="og-hinweis">Gestrichelt mit „E 6“: wartet auf Entscheidung 6. Gelber Rand: Pflichtrolle für Tor 1, noch nicht besetzt. Balken: Suche bis „besetzt“ (Vorschlag). Gelb markiert ist das laufende Quartal.</div></div></div>`;
+}
+function decAkte(id){
+  const d=D.find(x=>x.id===id), x=dec(id), w=ich(), ok=decOk(id), gew=x.wahl!==null&&x.wahl!==undefined;
+  const app=(p)=>{ const mein=p===w, an=p==="Alex"?x.alex_frei:x.lea_frei, am=p==="Alex"?x.alex_am:x.lea_am;
+    const cls=an?"frei":(mein?(gew?"mein":"mein gesperrt"):"");
+    const lab=an?p+" hat freigegeben":(mein?"Ich gebe frei":"wartet auf "+p);
+    const sub=an?(am?new Date(am).toLocaleDateString("de-DE"):"")+(mein?" · Klick nimmt zurück":""):(mein?(gew?"mit Begründung ins Log":"erst Möglichkeit wählen"):"unten links als "+p+" wechseln");
+    return `<button type="button" class="og-app ${cls}" data-frei="${p}:${id}"><img src="${AV[p]}" alt="" width="24" height="24"><span><b>${lab}</b><small>${sub}</small></span></button>`; };
+  const frei=R.filter(r=>r.dep.includes(id));
+  return `<div class="og-sub">Entscheidung ${id} · bis ${gfEsc(d.bis)}${d.due?" · "+frist(d):""}</div><h3>${gfEsc(d.t)}</h3><div class="why">${gfEsc(d.why)}</div>
+  <div class="og-opts" role="radiogroup" aria-label="Möglichkeiten">${d.opts.map((o,i)=>`<button type="button" class="og-opt" role="radio" aria-checked="${x.wahl===i}" data-wahl="${id}:${i}"><i></i><span>${gfEsc(o)}</span></button>`).join("")}</div>
+  <label>Begründung fürs Entscheidungslog<textarea rows="2" id="ogWhy" data-id="${id}" placeholder="Warum diese Möglichkeit, was ihr bewusst in Kauf nehmt">${gfEsc(x.begruendung||"")}</textarea></label>
+  <div class="og-apps">${app("Alex")}${app("Lea")}</div>
+  <div class="why">${ok?"Freigegeben"+(x.log_decision_id?" und im Entscheidungslog.":"."):(gew?"Gewählt; "+(x.alex_frei||x.lea_frei?"eine Freigabe fehlt.":"beide Freigaben fehlen.")+" Eine andere Wahl setzt beide Freigaben zurück.":"Noch keine Möglichkeit gewählt.")}</div>
+  <div class="og-sub">Schaltet frei</div><div class="og-chips">${frei.map(r=>`<button type="button" class="${fehlt(r).length?"":"ok"}" data-open="rolle:${r.id}">${gfEsc(r.t)}</button>`).join("")}</div>`;
+}
+function rolleAkte(id){
+  const r=R.find(x=>x.id===id), x=rol(id), z=rolleZst(r), s=x.schritt||0, lock=z.k==="lock";
+  const part=r.e==="Formate"?"Formatpartner":r.e==="Operations"?"Operations Partner":"Haus";
+  return `<div class="og-sub">${r.e} · ${part} · Stufe ${r.stufe}${r.phase?" · "+gfEsc(r.phase):""}</div><h3>${gfEsc(r.t)}</h3><div class="og-zst ${z.k==="fertig"?"fertig":lock?"":"frei"}">${z.l}</div>
+  <div class="og-2"><label>Leitung<input type="text" id="ogLead" data-id="${id}" maxlength="120" value="${gfEsc(x.leitung||(id==="gf"?"Alexander und Lea":""))}" placeholder="Name eintragen"></label><label>Stellvertretung<input type="text" id="ogStv" data-id="${id}" maxlength="120" value="${gfEsc(x.stellvertretung||"")}" placeholder="Name eintragen"></label></div>
+  <div class="og-sub">Leas Schritte</div><div class="og-steps">${r.steps.map((t,i)=>`<button type="button" class="og-step${i<s?" done":""}${i===s&&!lock?" naechst":""}${lock?" lock":""}" data-schritt="${id}:${i+1}" aria-pressed="${i<s}"><b>${i+1}</b><span>${gfEsc(t)}</span></button>`).join("")}</div>
+  <dl class="og-dl"><dt>Stand</dt><dd>${gfEsc(r.heute)}</dd><dt>Anforderungen</dt><dd>${gfEsc(r.anf)}</dd><dt>Vertretung</dt><dd>${gfEsc(r.stv)}</dd><dt>Instrument</dt><dd>${gfEsc(r.partner)}</dd><dt>Umfang</dt><dd>${gfEsc(r.umfang)}</dd><dt>Besetzt bis</dt><dd>${Q[r.q1]} (Vorschlag)${r.note?" · "+gfEsc(r.note):""}</dd></dl>
+  <div class="og-chips">${r.dep.map(d=>`<button type="button" class="${decOk(d)?"ok":""}" data-open="dec:${d}">${decOk(d)?"freigegeben":"wartet"} · ${d} ${gfEsc(D.find(y=>y.id===d).t)}</button>`).join("")}</div>`;
+}
+
+/* ---------- Meldung mit Bild ---------- */
+let _ogm=null;
+function melde(txt,bild){ const m=$("#ogMeldung"); $("#ogMeldungTxt").textContent=txt; $("#ogMeldungImg").src=bild||IMG[0].src; m.classList.add("show"); clearTimeout(_ogm); _ogm=setTimeout(()=>m.classList.remove("show"),3800); }
+
+/* ---------- Schreiben ---------- */
+async function laden(){
+  const d=await ogApi("get");
+  ST={dec:{},rolle:{},tor:{}};
+  (d.entscheidungen||[]).forEach(x=>ST.dec[x.id]=x);
+  (d.rollen||[]).forEach(x=>ST.rolle[x.id]=x);
+  (d.tore||[]).forEach(x=>ST.tor[x.key]=!!x.erfuellt);
+  GELADEN=true; render();
+}
+async function konflikt(e){
+  if(e&&e.auth){ gfToast(e.message); return; }
+  gfToast(e&&e.status===409?(e.message+" · neu geladen"):("Nicht gespeichert: "+(e&&e.message||"Verbindung")));
+  try{ await laden(); }catch(x){}
+}
+async function wahl(id,i){
+  const x=dec(id);
+  if(x.freigegeben_am){ gfToast("Schon freigegeben. Erst eine Freigabe zurücknehmen."); return; }
+  if(x.wahl===i) return;
+  const alt=Object.assign({},x); ST.dec[id]=Object.assign({},x,{wahl:i,alex_frei:false,lea_frei:false}); render();
+  try{ const r=await ogApi("wahl",{id,wahl:i,expect_rev:alt.rev}); ST.dec[id]=r.entscheidung; render(); }
+  catch(e){ ST.dec[id]=alt; await konflikt(e); }
+}
+async function freigabe(p,id){
+  const w=ich(), x=dec(id);
+  if(p!==w){ gfToast("Freigeben kann nur "+p+". Unten links auf „als "+p+"“ wechseln."); return; }
+  if(x.wahl===null||x.wahl===undefined){ gfToast("Erst eine Möglichkeit wählen, dann freigeben."); return; }
+  const mk=w==="Alex"?"alex_frei":"lea_frei", on=!x[mk];
+  const why=$("#ogWhy"); if(why&&why.dataset.id==id&&(why.value||"")!==(x.begruendung||"")) await begruendung(id,why.value);
+  try{
+    const r=await ogApi("freigabe",{id,on,expect_wahl:x.wahl});
+    ST.dec[id]=r.entscheidung; render();
+    if(r.neu_freigegeben){
+      const d=D.find(y=>y.id===id);
+      const n=R.filter(q=>q.dep.includes(id)&&!fehlt(q).length).length;
+      const alle=D.every(y=>decOk(y.id));
+      melde(alle?"Alle acht Entscheidungen stehen. Stufe 1 beginnt.":"Entscheidung "+id+" freigegeben · "+n+(n===1?" Rolle":" Rollen")+" startklar", alle?IMG[1].src:IMG[0].src);
+      if(!ST.dec[id].log_decision_id) ins_log(d, ST.dec[id]);
+    }
+  }catch(e){ await konflikt(e); }
+}
+async function ins_log(d,x){
+  try{
+    const frei=R.filter(r=>r.dep.includes(d.id)).map(r=>r.t).join(", ");
+    const res=await gfApi("decision_add",{decision:d.t+": "+d.opts[x.wahl]+(x.begruendung?" · Begründung: "+x.begruendung:""),
+      topic_title:"Organisation · Entscheidung "+d.id, strand:"habitate", decided_by:"Alex und Lea", owner:"Lea",
+      next_action:frei?"Teamaufbau: "+frei:"", decided_at:heuteIso()});
+    if(res&&res.decision&&res.decision.id){ await ogApi("log_verknuepfen",{id:d.id,decision_id:res.decision.id}); ST.dec[d.id].log_decision_id=res.decision.id; render(); }
+  }catch(e){ gfToast("Freigegeben, aber nicht ins Entscheidungslog geschrieben: "+(e.message||"Verbindung")); }
+}
+async function begruendung(id,text){
+  try{ const r=await ogApi("begruendung",{id,text}); ST.dec[id]=Object.assign({},dec(id),{begruendung:r.entscheidung.begruendung}); }
+  catch(e){ await konflikt(e); }
+}
+async function rolleSpeichern(id,patch,ok){
+  const x=rol(id), alt=Object.assign({},x);
+  ST.rolle[id]=Object.assign({},x,patch); render();
+  try{ const r=await ogApi("rolle",{id,patch,expect_rev:alt.rev||0}); ST.rolle[id]=r.rolle; render(); if(ok) ok(r.rolle); }
+  catch(e){ ST.rolle[id]=alt; await konflikt(e); }
+}
+function schritt(id,n){
+  const r=R.find(x=>x.id===id), f=fehlt(r);
+  if(f.length){ gfToast("Wartet noch auf Entscheidung "+f.join(", ")+"."); return; }
+  const cur=rol(id).schritt||0, v=Math.max(0,cur===n?n-1:n);
+  rolleSpeichern(id,{schritt:v},neu=>{ if(neu.schritt===r.steps.length&&cur<r.steps.length) melde(r.t+": besetzt, mit Stellvertretung.",IMG[Math.min(4,stufe()+1)].src); });
+}
+async function tor(key){
+  const on=!ST.tor[key], [n]=key.split("-").map(Number); const vorher=stufe();
+  ST.tor[key]=on; render();
+  try{ await ogApi("tor",{key,on}); const nach=stufe(); if(nach>vorher) melde("Tor "+nach+" erreicht · "+IMG[nach].art+" steht.",IMG[nach].src); }
+  catch(e){ ST.tor[key]=!on; await konflikt(e); }
+}
+function oeffne(k,id){
+  UI.sel={k,id}; render();
+  const q=new URLSearchParams(location.search); q.delete("d"); q.delete("r"); q.set(k==="dec"?"d":"r",id); history.replaceState(null,"","?"+q.toString());
+  if(window.matchMedia("(max-width:1180px)").matches) $("#ogAkte").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+/* ---------- Bedienung ---------- */
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-open],[data-peek],[data-view],[data-fil],[data-wahl],[data-frei],[data-schritt],[data-tor],[data-zug]"); if(!t) return;
+  if(t.dataset.open){ const [k,id]=t.dataset.open.split(":"); oeffne(k,k==="dec"?+id:id); return; }
+  if(t.dataset.peek!==undefined){ const i=+t.dataset.peek; UI.peek=(UI.peek===i||i===stufe())?null:i; render(); return; }
+  if(t.dataset.view){ UI.view=t.dataset.view; try{ localStorage.setItem("gf_og_view",UI.view); }catch(x){} render(); return; }
+  if(t.dataset.fil){ UI.filter=t.dataset.fil; try{ localStorage.setItem("gf_og_filter",UI.filter); }catch(x){} render(); return; }
+  if(t.dataset.wahl){ const [id,i]=t.dataset.wahl.split(":").map(Number); wahl(id,i); return; }
+  if(t.dataset.frei){ const [p,id]=t.dataset.frei.split(":"); freigabe(p,+id); return; }
+  if(t.dataset.schritt){ const [id,n]=t.dataset.schritt.split(":"); schritt(id,+n); return; }
+  if(t.dataset.tor){ tor(t.dataset.tor); return; }
+  if(t.dataset.zug){ const [a,k,id]=t.dataset.zug.split(":");
+    if(a==="open") oeffne(k,k==="dec"?+id:id);
+    else if(a==="frei") freigabe(ich(),+id);
+    else if(a==="schritt") schritt(id,(rol(id).schritt||0)+1);
+  }
+});
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.id==="ogWhy"){ const id=+t.dataset.id; if((t.value||"")!==(dec(id).begruendung||"")) begruendung(id,t.value); }
+  if(t.id==="ogLead"||t.id==="ogStv"){ const id=t.dataset.id, f=t.id==="ogLead"?"leitung":"stellvertretung"; if((t.value||"").trim()!==(rol(id)[f]||"")) rolleSpeichern(id,{[f]:t.value.trim()}); }
+});
+document.addEventListener("gf-who",()=>render());
+$("#ogNext").onclick=()=>{ const z=zugListe(); if(z.length) oeffne(z[0].k,z[0].k==="dec"?z[0].id:z[0].id); else gfToast("Nichts offen bei dir."); };
+
+gfGate(async()=>{
+  $("#app").style.display="block"; gfMountTopbar("organisation");
+  try{ await laden(); }
+  catch(e){ $("#ogMain").innerHTML=`<div class="loading">Nicht geladen: ${gfEsc(e.message||"Verbindung")}</div>`; }
+});
+</script>
+</body>
+</html>

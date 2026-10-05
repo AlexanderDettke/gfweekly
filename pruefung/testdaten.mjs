@@ -219,6 +219,12 @@ export const LAUNCH_LIST = { festivals: LAUNCH_FESTIVALS, meilensteine: LAUNCH_M
 
 export const ANTWORT = {
   ping: { ok:true, version:37 },
+  /* V32 Organisation (Edge Function „organisation“). „get“ teilt sich den Namen mit „saison“; die Seite Saison liest rows und items, Organisation die übrigen Felder. */
+  get: () => ({ rows:[], items:[],
+    entscheidungen:[1,2,3,4,5,6,7,8].map(id => ({ id, wahl: id===4?1:(id===1?0:null), alex_frei: id===4||id===1, lea_frei: id===4, alex_am: id===4?zeit(-1):(id===1?zeit(-1):null), lea_am: id===4?zeit(-1):null,
+      begruendung: id===4?'Testbegründung':null, freigegeben_am: id===4?zeit(-1):null, log_decision_id:null, rev: id===4?3:(id===1?2:0) })),
+    rollen:[ { id:'prod', schritt:2, leitung:'Testperson', stellvertretung:null, rev:2 } ],
+    tore:[ { key:'1-0', erfuellt:false } ], log:[] }),
   launch_list: () => LAUNCH_LIST,
   launch_confirm: (p) => ({ ok:true, von:p.by||'Alex', bestaetigt:3, besetzung:2, offen:1, fehler:[] }),
   launch_sync: () => Object.assign({ ok:true }, LAUNCH_SYNC, { laeufe:5 }),
@@ -435,7 +441,7 @@ export const VH_ANTWORT = {
 
 export const FALLBACK = { ok:true, items:[], topics:[], gains:[] };
 // Schreibende Aktionen darf der Lauf beantworten, ohne dass die Testdaten sie kennen; alles andere ist ein Testfehler.
-export const SCHREIBEND = new Set(['add','update','delete','capture','capture_many','checkin','score_event','decision_add','decision_update','decision_delete',
+export const SCHREIBEND = new Set(['wahl','freigabe','begruendung','log_verknuepfen','rolle','tor','add','update','delete','capture','capture_many','checkin','score_event','decision_add','decision_update','decision_delete',
   'session_start','session_end','session_delete','ritual_toggle','ritual_save','ritual_delete','milestone_save','milestone_delete','news_update','news_accept','news_delete',
   'people_save','people_delete','link_add','link_delete','sites_save','sites_delete','category_save','gate_set','gate_set_many','inbox_promote','inbox_reject','tidy_suggest',
   'absence_end','absence_tick','deputies_set','handover_build','handover_dossier','handover_log_add','launch_set',

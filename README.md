@@ -1,5 +1,9 @@
 # Das Hohe Haus (vormals GF Weekly)
 
+> **Stand 05.10.2026: V32 Organisation** auf dem Branch `paket/v32-organisation`: neue Seite `site/organisation.html`
+> (Navigation „Arbeiten“, vor Besetzung), Edge Function `organisation` v1 deployt, Migration `20261005053521` angewendet.
+> Einzelheiten in `docs/TECHNIKSTAND.md`, Abschnitt V32.
+
 > **Stand 03.10.2026: V31 Vorhaben** liegt auf dem Branch `paket/v31-vorhaben` (noch nicht gepusht). Edge Function v38 ist deployt,
 > die Migrationen sind angewendet, die Seiten gehen mit dem Push live. Einzelheiten und Prüfstand in `docs/TECHNIKSTAND.md`, Abschnitt V31.
 >
@@ -32,7 +36,7 @@ V9.1 (13.09.2026) legt die Optik des Design Systems „Modernist" (Claude Design
 Farbrollen, Dunkelmodus und Statusfarben bleiben unverändert Habitate. Modernists roter Akzent (#ec3013) wurde **bewusst nicht** übernommen: er kollidiert mit `--crit` („ausgefallen"), das im Cockpit dieselbe Farbe als Signal trägt. Die vier Diagrammfarben `--chart-teal/-peach/-coral/-grid` sind aus der Habitate-Quelle nachgezogen und stehen für spätere Kennzahl-Visualisierungen bereit.
 
 ## Wächter und Prüfungen
-`pruefung/abnahme.sh` fährt alles: Tokens gegen die Quelle des Design-Systems, Farbscan, Kontrast der Token-Zone, Matrix, Schirme (19 Seiten in 21 Ansichten × 1440/390 × dunkel/hell, 84 Bilder) und Bedienproben.
+`pruefung/abnahme.sh` fährt alles: Tokens gegen die Quelle des Design-Systems, Farbscan, Kontrast der Token-Zone, Matrix, Schirme (20 Seiten in 22 Ansichten × 1440/390 × dunkel/hell, 88 Bilder) und Bedienproben.
 `pruefung/vorhaben-probe.mjs` ist die Wirkungsprobe der Vorhaben gegen das echte Backend (`GF_PW=… node pruefung/vorhaben-probe.mjs`), sie arbeitet nur an Testvorhaben und räumt den Bestand des vorigen Laufs auf.
 `pruefung/waechter.mjs` sind die statischen Prüfungen, die keine Meinung brauchen: eindeutige Versionskennungen der Migrationen, Behauptungen in der Dokumentation ohne Beleg, Prüfskripte, die sich selbst bestätigen, feste Datumswerte ohne Stichtag, und ob die letzte Abnahme zum aktuellen Stand der geprüften Dateien gehört (`pruefung/stand.sh`, Beleg in `pruefung/letzte-abnahme.json`).
 Der Wächter läuft dreifach: in `abnahme.sh`, bei jedem Push über `.github/workflows/waechter.yml`, und als Stop-Hook in Claude Code (`.claude/settings.json`), damit keine Sitzung „fertig" sagen kann, solange er Befunde meldet.
