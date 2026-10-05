@@ -93,6 +93,25 @@
 .og-segs i{flex:1;height:4px;border-radius:2px;background:var(--fill)}
 .og-rk small{font-size:var(--stufe-1);color:var(--text-2)}
 .og-rk.lock small{color:var(--text-2)}
+.og-rz{display:flex;gap:8px;align-items:center;text-align:left;min-height:36px;padding:4px 8px;border-radius:var(--radius-s);background:transparent;border:1px dashed var(--border-strong);color:var(--text-2);font-size:var(--stufe-2);cursor:pointer;width:100%}
+.og-rz:hover{border-color:var(--text-3);color:var(--text)}
+.og-rz.sel{border-color:var(--action);color:var(--text)}
+.og-rz i{flex:none;width:8px;height:8px;border-radius:50%}
+.og-rz span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.og-rz small{flex:none;font-size:var(--stufe-1);color:var(--text-2)}
+.og-eb{font-size:var(--stufe-1);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-top:4px;color:var(--text-2);display:flex;align-items:center;gap:6px}
+.og-eb i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.og-tor .hinweis{font-size:var(--stufe-1);color:var(--text-2);margin:-2px 0 4px}
+.og-zug-rest{font-size:var(--stufe-2);color:var(--text-2);margin-top:8px;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.og-verlauf{margin-top:20px;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-l);padding:14px 18px}
+.og-verlauf h3{margin:0 0 8px;font-size:var(--stufe-3);font-weight:600}
+.og-verlauf ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px}
+.og-verlauf li{display:grid;grid-template-columns:118px 24px minmax(0,1fr);gap:10px;align-items:center;font-size:var(--stufe-2);min-height:28px}
+.og-verlauf time{color:var(--text-3);font-variant-numeric:tabular-nums}
+.og-verlauf img{width:22px;height:22px;border-radius:50%;object-fit:cover}
+.og-verlauf .leer{font-size:var(--stufe-2);color:var(--text-3)}
+.og-akte .mini{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px;font-size:var(--stufe-1);color:var(--text-2);border-top:1px solid var(--border);padding-top:10px}
+.og-akte .mini time{color:var(--text-3);margin-right:6px}
 .og-tor{margin:auto 12px 12px;padding:10px 12px;border-radius:var(--radius-m);background:var(--fill-soft);border:1px solid var(--border-strong);display:flex;flex-direction:column;gap:4px}
 .og-tor b{font-size:var(--stufe-2);color:var(--text)}
 .og-tor b.ok{color:var(--accent-strong)}
@@ -148,6 +167,7 @@
 .og-step.done{background:var(--accent-soft)}
 .og-step.naechst{border-color:var(--action)}
 .og-step.lock{color:var(--text-3);cursor:not-allowed}
+.og-step.spaeter{opacity:.6}
 .og-step b{flex:none;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;border:1px solid var(--text-3);color:var(--text-2)}
 .og-step.done b{background:var(--accent);border-color:var(--accent);color:var(--bg)}
 .og-dl{margin:0;display:grid;grid-template-columns:112px 1fr;gap:6px 10px;font-size:var(--stufe-2);border-top:1px solid var(--border);padding-top:10px}
@@ -163,7 +183,7 @@
 @keyframes ogRise{from{opacity:0;transform:translate(var(--og-x,0),8px)}to{opacity:1;transform:translate(var(--og-x,0),0)}}
 .og-meldung{--og-x:-50%}
 @media (max-width:1180px){ .og-grid{grid-template-columns:minmax(0,1fr)} .og-akte{position:static;order:-1} }
-@media (max-width:640px){ .og-stufen{grid-template-columns:minmax(0,1fr)} .og-track{grid-template-columns:repeat(5,minmax(96px,1fr));overflow-x:auto} .og-zug-l{grid-template-columns:minmax(0,1fr)} .og-2{grid-template-columns:minmax(0,1fr)} .og-apps{flex-direction:column} }
+@media (max-width:640px){ .og-verlauf li{grid-template-columns:88px 24px minmax(0,1fr)} .og-stufen{grid-template-columns:minmax(0,1fr)} .og-track{grid-template-columns:repeat(5,minmax(96px,1fr));overflow-x:auto} .og-zug-l{grid-template-columns:minmax(0,1fr)} .og-2{grid-template-columns:minmax(0,1fr)} .og-apps{flex-direction:column} }
 </style>
 </head>
 <body>
@@ -293,7 +313,7 @@ const AV={Alex:"/assets/img/avatar-alex.webp",Lea:"/assets/img/avatar-lea.webp"}
 const EC={Haus:"var(--og-haus)",Operations:"var(--og-ops)",Formate:"var(--og-fmt)"};
 
 /* ---------- Zustand ---------- */
-let ST={dec:{},rolle:{},tor:{}}, GELADEN=false;
+let ST={dec:{},rolle:{},tor:{},log:[]}, GELADEN=false;
 const UI={
   view:(()=>{ try{ const v=localStorage.getItem("gf_og_view"); return v==="zeit"?"zeit":"stufen"; }catch(e){ return "stufen"; } })(),
   filter:(()=>{ try{ const v=localStorage.getItem("gf_og_filter"); return ["alle","pflicht","frei","wartet"].includes(v)?v:"alle"; }catch(e){ return "alle"; } })(),
@@ -343,10 +363,13 @@ function zugListe(){
 }
 
 /* ---------- Zeichnen ---------- */
+const PFL=R.filter(r=>r.pflicht);
+const besetzt=r=>{ const x=rol(r.id); return (x.schritt||0)>=r.steps.length||!!(x.leitung&&x.stellvertretung); };
+const pflOkN=()=>PFL.filter(besetzt).length;
 function render(){
   if(!GELADEN) return;
   const w=ich(), nOk=D.filter(d=>decOk(d.id)).length, lvl=stufe();
-  const pfl=R.filter(r=>r.pflicht), pflOk=pfl.filter(r=>{ const x=rol(r.id); return (x.schritt||0)>=5||(x.leitung&&x.stellvertretung); }).length;
+  const pfl=PFL, pflOk=pflOkN();
   const offen=D.filter(d=>!decOk(d.id)&&d.due).sort((a,b)=>a.due<b.due?-1:1)[0];
   $("#ogLage").textContent = nOk===8
     ? "Stufe "+Math.min(4,lvl+1)+" · "+S[Math.min(3,lvl)].t+" · "+pflOk+" von "+pfl.length+" Pflichtrollen mit Stellvertretung"
@@ -356,13 +379,16 @@ function render(){
   const img=$("#ogHeroImg"); if(img.getAttribute("src")!==IMG[zeig].src){ img.src=IMG[zeig].src; } img.alt=IMG[zeig].alt;
   $("#ogTrack").innerHTML=IMG.map((m,i)=>{
     const erreicht=i<=lvl, jetzt=i===lvl;
-    let p=0; if(i===0) p=nOk/8; else if(erreicht) p=1; else if(i===lvl+1) p=S[i-1].tor.filter((x,j)=>ST.tor[i+"-"+j]).length/S[i-1].tor.length;
-    return `<button type="button" data-peek="${i}" aria-pressed="${zeig===i}"><span class="bar${erreicht&&i>0||p===1?" voll":""}"><i style="width:${Math.round(p*100)}%"></i></span><span><b>${m.t}</b>${jetzt?'<span class="mk">hier</span>':(erreicht?'<span class="mk ok">erreicht</span>':"")}</span><small>${m.sub}</small></button>`;
+    let p=0, zahl=m.sub;
+    if(i===0){ p=nOk/8; zahl=nOk+" von 8 Entscheidungen"; }
+    else if(erreicht){ p=1; zahl="Tor "+i+" erreicht"; }
+    else { const tn=S[i-1].tor.filter((x,j)=>ST.tor[i+"-"+j]).length; if(i===lvl+1) p=tn/S[i-1].tor.length; zahl="Tor "+i+" · "+tn+" von "+S[i-1].tor.length+(i===1?" · Pflichtrollen "+pflOk+" von "+pfl.length:""); }
+    return `<button type="button" data-peek="${i}" aria-pressed="${zeig===i}" title="${gfEsc(m.sub)}"><span class="bar${erreicht&&i>0||p===1?" voll":""}"><i style="width:${Math.round(p*100)}%"></i></span><span><b>${m.t}</b>${jetzt?'<span class="mk">hier</span>':(erreicht?'<span class="mk ok">erreicht</span>':"")}</span><small>${zahl}</small></button>`;
   }).join("");
 
   const z=zugListe();
   $("#ogZug").innerHTML=`<div class="og-zug-k"><img src="${AV[w]}" alt="" width="36" height="36"><div><b>${z.length?"Dein Zug, "+w+" · "+z.length+(z.length===1?" Sache":" Sachen"):"Nichts bei dir, "+w}</b><span>${w==="Lea"?"Freigaben, die auf dich warten, und die nächsten Schritte im Teamaufbau, nach Frist.":"Freigaben und Entscheidungen, die auf dich warten. Den Teamaufbau führt Lea."}</span></div></div>`+
-    (z.length?`<div class="og-zug-l">${z.slice(0,6).map(x=>`<div class="og-zi"><span class="dot${x.eilt?" eilt":""}"></span><button type="button" class="txt" data-open="${x.k}:${x.id}"><b>${gfEsc(x.head)}</b><span>${gfEsc(x.body)}</span></button><button type="button" class="btn btn-ghost" data-zug="${x.act}:${x.k}:${x.id}">${x.btn}</button></div>`).join("")}</div>`:"");
+    (z.length?`<div class="og-zug-l">${z.slice(0,3).map(x=>`<div class="og-zi"><span class="dot${x.eilt?" eilt":""}"></span><button type="button" class="txt" data-open="${x.k}:${x.id}"><b>${gfEsc(x.head)}</b><span>${gfEsc(x.body)}</span></button><button type="button" class="btn btn-ghost" data-zug="${x.act}:${x.k}:${x.id}">${x.btn}</button></div>`).join("")}</div>${z.length>3?`<button type="button" class="og-zug-rest" data-rest="${z[3].k}">noch ${z.length-3} weitere, ${z.slice(3).every(x=>x.k==="dec")?"alle unten bei den Entscheidungen":"unten bei Entscheidungen und Rollen"}</button>`:""}`:"");
   const b=document.getElementById("orgBadge"); if(b){ b.textContent=z.length; b.style.display=z.length?"inline-flex":"none"; }
 
   $("#ogDecSum").textContent=nOk+" von 8 freigegeben · jede gilt erst mit Alex und Lea";
@@ -374,11 +400,12 @@ function render(){
   $("#ogViews").innerHTML=[["stufen","Stufen und Tore"],["zeit","Zeitachse"]].map(([k,l])=>`<button type="button" class="seg${UI.view===k?" on":""}" data-view="${k}" aria-pressed="${UI.view===k}">${l}</button>`).join("");
   $("#ogFil").innerHTML=[["alle","Alle"],["pflicht","Pflichtrollen"],["frei","Startklar"],["wartet","Wartet"]].map(([k,l])=>`<button type="button" data-fil="${k}" aria-pressed="${UI.filter===k}">${l}<small>${R.filter(r=>fpass(r,k)).length}</small></button>`).join("");
 
-  $("#ogMain").innerHTML = UI.view==="zeit" ? zeitHtml() : stufenHtml(lvl);
+  $("#ogMain").innerHTML = (UI.view==="zeit" ? zeitHtml() : stufenHtml(lvl)) + verlaufHtml();
   $("#ogAkte").innerHTML = UI.sel.k==="dec" ? decAkte(UI.sel.id) : rolleAkte(UI.sel.id);
 }
 function karte(r){
   const z=rolleZst(r), x=rol(r.id), s=x.schritt||0, sel=UI.sel.k==="rolle"&&UI.sel.id===r.id;
+  if(z.k==="lock") return `<button type="button" class="og-rz${sel?" sel":""}" data-open="rolle:${r.id}" title="${gfEsc(z.l)}"><i style="background:${EC[r.e]}"></i><span>${gfEsc(r.t)}</span><small>E ${fehlt(r).join(", ")}</small></button>`;
   const lN=x.leitung||(r.id==="gf"?"Alexander und Lea":""), sN=x.stellvertretung||"";
   const krit=r.pflicht&&r.stufe===1&&s<r.steps.length&&z.k!=="lock";
   const slot=(f,l)=>`<span class="og-slot${f?" voll":""}"${f?` style="background:${EC[r.e]}"`:""}>${l}</span>`;
@@ -388,8 +415,31 @@ function stufenHtml(lvl){
   return `<div class="og-stufen">${S.map((s,i)=>{
     const rl=R.filter(r=>r.stufe===s.n&&fpass(r)), voll=torVoll(s), n=s.tor.filter((x,j)=>ST.tor[s.n+"-"+j]).length;
     const leer=R.some(r=>r.stufe===s.n)?"Keine Rolle in diesem Filter.":"Keine neue Rolle. Übergaben, Handbücher und Gremien ohne euren Vorsitz.";
-    return `<section class="og-stufe${i===lvl?" jetzt":""}${!voll&&i!==lvl?" spaeter":""}"><img src="${IMG[s.n].src}" alt="" width="1600" height="900" loading="lazy"><div class="k"><div class="og-eyebrow">Stufe ${s.n} · ${s.z}</div><h4>${s.t}</h4></div><div class="rl">${rl.length?rl.map(karte).join(""):`<div class="leer">${leer}</div>`}</div><div class="og-tor"><b class="${voll?"ok":""}">${voll?"Tor "+s.n+" erreicht":"Tor "+s.n+" · "+n+" von "+s.tor.length}</b>${s.tor.map((t,j)=>{ const on=!!ST.tor[s.n+"-"+j]; return `<button type="button" data-tor="${s.n}-${j}" aria-pressed="${on}"><span class="og-box${on?" on":""}"></span><span>${gfEsc(t)}</span></button>`; }).join("")}</div></section>`;
+    const gruppen=["Haus","Operations","Formate"].map(e=>{ const g=rl.filter(r=>r.e===e); return g.length?`<div class="og-eb"><i style="background:${EC[e]}"></i>${e}</div>${g.map(karte).join("")}`:""; }).join("");
+    const pf=s.n===1?`<div class="hinweis">Pflichtrollen mit Stellvertretung: ${pflOkN()} von ${PFL.length}. Das Tor gilt, wenn die Nachweise vorliegen, nicht nach Absicht.</div>`:"";
+    return `<section class="og-stufe${i===lvl?" jetzt":""}${!voll&&i!==lvl?" spaeter":""}"><img src="${IMG[s.n].src}" alt="" width="1600" height="900" loading="lazy"><div class="k"><div class="og-eyebrow">Stufe ${s.n} · ${s.z}</div><h4>${s.t}</h4></div><div class="rl">${rl.length?gruppen:`<div class="leer">${leer}</div>`}</div><div class="og-tor"><b class="${voll?"ok":""}">${voll?"Tor "+s.n+" erreicht":"Tor "+s.n+" · "+n+" von "+s.tor.length}</b>${pf}${s.tor.map((t,j)=>{ const on=!!ST.tor[s.n+"-"+j]; return `<button type="button" data-tor="${s.n}-${j}" aria-pressed="${on}"><span class="og-box${on?" on":""}"></span><span>${gfEsc(t)}</span></button>`; }).join("")}</div></section>`;
   }).join("")}</div>`;
+}
+function miniVerlauf(f){
+  const L=(ST.log||[]).filter(f).slice(0,4); if(!L.length) return "";
+  return `<ol class="mini">${L.map(l=>`<li><time>${wann(l.at)}</time>${gfEsc(l.who||"")} ${gfEsc(satz(l))}</li>`).join("")}</ol>`;
+}
+function satz(l){
+  const ref=l.ref||"", det=l.detail||{};
+  const dN=id=>{ const d=D.find(x=>x.id===+id); return d?"Entscheidung "+d.id+" („"+d.t+"“)":"Entscheidung "+id; };
+  const rN=id=>{ const r=R.find(x=>x.id===id); return r?r.t:id; };
+  if(l.what==="wahl"){ const d=D.find(x=>x.id===+ref); return "hat bei "+dN(ref)+" gewählt: "+(d&&d.opts[det.wahl]!==undefined?d.opts[det.wahl]:"Möglichkeit "+det.wahl); }
+  if(l.what==="freigabe") return "hat "+dN(ref)+" freigegeben"+(det.beide?" · damit von beiden freigegeben":"");
+  if(l.what==="freigabe_zurueck") return "hat die Freigabe für "+dN(ref)+" zurückgenommen";
+  if(l.what==="rolle"){ const t=[]; if(det.schritt!==undefined) t.push("Schritt "+det.schritt); if(det.leitung!==undefined) t.push("Leitung: "+(det.leitung||"gelöscht")); if(det.stellvertretung!==undefined) t.push("Stellvertretung: "+(det.stellvertretung||"gelöscht")); return "hat bei "+rN(ref)+" gesetzt: "+(t.join(", ")||"geändert"); }
+  if(l.what==="tor"){ const [n,j]=ref.split("-"); const st=S.find(x=>x.n===+n); return "hat bei Tor "+n+" abgehakt: "+(st&&st.tor[+j]||ref); }
+  if(l.what==="tor_zurueck"){ const [n,j]=ref.split("-"); const st=S.find(x=>x.n===+n); return "hat bei Tor "+n+" zurückgenommen: "+(st&&st.tor[+j]||ref); }
+  return l.what+" "+ref;
+}
+const wann=at=>new Date(at).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+function verlaufHtml(){
+  const L=(ST.log||[]).slice(0,10);
+  return `<section class="og-verlauf" aria-label="Verlauf"><h3>Zuletzt im Haus</h3>${L.length?`<ol>${L.map(l=>`<li><time datetime="${gfEsc(l.at)}">${wann(l.at)}</time>${AV[l.who]?`<img src="${AV[l.who]}" alt="${gfEsc(l.who)}" width="22" height="22">`:"<span></span>"}<span><b>${gfEsc(l.who||"")}</b> ${gfEsc(satz(l))}</span></li>`).join("")}</ol>`:`<div class="leer">Noch nichts eingetragen. Der erste Eintrag entsteht mit der ersten Wahl.</div>`}</section>`;
 }
 function zeitHtml(){
   const grp=e=>e==="Haus"?"Haus · besitzt · Hauspartner":e==="Operations"?"Operations · stellt her · Operations Partner":"Formate · prägen · Formatpartner";
@@ -421,16 +471,16 @@ function decAkte(id){
   <label>Begründung fürs Entscheidungslog<textarea rows="2" id="ogWhy" data-id="${id}" placeholder="Warum diese Möglichkeit, was ihr bewusst in Kauf nehmt">${gfEsc(x.begruendung||"")}</textarea></label>
   <div class="og-apps">${app("Alex")}${app("Lea")}</div>
   <div class="why">${ok?"Freigegeben"+(x.log_decision_id?" und im Entscheidungslog.":"."):(gew?"Gewählt; "+(x.alex_frei||x.lea_frei?"eine Freigabe fehlt.":"beide Freigaben fehlen.")+" Eine andere Wahl setzt beide Freigaben zurück.":"Noch keine Möglichkeit gewählt.")}</div>
-  <div class="og-sub">Schaltet frei</div><div class="og-chips">${frei.map(r=>`<button type="button" class="${fehlt(r).length?"":"ok"}" data-open="rolle:${r.id}">${gfEsc(r.t)}</button>`).join("")}</div>`;
+  <div class="og-sub">Schaltet frei</div><div class="og-chips">${frei.map(r=>`<button type="button" class="${fehlt(r).length?"":"ok"}" data-open="rolle:${r.id}">${gfEsc(r.t)}</button>`).join("")}</div>${miniVerlauf(l=>["wahl","freigabe","freigabe_zurueck"].includes(l.what)&&l.ref==String(id))}`;
 }
 function rolleAkte(id){
   const r=R.find(x=>x.id===id), x=rol(id), z=rolleZst(r), s=x.schritt||0, lock=z.k==="lock";
   const part=r.e==="Formate"?"Formatpartner":r.e==="Operations"?"Operations Partner":"Haus";
   return `<div class="og-sub">${r.e} · ${part} · Stufe ${r.stufe}${r.phase?" · "+gfEsc(r.phase):""}</div><h3>${gfEsc(r.t)}</h3><div class="og-zst ${z.k==="fertig"?"fertig":lock?"":"frei"}">${z.l}</div>
   <div class="og-2"><label>Leitung<input type="text" id="ogLead" data-id="${id}" maxlength="120" value="${gfEsc(x.leitung||(id==="gf"?"Alexander und Lea":""))}" placeholder="Name eintragen"></label><label>Stellvertretung<input type="text" id="ogStv" data-id="${id}" maxlength="120" value="${gfEsc(x.stellvertretung||"")}" placeholder="Name eintragen"></label></div>
-  <div class="og-sub">Leas Schritte</div><div class="og-steps">${r.steps.map((t,i)=>`<button type="button" class="og-step${i<s?" done":""}${i===s&&!lock?" naechst":""}${lock?" lock":""}" data-schritt="${id}:${i+1}" aria-pressed="${i<s}"><b>${i+1}</b><span>${gfEsc(t)}</span></button>`).join("")}</div>
+  <div class="og-sub">Leas Schritte</div><div class="og-steps">${r.steps.map((t,i)=>`<button type="button" class="og-step${i<s?" done":""}${i===s&&!lock?" naechst":""}${lock?" lock":""}${i>s?" spaeter":""}" data-schritt="${id}:${i+1}" aria-pressed="${i<s}"><b>${i+1}</b><span>${gfEsc(t)}</span></button>`).join("")}</div>
   <dl class="og-dl"><dt>Stand</dt><dd>${gfEsc(r.heute)}</dd><dt>Anforderungen</dt><dd>${gfEsc(r.anf)}</dd><dt>Vertretung</dt><dd>${gfEsc(r.stv)}</dd><dt>Instrument</dt><dd>${gfEsc(r.partner)}</dd><dt>Umfang</dt><dd>${gfEsc(r.umfang)}</dd><dt>Besetzt bis</dt><dd>${Q[r.q1]} (Vorschlag)${r.note?" · "+gfEsc(r.note):""}</dd></dl>
-  <div class="og-chips">${r.dep.map(d=>`<button type="button" class="${decOk(d)?"ok":""}" data-open="dec:${d}">${decOk(d)?"freigegeben":"wartet"} · ${d} ${gfEsc(D.find(y=>y.id===d).t)}</button>`).join("")}</div>`;
+  <div class="og-chips">${r.dep.map(d=>`<button type="button" class="${decOk(d)?"ok":""}" data-open="dec:${d}">${decOk(d)?"freigegeben":"wartet"} · ${d} ${gfEsc(D.find(y=>y.id===d).t)}</button>`).join("")}</div>${miniVerlauf(l=>l.what==="rolle"&&l.ref===id)}`;
 }
 
 /* ---------- Meldung mit Bild ---------- */
@@ -440,7 +490,7 @@ function melde(txt,bild){ const m=$("#ogMeldung"); $("#ogMeldungTxt").textConten
 /* ---------- Schreiben ---------- */
 async function laden(){
   const d=await ogApi("get");
-  ST={dec:{},rolle:{},tor:{}};
+  ST={dec:{},rolle:{},tor:{},log:d.log||[]};
   (d.entscheidungen||[]).forEach(x=>ST.dec[x.id]=x);
   (d.rollen||[]).forEach(x=>ST.rolle[x.id]=x);
   (d.tore||[]).forEach(x=>ST.tor[x.key]=!!x.erfuellt);
@@ -451,12 +501,13 @@ async function konflikt(e){
   gfToast(e&&e.status===409?(e.message+" · neu geladen"):("Nicht gespeichert: "+(e&&e.message||"Verbindung")));
   try{ await laden(); }catch(x){}
 }
+function merk(what,ref,detail){ ST.log=[{at:new Date().toISOString(),who:ich(),what,ref:String(ref),detail:detail||{}}].concat(ST.log||[]).slice(0,40); }
 async function wahl(id,i){
   const x=dec(id);
   if(x.freigegeben_am){ gfToast("Schon freigegeben. Erst eine Freigabe zurücknehmen."); return; }
   if(x.wahl===i) return;
   const alt=Object.assign({},x); ST.dec[id]=Object.assign({},x,{wahl:i,alex_frei:false,lea_frei:false}); render();
-  try{ const r=await ogApi("wahl",{id,wahl:i,expect_rev:alt.rev}); ST.dec[id]=r.entscheidung; render(); }
+  try{ const r=await ogApi("wahl",{id,wahl:i,expect_rev:alt.rev}); ST.dec[id]=r.entscheidung; merk("wahl",id,{wahl:i}); render(); }
   catch(e){ ST.dec[id]=alt; await konflikt(e); }
 }
 async function freigabe(p,id){
@@ -467,7 +518,7 @@ async function freigabe(p,id){
   const why=$("#ogWhy"); if(why&&why.dataset.id==id&&(why.value||"")!==(x.begruendung||"")) await begruendung(id,why.value);
   try{
     const r=await ogApi("freigabe",{id,on,expect_wahl:x.wahl});
-    ST.dec[id]=r.entscheidung; render();
+    ST.dec[id]=r.entscheidung; merk(on?"freigabe":"freigabe_zurueck",id,{wahl:x.wahl,beide:!!r.neu_freigegeben}); render();
     if(r.neu_freigegeben){
       const d=D.find(y=>y.id===id);
       const n=R.filter(q=>q.dep.includes(id)&&!fehlt(q).length).length;
@@ -493,19 +544,21 @@ async function begruendung(id,text){
 async function rolleSpeichern(id,patch,ok){
   const x=rol(id), alt=Object.assign({},x);
   ST.rolle[id]=Object.assign({},x,patch); render();
-  try{ const r=await ogApi("rolle",{id,patch,expect_rev:alt.rev||0}); ST.rolle[id]=r.rolle; render(); if(ok) ok(r.rolle); }
+  try{ const r=await ogApi("rolle",{id,patch,expect_rev:alt.rev||0}); ST.rolle[id]=r.rolle; merk("rolle",id,patch); render(); if(ok) ok(r.rolle); }
   catch(e){ ST.rolle[id]=alt; await konflikt(e); }
 }
 function schritt(id,n){
   const r=R.find(x=>x.id===id), f=fehlt(r);
   if(f.length){ gfToast("Wartet noch auf Entscheidung "+f.join(", ")+"."); return; }
-  const cur=rol(id).schritt||0, v=Math.max(0,cur===n?n-1:n);
+  const cur=rol(id).schritt||0;
+  if(n>cur+1){ gfToast("Erst Schritt "+(cur+1)+" abhaken."); return; }
+  const v=Math.max(0,cur===n?n-1:n);
   rolleSpeichern(id,{schritt:v},neu=>{ if(neu.schritt===r.steps.length&&cur<r.steps.length) melde(r.t+": besetzt, mit Stellvertretung.",IMG[Math.min(4,stufe()+1)].src); });
 }
 async function tor(key){
   const on=!ST.tor[key], [n]=key.split("-").map(Number); const vorher=stufe();
   ST.tor[key]=on; render();
-  try{ await ogApi("tor",{key,on}); const nach=stufe(); if(nach>vorher) melde("Tor "+nach+" erreicht · "+IMG[nach].art+" steht.",IMG[nach].src); }
+  try{ await ogApi("tor",{key,on}); merk(on?"tor":"tor_zurueck",key); render(); const nach=stufe(); if(nach>vorher) melde("Tor "+nach+" erreicht · "+IMG[nach].art+" steht.",IMG[nach].src); }
   catch(e){ ST.tor[key]=!on; await konflikt(e); }
 }
 function oeffne(k,id){
@@ -516,7 +569,8 @@ function oeffne(k,id){
 
 /* ---------- Bedienung ---------- */
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-open],[data-peek],[data-view],[data-fil],[data-wahl],[data-frei],[data-schritt],[data-tor],[data-zug]"); if(!t) return;
+  const t=e.target.closest("[data-open],[data-peek],[data-view],[data-fil],[data-wahl],[data-frei],[data-schritt],[data-tor],[data-zug],[data-rest]"); if(!t) return;
+  if(t.dataset.rest){ (t.dataset.rest==="dec"?$("#ogDecs"):$("#ogMain")).scrollIntoView({behavior:"smooth",block:"start"}); return; }
   if(t.dataset.open){ const [k,id]=t.dataset.open.split(":"); oeffne(k,k==="dec"?+id:id); return; }
   if(t.dataset.peek!==undefined){ const i=+t.dataset.peek; UI.peek=(UI.peek===i||i===stufe())?null:i; render(); return; }
   if(t.dataset.view){ UI.view=t.dataset.view; try{ localStorage.setItem("gf_og_view",UI.view); }catch(x){} render(); return; }
