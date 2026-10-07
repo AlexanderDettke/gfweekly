@@ -8,7 +8,8 @@ const PGLITE = Deno.env.get('PGLITE_MODUL');
 if (!PGLITE) { console.log('PGLITE_MODUL fehlt'); Deno.exit(2); }
 const { PGlite } = await import(PGLITE.startsWith('file:') ? PGLITE : 'file://' + PGLITE);
 const BASIS = new URL('../', import.meta.url);
-const MIGRATION = await Deno.readTextFile(new URL('supabase/migrations/20261007052131_hh_komm_v32a.sql', BASIS)) + '\n' + await Deno.readTextFile(new URL('supabase/migrations/20261007070401_hh_komm_v32b.sql', BASIS));
+const MIGRATION = ['20261007052131_hh_komm_v32a', '20261007070401_hh_komm_v32b', '20261007073224_hh_komm_v32c']
+  .map(n => Deno.readTextFileSync(new URL(`supabase/migrations/${n}.sql`, BASIS))).join('\n');
 
 let ok = 0, fehler = 0;
 const gleich = (name: string, ist: unknown, soll: unknown) => { const a = JSON.stringify(ist), b = JSON.stringify(soll); if (a === b) { ok++; console.log('  ok     ' + name); } else { fehler++; console.log('  FEHLT  ' + name + '\n         ist  ' + a.slice(0, 500) + '\n         soll ' + b.slice(0, 500)); } };
@@ -97,14 +98,14 @@ const admin = {
 };
 
 /* ---------- Asana, Google, Sheets ---------- */
-const A = { projekte: new Map<string, any>(), abschnitte: new Map<string, any>(), aufgaben: new Map<string, any>(), stories: [] as any[], n: 1000, aufrufe: [] as string[], stoerung: [] as any[] };
+const A = { projekte: new Map<string, any>(), abschnitte: new Map<string, any>(), aufgaben: new Map<string, any>(), stories: [] as any[], n: 1000, aufrufe: [] as string[], stoerung: [] as any[], verzoegerung: 0, haenger: null as null | ((m: string, p: string) => Promise<void> | null) };
 const neueGid = () => String(++A.n);
 function asanaAntwort(status: number, body: unknown) { return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }); }
 function asanaFake(methode: string, url: URL, body: any) {
   const pfad = url.pathname.replace('/api/1.0', '');
   A.aufrufe.push(`${methode} ${pfad}`);
   const st = A.stoerung.findIndex(s => s.methode === methode && s.muster.test(pfad));
-  if (st >= 0) { const s = A.stoerung.splice(st, 1)[0]; if (s.vorher) s.vorher(body); return asanaAntwort(s.status, { errors: [{ message: s.text }] }); }
+  if (st >= 0) { const s = A.stoerung.splice(st, 1)[0]; if (s.vorher) s.vorher(body); const r = asanaAntwort(s.status, { errors: [{ message: s.text }] }); if (s.retryAfter) r.headers.set('retry-after', String(s.retryAfter)); return r; }
   const d = body?.data || {};
   let m: RegExpExecArray | null;
   if (methode === 'GET' && pfad === '/projects') {
@@ -184,7 +185,11 @@ globalThis.fetch = (async (eingabe: any, init: any = {}) => {
   const url = new URL(typeof eingabe === 'string' ? eingabe : eingabe.url);
   const methode = (init.method || 'GET').toUpperCase();
   let body: any = null; if (init.body && typeof init.body === 'string') { try { body = JSON.parse(init.body); } catch (_e) { body = null; } }
-  if (url.hostname === 'app.asana.com') return asanaFake(methode, url, body);
+  if (url.hostname === 'app.asana.com') {
+    if (A.verzoegerung) await new Promise(r => setTimeout(r, A.verzoegerung));
+    if (A.haenger) { const h = A.haenger(methode, url.pathname); if (h) await h; }
+    return asanaFake(methode, url, body);
+  }
   return sheetsFake(methode, url, body);
 }) as typeof fetch;
 
@@ -345,6 +350,73 @@ wahr('Tick: Hinweis an Asana bei Abgabe ohne Freigabe', A.stories.some(s => s.ta
 const anz = A.stories.length; await K.tick();
 gleich('Hinweis nur einmal', A.stories.length, anz);
 HEUTE = '2026-10-07';
+
+console.log('\n13. Fortsetzung, Mitgliedschaft, Sperre, Aufräumen, Ratenlimit (Review 32c)');
+{
+  /* Wiederholt knappes Budget: jeder Aufruf kommt voran, keine Aufgabe wird doppelt bearbeitet. */
+  await q(`delete from komm_versandlauf`);
+  A.verzoegerung = 15; Deno.env.set('KOMM_SEND_BUDGET_MS', '60');
+  const runden: any[] = [];
+  for (let i = 0; i < 80; i++) { const r = await ruf('komm_send', { festival: 'FLRD27', by: 'Alex', bestaetigt: true }); runden.push(r.body); if (!r.body.weiter) break; }
+  Deno.env.delete('KOMM_SEND_BUDGET_MS'); A.verzoegerung = 0;
+  const pf = [...A.projekte.values()].find(p => p.name === 'Kommunikation Fluidity 2027')!;
+  const summeNeu = runden.reduce((x, r) => x + (r.neu || 0), 0), summeAkt = runden.reduce((x, r) => x + (r.aktualisiert || 0), 0);
+  wahr('knappes Budget: mehrere Aufrufe, jeder kommt voran, am Ende vollständig', runden.length > 3 && runden.every(r => (r.neu || 0) + (r.aktualisiert || 0) > 0) && runden[runden.length - 1].weiter === false, JSON.stringify(runden.map(r => [r.neu, r.aktualisiert, r.rest])));
+  gleich('kein Wiederholen bereits bearbeiteter Aufgaben im selben Lauf', summeNeu + summeAkt, runden[0].aufgaben);
+  gleich('Projekt Fluidity vollständig und ohne Dubletten', [aufgabenIn(pf.gid).length, new Set(aufgabenIn(pf.gid).map(t => t.name)).size], [runden[0].aufgaben, runden[0].aufgaben]);
+  const neuerLauf = await ruf('komm_send', { festival: 'FLRD27', by: 'Alex', bestaetigt: true });
+  gleich('nach Abschluss beginnt ein neuer Lauf: alles aktualisiert, nichts neu', [neuerLauf.body.neu, neuerLauf.body.aktualisiert, neuerLauf.body.weiter], [0, runden[0].aufgaben, false]);
+}
+{
+  /* Unterbrochener Projektwechsel: eine Übernahme scheitert, der nächste Aufruf holt sie nach. */
+  const alt = [...A.projekte.values()].find(p => p.name === 'Kommunikation by nature 2027' && !p.archived)!;
+  alt.archived = true;
+  A.stoerung.push({ methode: 'POST', muster: /^\/tasks\/\d+\/addProject$/, status: 500, text: 'Probe: Übernahme scheitert' });
+  const r1 = await ruf('komm_send', { festival: 'BYNRD27', by: 'Alex', bestaetigt: true });
+  const ziel = [...A.projekte.values()].find(p => p.name === alt.name && !p.archived)!;
+  wahr('erster Versuch: eine Aufgabe nicht übernommen, als Fehler gemeldet', r1.body.fehler.length === 1 && aufgabenIn(ziel.gid).length === r1.body.aufgaben - 1, JSON.stringify(r1.body.fehler));
+  const r2 = await ruf('komm_send', { festival: 'BYNRD27', by: 'Alex', bestaetigt: true });
+  gleich('zweiter Versuch: alle gemerkten Aufgaben im Zielprojekt', [aufgabenIn(ziel.gid).length, r2.body.neu, r2.body.fehler.length], [r2.body.aufgaben, 0, 0]);
+}
+{
+  /* Sperre läuft während einer hängenden Anfrage ab: der hängende Lauf hört auf, keine Dubletten. */
+  await q(`delete from komm_versandlauf where schluessel = 'WMRD27'`);
+  const pw = [...A.projekte.values()].find(p => p.name.startsWith('Kommunikation Wilde Möhre') && !p.archived)!;
+  for (const t of aufgabenIn(pw.gid)) t.geloescht = true;
+  await q(`update komm_veroeffentlichungen set asana_task_gid = null, gesendet_am = null where festival_short = 'WMRD27'`);
+  let loslassen: () => void = () => {};
+  const haengt = new Promise<void>(r => { loslassen = r; });
+  let einmal = true;
+  A.haenger = (m, p) => (einmal && m === 'POST' && p.endsWith('/tasks')) ? (einmal = false, haengt) : null;
+  const a = ruf('komm_send', { festival: 'WMRD27', by: 'Alex', bestaetigt: true });
+  await new Promise(r => setTimeout(r, 300));
+  await q(`update komm_sperre set bis = now() - interval '1 second' where schluessel = 'festival:WMRD27'`);
+  const b = await ruf('komm_send', { festival: 'WMRD27', by: 'Lea', bestaetigt: true });
+  loslassen(); A.haenger = null;
+  const ra = await a;
+  const namen = aufgabenIn(pw.gid).map(t => t.name);
+  wahr('zweiter Lauf übernimmt nach Ablauf, der hängende hört nach seiner Anfrage auf', b.status === 200 && ra.status === 200 && ra.body.unterbrochen?.includes('Sperre verloren'), JSON.stringify([b.status, ra.body.unterbrochen, ra.body.neu]));
+  gleich('keine Dubletten im Projekt', namen.length, new Set(namen).size);
+}
+{
+  /* Ratenlimit mit langer Wartezeit: geordnete Unterbrechung mit frühestem Fortsetzungszeitpunkt. */
+  await q(`delete from komm_versandlauf where schluessel = 'FAMRD27'`);
+  A.stoerung.push({ methode: 'PUT', muster: /^\/tasks\/\d+$/, status: 429, text: 'rate limit', retryAfter: 120 });
+  const r = await ruf('komm_send', { festival: 'FAMRD27', by: 'Alex', bestaetigt: true });
+  wahr('Ratenlimit 120 s (länger als das Budget): unterbrochen, weiter, fortsetzen_ab rund zwei Minuten später', r.body.weiter === true && !!r.body.unterbrochen && Date.parse(r.body.fortsetzen_ab) - Date.now() > 100000 && r.body.rest > 0, JSON.stringify([r.body.unterbrochen, r.body.fortsetzen_ab, r.body.rest]));
+  const r2 = await ruf('komm_send', { festival: 'FAMRD27', by: 'Alex', bestaetigt: true });
+  gleich('Fortsetzung bearbeitet nur den Rest', [r2.body.weiter, r2.body.neu + r2.body.aktualisiert], [false, r.body.rest]);
+}
+{
+  /* Aufräumen mit einer nicht löschbaren Aufgabe: Projekt bleibt, zweiter Aufruf räumt fertig auf. */
+  await ruf('komm_send', { festival: 'LUSRD27', by: 'Alex', test: true });
+  A.stoerung.push({ methode: 'DELETE', muster: /^\/tasks\/\d+$/, status: 500, text: 'Probe: Löschen scheitert' });
+  const c1 = await ruf('komm_test_aufraeumen', { by: 'Alex' });
+  const pt = [...A.projekte.values()].find(p => p.name === 'Kommunikation TEST' && !p.geloescht);
+  wahr('eine Aufgabe nicht gelöscht: Projekt bleibt, Fehler gemeldet', c1.body.ok === false && !!pt && aufgabenIn(pt.gid).length === 1, JSON.stringify(c1.body));
+  const c2 = await ruf('komm_test_aufraeumen', { by: 'Alex' });
+  wahr('zweiter Aufruf räumt fertig auf', c2.body.ok === true && c2.body.aufgaben === 1 && pt!.geloescht === true, JSON.stringify(c2.body));
+}
 
 console.log('\n12. Redaktionstabelle');
 const t0 = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });

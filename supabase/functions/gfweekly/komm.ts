@@ -15,6 +15,8 @@ const K: any = (globalThis as any).KommLogik;
 type Any = any;
 
 const SEND_BUDGET_MS = 90000;
+const ASANA_ZEIT_MS = 20000;      // Zeitgrenze je Asana-Anfrage
+const SPERRE_SEKUNDEN = 180;      // länger als Budget plus eine Anfrage plus eine Wartezeit
 const TEST_PROJEKT = 'Kommunikation TEST';
 const SHEET_ID = '1CG1jQGIX2anXi2CpclgOB_kpqIKySsjK965OMQjol-k';
 const SHEET_REITER = 'Contentplan';
@@ -317,15 +319,28 @@ export function kommModul(ctx: KommKontext) {
   }
 
   /* ---------- Asana ---------- */
-  async function asana(pfad: string, methode = 'GET', koerper?: unknown): Promise<Any> {
+  /* Jede Anfrage hat eine Zeitgrenze (ASANA_ZEIT_MS), damit ein Lauf seine Sperre nie überdauert (Review 32c, Befund 3).
+     Ratenlimit: die verlangte Wartezeit wird eingehalten, wenn sie vor warteBis endet; sonst Fehler mit status 429 und
+     retryAfter, der Versand unterbricht dann geordnet (Review 32c, Befund 5). */
+  async function asana(pfad: string, methode = 'GET', koerper?: unknown, warteBis = Date.now() + 15000): Promise<Any> {
     for (let versuch = 0; versuch < 2; versuch++) {
-      const res = await fetch('https://app.asana.com/api/1.0' + pfad, {
-        method: methode,
-        headers: { 'Authorization': 'Bearer ' + ctx.ASANA_TOKEN, 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: koerper === undefined ? undefined : JSON.stringify({ data: koerper }),
-      });
-      const text = await res.text();
-      if (res.status === 429 && versuch === 0) { const w = Math.min(10, Number(res.headers.get('retry-after') || 5)); await new Promise(r => setTimeout(r, w * 1000)); continue; }
+      const ab = new AbortController();
+      const zeit = setTimeout(() => ab.abort(), ASANA_ZEIT_MS);
+      let res: Response, text: string;
+      try {
+        res = await fetch('https://app.asana.com/api/1.0' + pfad, { method: methode, signal: ab.signal,
+          headers: { 'Authorization': 'Bearer ' + ctx.ASANA_TOKEN, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: koerper === undefined ? undefined : JSON.stringify({ data: koerper }) });
+        text = await res.text();
+      } catch (e) {
+        const f: Any = new Error(`Asana ${methode} ${pfad.split('?')[0]}: ${ab.signal.aborted ? 'keine Antwort in ' + ASANA_ZEIT_MS / 1000 + ' s' : String((e as Error).message).slice(0, 120)}`);
+        f.status = 0; f.unklar = true; throw f;
+      } finally { clearTimeout(zeit); }
+      if (res.status === 429) {
+        const w = Math.max(1, Number(res.headers.get('retry-after') || 30));
+        if (versuch === 0 && Date.now() + w * 1000 < warteBis) { await new Promise(r => setTimeout(r, w * 1000)); continue; }
+        const f: Any = new Error(`Asana ${methode} ${pfad.split('?')[0]}: Ratenlimit, frühestens in ${w} s erneut`); f.status = 429; f.retryAfter = w; throw f;
+      }
       let d: Any = {}; try { d = JSON.parse(text); } catch (_e) { d = {}; }
       if (!res.ok) { const e: Any = new Error(`Asana ${methode} ${pfad.split('?')[0]}: ${res.status} ${(d?.errors?.[0]?.message) || text.slice(0, 160)}`); e.status = res.status; throw e; }
       return pfad.includes('limit=') ? d : d.data;
@@ -381,12 +396,12 @@ export function kommModul(ctx: KommKontext) {
        Neuberechnung keine Veröffentlichung verändert, die gerade nach Asana geht (Review 32a, Runde 1 Befund 2, Runde 2 Befund 1).
        Sie hält länger als das Zeitbudget und verfällt von selbst. Die Vorschau liest ohne Sperre. */
     const sperre = `festival:${f.short_name}`;
-    const sperrVon = t.vorschau ? null : await sperren(sperre, 180);
+    const sperrVon = t.vorschau ? null : await sperren(sperre, SPERRE_SEKUNDEN);
     if (!t.vorschau && !sperrVon) return { status: 409, body: { error: 'Für dieses Festival läuft gerade ein Versand oder eine Berechnung; bitte gleich noch einmal.' } };
-    try { return await sendenLesen(t, f, test, von); }
+    try { return await sendenLesen(t, f, test, von, { schluessel: sperre, von: sperrVon || '' }); }
     finally { if (sperrVon) await freigeben(sperre, sperrVon); }
   }
-  async function sendenLesen(t: Any, f: Any, test: boolean, von: string) {
+  async function sendenLesen(t: Any, f: Any, test: boolean, von: string, halt: { schluessel: string, von: string }) {
     const heute = ctx.heuteBerlin();
     const pubs = (await gespeichert([f.short_name])).filter((p: Any) => K.aktuell(p, heute));
     if (!pubs.length) return { status: 400, body: { error: 'Für dieses Festival ist nichts berechnet; zuerst komm_berechnen' } };
@@ -405,14 +420,18 @@ export function kommModul(ctx: KommKontext) {
     if (!test) for (const a of rahmen.aufgaben) if ((a.vid && gidJe.has(a.vid)) || (a.ids && a.ids.some((i: string) => gidJe.has(i)))) bekannt.add(a.name);
     const saetze = K.versandSaetze(f, rahmen, zust.name + (vertretung ? ' (Leitung Marketing, weil Kommunikation nicht besetzt ist)' : ''), bekannt, projektName);
     if (t.vorschau) return { status: 200, body: { ok: true, vorschau: true, saetze, projekt: projektName, aufgaben: rahmen.aufgaben.length, einzeln: rahmen.einzeln, buendel: rahmen.buendel, pruefpunkte: rahmen.pruefpunkte, abschnitte: rahmen.abschnitte, person: zust.name, test } };
-    return await sendenGesperrt(t, f, test, von, zust, vertretung, rahmen, projektName, logWhat, pubs, gidJe, saetze);
+    return await sendenGesperrt(halt, f, test, von, zust, vertretung, rahmen, projektName, logWhat, gidJe, saetze);
   }
   async function abbruch(logWhat: string, von: string, f: Any, projekt: string, grund: string) {
     await log(logWhat, von, { festival: f.short_name, projekt, url: `https://app.asana.com/0/${projekt}`, abgebrochen: grund, neu: 0, aktualisiert: 0, weiter: true, fehler: [grund] });
     return { status: 502, body: { error: grund, projekt } };
   }
-  async function sendenGesperrt(_t: Any, f: Any, test: boolean, von: string, zust: Any, vertretung: boolean, rahmen: Any, projektName: string, logWhat: string, pubs: Any[], gidJe: Map<string, string>, saetze: string[]) {
+  async function sendenGesperrt(halt: { schluessel: string, von: string }, f: Any, test: boolean, von: string, zust: Any, vertretung: boolean, rahmen: Any, projektName: string, logWhat: string, gidJe: Map<string, string>, saetze: string[]) {
     const beginn = Date.now();
+    const haltOk = async () => {
+      const { data } = await admin.rpc('hh_komm_sperre_halten', { p_schluessel: halt.schluessel, p_von: halt.von, p_sekunden: SPERRE_SEKUNDEN });
+      return data === true;
+    };
 
     /* Projekt: Kennung aus dem letzten Versand, sonst Suche nach dem Namen, sonst neu (Eigentum bei der verantwortlichen Person). */
     const { data: letzter } = await admin.from('komm_log').select('detail').in('what', [logWhat, logWhat + '_projekt']).eq('detail->>festival', f.short_name).not('detail->>projekt', 'is', null).order('at', { ascending: false }).limit(1);
@@ -422,6 +441,7 @@ export function kommModul(ctx: KommKontext) {
     catch (e) { return { status: 502, body: { error: 'Projekt nicht erreichbar: ' + String((e as Error).message).slice(0, 200), hinweis: 'Nichts geändert.' } }; }
     const fehler: string[] = [];
     if (!projekt) {
+      if (!(await haltOk())) return { status: 409, body: { error: 'Sperre verloren; ein anderer Lauf ist dran. Nichts angelegt.' } };
       const daten: Any = { name: projektName, workspace: ctx.ASANA_WORKSPACE, notes: projektNotiz(f, zust.name, test), owner: zust.asana_gid, default_view: 'list' };
       try { const team = await teamFinden(); if (team) daten.team = team; } catch (_e) { /* ohne Team versuchen */ }
       try { projekt = String((await asana('/projects', 'POST', daten)).gid); }
@@ -451,6 +471,7 @@ export function kommModul(ctx: KommKontext) {
     for (let i = 0; i < rahmen.abschnitte.length; i++) {
       const name = rahmen.abschnitte[i];
       if (abschnitt[name]) continue;
+      if (!(await haltOk())) return await abbruch(logWhat, von, f, projekt!, 'Sperre verloren beim Anlegen der Abschnitte; ein anderer Lauf ist dran');
       const spaeter = rahmen.abschnitte.slice(i + 1).find((n: string) => abschnitt[n]);
       try { abschnitt[name] = String((await asana(`/projects/${projekt}/sections`, 'POST', spaeter ? { name, insert_before: abschnitt[spaeter] } : { name })).gid); }
       catch (e) { fehler.push(`Abschnitt ${name}: ` + String((e as Error).message).slice(0, 120)); }
@@ -466,46 +487,89 @@ export function kommModul(ctx: KommKontext) {
 
     /* Zeitbudget je Aufruf; der Rest folgt beim nächsten Senden. KOMM_SEND_BUDGET_MS nur für die Probe. */
     const budget = Number(Deno.env.get('KOMM_SEND_BUDGET_MS') || SEND_BUDGET_MS);
-    let neu = 0, aktualisiert = 0, rest = 0, verschoben = 0;
-    /* Projektwechsel (altes Projekt archiviert oder gelöscht): gemerkte Aufgaben kommen in das neue Projekt, statt nur
-       im alten aktualisiert zu werden (Review 32a, Runde 3, Befund 3). */
-    const wechsel = !test && !!vorherProjekt && vorherProjekt !== projekt;
-    const aufgaben = rahmen.aufgaben.slice().sort((a: Any, b: Any) => (a.due_on < b.due_on ? -1 : a.due_on > b.due_on ? 1 : 0));
-    for (const a of aufgaben) {
-      if (Date.now() - beginn > budget) { rest++; continue; }
+    let neu = 0, aktualisiert = 0, rest = 0, verschoben = 0, unterbrochen = '', fortsetzenAb: string | null = null;
+    /* Versandlauf: ein Versand über mehrere Aufrufe setzt bei der nächsten unbearbeiteten Aufgabe fort, statt wieder vorn
+       zu beginnen (Review 32c, Befund 2). Ein abgeschlossener oder einen Tag alter Lauf beginnt neu. */
+    const laufSchluessel = test ? `test:${f.short_name}` : f.short_name;
+    const { data: laufAlt } = await admin.from('komm_versandlauf').select('*').eq('schluessel', laufSchluessel).maybeSingle();
+    const fortsetzen = !!laufAlt && !laufAlt.abgeschlossen && (Date.now() - Date.parse(laufAlt.aktualisiert_am)) < 86400000;
+    const erledigt = new Set<string>(fortsetzen ? (laufAlt.erledigt || []) : []);
+    const laufId = fortsetzen ? laufAlt.lauf : crypto.randomUUID();
+    const laufSpeichern = async (fertig: boolean) => {
+      const { error } = await admin.from('komm_versandlauf').upsert({ schluessel: laufSchluessel, lauf: laufId, erledigt: Array.from(erledigt),
+        gestartet_am: fortsetzen ? laufAlt.gestartet_am : new Date(beginn).toISOString(), aktualisiert_am: new Date().toISOString(), abgeschlossen: fertig }, { onConflict: 'schluessel' });
+      if (error) fehler.push('Fortschritt des Versands nicht gespeichert: ' + error.message);
+    };
+    await laufSpeichern(false);
+    /* Zugehörigkeit zum Zielprojekt je gemerkter Aufgabe, nicht nur beim erkannten Projektwechsel (Review 32c, Befund 1). */
+    const gidsImProjekt = new Set(imProjekt.values());
+    const aufgaben = rahmen.aufgaben.slice().sort((a: Any, b: Any) => (a.due_on < b.due_on ? -1 : a.due_on > b.due_on ? 1 : 0)).filter((a: Any) => !erledigt.has(a.name));
+    let seitSpeichern = 0;
+    for (let i = 0; i < aufgaben.length; i++) {
+      const a = aufgaben[i];
+      /* Mindestens eine Aufgabe je Aufruf, damit auch ein langsamer Vorlauf den Versand nie zum Stehen bringt. */
+      if (unterbrochen || (i > 0 && Date.now() - beginn > budget)) { rest = aufgaben.length - i; break; }
+      /* Vor jeder Änderung: Sperre noch unser? Dann verlängern; sonst sofort aufhören (Review 32c, Befund 3). */
+      if (!(await haltOk())) { unterbrochen = 'Sperre verloren; ein anderer Lauf ist dran'; rest = aufgaben.length - i; break; }
       const ids: string[] = a.vid ? [a.vid] : (a.ids || []);
       let gid: string | null = test ? null : ((a.vid && gidJe.get(a.vid)) || ids.map(i => gidJe.get(i)).find(Boolean) || null);
       gid = gid || imProjekt.get(norm(a.name)) || null;
-      try {
-        if (gid) {
-          if (wechsel && !imProjekt.has(norm(a.name))) {
+      const warteBis = beginn + budget;
+      let erfolg = false, neuAngelegt = false;
+      for (let versuch = 0; versuch < 2 && !erfolg; versuch++) {
+        try {
+          if (gid) {
+            if (!gidsImProjekt.has(gid)) {
+              const sek = abschnitt[a.abschnitt];
+              await asana(`/tasks/${gid}/addProject`, 'POST', sek ? { project: projekt, section: sek } : { project: projekt }, warteBis);
+              gidsImProjekt.add(gid); imProjekt.set(norm(a.name), gid); verschoben++;
+            }
+            await asana(`/tasks/${gid}`, 'PUT', { due_on: a.due_on, notes: a.notes }, warteBis);
+            aktualisiert++;
+          } else {
             const sek = abschnitt[a.abschnitt];
-            await asana(`/tasks/${gid}/addProject`, 'POST', sek ? { project: projekt, section: sek } : { project: projekt });
-            imProjekt.set(norm(a.name), gid); verschoben++;
+            const d = await asana('/tasks', 'POST', Object.assign({ name: a.name, notes: a.notes, due_on: a.due_on, assignee: zust.asana_gid, workspace: ctx.ASANA_WORKSPACE },
+              sek ? { memberships: [{ project: projekt, section: sek }] } : { projects: [projekt] }), warteBis);
+            gid = String(d.gid); neu++; neuAngelegt = true; imProjekt.set(norm(a.name), gid); gidsImProjekt.add(gid);
           }
-          await asana(`/tasks/${gid}`, 'PUT', { due_on: a.due_on, notes: a.notes });
-          aktualisiert++;
-        } else {
-          const sek = abschnitt[a.abschnitt];
-          const d = await asana('/tasks', 'POST', Object.assign({ name: a.name, notes: a.notes, due_on: a.due_on, assignee: zust.asana_gid, workspace: ctx.ASANA_WORKSPACE },
-            sek ? { memberships: [{ project: projekt, section: sek }] } : { projects: [projekt] }));
-          gid = String(d.gid); neu++; imProjekt.set(norm(a.name), gid);
+          erfolg = true;
+        } catch (e) {
+          const st = (e as Any).status;
+          if (st === 429) { unterbrochen = String((e as Error).message); fortsetzenAb = new Date(Date.now() + Number((e as Any).retryAfter || 30) * 1000).toISOString(); break; }
+          if (st === 404) { fehler.push(`${a.name}: in Asana gelöscht, nicht neu angelegt`); break; }
+          if ((e as Any).unklar && !gid) {
+            /* Anlage mit unklarem Ausgang: vor einem neuen Versuch im Projekt nachsehen, nie blind doppelt anlegen. */
+            try { for (const x of await asanaAlle(`/projects/${projekt}/tasks?opt_fields=name&limit=100`)) if (norm(x.name) === norm(a.name)) { gid = String(x.gid); imProjekt.set(norm(a.name), gid); gidsImProjekt.add(gid); } }
+            catch (_e) { /* bleibt offen */ }
+            if (gid) { neu++; erfolg = true; break; }
+            if (versuch === 0) continue;
+          }
+          fehler.push(`${a.name}: ${String((e as Error).message).slice(0, 160)}`); break;
         }
-      } catch (e) {
-        if ((e as Any).status === 404) fehler.push(`${a.name}: in Asana gelöscht, nicht neu angelegt`);
-        else fehler.push(`${a.name}: ${String((e as Error).message).slice(0, 160)}`);
-        continue;
       }
+      if (unterbrochen) { rest = aufgaben.length - i; break; }
+      if (!erfolg) continue;
+      /* Nach der Änderung noch einmal: hat ein anderer Lauf übernommen, während die Anfrage lief, wird eine eigene
+         Neuanlage zurückgenommen, statt eine Dublette zu hinterlassen. */
+      if (!(await haltOk())) {
+        if (neuAngelegt && gid) { try { await asana(`/tasks/${gid}`, 'DELETE'); neu--; } catch (e) { fehler.push(`${a.name}: Aufgabe ${gid} nach verlorener Sperre nicht zurückgenommen: ${String((e as Error).message).slice(0, 120)}`); } }
+        unterbrochen = 'Sperre verloren; ein anderer Lauf ist dran'; rest = aufgaben.length - i; break;
+      }
+      erledigt.add(a.name);
       if (!test && ids.length) {
         /* Kennung sofort merken, damit ein Abbruch keine Dublette erzeugt; das erste Sendedatum bleibt. */
         const { data: n1, error: e1 } = await admin.rpc('hh_komm_gesendet', { p_ids: ids, p_gid: gid });
         if (e1) fehler.push(`${a.name}: Aufgabe ${gid} steht in Asana, ließ sich aber nicht merken: ${e1.message}`);
         else if (Number(n1) !== ids.length) fehler.push(`${a.name}: Aufgabe ${gid} steht in Asana, aber nur ${n1} von ${ids.length} Veröffentlichungen im Haus gefunden`);
-        else for (const i of ids) gidJe.set(i, gid);
+        else for (const i of ids) gidJe.set(i, gid!);
       }
+      if (++seitSpeichern >= 10) { seitSpeichern = 0; await laufSpeichern(false); }
     }
+    await laufSpeichern(rest === 0 && !unterbrochen);
     const url = `https://app.asana.com/0/${projekt}`;
-    const detail = { festival: f.short_name, projekt, url, neu, aktualisiert, rest, projektwechsel: wechsel ? { von: vorherProjekt, uebernommen: verschoben } : null, weiter: rest > 0, abgeschlossen: rest === 0, fehler, person: zust.name, vertretung, aufgaben: rahmen.aufgaben.length, abschnitte: rahmen.abschnitte.length };
+    const detail = { festival: f.short_name, projekt, url, neu, aktualisiert, rest, lauf: laufId, im_lauf_erledigt: erledigt.size,
+      projektwechsel: verschoben ? { von: vorherProjekt, uebernommen: verschoben } : null, weiter: rest > 0, abgeschlossen: rest === 0 && !unterbrochen,
+      unterbrochen: unterbrochen || null, fortsetzen_ab: fortsetzenAb, fehler, person: zust.name, vertretung, aufgaben: rahmen.aufgaben.length, abschnitte: rahmen.abschnitte.length };
     const protokoll = await log(logWhat, von, detail);
     if (!protokoll) fehler.push('Der Versand ließ sich nicht protokollieren (komm_log); die Projektkennung ' + projekt + ' steht nur in dieser Antwort.');
     return { status: 200, body: Object.assign({ ok: true, test, protokoll, saetze }, detail) };
@@ -525,9 +589,12 @@ export function kommModul(ctx: KommKontext) {
       let meta: Any;
       try { meta = await asana(`/projects/${p}?opt_fields=name`); } catch (e) { if ((e as Any).status === 404) continue; fehler.push(String((e as Error).message)); continue; }
       if (norm(meta.name) !== norm(TEST_PROJEKT)) { fehler.push(`Projekt ${p} heißt „${meta.name}“, nicht angefasst`); continue; }
+      let offen = 0;
       for (const a of await asanaAlle(`/projects/${p}/tasks?opt_fields=name&limit=100`)) {
-        try { await asana(`/tasks/${a.gid}`, 'DELETE'); geloescht++; } catch (e) { fehler.push(String((e as Error).message).slice(0, 160)); }
+        try { await asana(`/tasks/${a.gid}`, 'DELETE'); geloescht++; } catch (e) { if ((e as Any).status === 404) continue; offen++; fehler.push(String((e as Error).message).slice(0, 160)); }
       }
+      /* Bleibt eine Aufgabe stehen, bleibt auch das Projekt: der nächste Aufruf findet sie dort wieder (Review 32c, Befund 4). */
+      if (offen) { fehler.push(`Projekt ${p} bleibt, weil ${offen} Aufgaben nicht gelöscht werden konnten; bitte erneut aufräumen`); continue; }
       try { await asana(`/projects/${p}`, 'DELETE'); projekte++; } catch (e) { fehler.push(String((e as Error).message).slice(0, 160)); }
     }
     const protokoll = await log('komm_test_aufraeumen', von, { projekte, aufgaben: geloescht, fehler });

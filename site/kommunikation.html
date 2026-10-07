@@ -400,9 +400,10 @@ async function senden(s){
       const r=await gfApi("komm_send",{ festival:s, by:wer(), bestaetigt:true });
       summe.neu+=r.neu||0; summe.aktualisiert+=r.aktualisiert||0; summe.fehler.push(...(r.fehler||[]));
       ergebnis=Object.assign({}, r, summe);
-      if(!r.weiter) break; runde++;
+      if(!r.weiter||r.unterbrochen) break; runde++;
     }
     OFFEN.vorschau[s]={ ergebnis };
+    if(ergebnis&&ergebnis.weiter){ await neuLaden(); melde(`Versand unvollständig: ${ergebnis.rest} Aufgaben noch offen${ergebnis.unterbrochen?" ("+ergebnis.unterbrochen+")":""}. Bitte später erneut senden; der Versand setzt dort fort.`, { fokus:true }); return; }
   }catch(err){ OFFEN.vorschau[s]={ fehler:err.message }; await neuLaden(); melde("Versand nicht ausgeführt oder unterbrochen: "+err.message, { fokus:true }); return; }
   await neuLaden(`Rahmen ${fest(s).name} gesendet: ${summe.neu} neu, ${summe.aktualisiert} aktualisiert${summe.fehler.length?", "+summe.fehler.length+" Fehler":""}`);
   fokus(`#fest-${s} .vorschau [data-act="vorschau-zu"]`);
