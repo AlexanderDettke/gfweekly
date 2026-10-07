@@ -35,7 +35,7 @@ echo "\n== Kommunikation (V32): Rechenlogik, Vergleich mit dem Python-Rechner, B
 node pruefung/komm-test.mjs | tail -1
 node pruefung/komm-vergleich.mjs
 node pruefung/komm-bedienung.mjs | tail -1
-if [ -n "$PGLITE_MODUL" ]; then node pruefung/komm-sql-probe.mjs | tail -1; else echo "SQL-Probe übersprungen (PGLITE_MODUL nicht gesetzt)"; fi
+if [ -n "$PGLITE_MODUL" ]; then node pruefung/komm-sql-probe.mjs | tail -1; npx -y deno run -A pruefung/komm-aktionen-probe.ts | tail -1; else echo "SQL- und Aktionsprobe übersprungen (PGLITE_MODUL nicht gesetzt)"; fi
 
 echo "\n== Wächter (statische Prüfungen) =="
 WAECHTER_OHNE_FRISCHE=1 node pruefung/waechter.mjs
