@@ -134,5 +134,5 @@ am genauen Commit prüfen. Zusammenarbeit, die es nicht gibt, wird nicht behaupt
 - **Hinweis zur Nummer:** Am 05.10.2026 lief parallel „V32 Organisation“ (Seite `organisation.html`, Assets `?v=31`). Dieses Paket heißt im Repo deshalb „V32 Kommunikation“ (Kürzel V32K in Reviewdateien nur, wo nötig); Assets gehen auf `?v=32`.
 - **Zuständig:** Claude Code, Branch `paket/v32-kommunikation`.
 - **Prüfer:** Codex CLI, read-only, je Teilpaket am genauen Commit nach `docs/reviews/V32-pruefauftrag.md`, höchstens drei Runden.
-- **Stand:** in Arbeit.
+- **Stand:** live seit 07.10.2026 (Abnahme im Technikstand). Offen: Dienstkonto und Entscheidung zum Restfenster für Christians Tabelle (`FRAGEN_FUER_MORGEN.md`).
 

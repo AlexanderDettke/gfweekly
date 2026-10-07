@@ -835,3 +835,18 @@ Zusammen 322 Aufgaben bei Christian (Veröffentlichungen der Klassen P, L, PR, T
 3. **`komm_tabelle_sync alle`:** „nicht konfiguriert“ (Secret `GOOGLE_DIENSTKONTO_JSON` fehlt), 93 Zellen geplant, Christians Tabelle unverändert, auch `F5`. Der Schritt für Alex steht in `FRAGEN_FUER_MORGEN.md`.
 
 **Nach den Reviews 32d und 32e, Runde 2.** Tabelle: Zeitgrenze je Google-Anfrage, Sperrprüfung vor F5 und vor dem Schreibblock, Zeile 5 und F5 vor dem Schreiben verglichen (bei Abweichung nichts geschrieben), F5-Umstellung vorher reserviert und höchstens einmal versucht, Einzellauf gleicht die alten Tage des Festivals mit ab, ausgelassene Termine machen den Lauf unvollständig (`ok: false`, Zahl im Tick), Termine vor dem Kalenderbeginn nur als `vor_beginn`. Das Restfenster zwischen letzter Prüfung und Schreiben bleibt und ist als Entscheidung für Alex in `FRAGEN_FUER_MORGEN.md` (Punkt 2) eingetragen. Hinweise: Sperrprüfung vor jeder Zustellung, Zeitbudget, stabile Marke im Kommentar gegen doppelte Zustellung. Aktionsprobe 110 ok.
+
+**Nach den Reviews 32d und 32e, Runde 3 (letzter Stand ohne Nachprüfung).** Schreiben in Christians Tabelle ist technisch gesperrt, bis Alex das Restfenster annimmt und `KOMM_TABELLE_SCHREIBEN=ja` setzt (ohne: Trockenlauf, `ok: false`, auch im Tick); unbekanntes F5 ist ein Konflikt; Kalenderbeginn fest 01.10.2026; verhinderte Bereinigungen werden gemeldet; Zeitgrenze auch für die Google-Anmeldung. Hinweise: Sperre und Budget je Kommentarseite und vor dem Senden, unvollständiger Abgleich sendet nicht. Aktionsprobe 113 ok.
+
+**Review 32c, 32d, 32e.** Je drei Runden (`docs/reviews/V32c-*`, `V32d-*`, `V32e-*`), alle Befunde bestätigt und behoben, Befund 1 aus 32d Runde 2 als Entscheidung an Alex (Restfenster); jeweils letzter Stand ohne Nachprüfung.
+
+### Abnahme V32 Kommunikation (07.10.2026)
+
+1. Alle fünf Festivals berechnet (live 498 Veröffentlichungen, 3.804 Schritte), Wirkungsprobe wie erwartet.
+2. Seite live am Handy (390) und am Rechner (1440) gegen das echte Backend geprüft: fünf Festivals mit Christian Linck und „gesendet am“, Wochenlast 56 Wochen, Spitzenwoche 24.05.2027 mit 142 Stunden, keine offene Entscheidung, keine waagrechte Scrollbreite, keine Konsolenfehler (Playwright gegen hohes-haus.netlify.app, Passwort nur im Prozess aus dem Vault).
+3. `komm_send` zuerst mit Lusatia gegen „Kommunikation TEST“ (danach gelöscht), dann echt für alle fünf: 322 Aufgaben bei Christian.
+4. Fixtermine: nicht geschrieben, Dienstkonto fehlt (Aufgabe für Alex), Schreiben zusätzlich bis zur Entscheidung über das Restfenster gesperrt.
+5. Slots über `komm_slots_offen` abrufbar (live 89 offen).
+6. Tests: `komm-test.mjs` 70, `komm-vergleich.mjs` alle fünf ohne Abweichung, `komm-sql-probe.mjs` 31, `komm-aktionen-probe.ts` 113, `komm-bedienung.mjs` 56, `abnahme.sh` bestanden.
+7. Codex-Runden je Teilpaket beantwortet (32a bis 32e je drei Runden).
+8. Live: Edge Function `gfweekly` v39, Migrationen `20261007052131`, `20261007070401`, `20261007073224`, `20261007074130`, `20261007091500`, Seiten über Netlify aus `main`.

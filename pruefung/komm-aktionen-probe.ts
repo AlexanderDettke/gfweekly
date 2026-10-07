@@ -563,6 +563,10 @@ const schluessel = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', 
 const pkcs8 = new Uint8Array(await crypto.subtle.exportKey('pkcs8', (schluessel as CryptoKeyPair).privateKey));
 const pem = '-----BEGIN PRIVATE KEY-----\n' + btoa(String.fromCharCode(...pkcs8)).replace(/(.{64})/g, '$1\n') + '\n-----END PRIVATE KEY-----\n';
 Deno.env.set('GOOGLE_DIENSTKONTO_JSON', JSON.stringify({ client_email: 'hohes-haus@probe.iam.gserviceaccount.com', private_key: pem }));
+/* Ohne Schreibfreigabe nur Trockenlauf, auch mit Dienstkonto (Review 32d, Runde 3, Befund 1). */
+const ohneFreigabe = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+wahr('mit Dienstkonto, ohne KOMM_TABELLE_SCHREIBEN: nichts geschrieben, ok false', S.schreibe.length === 0 && ohneFreigabe.body.schreibfreigabe === false && ohneFreigabe.body.ok === false && /Schreiben gesperrt/.test(ohneFreigabe.body.ergebnis), JSON.stringify([S.schreibe.length, ohneFreigabe.body.ergebnis]));
+Deno.env.set('KOMM_TABELLE_SCHREIBEN', 'ja');
 /* Fremde Inhalte: Christians Eintrag am 15.10.2026 (Lusatia VVK) und eine fremde Formel mit leerem Ergebnis am 15.06.2027. */
 const spalteVon = (iso: string) => 5 + Math.round((Date.parse(iso) - Date.parse('2026-10-01')) / 86400000);
 zelle6(spalteVon('2026-10-15'), { stringValue: 'Takeover Christian' });
@@ -705,6 +709,22 @@ console.log('\n17. Nach Review 32d und 32e, Runde 2');
   const nach2 = A.stories.filter(x => x.task === k.asana_task_gid).length - vorher;
   gleich('verlorene Antwort: genau ein Kommentar nach zwei Ticks, mit Marke', [nach1, nach2, A.stories.filter(x => x.task === k.asana_task_gid).every(x => !x.text.startsWith('Hinweis') || x.text.includes(`[komm:hinweis:${k.id}]`))], [1, 1, true]);
   HEUTE = '2026-10-07';
+}
+
+{
+  /* Unbekanntes F5: Konflikt, ok false (Runde 3, Befund 2). */
+  S.f5 = '=DATE(2027,1,1)';
+  const u = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+  wahr('unbekanntes F5: Konflikt, ok false', u.body.ok === false && u.body.konflikt.some((x: string) => /weder die alte|schon einmal umgestellt/.test(x)), JSON.stringify(u.body.konflikt));
+  S.f5 = '=DATE(2026,10,1)';
+  await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+  /* Verhinderte Bereinigung: Christian ergänzt eine eigene Zelle, der Termin entfällt danach (Runde 3, Befund 3). */
+  const sp = spalteVon('2027-08-08'); const z = S.zeile6.get(sp);
+  z.userEnteredValue = { stringValue: (z.userEnteredValue?.stringValue || '') + ' · Christian ergänzt' };
+  FESTE[2].starts_on = '2027-08-13'; FESTE[2].ends_on = '2027-08-15';
+  const b = await ruf('komm_tabelle_sync', { festival: 'BYNRD27', by: 'Alex' });
+  FESTE[2].starts_on = '2027-08-06'; FESTE[2].ends_on = '2027-08-08';
+  wahr('verhinderte Bereinigung gemeldet, Ergänzung bleibt, ok false', b.body.ok === false && b.body.fremd.some((x: any) => x.datum === '2027-08-08') && /Christian ergänzt/.test(S.zeile6.get(sp).userEnteredValue.stringValue), JSON.stringify([b.body.ok, b.body.fremd.map((x: any) => x.datum)]));
 }
 
 console.log(`\n${ok} ok, ${fehler} Fehler`);

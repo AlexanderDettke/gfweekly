@@ -26,6 +26,10 @@ const SHEET_ZEILE = 6;            // Zeile 6 „Fixtermine & Meilensteine“
 const SHEET_DATUMSZEILE = 5;      // Zeile 5: Datum je Spalte ab F
 const SHEET_ERSTE_SPALTE = 5;     // Spalte F, 0-basiert
 const DIENSTKONTO_SECRET = 'GOOGLE_DIENSTKONTO_JSON';
+/* Schreiben in Christians Tabelle erst nach Alex' Entscheidung über das Restfenster (Review 32d, Runde 3, Befund 1):
+   ohne KOMM_TABELLE_SCHREIBEN=ja läuft jeder Abgleich als Trockenlauf, auch mit Dienstkonto. */
+const SCHREIBFREIGABE_SECRET = 'KOMM_TABELLE_SCHREIBEN';
+const KALENDER_BEGINN = '2026-10-01';
 
 export interface KommKontext {
   admin: Any;
@@ -681,7 +685,7 @@ export function kommModul(ctx: KommKontext) {
     const kopf = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
     const inhalt = b64url(JSON.stringify({ iss: konto.client_email, scope: 'https://www.googleapis.com/auth/spreadsheets', aud: 'https://oauth2.googleapis.com/token', iat: jetzt, exp: jetzt + 3000 }));
     const sig = new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(`${kopf}.${inhalt}`)));
-    const res = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    const res = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', signal: AbortSignal.timeout(ASANA_ZEIT_MS), headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: `${kopf}.${inhalt}.${b64url(sig)}` }) });
     const d = await res.json();
     if (!res.ok || !d.access_token) throw new Error('Google-Anmeldung des Dienstkontos fehlgeschlagen: ' + (d.error_description || d.error || res.status));
@@ -751,8 +755,10 @@ export function kommModul(ctx: KommKontext) {
     const betrifft = (x: Any) => voll || x.eintraege.some((e: Any) => kuerzel.has(String(e.text).split(' ')[0]));
     return { termine: alle.filter(betrifft), alle, kuerzel, voll };
   }
-  async function tabelleGesperrt(t: Any, by: string, daten: Any, halten: () => Promise<boolean>) {
+  async function tabelleGesperrt(t0: Any, by: string, daten: Any, halten: () => Promise<boolean>) {
     const { termine, alle, kuerzel, voll } = daten;
+    const freigegeben = (Deno.env.get(SCHREIBFREIGABE_SECRET) || '').toLowerCase() === 'ja';
+    const t = freigegeben ? t0 : Object.assign({}, t0, { trocken: true });
     const token = await googleToken();
     const meta = await sheets(token, '?fields=sheets(properties(sheetId,title,gridProperties(columnCount,rowCount)))');
     const reiter = (meta.sheets || []).find((s: Any) => s.properties?.title === SHEET_REITER);
@@ -795,7 +801,8 @@ export function kommModul(ctx: KommKontext) {
             zeilen = await lesen();
           }
         }
-      } else f5Ergebnis = t.trocken ? `würde ${f5} auf ${SHEET_START_FORMEL} setzen` : `F5 trägt „${f5}“, nicht die erwartete Formel; nicht geändert`;
+      } else if (t.trocken && f5n === SHEET_ALT_FORMEL.toUpperCase()) f5Ergebnis = `würde ${f5} auf ${SHEET_START_FORMEL} setzen`;
+      else { f5Ergebnis = `F5 trägt „${f5}“, weder die alte noch die freigegebene Formel; nicht geändert`; konflikt.push(f5Ergebnis); }
     }
     const plan = planen(zeilen, termine, alle, kuerzel, voll);
     /* Unmittelbar vor dem Schreiben: Sperre noch unser, Zeile 5 und F5 unverändert, Zeile 6 je Zelle unverändert
@@ -830,12 +837,12 @@ export function kommModul(ctx: KommKontext) {
        des Kalenders ohne Spalte, doppelte Daten, fehlende Abdeckung (Runde 2, Befund 6). Termine vor dem Kalenderbeginn
        (01.10.2026) gehören nicht in die Tabelle und stehen nur als Zahl im Bericht. */
     const unvollstaendig = !plan.reichtBis || plan.reichtBis < '2027-12-31' || plan.doppelt.length > 0 || plan.ausserhalb.length > 0 || plan.fremd.length > 0;
-    const ergebnis = t.trocken ? 'Trockenlauf' : (unvollstaendig || konflikt.length ? 'geschrieben, unvollständig' : 'geschrieben');
+    const ergebnis = !freigegeben ? 'Trockenlauf: Schreiben gesperrt bis zur Entscheidung über das Restrisiko (KOMM_TABELLE_SCHREIBEN)' : t.trocken ? 'Trockenlauf' : (unvollstaendig || konflikt.length ? 'geschrieben, unvollständig' : 'geschrieben');
     const detail = { ergebnis, festival: t.festival || 'alle', f5: f5Ergebnis, konflikt, geschrieben: t.trocken ? 0 : anfragen.length - geleert, geleert, geplant: plan.anfragen.length,
       unveraendert: plan.unveraendert, fremd: plan.fremd, ausgelassen: plan.fremd.length + plan.ausserhalb.length, ausserhalb: plan.ausserhalb, vor_beginn: plan.vorBeginn,
       doppelte_daten: plan.doppelt, spalten_bis: plan.reichtBis, reicht_bis_2027: !!plan.reichtBis && plan.reichtBis >= '2027-12-31' };
     const protokoll = await log('komm_tabelle_sync', by, detail);
-    return { status: 200, body: Object.assign({ ok: !unvollstaendig && !konflikt.length, konfiguriert: true, protokoll }, detail) };
+    return { status: 200, body: Object.assign({ ok: freigegeben && !unvollstaendig && !konflikt.length, konfiguriert: true, schreibfreigabe: freigegeben, protokoll }, detail) };
   }
   /* Schreibplan aus gelesenen Zeilen 5 und 6. Spalte je Datum aus den tatsächlichen Datumswerten (doppelte Daten werden
      nicht beschrieben); eigene Zellen nur mit vollständigem Nachweis (Runde 1, Befund 1). Ein Lauf für ein Festival
@@ -849,7 +856,8 @@ export function kommModul(ctx: KommKontext) {
     });
     for (const d of doppelt) datumZu.delete(d);
     const tage = Array.from(datumZu.keys()).sort();
-    const beginn = tage[0] || null, reichtBis = tage[tage.length - 1] || null;
+    const reichtBis = tage[tage.length - 1] || null;
+    if (tage[0] && tage[0] > KALENDER_BEGINN) doppelt.push(`Kalender beginnt erst am ${tage[0]}`);
     const zeile6 = zeilen[1]?.values || [];
     const anfragen: Any[] = [], fremd: Any[] = [], ausserhalb: Any[] = [];
     let unveraendert = 0, vorBeginn = 0;
@@ -867,11 +875,11 @@ export function kommModul(ctx: KommKontext) {
       const i = datumZu.get(d);
       if (i === undefined) {
         if (!x) continue;
-        if (beginn && d < beginn) { vorBeginn++; continue; }
+        if (d < KALENDER_BEGINN) { vorBeginn++; continue; }
         ausserhalb.push({ datum: d, text: x.text, grund: doppelt.includes(d) ? 'Datum steht mehrfach in Zeile 5' : 'Datum nicht in Zeile 5' }); continue;
       }
       const c = zeile6[i] || {};
-      if (!K.zelleFrei(zellRoh(c), c.note, d)) { if (x) fremd.push({ zelle: `${K.spaltenName(i)}${SHEET_ZEILE}`, datum: d, vorhanden: zellText(c).slice(0, 80), soll: x.text }); continue; }
+      if (!K.zelleFrei(zellRoh(c), c.note, d)) { fremd.push({ zelle: `${K.spaltenName(i)}${SHEET_ZEILE}`, datum: d, vorhanden: zellText(c).slice(0, 80), soll: x ? x.text : '(leer: Termin entfallen)' }); continue; }
       if (!x) {
         if (/^komm:/.test(String(c.note || ''))) anfragen.push({ spalte: i, datum: d, text: '', wert: {} });
         continue;
@@ -970,7 +978,18 @@ export function kommModul(ctx: KommKontext) {
                Protokoll; Runde 2, Befund 2). */
             const marke = `[komm:hinweis:${id}]`;
             try {
-              const stories = await asanaAlle(`/tasks/${p.asana_task_gid}/stories?opt_fields=text,resource_subtype&limit=100`);
+              /* Kommentare seitenweise lesen, je Seite Sperre und Budget prüfen; ein unvollständiger Abgleich sendet nicht
+                 (Review 32e, Runde 3, Befund 1). */
+              const stories: Any[] = []; let pfad = `/tasks/${p.asana_task_gid}/stories?opt_fields=text,resource_subtype&limit=100`, vollstaendig = false;
+              for (let seite = 0; seite < 50; seite++) {
+                const { data: h2 } = await admin.rpc('hh_komm_sperre_halten', { p_schluessel: 'hinweise', p_von: hv, p_sekunden: 120 });
+                if (h2 !== true || Date.now() - beginnH > 60000) break;
+                const d = await asana(pfad); stories.push(...(d.data || [])); pfad = d.next_page?.path || '';
+                if (!pfad) { vollstaendig = true; break; }
+              }
+              if (!vollstaendig) { offen++; bericht.push(`Hinweis zu ${id}: Kommentare nicht vollständig gelesen, Rest im nächsten Tick`); break; }
+              const { data: h3 } = await admin.rpc('hh_komm_sperre_halten', { p_schluessel: 'hinweise', p_von: hv, p_sekunden: 120 });
+              if (h3 !== true) { offen++; bericht.push('Hinweise: Sperre verloren, Rest im nächsten Tick'); break; }
               if (!stories.some((x: Any) => String(x?.text || '').includes(marke))) {
                 await asana(`/tasks/${p.asana_task_gid}/stories`, 'POST', { text: `Hinweis aus dem Hohen Haus: Für „${p.titel}“ am ${K.kurz(p.t)} liegt eine Abgabe eines Partners vor, die Freigabe fehlt noch. Bitte im Habitat Hub freigeben oder Korrektur anfordern. ${marke}` });
               }
