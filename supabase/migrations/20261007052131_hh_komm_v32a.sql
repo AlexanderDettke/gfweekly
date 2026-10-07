@@ -232,7 +232,11 @@ create or replace function public.hh_komm_pruefpunkt_set(p_festival text, p_datu
 returns jsonb language plpgsql set search_path = public as $$
 declare alt public.komm_pruefpunkte; neu public.komm_pruefpunkte;
 begin
+  perform pg_advisory_xact_lock(hashtext('komm_einspielen:' || p_festival));   -- dieselbe Sperre wie hh_komm_einspielen (Review 32a, Runde 3, Befund 1)
   perform pg_advisory_xact_lock(hashtext('komm_pp:' || p_festival || ':' || p_datum));
+  if not exists (select 1 from komm_veroeffentlichungen where festival_short = p_festival and regel_id = 'PRUEF' and t = p_datum) then
+    raise exception 'An diesem Tag gibt es (inzwischen) keinen Prüfpunkt; bitte neu laden' using errcode = 'PT409';
+  end if;
   select * into alt from komm_pruefpunkte where festival_short = p_festival and datum = p_datum for update;
   if p_expect is not null and coalesce(alt.stufe, 'offen') <> p_expect then
     raise exception 'Inzwischen geändert: Stufe steht auf %', coalesce(alt.stufe, 'offen') using errcode = 'PT409';

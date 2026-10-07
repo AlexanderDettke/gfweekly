@@ -292,8 +292,13 @@ export function kommModul(ctx: KommKontext) {
     const name = String(t.by).trim().slice(0, 60);
     const notizSetzen = t.notiz !== undefined;
     const notiz = notizSetzen && t.notiz ? String(t.notiz).slice(0, 4000) : null;
-    const { data, error } = await admin.rpc('hh_komm_pruefpunkt_set', { p_festival: f.short_name, p_datum: datum, p_stufe: stufe, p_extras: extras,
-      p_notiz: notiz, p_notiz_setzen: notizSetzen, p_von: by === 'Alex' || by === 'Lea' ? by : name, p_expect: t.expect_stufe ? String(t.expect_stufe) : null });
+    /* Unter derselben Sperre wie Berechnung und Versand; die Funktion prüft den Prüfpunkt noch einmal in ihrer Transaktion. */
+    const sperrVon = await sperren(`festival:${f.short_name}`, 30);
+    if (!sperrVon) return { status: 409, body: { error: 'Für dieses Festival läuft gerade eine Berechnung oder ein Versand; bitte gleich noch einmal.' } };
+    let data: Any = null, error: Any = null;
+    try { ({ data, error } = await admin.rpc('hh_komm_pruefpunkt_set', { p_festival: f.short_name, p_datum: datum, p_stufe: stufe, p_extras: extras,
+      p_notiz: notiz, p_notiz_setzen: notizSetzen, p_von: by === 'Alex' || by === 'Lea' ? by : name, p_expect: t.expect_stufe ? String(t.expect_stufe) : null })); }
+    finally { await freigeben(`festival:${f.short_name}`, sperrVon); }
     if (error) return { status: error.code === 'PT409' ? 409 : 500, body: { error: error.message } };
     const protokoll = true;
     return { status: 200, body: { ok: true, pruefpunkt: data, protokoll } };
@@ -400,7 +405,8 @@ export function kommModul(ctx: KommKontext) {
     /* Projekt: Kennung aus dem letzten Versand, sonst Suche nach dem Namen, sonst neu (Eigentum bei der verantwortlichen Person). */
     const { data: letzter } = await admin.from('komm_log').select('detail').in('what', [logWhat, logWhat + '_projekt']).eq('detail->>festival', f.short_name).not('detail->>projekt', 'is', null).order('at', { ascending: false }).limit(1);
     let projekt: string | null = null;
-    try { projekt = await projektFinden(projektName, (letzter || [])[0]?.detail?.projekt || null); }
+    const vorherProjekt: string | null = (letzter || [])[0]?.detail?.projekt || null;
+    try { projekt = await projektFinden(projektName, vorherProjekt); }
     catch (e) { return { status: 502, body: { error: 'Projekt nicht erreichbar: ' + String((e as Error).message).slice(0, 200), hinweis: 'Nichts geändert.' } }; }
     const fehler: string[] = [];
     if (!projekt) {
@@ -408,9 +414,14 @@ export function kommModul(ctx: KommKontext) {
       try { const team = await teamFinden(); if (team) daten.team = team; } catch (_e) { /* ohne Team versuchen */ }
       try { projekt = String((await asana('/projects', 'POST', daten)).gid); }
       catch (e) {
-        /* Manche Arbeitsbereiche lassen owner beim Anlegen nicht zu: ohne owner anlegen und danach setzen. */
-        try { delete daten.owner; projekt = String((await asana('/projects', 'POST', daten)).gid); try { await asana(`/projects/${projekt}`, 'PUT', { owner: zust.asana_gid }); } catch (e2) { fehler.push('Eigentum nicht übertragen: ' + String((e2 as Error).message).slice(0, 160)); } }
-        catch (e3) { return { status: 400, body: { error: String((e3 as Error).message), erster_fehler: String((e as Error).message).slice(0, 200), hinweis: 'Projekt nicht angelegt; nichts geändert.' } }; }
+        /* Unklarer Ausgang (Netz, 5xx, verlorene Antwort): erst nach dem Projekt suchen, nie blind ein zweites anlegen
+           (Review 32a, Runde 3, Befund 2). Ein zweiter Versuch ohne owner nur, wenn Asana das Feld ausdrücklich ablehnt. */
+        const st = (e as Any).status, text = String((e as Error).message);
+        try { projekt = await projektFinden(projektName, null); } catch (_e) { projekt = null; }
+        if (!projekt && st === 400 && /owner/i.test(text)) {
+          try { delete daten.owner; projekt = String((await asana('/projects', 'POST', daten)).gid); try { await asana(`/projects/${projekt}`, 'PUT', { owner: zust.asana_gid }); } catch (e2) { fehler.push('Eigentum nicht übertragen: ' + String((e2 as Error).message).slice(0, 160)); } }
+          catch (e3) { return { status: 400, body: { error: String((e3 as Error).message), erster_fehler: text.slice(0, 200), hinweis: 'Projekt nicht angelegt; nichts geändert.' } }; }
+        } else if (!projekt) return { status: 502, body: { error: 'Projekt nicht angelegt: ' + text.slice(0, 200), hinweis: 'Nichts geändert. Beim nächsten Senden wird zuerst nach dem Projekt gesucht.' } };
       }
       /* Eigene Protokollart: die Anlage ist kein Versand (Review 32a, Runde 2, Befund 4). */
       const ok = await log(logWhat + '_projekt', von, { festival: f.short_name, projekt, url: `https://app.asana.com/0/${projekt}`, schritt: 'Projekt angelegt' });
@@ -441,7 +452,10 @@ export function kommModul(ctx: KommKontext) {
     try { for (const a of await asanaAlle(`/projects/${projekt}/tasks?opt_fields=name&limit=100`)) if (a?.name && !imProjekt.has(norm(a.name))) imProjekt.set(norm(a.name), String(a.gid)); }
     catch (e) { return await abbruch(logWhat, von, f, projekt!, 'Aufgabenliste nicht lesbar: ' + String((e as Error).message).slice(0, 160) + '. Keine Aufgabe angelegt, sonst könnten Aufgaben doppelt entstehen.'); }
 
-    let neu = 0, aktualisiert = 0, rest = 0;
+    let neu = 0, aktualisiert = 0, rest = 0, verschoben = 0;
+    /* Projektwechsel (altes Projekt archiviert oder gelöscht): gemerkte Aufgaben kommen in das neue Projekt, statt nur
+       im alten aktualisiert zu werden (Review 32a, Runde 3, Befund 3). */
+    const wechsel = !test && !!vorherProjekt && vorherProjekt !== projekt;
     const aufgaben = rahmen.aufgaben.slice().sort((a: Any, b: Any) => (a.due_on < b.due_on ? -1 : a.due_on > b.due_on ? 1 : 0));
     for (const a of aufgaben) {
       if (Date.now() - beginn > SEND_BUDGET_MS) { rest++; continue; }
@@ -450,6 +464,11 @@ export function kommModul(ctx: KommKontext) {
       gid = gid || imProjekt.get(norm(a.name)) || null;
       try {
         if (gid) {
+          if (wechsel && !imProjekt.has(norm(a.name))) {
+            const sek = abschnitt[a.abschnitt];
+            await asana(`/tasks/${gid}/addProject`, 'POST', sek ? { project: projekt, section: sek } : { project: projekt });
+            imProjekt.set(norm(a.name), gid); verschoben++;
+          }
           await asana(`/tasks/${gid}`, 'PUT', { due_on: a.due_on, notes: a.notes });
           aktualisiert++;
         } else {
@@ -472,7 +491,7 @@ export function kommModul(ctx: KommKontext) {
       }
     }
     const url = `https://app.asana.com/0/${projekt}`;
-    const detail = { festival: f.short_name, projekt, url, neu, aktualisiert, rest, weiter: rest > 0, abgeschlossen: rest === 0, fehler, person: zust.name, vertretung, aufgaben: rahmen.aufgaben.length, abschnitte: rahmen.abschnitte.length };
+    const detail = { festival: f.short_name, projekt, url, neu, aktualisiert, rest, projektwechsel: wechsel ? { von: vorherProjekt, uebernommen: verschoben } : null, weiter: rest > 0, abgeschlossen: rest === 0, fehler, person: zust.name, vertretung, aufgaben: rahmen.aufgaben.length, abschnitte: rahmen.abschnitte.length };
     const protokoll = await log(logWhat, von, detail);
     if (!protokoll) fehler.push('Der Versand ließ sich nicht protokollieren (komm_log); die Projektkennung ' + projekt + ' steht nur in dieser Antwort.');
     return { status: 200, body: Object.assign({ ok: true, test, protokoll, saetze }, detail) };
@@ -531,6 +550,15 @@ export function kommModul(ctx: KommKontext) {
   }
   function serienDatum(n: number) { return K.plus('1899-12-30', Math.round(n)); }
   function zellText(c: Any) { return (c?.formattedValue ?? c?.userEnteredValue?.stringValue ?? '').toString(); }
+  /* Eingegebener Inhalt: bei Formeln die Formel, nicht ihr Ergebnis (eine fremde Formel ="" ist nicht leer). */
+  function zellRoh(c: Any) {
+    const u = c?.userEnteredValue; if (!u) return '';
+    if (u.formulaValue !== undefined) return String(u.formulaValue);
+    if (u.stringValue !== undefined) return String(u.stringValue);
+    if (u.numberValue !== undefined) return String(u.numberValue);
+    if (u.boolValue !== undefined) return String(u.boolValue);
+    return JSON.stringify(u);
+  }
 
   async function tabelleSync(t: Any, by: string) {
     const rw = await regelwerk();
@@ -596,16 +624,16 @@ export function kommModul(ctx: KommKontext) {
       const i = datumZu.get(x.datum);
       if (i === undefined) { ausserhalb.push({ datum: x.datum, text: x.text }); continue; }
       const c = zeile6[i] || {};
-      if (!K.zelleFrei(zellText(c), c.note)) { fremd.push({ zelle: `${K.spaltenName(i)}${SHEET_ZEILE}`, datum: x.datum, vorhanden: zellText(c).slice(0, 80), soll: x.text }); continue; }
-      const notiz = `${x.notiz}\nAus dem Hohen Haus (Fixtermine), wird täglich abgeglichen.`;
-      if (zellText(c) === x.text && c.note === notiz) { unveraendert++; continue; }
+      if (!K.zelleFrei(zellRoh(c), c.note)) { fremd.push({ zelle: `${K.spaltenName(i)}${SHEET_ZEILE}`, datum: x.datum, vorhanden: zellText(c).slice(0, 80), soll: x.text }); continue; }
+      const notiz = K.zellNotiz(x);
+      if (zellRoh(c) === x.text && c.note === notiz) { unveraendert++; continue; }
       anfragen.push({ updateCells: { start: { sheetId, rowIndex: SHEET_ZEILE - 1, columnIndex: i }, rows: [{ values: [{ userEnteredValue: { stringValue: x.text }, note: notiz }] }], fields: 'userEnteredValue,note' } });
     }
     /* Eigene Zellen, deren Termin es nicht mehr gibt, leeren (nur bei vollem Lauf; nur mit Kennung komm:). */
     let geleert = 0;
     if (wahl.length === fs.length) {
       zeile6.forEach((c: Any, i: number) => {
-        if (i < SHEET_ERSTE_SPALTE || !/^komm:/.test(String(c?.note || ''))) return;
+        if (i < SHEET_ERSTE_SPALTE || !/^komm:/.test(String(c?.note || '')) || !K.zelleFrei(zellRoh(c), c.note)) return;
         const d = Array.from(datumZu.entries()).find(([, j]) => j === i)?.[0];
         if (d && soll.has(d)) return;
         anfragen.push({ updateCells: { start: { sheetId, rowIndex: SHEET_ZEILE - 1, columnIndex: i }, rows: [{ values: [{}] }], fields: 'userEnteredValue,note' } });

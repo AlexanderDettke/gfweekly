@@ -99,6 +99,7 @@ gleich('zweite Entscheidung mit gesehener Stufe, Notiz bleibt', [ppz.stufe, ppz.
 gleich('veraltete gesehene Stufe: PT409', await fehlerCode(`select public.hh_komm_pruefpunkt_set('LUSRD27', $1::date, 'gruen', '{}', null, false, 'Lea', 'gelb')`, [pp]), 'PT409');
 const plog = await q(`select detail from komm_log where what = 'komm_pruefpunkt_set' order by id`);
 gleich('Protokoll mit Vorzustand', [plog.length, plog[0].detail.vorher, plog[1].detail.vorher.stufe], [2, null, 'gelb']);
+gleich('Prüfpunkt an einem Tag ohne Prüfpunkt (etwa nach einer Verschiebung): PT409', await fehlerCode(`select public.hh_komm_pruefpunkt_set('LUSRD27', '2027-01-01'::date, 'gelb', '{}', null, false, 'Alex', null)`), 'PT409');
 wahr('unbekanntes Extra wird abgewiesen', !!(await fehlerCode(`select public.hh_komm_pruefpunkt_set('LUSRD27', $1::date, 'gelb', array['E99'], null, false, 'Alex', null)`, [pp])));
 
 console.log('\n6. Regelwerk');

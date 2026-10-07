@@ -153,7 +153,10 @@ console.log('\n7. Fixtermine für die Redaktionstabelle');
   wahr('mehrere Einträge eines Tages mit „ · “ getrennt', fx.some(x => x.eintraege.length > 1 && x.text.includes(' · ')));
   wahr('jede Zelle trägt die Kennung komm: im Hinweis', fx.every(x => /^komm:fix-\d{4}-\d{2}-\d{2}$/.test(x.notiz)));
   gleich('Spalte F ist der Starttag, 31.12.2027 liegt in Spalte QT', [K.spaltenName(K.spalteZu('2026-10-01', '2026-10-01')), K.spaltenName(K.spalteZu('2026-10-01', '2027-12-31'))], ['F', 'QT']);
-  gleich('Zelle frei: leer oder von uns', [K.zelleFrei('', ''), K.zelleFrei('LUS F', 'komm:fix-2027-07-23'), K.zelleFrei('Christians Eintrag', ''), K.zelleFrei('x', 'Notiz von Christian')], [true, true, false, false]);
+  const eigen = K.zellNotiz({ notiz: 'komm:fix-2027-07-23', text: 'LUS F' });
+  gleich('Zelle frei: leer oder unverändert von uns', [K.zelleFrei('', ''), K.zelleFrei('LUS F', eigen), K.zelleFrei('Christians Eintrag', ''), K.zelleFrei('', 'Notiz von Christian')], [true, true, false, false]);
+  gleich('fremde Formel mit leerem Ergebnis ist nicht frei', K.zelleFrei('=""', ''), false);
+  gleich('eigene Zelle, von Hand geändert, ist fremd', K.zelleFrei('LUS F, Aufbau ab 15.07.', eigen), false);
 }
 
 console.log('\n8. Partner-Slots und Tick');

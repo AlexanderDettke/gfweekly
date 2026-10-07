@@ -450,8 +450,16 @@
   /* Spalte der Tabelle zu einem Datum: Spalte F (Index 5, 0-basiert) ist der Starttag. */
   function spalteZu(startTag, datum) { const i = tage(startTag, datum); return i < 0 ? null : 5 + i; }
   function spaltenName(index0) { let n = index0 + 1, s = ''; while (n > 0) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); } return s; }
-  /* Darf eine Zelle geschrieben werden? Leer oder schon von uns (Hinweis beginnt mit komm:). */
-  function zelleFrei(wert, notiz) { return (!wert || !String(wert).trim()) || /^komm:/.test(String(notiz || '')); }
+  /* Darf eine Zelle geschrieben werden? roh ist der eingegebene Inhalt (bei Formeln die Formel, nicht ihr Ergebnis).
+     Frei ist eine Zelle ohne Inhalt und ohne fremden Hinweis, oder eine eigene (Hinweis beginnt mit komm:), deren Inhalt
+     noch genau dem entspricht, was wir geschrieben haben (Zeile „Inhalt:“ im Hinweis). Hat jemand eine eigene Zelle
+     geändert, gilt sie als fremd (Review 32a, Runde 3, Befund 4). */
+  function zelleFrei(roh, notiz) {
+    const n = String(notiz || ''), r = String(roh ?? '');
+    if (/^komm:/.test(n)) { const m = /\nInhalt: (.*)$/m.exec(n); return !m || m[1] === r; }
+    return !r.length && !n.trim();
+  }
+  function zellNotiz(x) { return `${x.notiz}\nInhalt: ${x.text}\nAus dem Hohen Haus (Fixtermine), wird täglich abgeglichen.`; }
 
   /* ---------- Partner-Slots (32e) ---------- */
   function slotOffen(p, heute) {
@@ -487,7 +495,7 @@
     regelwerkInfo, festivalAus, saisonStart, berechne, csvZeilen, themaZurRegel,
     aktuell, ueberfaellig, naechste, wochenlast, stellenWort, jahresband,
     asanaEinzeln, schrittListe, asanaRahmen, versandSaetze,
-    fixtermine, spalteZu, spaltenName, zelleFrei,
+    fixtermine, spalteZu, spaltenName, zelleFrei, zellNotiz,
     slotOffen, abgabefrist, tickEntscheidungen,
     wort, zahlWort, naechsterPruefpunkt };
 });
