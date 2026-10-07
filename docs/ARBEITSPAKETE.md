@@ -127,3 +127,12 @@ am genauen Commit prüfen. Zusammenarbeit, die es nicht gibt, wird nicht behaupt
 - **Prüfer:** Codex CLI, read-only, je Teilpaket am genauen Commit nach `docs/reviews/V31-pruefauftrag.md`.
 - **Termin:** live bis 12.10.2026 abends, Übergabe Lea am 13.10.2026.
 - **Stand:** vorbereitet, Bau offen.
+
+### WP-V32K · Kommunikation: Postingplan-Standard für alle fünf Festivals
+
+- **Auftrag:** `docs/PAKET-V32-KOMMUNIKATION.md`, Teilpakete 32a bis 32e, freigegeben von Alex am 05.10.2026; Durchlauf (Besetzung, Versand an Asana, Fixtermine) freigegeben am 06.10.2026. Startprompt `docs/STARTPROMPT-V32.md`.
+- **Hinweis zur Nummer:** Am 05.10.2026 lief parallel „V32 Organisation“ (Seite `organisation.html`, Assets `?v=31`). Dieses Paket heißt im Repo deshalb „V32 Kommunikation“ (Kürzel V32K in Reviewdateien nur, wo nötig); Assets gehen auf `?v=32`.
+- **Zuständig:** Claude Code, Branch `paket/v32-kommunikation`.
+- **Prüfer:** Codex CLI, read-only, je Teilpaket am genauen Commit nach `docs/reviews/V32-pruefauftrag.md`, höchstens drei Runden.
+- **Stand:** in Arbeit.
+
