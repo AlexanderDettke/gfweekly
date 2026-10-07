@@ -815,3 +815,21 @@ Keine Abweichung über 10 Prozent. Draußenbande: der Vorverkauf lief laut Platt
 **Nach Review 32d, Runde 1.** Sperre vor dem Lesen der Termine; eigene Zellen nur mit vollständigem Nachweis (Kennung mit Datum, Inhaltszeile); F5 genau einmal, eine spätere Rückstellung bleibt und ist ein Konflikt; vergangene Prüfpunkte bleiben; doppelte Daten in Zeile 5 werden nicht beschrieben; „geschrieben, unvollständig“ bei fehlender Abdeckung. **Verbleibendes Risiko:** Vor dem Schreiben wird frisch gelesen und nur unveränderte Zellen werden geschrieben. Die Sheets-API kennt aber kein bedingtes Schreiben; in den Sekundenbruchteilen zwischen dieser Prüfung und dem Schreiben könnte eine gleichzeitige Eingabe in genau derselben Zelle überschrieben werden. Den Rest schlösse nur ein geschützter Bereich in Christians Tabelle, den das Paket ausschließt.
 
 **Nach Review 32e, Runde 1.** Hinweise nur nach bestätigter Zustellung als gemeldet (`komm_hinweis`), sonst `komm_hinweis_offen` und neuer Versuch im nächsten Tick; Hinweisabschnitt unter eigener Sperre. Aktionsprobe 88 ok.
+
+### Durchlauf (07.10.2026, Freigabe Alex 06.10.2026 im Chat, Ausführung nach Freigabe in der Sitzung)
+
+**Asana-Test vor dem Versand** mit Stand `d1d1182` (nach Review 32c Runde 3): Lusatia gegen „Kommunikation TEST“, erster Aufruf 49 Aufgaben (Zeitbudget), zweiter 17 und abgeschlossen; laut Asana-Connector 66 Aufgaben, Eigentum Alexander Dettke, 13 Abschnitte September 2026 bis September 2027 in Reihenfolge; Beschreibung mit Briefing, Richtwert, Schrittliste zum Abhaken, Kennung und Link. Danach `komm_test_aufraeumen`: 66 Aufgaben und das Projekt gelöscht.
+
+1. **Besetzung `komm`.** Alle fünf Festivals trugen schon Christian Linck; Lusatia, Draußenbande, by nature und Fluidity waren von Alex bestätigt, Wilde Möhre stand auf Vorschlag. Wilde Möhre über `launch_set` (bestehender Weg) als Alex bestätigt, Notiz „Umfang offen · Bestätigt nach Freigabe Alex Chat 06.10.2026“ (der erste Aufruf hatte die Notiz „Umfang offen“ ersetzt, der zweite stellt beides zusammen; Vorzustand im Protokoll). Nebenwirkung der bestehenden Semantik: die vier Launch-Meilensteine des Bereichs `komm` von Wilde Möhre gingen dabei von Vorschlag auf bestätigt. Keine andere eingetragene Person überschrieben.
+2. **`komm_send` echt als Alex**, je Festival bis „abgeschlossen“ (jeweils zwei Aufrufe wegen des Zeitbudgets), keine Fehler:
+
+| Festival | Projekt in Asana | Aufgaben | Eigentum |
+| --- | --- | --- | --- |
+| Wilde Möhre | Kommunikation Wilde Möhre 2027 (`1219262104891239`) | 61 | Christian Linck |
+| Draußenbande | Kommunikation Draußenbande 2027 (`1219259693625127`) | 60 | Christian Linck |
+| Lusatia | Kommunikation Lusatia 2027 (`1219263889682523`) | 66 | Christian Linck |
+| Fluidity | Kommunikation Fluidity 2027 (`1219263890640229`) | 68 | Christian Linck |
+| by nature | Kommunikation by nature 2027 (`1219263891583483`) | 67 | Christian Linck |
+
+Zusammen 322 Aufgaben bei Christian (Veröffentlichungen der Klassen P, L, PR, TM, NL, AD, INT und Pflicht-M, Prüfpunkte, Monatsbündel), Abschnitte je Monat; laut Connector Eigentum und Aufgabenzahl je Projekt bestätigt. 498 von 498 kommenden Veröffentlichungen tragen danach eine Asana-Kennung und ein Sendedatum.
+3. **`komm_tabelle_sync alle`:** „nicht konfiguriert“ (Secret `GOOGLE_DIENSTKONTO_JSON` fehlt), 93 Zellen geplant, Christians Tabelle unverändert, auch `F5`. Der Schritt für Alex steht in `FRAGEN_FUER_MORGEN.md`.
