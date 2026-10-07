@@ -405,6 +405,7 @@ async function senden(s){
     OFFEN.vorschau[s]={ ergebnis };
   }catch(err){ OFFEN.vorschau[s]={ fehler:err.message }; await neuLaden(); melde("Versand nicht ausgeführt oder unterbrochen: "+err.message, { fokus:true }); return; }
   await neuLaden(`Rahmen ${fest(s).name} gesendet: ${summe.neu} neu, ${summe.aktualisiert} aktualisiert${summe.fehler.length?", "+summe.fehler.length+" Fehler":""}`);
+  fokus(`#fest-${s} .vorschau [data-act="vorschau-zu"]`);
 }
 async function ppSpeichern(form){
   const s=form.dataset.f, d=form.dataset.d;
@@ -421,7 +422,7 @@ async function ppSpeichern(form){
     return; }
   delete OFFEN.pp[s];
   await neuLaden(`Prüfpunkt ${fmtK(d)} gespeichert: Stufe ${stufeWort(stufe)}${extras.length?", "+extras.join(", "):""}`);
-  fokus(`#fest-${s} [data-act="pp"]`);
+  fokusAusloeser(s, d);
 }
 document.addEventListener("click", async e=>{
   const a=e.target.closest("[data-act]"); if(!a) return;
@@ -436,7 +437,7 @@ document.addEventListener("click", async e=>{
       OFFEN.pp[s]={ datum:a.dataset.d, basis:{ stufe:g.stufe||"offen", extras:(g.extras||[]).slice(), notiz:g.notiz||"", am:g.entschieden_am||null } }; }
     renderKopf();
     const z=document.getElementById("fest-"+s); if(z){ z.scrollIntoView({block:"nearest"}); const c=z.querySelector(".pp-form .chip.on")||z.querySelector(".pp-form .chip"); if(c) c.focus(); else fokus(`#fest-${s} [data-act="pp"]`); } return; }
-  if(a.dataset.act==="pp-zu"){ delete OFFEN.pp[s]; renderKopf(); fokus(`#fest-${s} [data-act="pp"]`); return; }
+  if(a.dataset.act==="pp-zu"){ const d=(OFFEN.pp[s]||{}).datum; delete OFFEN.pp[s]; renderKopf(); fokusAusloeser(s, d); return; }
   if(a.dataset.act==="neu-laden"){ neuLaden(VERALTET?"Neu geladen":""); return; }
   if(a.dataset.act==="meldung-zu"){ $("#kmMeldung").hidden=true; return; }
   if(a.dataset.act==="extras-frei"){
@@ -445,7 +446,7 @@ document.addEventListener("click", async e=>{
     if(veraltetSperre()) return;
     try{ await gfApi("komm_pruefpunkt_set",{ festival:s, datum:pp.datum, stufe:pp.stufe, extras:pp.extras, by:wer(), expect_stufe:pp.stufe, expect_extras:pp.extras, expect_notiz:pp.notiz||"", expect_am:pp.entschieden_am||null }); }
     catch(err){ await neuLaden(); melde("Nicht freigegeben: "+err.message+(VERALTET?". Die Seite ließ sich nicht neu laden; der angezeigte Stand ist veraltet.":(/geändert/i.test(err.message)?". Die Seite zeigt jetzt den aktuellen Stand.":"")), { fokus:true }); return; }
-    await neuLaden(`Extras ${pp.extras.join(", ")} für ${f.name} freigegeben als ${wer()}`);
+    await neuLaden(`Extras ${pp.extras.join(", ")} für ${f.name} freigegeben als ${wer()}`, { fokus:true });
   }
 });
 function entwurf(form){ const s=form.dataset.f; if(!OFFEN.pp[s]) return;
@@ -461,6 +462,8 @@ function melde(text, o={}){ const st=$("#kmStatus"); if(st){ st.textContent=""; 
   const z=$("#kmMeldung"); if(z){ z.hidden=false; z.querySelector(".t").textContent=text; if(o.fokus) z.focus(); } }
 let VERALTET=false;
 function veraltetSperre(){ if(!VERALTET) return false; melde("Der angezeigte Stand ist veraltet. Bitte zuerst neu laden, dann entscheiden.", { fokus:true }); return true; }
+/* Zurück zum auslösenden Knopf des Prüfpunkts (mit Datum), sonst zum Prüfpunktknopf des Festivals, sonst zur Statuszeile. */
+function fokusAusloeser(s, d){ setTimeout(()=>{ const el=document.querySelector(`[data-act="pp"][data-f="${s}"][data-d="${d}"]`)||document.querySelector(`#fest-${s} [data-act="pp"]`)||$("#kmMeldung"); if(el) el.focus(); }, 0); }
 function fokus(sel){ setTimeout(()=>{ const el=document.querySelector(sel); if(el) el.focus(); }, 0); }
 function zeigeLadefehler(err){
   const satz=`Die Daten ließen sich nicht laden (${gfEsc(err&&err.message||"Verbindung")}). Was hier fehlt, ist nicht leer, sondern unbekannt.`;
@@ -473,8 +476,8 @@ function zeigeLadefehler(err){
 }
 /* Nach Schreibaktionen: deren Ergebnis steht schon fest; scheitert nur das Neuladen, sagt die Seite genau das. */
 /* erfolg: Satz zur bestätigten Schreibaktion; ohne erfolg wird nichts als gespeichert gemeldet (Review 32b, Runde 2, Befund 2). */
-async function neuLaden(erfolg){
-  try{ await load(true); VERALTET=false; $("#kmVeraltet").hidden=true; if(erfolg) melde(erfolg); }
+async function neuLaden(erfolg, o={}){
+  try{ await load(true); VERALTET=false; $("#kmVeraltet").hidden=true; if(erfolg) melde(erfolg, o); }
   catch(err){
     if(D){ VERALTET=true; renderAll(); $("#kmVeraltet").hidden=false;
       melde((erfolg?erfolg+". ":"")+"Die Seite ließ sich nicht neu laden ("+(err.message||"Verbindung")+"); der angezeigte Stand ist veraltet.", { fokus:true }); }

@@ -39,6 +39,7 @@ for (const s of [{ w: 390, h: 844 }, { w: 1440, h: 900 }]) {
   wahr('Vorschau in Worten, Knopf „Senden als Lea“', (await page.innerText('#fest-FAMRD27 .vorschau')).includes('Eigentum und Zuständigkeit') && (await page.innerText('#fest-FAMRD27 [data-act="senden"]')).includes('Lea'));
   wahr('Vorschau ruft komm_send mit vorschau und by Lea', aufrufe.some(a => a.action === 'komm_send' && a.payload.vorschau && a.payload.by === 'Lea'));
   await page.click('#fest-FAMRD27 [data-act="senden"]'); await page.waitForFunction(() => (document.querySelector('#fest-FAMRD27 .vorschau') || {}).innerText?.includes('Gesendet'));
+  wahr('nach dem Senden liegt der Fokus im Ergebnis (Knopf „Schließen“)', await page.evaluate(() => document.activeElement?.matches('#fest-FAMRD27 .vorschau [data-act="vorschau-zu"]')));
   wahr('Senden schickt bestaetigt und meldet das Ergebnis', aufrufe.some(a => a.action === 'komm_send' && a.payload.bestaetigt === true && a.payload.by === 'Lea'));
   await page.click('#fest-FAMRD27 [data-act="vorschau-zu"]');
   wahr('nach dem Versand: Rahmen „gesendet“, nicht mehr unvollständig', !(await page.innerText('#fest-FAMRD27')).includes('unvollständig') && (await page.innerText('#fest-FAMRD27')).includes('gesendet am'));
@@ -73,6 +74,7 @@ for (const s of [{ w: 390, h: 844 }, { w: 1440, h: 900 }]) {
   KOMM_LIST.entscheiden.push({ art: 'extras', festival: 'FAMRD27', datum: fe.datum, extras: ['E01'], text: 'Draußenbande: Extras mit Budget gewählt (E01), Freigabe der GF fehlt.' });
   await page.reload(); await page.waitForSelector('[data-act="extras-frei"]');
   await page.click('[data-act="extras-frei"]'); await page.waitForTimeout(500);
+  wahr('nach der Freigabe liegt der Fokus auf der Ergebnismeldung', await page.evaluate(() => document.activeElement?.id === 'kmMeldung'));
   wahr('nach der Freigabe ist die Budgetentscheidung verschwunden und gemeldet', !(await page.$('[data-act="extras-frei"]')) && (await page.innerText('#kmMeldung')).includes('freigegeben'));
 
   wahr('Entscheidungen: Besetzung, Prüfpunkt, Überlast (die freigegebenen Extras sind weg)', (await page.innerText('#kmEntscheiden')).match(/Besetzung[\s\S]*(Prüfpunkt[\s\S]*)?Überlast/i) !== null && !(await page.innerText('#kmEntscheiden')).includes('Extras mit Budget'));
