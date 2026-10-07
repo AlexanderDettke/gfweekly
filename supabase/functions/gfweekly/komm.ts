@@ -296,7 +296,18 @@ export function kommModul(ctx: KommKontext) {
     const sperrVon = await sperren(`festival:${f.short_name}`, 30);
     if (!sperrVon) return { status: 409, body: { error: 'Für dieses Festival läuft gerade eine Berechnung oder ein Versand; bitte gleich noch einmal.' } };
     let data: Any = null, error: Any = null;
-    try { ({ data, error } = await admin.rpc('hh_komm_pruefpunkt_set', { p_festival: f.short_name, p_datum: datum, p_stufe: stufe, p_extras: extras,
+    try {
+      /* Gesehener Stand des Entwurfs: Notiz und Zeitpunkt der letzten Entscheidung (Review 32b, Runde 2, Befund 1).
+         Alle Schreibwege auf komm_pruefpunkte laufen unter dieser Sperre, der Vergleich ist deshalb verlässlich. */
+      if (t.expect_am !== undefined || t.expect_notiz !== undefined) {
+        const { data: jetzt, error: le } = await admin.from('komm_pruefpunkte').select('notiz,entschieden_am').eq('festival_short', f.short_name).eq('datum', datum).maybeSingle();
+        if (le) throw le;
+        const am = jetzt?.entschieden_am ? new Date(jetzt.entschieden_am).toISOString() : null;
+        const erwartetAm = t.expect_am ? new Date(String(t.expect_am)).toISOString() : null;
+        if (t.expect_am !== undefined && am !== erwartetAm) return { status: 409, body: { error: 'Inzwischen geändert: der Prüfpunkt wurde seit dem Öffnen neu entschieden' } };
+        if (t.expect_notiz !== undefined && (jetzt?.notiz || '') !== String(t.expect_notiz || '')) return { status: 409, body: { error: 'Inzwischen geändert: die Notiz wurde seit dem Öffnen geändert' } };
+      }
+      ({ data, error } = await admin.rpc('hh_komm_pruefpunkt_set', { p_festival: f.short_name, p_datum: datum, p_stufe: stufe, p_extras: extras,
       p_notiz: notiz, p_notiz_setzen: notizSetzen, p_von: by === 'Alex' || by === 'Lea' ? by : name, p_expect: t.expect_stufe ? String(t.expect_stufe) : null,
       p_expect_extras: Array.isArray(t.expect_extras) ? t.expect_extras.map(String) : null })); }
     finally { await freigeben(`festival:${f.short_name}`, sperrVon); }

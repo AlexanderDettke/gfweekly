@@ -19,6 +19,8 @@ for (const s of [{ w: 390, h: 844 }, { w: 1440, h: 900 }]) {
   Object.assign(KOMM_LIST, JSON.parse(KOMM_SAAT));   // jeder Durchgang beginnt mit demselben Stand
   const ctx = await browser.newContext({ viewport: { width: s.w, height: s.h }, locale: 'de-DE', timezoneId: 'Europe/Berlin' });
   let ausfall = false, konflikt = false;
+  /* Jemand anderes entscheidet denselben Prüfpunkt, während der Entwurf offen ist. */
+  const fremd = () => { const pp = KOMM_LIST.festivals.find(f => f.short_name === 'FAMRD27').pruefpunkte[0]; Object.assign(pp, { stufe: 'rot', extras: ['E04'], entschieden_von: 'Alex (fremd)', entschieden_am: '2026-10-07T09:00:00.000Z' }); };
   await ctx.addInitScript(() => { sessionStorage.setItem('gf_pw', 'test'); sessionStorage.setItem('gf_who', 'Lea'); localStorage.setItem('gf_theme', 'dark'); });
   const aufrufe = [];
   await ctx.route('**/functions/v1/**', async route => { let b = {}; try { b = JSON.parse(route.request().postData() || '{}'); } catch (e) {}
@@ -32,12 +34,14 @@ for (const s of [{ w: 390, h: 844 }, { w: 1440, h: 900 }]) {
   page.on('dialog', d => d.accept());
   await page.goto(BASE + '/kommunikation.html'); await page.waitForSelector('#kmFest li[id^="fest-"]');
   wahr('fünf Festivalzeilen, Lusatia als nicht besetzt hervorgehoben', (await page.$$('#kmFest li[id^="fest-"]')).length === 5 && await page.$eval('#fest-LUSRD27', e => e.classList.contains('offen') && e.innerText.includes('Kommunikation nicht besetzt')));
+  wahr('vor dem Versand: Rahmen Draußenbande unvollständig mit Fehlerliste', (await page.innerText('#fest-FAMRD27')).includes('unvollständig'));
   await page.click('#fest-FAMRD27 [data-act="vorschau"]'); await page.waitForSelector('#fest-FAMRD27 .vorschau [data-act="senden"]');
   wahr('Vorschau in Worten, Knopf „Senden als Lea“', (await page.innerText('#fest-FAMRD27 .vorschau')).includes('Eigentum und Zuständigkeit') && (await page.innerText('#fest-FAMRD27 [data-act="senden"]')).includes('Lea'));
   wahr('Vorschau ruft komm_send mit vorschau und by Lea', aufrufe.some(a => a.action === 'komm_send' && a.payload.vorschau && a.payload.by === 'Lea'));
   await page.click('#fest-FAMRD27 [data-act="senden"]'); await page.waitForFunction(() => (document.querySelector('#fest-FAMRD27 .vorschau') || {}).innerText?.includes('Gesendet'));
   wahr('Senden schickt bestaetigt und meldet das Ergebnis', aufrufe.some(a => a.action === 'komm_send' && a.payload.bestaetigt === true && a.payload.by === 'Lea'));
   await page.click('#fest-FAMRD27 [data-act="vorschau-zu"]');
+  wahr('nach dem Versand: Rahmen „gesendet“, nicht mehr unvollständig', !(await page.innerText('#fest-FAMRD27')).includes('unvollständig') && (await page.innerText('#fest-FAMRD27')).includes('gesendet am'));
   await page.click('#fest-FAMRD27 [data-act="pp"]'); await page.waitForSelector('#fest-FAMRD27 .pp-form');
   wahr('Formular öffnet mit dem Fokus auf der gewählten Stufe', await page.evaluate(() => document.activeElement?.matches('.pp-form .chip.on') && document.activeElement.dataset.v === 'gelb'));
   await page.fill('#fest-FAMRD27 .pp-form textarea', 'Entwurf bleibt');
@@ -55,10 +59,23 @@ for (const s of [{ w: 390, h: 844 }, { w: 1440, h: 900 }]) {
   konflikt = true;
   await page.click('#fest-FAMRD27 [data-act="pp"]'); await page.waitForSelector('#fest-FAMRD27 .pp-form');
   await page.click('#fest-FAMRD27 .pp-form .chip[data-v="gruen"]'); await page.click('#fest-FAMRD27 .pp-form button[type="submit"]'); await page.waitForTimeout(400);
-  wahr('Konflikt: Meldung „nicht gespeichert“, Formular zu, aktueller Stand geladen', (await page.innerText('#kmStatus')).includes('Nicht gespeichert') && !(await page.$('#fest-FAMRD27 .pp-form')));
+  wahr('Konflikt: sichtbare Meldung „Nicht gespeichert“ mit Fokus, Formular zu', (await page.innerText('#kmMeldung')).includes('Nicht gespeichert') && await page.evaluate(() => document.activeElement?.id === 'kmMeldung') && !(await page.$('#fest-FAMRD27 .pp-form')));
   konflikt = false;
-  wahr('Rahmenstatus: unvollständig mit Fehlerliste, begonnen mit Rest', (await page.innerText('#fest-FAMRD27')).includes('unvollständig') && (await page.innerText('#fest-WMRD27')).includes('begonnen'));
-  wahr('Entscheidungen: Besetzung, Prüfpunkt, Extras, Überlast', (await page.innerText('#kmEntscheiden')).match(/Besetzung[\s\S]*Prüfpunkt[\s\S]*Extras mit Budget[\s\S]*Überlast/i) !== null);
+  wahr('Rahmenstatus Wilde Möhre: begonnen, Rest folgt', (await page.innerText('#fest-WMRD27')).includes('begonnen'));
+  /* Entwurf, während jemand anderes entscheidet: der Ausgangsstand bleibt, Speichern meldet den Konflikt. */
+  await page.click('#fest-FAMRD27 [data-act="pp"]'); await page.waitForSelector('#fest-FAMRD27 .pp-form');
+  fremd();
+  await page.click('#fest-FAMRD27 .pp-form .chip[data-v="gelb"]'); await page.click('#fest-FAMRD27 .pp-form button[type="submit"]'); await page.waitForTimeout(400);
+  wahr('Entwurf über eine fremde Entscheidung hinweg: 409 statt Überschreiben', (await page.innerText('#kmMeldung')).includes('Nicht gespeichert') && KOMM_LIST.festivals.find(f => f.short_name === 'FAMRD27').pruefpunkte[0].entschieden_von === 'Alex (fremd)');
+  /* Budgetfreigabe: danach verschwindet die offene Entscheidung. */
+  const fe = KOMM_LIST.festivals.find(f => f.short_name === 'FAMRD27').pruefpunkte[0];
+  Object.assign(fe, { stufe: 'gelb', extras: ['E01'], entschieden_von: 'Christian Linck', entschieden_am: '2026-10-06T10:00:00.000Z' });
+  KOMM_LIST.entscheiden.push({ art: 'extras', festival: 'FAMRD27', datum: fe.datum, extras: ['E01'], text: 'Draußenbande: Extras mit Budget gewählt (E01), Freigabe der GF fehlt.' });
+  await page.reload(); await page.waitForSelector('[data-act="extras-frei"]');
+  await page.click('[data-act="extras-frei"]'); await page.waitForTimeout(500);
+  wahr('nach der Freigabe ist die Budgetentscheidung verschwunden und gemeldet', !(await page.$('[data-act="extras-frei"]')) && (await page.innerText('#kmMeldung')).includes('freigegeben'));
+
+  wahr('Entscheidungen: Besetzung, Prüfpunkt, Überlast (die freigegebenen Extras sind weg)', (await page.innerText('#kmEntscheiden')).match(/Besetzung[\s\S]*(Prüfpunkt[\s\S]*)?Überlast/i) !== null && !(await page.innerText('#kmEntscheiden')).includes('Extras mit Budget'));
   const ziel = await page.$('#kmLast .ziel[tabindex="0"]'); await ziel.focus();
   const vorher = await page.evaluate(() => [document.activeElement.dataset.i, document.getElementById('kmTip').innerText]);
   await page.keyboard.press('ArrowRight');
@@ -73,9 +90,18 @@ for (const s of [{ w: 390, h: 844 }, { w: 1440, h: 900 }]) {
   const breite = await page.evaluate(() => document.documentElement.scrollWidth);
   wahr('keine waagrechte Scrollbreite nach dem Aufklappen', breite <= s.w, 'Breite ' + breite);
   wahr('keine Konsolenfehler', !meldungen.filter(m => !/503|409/.test(m)).length, meldungen.join(' | '));
-  ausfall = true; await page.reload(); await page.waitForTimeout(800);
+  /* Abgelehntes Speichern bei gleichzeitigem Ladeausfall: keine Meldung „gespeichert“, Stand als veraltet gesperrt. */
+  await page.click('#fest-FAMRD27 [data-act="pp"]'); await page.waitForSelector('#fest-FAMRD27 .pp-form');
+  konflikt = true; ausfall = true;
+  await page.click('#fest-FAMRD27 .pp-form button[type="submit"]'); await page.waitForTimeout(500);
+  const mld = await page.innerText('#kmMeldung'), alt = await page.isVisible('#kmVeraltet');
+  wahr('Ablehnung plus Ladeausfall: nicht „gespeichert“, Stand veraltet und gesperrt', !mld.includes('gespeichert: Stufe') && mld.includes('Nicht gespeichert') && mld.includes('veraltet') && !mld.includes('aktuellen Stand') && alt, JSON.stringify([mld, alt]));
+  konflikt = false;
+  await page.click('#fest-FAMRD27 [data-act="vorschau"]'); await page.waitForTimeout(200);
+  wahr('veralteter Stand: Versand gesperrt mit Hinweis', (await page.innerText('#kmMeldung')).includes('veraltet') && !(await page.$('#fest-FAMRD27 .vorschau [data-act="senden"]')));
+  await page.reload(); await page.waitForTimeout(800);
   wahr('Ladefehler: jeder Abschnitt sagt „nicht geladen“, Knopf „Noch einmal laden“', (await page.innerText('#km')).includes('Noch einmal laden') && !(await page.innerText('#km')).includes('lädt …') && (await page.innerText('#kmEntscheiden')).includes('unbekannt'));
-  ausfall = false; await page.click('[data-act="neu-laden"]'); await page.waitForSelector('#kmFest li[id^="fest-"]');
+  ausfall = false; await page.click('#kmFest [data-act="neu-laden"]'); await page.waitForSelector('#kmFest li[id^="fest-"]');
   wahr('Noch einmal laden holt die Daten', (await page.$$('#kmFest li[id^="fest-"]')).length === 5);
   await ctx.close();
 }

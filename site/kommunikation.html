@@ -118,6 +118,9 @@ details[open]>summary .chev{transform:rotate(90deg)}
 .km-band .monate{position:relative;height:14px;margin-left:118px}
 .km-nurleser{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .km-fehler{display:grid;gap:8px;justify-items:start}
+.km-meldung{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.km-meldung[hidden],#kmVeraltet[hidden]{display:none}
+.km-meldung:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .km-band .monate span{position:absolute;font-size:10px;color:var(--text-2);transform:translateX(-2px)}
 @media (max-width:520px){ .km-band .zeile{grid-template-columns:1fr} .km-band .monate{margin-left:0} }
 </style>
@@ -142,6 +145,8 @@ details[open]>summary .chev{transform:rotate(90deg)}
 
   <main id="km">
     <div class="km-nurleser" id="kmStatus" role="status" aria-live="polite"></div>
+    <div class="km-note km-meldung" id="kmMeldung" tabindex="-1" hidden><span class="t"></span> <button class="btn btn-sm btn-brand" data-act="meldung-zu">Ausblenden</button></div>
+    <div class="km-note" id="kmVeraltet" hidden><b>Stand veraltet.</b> Die Seite ließ sich nicht neu laden; Entscheidungen sind gesperrt, bis sie neu geladen ist. <button class="btn btn-sm btn-brand" data-act="neu-laden">Neu laden</button></div>
     <p class="km-lead" id="kmLead">Postingplan-Standard für alle fünf Festivals 2027. Die Geschäftsführung legt je Festival fest, wer die Kommunikation verantwortet, entscheidet über Budget und Extras der Stufe Rot und übergibt einmal den Rahmen. Alles Weitere verteilt die verantwortliche Person selbst.</p>
 
     <section class="km-sec" aria-labelledby="kmF0">
@@ -398,38 +403,49 @@ async function senden(s){
       if(!r.weiter) break; runde++;
     }
     OFFEN.vorschau[s]={ ergebnis };
-    melde(`Rahmen ${fest(s).name}: ${summe.neu} neu, ${summe.aktualisiert} aktualisiert${summe.fehler.length?", "+summe.fehler.length+" Fehler":""}`);
-  }catch(err){ OFFEN.vorschau[s]={ fehler:err.message }; melde("Versand: "+err.message); }
-  await neuLaden();
+  }catch(err){ OFFEN.vorschau[s]={ fehler:err.message }; await neuLaden(); melde("Versand nicht ausgeführt oder unterbrochen: "+err.message, { fokus:true }); return; }
+  await neuLaden(`Rahmen ${fest(s).name} gesendet: ${summe.neu} neu, ${summe.aktualisiert} aktualisiert${summe.fehler.length?", "+summe.fehler.length+" Fehler":""}`);
 }
 async function ppSpeichern(form){
   const s=form.dataset.f, d=form.dataset.d;
   const stufe=(form.querySelector('input[name="stufe"]')||{}).value||"offen";
   const extras=[...form.querySelectorAll('input[name="extra"]:checked')].map(x=>x.value);
   const notiz=form.querySelector('textarea[name="notiz"]').value;
-  const pp=((fest(s)||{}).pruefpunkte||[]).find(x=>x.datum===d)||{};
-  try{ await gfApi("komm_pruefpunkt_set",{ festival:s, datum:d, stufe, extras, notiz, by:wer(), expect_stufe:pp.stufe||"offen", expect_extras:pp.extras||[] }); }
-  catch(err){ melde("Nicht gespeichert: "+err.message+(/geändert/i.test(err.message)?" Die Seite zeigt jetzt den aktuellen Stand.":"")); if(/geändert/i.test(err.message)){ delete OFFEN.pp[s]; await neuLaden(); } return; }
+  if(veraltetSperre()) return;
+  const b=(OFFEN.pp[s]||{}).basis||{};
+  try{ await gfApi("komm_pruefpunkt_set",{ festival:s, datum:d, stufe, extras, notiz, by:wer(), expect_stufe:b.stufe||"offen", expect_extras:b.extras||[], expect_notiz:b.notiz||"", expect_am:b.am||null }); }
+  catch(err){
+    if(/geändert/i.test(err.message)){ delete OFFEN.pp[s]; await neuLaden();
+      melde("Nicht gespeichert: "+err.message+(VERALTET?". Die Seite ließ sich nicht neu laden; der angezeigte Stand ist veraltet. Dein Entwurf ist verworfen.":". Die Seite zeigt jetzt den aktuellen Stand; dein Entwurf ist verworfen."), { fokus:true }); }
+    else melde("Nicht gespeichert: "+err.message, { fokus:true });
+    return; }
   delete OFFEN.pp[s];
-  melde(`Prüfpunkt ${fmtK(d)} gespeichert: Stufe ${stufeWort(stufe)}${extras.length?", "+extras.join(", "):""}`);
-  await neuLaden(); fokus(`#fest-${s} [data-act="pp"]`);
+  await neuLaden(`Prüfpunkt ${fmtK(d)} gespeichert: Stufe ${stufeWort(stufe)}${extras.length?", "+extras.join(", "):""}`);
+  fokus(`#fest-${s} [data-act="pp"]`);
 }
 document.addEventListener("click", async e=>{
   const a=e.target.closest("[data-act]"); if(!a) return;
   const s=a.dataset.f;
-  if(a.dataset.act==="vorschau"){ if(OFFEN.vorschau[s]&&!OFFEN.vorschau[s].ergebnis){ delete OFFEN.vorschau[s]; renderKopf(); } else vorschau(s); return; }
+  if(a.dataset.act==="vorschau"){ if(veraltetSperre()) return; if(OFFEN.vorschau[s]&&!OFFEN.vorschau[s].ergebnis){ delete OFFEN.vorschau[s]; renderKopf(); } else vorschau(s); return; }
   if(a.dataset.act==="vorschau-zu"){ delete OFFEN.vorschau[s]; renderKopf(); const b=document.querySelector(`#fest-${s} [data-act="vorschau"]`); if(b) b.focus(); return; }
-  if(a.dataset.act==="senden"){ senden(s); return; }
-  if(a.dataset.act==="pp"){ if(OFFEN.pp[s]&&OFFEN.pp[s].datum===a.dataset.d){ delete OFFEN.pp[s]; } else OFFEN.pp[s]={ datum:a.dataset.d }; renderKopf();
+  if(a.dataset.act==="senden"){ if(!veraltetSperre()) senden(s); return; }
+  if(a.dataset.act==="pp"){ if(veraltetSperre()) return;
+    if(OFFEN.pp[s]&&OFFEN.pp[s].datum===a.dataset.d){ delete OFFEN.pp[s]; }
+    else { const g=((fest(s)||{}).pruefpunkte||[]).find(x=>x.datum===a.dataset.d)||{};
+      /* Ausgangsstand des Entwurfs: bleibt unverändert, auch wenn die Seite inzwischen neu lädt (Review 32b, Runde 2, Befund 1). */
+      OFFEN.pp[s]={ datum:a.dataset.d, basis:{ stufe:g.stufe||"offen", extras:(g.extras||[]).slice(), notiz:g.notiz||"", am:g.entschieden_am||null } }; }
+    renderKopf();
     const z=document.getElementById("fest-"+s); if(z){ z.scrollIntoView({block:"nearest"}); const c=z.querySelector(".pp-form .chip.on")||z.querySelector(".pp-form .chip"); if(c) c.focus(); else fokus(`#fest-${s} [data-act="pp"]`); } return; }
   if(a.dataset.act==="pp-zu"){ delete OFFEN.pp[s]; renderKopf(); fokus(`#fest-${s} [data-act="pp"]`); return; }
-  if(a.dataset.act==="neu-laden"){ neuLaden(); return; }
+  if(a.dataset.act==="neu-laden"){ neuLaden(VERALTET?"Neu geladen":""); return; }
+  if(a.dataset.act==="meldung-zu"){ $("#kmMeldung").hidden=true; return; }
   if(a.dataset.act==="extras-frei"){
     const f=fest(s); const pp=(f.pruefpunkte||[]).find(x=>x.datum===a.dataset.d); if(!pp) return;
     if(!confirm(`Extras ${pp.extras.join(", ")} für ${f.name} als ${wer()} freigeben?`)) return;
-    try{ await gfApi("komm_pruefpunkt_set",{ festival:s, datum:pp.datum, stufe:pp.stufe, extras:pp.extras, by:wer(), expect_stufe:pp.stufe, expect_extras:pp.extras }); }
-    catch(err){ melde("Nicht freigegeben: "+err.message+(/geändert/i.test(err.message)?" Die Seite zeigt jetzt den aktuellen Stand.":"")); await neuLaden(); return; }
-    melde(`Extras ${pp.extras.join(", ")} für ${f.name} freigegeben als ${wer()}`); await neuLaden();
+    if(veraltetSperre()) return;
+    try{ await gfApi("komm_pruefpunkt_set",{ festival:s, datum:pp.datum, stufe:pp.stufe, extras:pp.extras, by:wer(), expect_stufe:pp.stufe, expect_extras:pp.extras, expect_notiz:pp.notiz||"", expect_am:pp.entschieden_am||null }); }
+    catch(err){ await neuLaden(); melde("Nicht freigegeben: "+err.message+(VERALTET?". Die Seite ließ sich nicht neu laden; der angezeigte Stand ist veraltet.":(/geändert/i.test(err.message)?". Die Seite zeigt jetzt den aktuellen Stand.":"")), { fokus:true }); return; }
+    await neuLaden(`Extras ${pp.extras.join(", ")} für ${f.name} freigegeben als ${wer()}`);
   }
 });
 function entwurf(form){ const s=form.dataset.f; if(!OFFEN.pp[s]) return;
@@ -440,7 +456,11 @@ document.addEventListener("submit", e=>{ const f=e.target.closest(".pp-form"); i
 document.addEventListener("gf-who", ()=>{ if(D) renderAll(); });
 let kmBreite=0; window.addEventListener("resize",()=>{ const b=($("#kmLast")||{}).clientWidth||0; if(D&&Math.abs(b-kmBreite)>40){ kmBreite=b; renderLast(); } });
 
-function melde(text){ const st=$("#kmStatus"); if(st){ st.textContent=""; setTimeout(()=>{ st.textContent=text; }, 30); } gfToast(text); }
+/* Sichtbare Statuszeile plus Ankündigung für Bildschirmleser; bei Konflikten springt der Fokus auf die Zeile. */
+function melde(text, o={}){ const st=$("#kmStatus"); if(st){ st.textContent=""; setTimeout(()=>{ st.textContent=text; }, 30); }
+  const z=$("#kmMeldung"); if(z){ z.hidden=false; z.querySelector(".t").textContent=text; if(o.fokus) z.focus(); } }
+let VERALTET=false;
+function veraltetSperre(){ if(!VERALTET) return false; melde("Der angezeigte Stand ist veraltet. Bitte zuerst neu laden, dann entscheiden.", { fokus:true }); return true; }
 function fokus(sel){ setTimeout(()=>{ const el=document.querySelector(sel); if(el) el.focus(); }, 0); }
 function zeigeLadefehler(err){
   const satz=`Die Daten ließen sich nicht laden (${gfEsc(err&&err.message||"Verbindung")}). Was hier fehlt, ist nicht leer, sondern unbekannt.`;
@@ -452,9 +472,14 @@ function zeigeLadefehler(err){
   $("#kmAnstehend").innerHTML=`<p class="km-muted">Nicht geladen.</p>`; $("#kmBand").innerHTML=`<p class="km-muted">Nicht geladen.</p>`; $("#kmVerlauf").innerHTML="";
 }
 /* Nach Schreibaktionen: deren Ergebnis steht schon fest; scheitert nur das Neuladen, sagt die Seite genau das. */
-async function neuLaden(){
-  try{ await load(true); }
-  catch(err){ if(D){ renderAll(); melde("Gespeichert, aber die Seite ließ sich nicht neu laden: "+(err.message||"Verbindung")+". Bitte neu laden, bevor du weiter entscheidest."); } else zeigeLadefehler(err); }
+/* erfolg: Satz zur bestätigten Schreibaktion; ohne erfolg wird nichts als gespeichert gemeldet (Review 32b, Runde 2, Befund 2). */
+async function neuLaden(erfolg){
+  try{ await load(true); VERALTET=false; $("#kmVeraltet").hidden=true; if(erfolg) melde(erfolg); }
+  catch(err){
+    if(D){ VERALTET=true; renderAll(); $("#kmVeraltet").hidden=false;
+      melde((erfolg?erfolg+". ":"")+"Die Seite ließ sich nicht neu laden ("+(err.message||"Verbindung")+"); der angezeigte Stand ist veraltet.", { fokus:true }); }
+    else zeigeLadefehler(err);
+  }
 }
 async function load(still){
   const d=await gfApi("komm_list",{});

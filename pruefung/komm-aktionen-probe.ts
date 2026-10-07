@@ -223,6 +223,10 @@ gleich('Gelb mit Extras ohne Budget von Christian: gespeichert mit Namen', [p1.s
 gleich('Extra mit Budget von Christian: 403', (await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: ppDat, stufe: 'gelb', extras: ['E01'], by: 'Christian Linck' })).status, 403);
 gleich('veraltete gesehene Stufe: 409', (await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: ppDat, stufe: 'rot', extras: ['E04'], by: 'Alex', expect_stufe: 'offen' })).status, 409);
 gleich('Freigabe mit altem Stand der Extras: 409', (await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: ppDat, stufe: 'gelb', extras: ['E03'], by: 'Alex', expect_stufe: 'gelb', expect_extras: ['E03'] })).status, 409);
+const ppJetzt = (await q(`select entschieden_am, notiz from komm_pruefpunkte where festival_short = 'FAMRD27' and datum = $1::date`, [ppDat]))[0];
+gleich('Entwurf mit altem Entscheidungszeitpunkt: 409', (await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: ppDat, stufe: 'gelb', extras: ['E03', 'E05'], by: 'Lea', expect_stufe: 'gelb', expect_extras: ['E03', 'E05'], expect_am: '2026-10-01T00:00:00.000Z' })).status, 409);
+gleich('Entwurf mit geänderter Notiz: 409', (await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: ppDat, stufe: 'gelb', extras: ['E03', 'E05'], by: 'Lea', expect_notiz: 'andere Notiz' })).status, 409);
+gleich('Entwurf mit passendem Ausgangsstand: 200', (await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: ppDat, stufe: 'gelb', extras: ['E03', 'E05'], by: 'Lea', expect_stufe: 'gelb', expect_extras: ['E05', 'E03'], expect_notiz: ppJetzt.notiz, expect_am: ppJetzt.entschieden_am })).status, 200);
 gleich('Tag ohne Prüfpunkt: 404', (await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: '2027-01-01', stufe: 'gelb', by: 'Alex' })).status, 404);
 const l2 = await ruf('komm_list');
 wahr('Entscheidungen zeigen den gelben Prüfpunkt', l2.body.entscheiden.some((e: any) => e.art === 'pruefpunkt' && e.datum === ppDat && e.stufe === 'gelb'));

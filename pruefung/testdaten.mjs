@@ -501,14 +501,22 @@ export const KOMM_LIST = (() => {
 Object.assign(ANTWORT, {
   komm_list: () => KOMM_LIST,
   komm_send: (p) => p.vorschau ? ({ ok: true, vorschau: true, saetze: ['Projekt „Kommunikation Testfestival 2027“ in Asana, Eigentum und Zuständigkeit bei Testperson Kommunikation.', '60 Veröffentlichungen als eigene Aufgabe, 9 Prüfpunkte, 11 Monatsbündel für die übrigen Beiträge; Abschnitte je Monat (12).', 'Alle 80 Aufgaben werden neu angelegt.'] })
-    : ({ ok: true, projekt: '1200000000000003', url: 'https://app.asana.com/0/1200000000000003', neu: 80, aktualisiert: 0, rest: 0, weiter: false, fehler: [] }),
+    : (() => { const f = KOMM_LIST.festivals.find(x => x.short_name === p.festival);
+        if (f) f.rahmen = { gesendet_am: zeit(0), url: 'https://app.asana.com/0/1200000000000003', von: p.by, neu: 80, aktualisiert: 0, weiter: false, abgebrochen: null, fehler: 0, fehler_liste: [], aufgaben_gesendet: f.anzahl };
+        return { ok: true, projekt: '1200000000000003', url: 'https://app.asana.com/0/1200000000000003', neu: 80, aktualisiert: 0, rest: 0, weiter: false, fehler: [] }; })(),
   /* Schreibt in den Seitenstand, damit die Bedienprobe den neuen Stand nach dem Speichern sieht; gesehener Stand alt: 409. */
   komm_pruefpunkt_set: (p) => {
     const f = KOMM_LIST.festivals.find(x => x.short_name === p.festival); const pp = f && f.pruefpunkte.find(x => x.datum === p.datum);
     if (!pp) return { __status: 404, error: 'Prüfpunkt unbekannt' };
     const gleicheExtras = (a, b) => JSON.stringify([...(a || [])].sort()) === JSON.stringify([...(b || [])].sort());
     if ((p.expect_stufe && p.expect_stufe !== pp.stufe) || (p.expect_extras && !gleicheExtras(p.expect_extras, pp.extras))) return { __status: 409, error: `Inzwischen geändert: Stufe steht auf ${pp.stufe}` };
-    Object.assign(pp, { stufe: p.stufe, extras: p.extras || [], entschieden_von: p.by, notiz: p.notiz ?? pp.notiz });
+    if (p.expect_am !== undefined && (p.expect_am || null) !== (pp.entschieden_am || null)) return { __status: 409, error: 'Inzwischen geändert: der Prüfpunkt wurde seit dem Öffnen neu entschieden' };
+    Object.assign(pp, { stufe: p.stufe, extras: p.extras || [], entschieden_von: p.by, entschieden_am: zeit(0), notiz: p.notiz ?? pp.notiz });
+    /* Entscheidungsliste wie komm_list: Gelb oder Rot bleibt sichtbar, Extras mit Budget nur ohne Freigabe von Alex oder Lea. */
+    KOMM_LIST.entscheiden = KOMM_LIST.entscheiden.filter(e => !(e.festival === p.festival && e.datum === p.datum));
+    if (p.stufe === 'gelb' || p.stufe === 'rot') KOMM_LIST.entscheiden.push({ art: 'pruefpunkt', festival: p.festival, datum: p.datum, stufe: p.stufe, extras: pp.extras, text: `${f.name}: Prüfpunkt ${KL.kurz(p.datum)} steht auf ${p.stufe}.` });
+    const budget = pp.extras.filter(e => ['E01', 'E02', 'E04', 'E08', 'E09', 'E10', 'E12', 'E13'].includes(e));
+    if (budget.length && !['Alex', 'Lea'].includes(p.by)) KOMM_LIST.entscheiden.push({ art: 'extras', festival: p.festival, datum: p.datum, extras: budget, text: `${f.name}: Extras mit Budget gewählt (${budget.join(', ')}), Freigabe der GF fehlt.` });
     if (f.naechster_pruefpunkt && f.naechster_pruefpunkt.datum === pp.datum) Object.assign(f.naechster_pruefpunkt, { stufe: p.stufe, extras: p.extras || [] });
     return { ok: true, pruefpunkt: { festival_short: p.festival, datum: p.datum, stufe: p.stufe, extras: p.extras || [] }, protokoll: true };
   },
