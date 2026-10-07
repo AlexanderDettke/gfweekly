@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#171d18" />
+<title>Das Hohe Haus · Kommunikation</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=32" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=32" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=32" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=32" />
+<link rel="stylesheet" href="/assets/styles.css?v=32" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
+<style>
+/* Kommunikation (V32, 07.10.2026): Postingplan-Standard für alle fünf Festivals aus Sicht der Geschäftsführung.
+   Drei Fragen: Wer ist zuständig, wo wird es eng, was muss entschieden werden. Daten aus komm_list, Rechenlogik KommLogik.
+   Status als Wort, Farbe trägt keine Bedeutung allein; Hervorhebung durch Rahmen. */
+#km{max-width:1040px;display:grid;gap:22px;margin-top:6px}
+.km-lead{color:var(--text-2);max-width:72ch;margin:0;line-height:var(--leading-text)}
+.km-eb{font-size:var(--stufe-1);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-2)}
+.km-sec{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);padding:16px 18px;display:grid;gap:14px;min-width:0}
+.km-sec>h2{font-size:var(--stufe-4);margin:0;text-wrap:balance}
+.km-sec h3{font-size:var(--stufe-3);margin:0}
+.km-muted{color:var(--text-2);font-size:var(--stufe-2);line-height:var(--leading-text);margin:0}
+.km-satz{margin:0;font-size:var(--stufe-3);line-height:var(--leading-text);max-width:76ch}
+.km-note{background:var(--warn-bg);color:var(--text);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:var(--leading-text)}
+.km-mark{display:inline-block;font-size:.66rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:var(--radius-s);padding:0 5px;margin-left:6px;vertical-align:1px;white-space:nowrap;color:var(--text);border:var(--rahmen) solid var(--border-strong)}
+.km-mark.leer{color:var(--text-2);border-style:dashed}
+.km-mark.stark{border:2px solid var(--text)}
+
+/* Kopf: je Festival eine Zeile */
+.km-fest{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.km-fest>li{background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:10px 12px;display:grid;grid-template-columns:minmax(120px,1.1fr) minmax(0,1.3fr) minmax(0,1.3fr) minmax(0,1.2fr) minmax(0,1fr);gap:6px 14px;align-items:start;min-width:0}
+.km-fest>li.offen{border:2px solid var(--text)}
+.km-fest .n{font-weight:700;font-size:var(--stufe-3);line-height:1.25}
+.km-fest .n small{display:block;font-weight:500;font-size:var(--stufe-1);color:var(--text-2);margin-top:2px}
+.km-fest .f{font-size:var(--stufe-2);line-height:var(--leading-text);min-width:0;overflow-wrap:anywhere}
+.km-fest .f .l{display:block;font-size:var(--stufe-1);color:var(--text-2);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.km-fest .acts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
+.km-fest .vorschau{grid-column:1/-1;background:var(--surface);border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);padding:10px 12px;display:grid;gap:8px}
+.km-fest .vorschau p{margin:0;font-size:var(--stufe-2);line-height:var(--leading-text)}
+.km-fest .pp-form{grid-column:1/-1;background:var(--surface);border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);padding:10px 12px;display:grid;gap:10px}
+.km-extras{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px}
+.km-extras label{display:flex;gap:8px;align-items:flex-start;font-size:var(--stufe-2);line-height:1.35;padding:6px 8px;border:var(--rahmen) solid var(--border);border-radius:var(--radius-s);background:var(--surface-2);cursor:pointer}
+.km-extras input{margin-top:3px;width:18px;height:18px;flex:none}
+.km-extras small{display:block;color:var(--text-2)}
+@media (max-width:900px){ .km-fest>li{grid-template-columns:1fr 1fr} .km-fest .n{grid-column:1/-1} }
+@media (max-width:520px){ .km-fest>li{grid-template-columns:1fr} }
+
+/* Wochenlast */
+.km-last{position:relative;min-width:0}
+.km-last svg{display:block;width:100%;height:auto;overflow:visible}
+.km-last .ach text{font-size:11px;fill:var(--text-2)}
+.km-last .linie{stroke:var(--text-2);stroke-width:1;stroke-dasharray:3 4}
+.km-last .linie-t{font-size:11px;fill:var(--text-2)}
+.km-last .band{fill:var(--surface-2)}
+.km-last .band-t{font-size:11px;fill:var(--text-2);font-weight:600}
+.km-last .heute{stroke:var(--text);stroke-width:1.5}
+.km-last .ziel{fill:transparent;cursor:crosshair}
+.km-last .ziel:focus{outline:none}
+.km-last .ziel:focus-visible,.km-last .ziel.aktiv{fill:var(--fill-soft,rgba(128,128,128,.12));stroke:var(--focus);stroke-width:1.5}
+.km-tip{position:absolute;pointer-events:none;background:var(--panel);color:var(--text);border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);padding:8px 10px;font-size:var(--stufe-2);line-height:1.4;box-shadow:var(--shadow-2,0 6px 24px rgba(0,0,0,.25));max-width:260px;z-index:3;display:none}
+.km-tip b{display:block}
+.km-legende{display:flex;flex-wrap:wrap;gap:6px 14px;list-style:none;margin:0;padding:0;font-size:var(--stufe-2)}
+.km-legende li{display:flex;align-items:center;gap:6px}
+.km-legende i{width:14px;height:14px;border-radius:3px;display:inline-block;border:var(--rahmen) solid var(--border-strong)}
+.km-legende .muster{background-image:repeating-linear-gradient(45deg,var(--text-2) 0 1px,transparent 1px 5px)}
+
+/* Listen */
+.km-liste{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.km-liste li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:8px 10px;background:var(--surface-2);border-radius:var(--radius-m);font-size:var(--stufe-2);line-height:var(--leading-text)}
+.km-liste li .t{min-width:0;overflow-wrap:anywhere}
+.km-liste li .d{font-variant-numeric:tabular-nums;color:var(--text-2);white-space:nowrap}
+.km-liste li .acts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px}
+.km-tabelle{width:100%;border-collapse:collapse;font-size:var(--stufe-2)}
+.km-tabelle.stapel{table-layout:fixed}
+.km-tabelle.stapel td{overflow-wrap:anywhere}
+.km-tabelle th,.km-tabelle td{text-align:left;padding:6px 8px;border-bottom:var(--rahmen) solid var(--border);vertical-align:top}
+.km-tabelle th{color:var(--text-2);font-weight:600;font-size:var(--stufe-1);text-transform:uppercase;letter-spacing:.05em}
+.km-tabelle td.z{font-variant-numeric:tabular-nums;white-space:nowrap}
+.km-scroll{overflow-x:auto;max-width:100%}
+/* Am Handy: Tabellenzeilen gestapelt (Datum links, Rest darunter), keine waagrechte Scrollbreite */
+@media (max-width:600px){
+  .km-tabelle.stapel thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .km-tabelle.stapel tr{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;padding:8px 0;border-bottom:var(--rahmen) solid var(--border)}
+  .km-tabelle.stapel td{border:0;padding:0;min-width:0;overflow-wrap:anywhere}
+  .km-tabelle.stapel td:nth-child(n+3){grid-column:2}
+  .km-tabelle.stapel td:nth-child(3)::before{content:"Stand: ";color:var(--text-2)}
+  .km-tabelle.stapel td:nth-child(3) br{display:none}
+  .km-tabelle.stapel td:nth-child(3) .km-muted{margin-left:.4em}
+}
+.km-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;align-items:start}
+.km-block{background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:10px 12px;display:grid;gap:8px;min-width:0}
+.km-block h3{font-size:var(--stufe-3)}
+
+/* Aufklappbar */
+details.km-auf{background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m)}
+details.km-auf[open]{border-color:var(--border-strong)}
+.km-auf>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;align-items:center;gap:8px;font-weight:600;border-radius:var(--radius-m);min-height:var(--ziel-min,44px)}
+.km-auf>summary::-webkit-details-marker{display:none}
+.km-auf>summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.km-auf .chev{display:inline-block;margin-left:auto;color:var(--text-2);transition:transform var(--motion-fast,.15s)}
+details[open]>summary .chev{transform:rotate(90deg)}
+.km-auf .body{padding:0 14px 14px;display:grid;gap:12px;min-width:0}
+
+/* Jahresband */
+.km-band{display:grid;gap:10px}
+.km-band .zeile{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px;align-items:center}
+.km-band .zeile b{font-size:var(--stufe-2)}
+.km-band .spur{position:relative;height:34px;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-s);overflow:hidden}
+.km-band .ph{position:absolute;top:0;bottom:12px;border-right:var(--rahmen) solid var(--border);font-size:10px;color:var(--text-2);padding:1px 3px;white-space:nowrap;overflow:hidden;box-sizing:border-box}
+.km-band .ph.f{background:var(--surface-2);border:2px solid var(--text)}
+.km-band .mk{position:absolute;bottom:1px;transform:translateX(-50%);font-size:10px;line-height:10px;font-weight:700;color:var(--text)}
+.km-band .heute{position:absolute;top:0;bottom:0;border-left:2px solid var(--text)}
+.km-band .monate{position:relative;height:14px;margin-left:118px}
+.km-band .monate span{position:absolute;font-size:10px;color:var(--text-2);transform:translateX(-2px)}
+@media (max-width:520px){ .km-band .zeile{grid-template-columns:1fr} .km-band .monate{margin-left:0} }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Das Hohe Haus</h1>
+    <div class="sub">Kommunikation · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+  <div id="hero"></div>
+
+  <main id="km">
+    <p class="km-lead" id="kmLead">Postingplan-Standard für alle fünf Festivals 2027. Die Geschäftsführung legt je Festival fest, wer die Kommunikation verantwortet, entscheidet über Budget und Extras der Stufe Rot und übergibt einmal den Rahmen. Alles Weitere verteilt die verantwortliche Person selbst.</p>
+
+    <section class="km-sec" aria-labelledby="kmF0">
+      <div class="km-eb" id="kmStand">Stand heute</div>
+      <h2 id="kmF0">Wer ist zuständig?</h2>
+      <ul class="km-fest" id="kmFest"><li><span class="km-muted">lädt …</span></li></ul>
+      <p class="km-muted" id="kmFestFuss"></p>
+    </section>
+
+    <section class="km-sec" aria-labelledby="kmF1">
+      <h2 id="kmF1">Wo wird es eng?</h2>
+      <p class="km-satz" id="kmLastSatz">lädt …</p>
+      <div class="km-last" id="kmLast"></div>
+      <ul class="km-legende" id="kmLegende" aria-label="Legende"></ul>
+      <details class="km-auf">
+        <summary>Wochen als Liste <span class="chev" aria-hidden="true">›</span></summary>
+        <div class="body"><div class="km-scroll" id="kmLastListe"></div></div>
+      </details>
+    </section>
+
+    <section class="km-sec" aria-labelledby="kmF2">
+      <h2 id="kmF2">Was muss die GF entscheiden?</h2>
+      <ul class="km-liste" id="kmEntscheiden"><li><span class="km-muted">lädt …</span></li></ul>
+    </section>
+
+    <section class="km-sec" aria-labelledby="kmF3">
+      <h2 id="kmF3">Was steht an?</h2>
+      <p class="km-muted">Pflichtveröffentlichungen der nächsten 30 Tage je Festival. Schritte und Rollen verteilt die verantwortliche Person in Asana oder in ihrer Redaktionstabelle.</p>
+      <div class="km-grid" id="kmAnstehend"></div>
+    </section>
+
+    <details class="km-auf km-sec" id="kmBandAuf" style="padding:0">
+      <summary>Jahresband: Phasen, Programmwellen, Videos, Prüfpunkte <span class="chev" aria-hidden="true">›</span></summary>
+      <div class="body" id="kmBand"></div>
+    </details>
+
+    <details class="km-auf" id="kmVerlaufAuf">
+      <summary>Verlauf <span class="chev" aria-hidden="true">›</span></summary>
+      <div class="body"><ul class="km-liste" id="kmVerlauf"></ul></div>
+    </details>
+  </main>
+</div>
+
+<script src="/assets/core.js?v=32"></script>
+<script src="/assets/komm-logik.js?v=32"></script>
+<script src="/assets/game.js?v=32"></script>
+<script src="/assets/eggs.js?v=32" defer></script>
+<script>
+/* V32 Kommunikation · Seite der Geschäftsführung. Daten aus komm_list; Schreiben über komm_pruefpunkt_set, komm_send, komm_berechnen. */
+const $=s=>document.querySelector(s);
+const KL=KommLogik;
+let D=null, HEUTE=null;
+const OFFEN={ vorschau:{}, pp:{} };       // je Festival: Vorschau des Versands, offenes Prüfpunkt-Formular
+const FARBEN=["var(--chart-gruen)","var(--chart-peach)","var(--chart-coral)","var(--accent-strong)","var(--text-2)"];
+const fmtD=iso=>KL.kurz(iso), fmtK=iso=>KL.kurzOhneJahr(iso);
+const stufeWort=s=>KL.STUFE_WORT[s]||s||"offen";
+const statusWort=s=>({offen:"offen",in_arbeit:"in Arbeit",entwurf:"Entwurf",in_abstimmung:"in Abstimmung",freigegeben:"freigegeben",eingeplant:"eingeplant",veroeffentlicht:"veröffentlicht",dokumentiert:"dokumentiert",ueberfaellig:"überfällig",zu_pruefen:"zu prüfen"})[s]||s||"offen";
+const kanalWort=k=>({feed:"Feed",reel:"Reel",story:"Story",newsletter:"Newsletter",website:"Website",presse:"Presse",anzeige:"Anzeige",mail_ticketinhabende:"Mail an Ticketinhabende",intern:"intern",brief_und_mail:"Brief und Mail",story_app:"Story und App"})[k]||k||"";
+function fest(s){ return (D.festivals||[]).find(f=>f.short_name===s)||null; }
+function wer(){ return gfWho()==="Lea"?"Lea":"Alex"; }
+
+/* ---------- Kopf ---------- */
+function renderKopf(){
+  const fs=D.festivals||[];
+  $("#kmStand").textContent=`Stand ${fmtD(HEUTE)} · Regelwerk ${D.regelwerk||""}`;
+  if(!fs.length){ $("#kmFest").innerHTML=`<li><span class="km-muted">Keine Festivals 2027 gefunden.</span></li>`; return; }
+  $("#kmFest").innerHTML=fs.map(f=>{
+    const p=f.person;
+    const zust=p?`${gfEsc(p.name)}${p.status==="bestaetigt"?` <span class="km-mark">bestätigt</span>`:` <span class="km-mark leer">${gfEsc(p.status||"Vorschlag")}</span>`}${p.hat_asana?"":` <span class="km-mark leer">ohne Asana-Konto</span>`}`
+      :`<b>Kommunikation nicht besetzt</b><br><span class="km-muted">zuständig bis dahin: Leitung Marketing</span>`;
+    const r=f.rahmen;
+    const am=r?fmtD(String(r.gesendet_am).slice(0,10)):"";
+    const rahmen=!r?"nicht gesendet":(r.abgebrochen?`<b>abgebrochen</b> am ${am}: ${gfEsc(r.abgebrochen)}`:(r.weiter?`<b>begonnen</b> am ${am}, Rest folgt beim nächsten Senden`:`gesendet am ${am}`))
+      +(r&&r.url?` · <a href="${gfEsc(r.url)}" target="_blank" rel="noopener">in Asana</a>`:"")+(r?`<br><span class="km-muted">${r.aufgaben_gesendet??0} Veröffentlichungen mit Aufgabe in Asana</span>`:"");
+    const zp=(f.zu_pruefen||[]).length;
+    const pp=f.naechster_pruefpunkt;
+    const ppText=pp?`${fmtD(pp.datum)}, Stufe ${stufeWort(pp.stufe)}${pp.stufe==="offen"?"":""}`:"keiner mehr";
+    const ue=f.ueberfaellig||{schritte:0,veroeffentlichungen:0};
+    const ueText=ue.schritte?`<b>überfällig</b>: ${ue.schritte} ${ue.schritte===1?"Schritt":"Schritte"} an ${ue.veroeffentlichungen} ${ue.veroeffentlichungen===1?"Veröffentlichung":"Veröffentlichungen"}`:"nichts überfällig";
+    const vorschau=OFFEN.vorschau[f.short_name];
+    const form=OFFEN.pp[f.short_name];
+    return `<li id="fest-${gfEsc(f.short_name)}" class="${p?"":"offen"}">
+      <div class="n">${gfEsc(f.name)}<small>${gfEsc(f.kuerzel)} · VVK ${fmtD(f.V)} · ${fmtK(f.F)} bis ${fmtD(f.Z)}${f.pruefen?" · Termin vorläufig":""}</small></div>
+      <div class="f"><span class="l">verantwortlich</span>${zust}<br><a href="saison.html#saF2">Besetzung ändern in Saison</a></div>
+      <div class="f"><span class="l">Rahmen in Asana</span>${rahmen}${zp?`<br><b>${zp} zu prüfen</b>: Termin hat sich nach dem Senden verschoben`:""}</div>
+      <div class="f"><span class="l">nächster Prüfpunkt</span>${ppText}</div>
+      <div class="f"><span class="l">Überfälliges</span>${ueText}<br><span class="km-muted">${f.anzahl} Veröffentlichungen, ${gfFmtInt(Math.round(f.stunden))} Stunden</span></div>
+      <div class="acts">
+        <button class="btn btn-sm btn-brand" data-act="vorschau" data-f="${gfEsc(f.short_name)}" aria-expanded="${vorschau?"true":"false"}">${r?"Rahmen erneut senden":"Rahmen an Asana"}</button>
+        ${pp?`<button class="btn btn-sm" data-act="pp" data-f="${gfEsc(f.short_name)}" data-d="${gfEsc(pp.datum)}" aria-expanded="${form?"true":"false"}">Stufe zum Prüfpunkt ${fmtK(pp.datum)}</button>`:""}
+      </div>
+      ${vorschau?renderVorschau(f, vorschau):""}
+      ${form?renderPpForm(f, form):""}
+    </li>`;
+  }).join("");
+  const ohne=fs.filter(f=>!f.person).length;
+  $("#kmFestFuss").textContent=ohne?`${ohne} von ${fs.length} Festivals ohne verantwortliche Person Kommunikation.`:`Alle ${fs.length} Festivals haben eine verantwortliche Person Kommunikation.`;
+}
+function renderVorschau(f, v){
+  if(v.laedt) return `<div class="vorschau" role="status"><p>Vorschau wird gerechnet …</p></div>`;
+  if(v.fehler) return `<div class="vorschau" role="alert"><p>Fehler: ${gfEsc(v.fehler)}</p><div><button class="btn btn-sm btn-brand" data-act="vorschau-zu" data-f="${gfEsc(f.short_name)}">Schließen</button></div></div>`;
+  if(v.ergebnis){ const e=v.ergebnis; return `<div class="vorschau" role="status"><p><b>Gesendet:</b> ${e.neu} neu, ${e.aktualisiert} aktualisiert${e.weiter?`, ${e.rest} folgen`:""}${(e.fehler||[]).length?`, ${e.fehler.length} Fehler`:""}. <a href="${gfEsc(e.url)}" target="_blank" rel="noopener">Projekt in Asana</a></p>${(e.fehler||[]).length?`<details class="km-auf"><summary>Fehler anzeigen <span class="chev" aria-hidden="true">›</span></summary><div class="body"><ul class="km-liste">${e.fehler.map(x=>`<li><span class="t">${gfEsc(x)}</span></li>`).join("")}</ul></div></details>`:""}<div><button class="btn btn-sm btn-brand" data-act="vorschau-zu" data-f="${gfEsc(f.short_name)}">Schließen</button></div></div>`; }
+  if(v.sendet) return `<div class="vorschau" role="status"><p>Wird gesendet${v.runde>1?` (Teil ${v.runde})`:""} …</p></div>`;
+  return `<div class="vorschau"><p><b>Vorschau</b></p>${(v.saetze||[]).map(s=>`<p>${gfEsc(s)}</p>`).join("")}<p class="km-muted">Erneutes Senden legt nur Neues an und aktualisiert Fälligkeit und Beschreibung; Zuständigkeit, Unteraufgaben, Kommentare und Abschnitt in Asana bleiben.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px"><button class="btn btn-sm btn-primary" data-act="senden" data-f="${gfEsc(f.short_name)}">Senden als ${wer()}</button><button class="btn btn-sm btn-brand" data-act="vorschau-zu" data-f="${gfEsc(f.short_name)}">Abbrechen</button></div></div>`;
+}
+function renderPpForm(f, form){
+  const ex=D.extras||[];
+  const pp=(f.pruefpunkte||[]).find(x=>x.datum===form.datum)||{};
+  const gewaehlt=new Set(form.extras||pp.extras||[]);
+  const stufe=form.stufe||pp.stufe||"offen";
+  return `<form class="pp-form" data-f="${gfEsc(f.short_name)}" data-d="${gfEsc(form.datum)}">
+    <p class="km-satz" style="font-size:var(--stufe-2)"><b>Prüfpunkt ${fmtD(form.datum)}</b>: Verkauf laut Ticketsystem gegen Zielpfad, Kaufabbrüche, wiederkehrende Fragen, Reichweite, Klicks auf den Kaufweg. Stufe Rot und Extras mit Budget entscheiden nur Alex oder Lea.</p>
+    <div>${gfChips("stufe",[["gruen","grün"],["gelb","gelb"],["rot","rot"],["knapp","knapp"],["offen","offen"]],stufe,{label:"Stufe"})}</div>
+    <fieldset style="border:0;padding:0;margin:0"><legend class="km-muted" style="margin-bottom:6px">Extras (bei Gelb bis zu zwei der Stufe Gelb; Rot mit Freigabe der GF)</legend>
+      <div class="km-extras">${ex.map(e=>`<label><input type="checkbox" name="extra" value="${gfEsc(e.id)}"${gewaehlt.has(e.id)?" checked":""}><span>${gfEsc(e.id)} ${gfEsc(e.name)}<small>Stufe ${gfEsc(stufeWort(e.stufe)||e.stufe)}${e.budget?", braucht Budget":""}</small></span></label>`).join("")}</div></fieldset>
+    <label class="km-muted" for="ppNotiz-${gfEsc(f.short_name)}">Notiz</label>
+    <textarea id="ppNotiz-${gfEsc(f.short_name)}" name="notiz" rows="2" style="width:100%">${gfEsc(pp.notiz||"")}</textarea>
+    <div style="display:flex;flex-wrap:wrap;gap:8px"><button class="btn btn-sm btn-primary" type="submit">Speichern als ${wer()}</button><button class="btn btn-sm btn-brand" type="button" data-act="pp-zu" data-f="${gfEsc(f.short_name)}">Abbrechen</button></div>
+  </form>`;
+}
+
+/* ---------- Wo wird es eng? ---------- */
+function renderLast(){
+  const W=(D.wochenlast||[]);
+  const fs=D.festivals||[];
+  if(!W.length){ $("#kmLastSatz").textContent="Noch nichts berechnet."; $("#kmLast").innerHTML=""; $("#kmLegende").innerHTML=""; $("#kmLastListe").innerHTML=""; return; }
+  const spitze=W.reduce((a,b)=>b.gesamt>a.gesamt?b:a, W[0]);
+  const ueber=W.filter(w=>w.gesamt>3*KL.STELLE_STUNDEN);
+  $("#kmLastSatz").innerHTML=`Spitzenwoche ab ${fmtD(spitze.woche)}: <b>${gfFmtInt(Math.round(spitze.gesamt))} Stunden</b>, ${gfEsc(KL.stellenWort(spitze.gesamt))} (35 Stunden je Stelle). ${ueber.length?`In ${ueber.length} ${ueber.length===1?"Woche":"Wochen"} braucht es mehr als drei Stellen.`:"Keine Woche braucht mehr als drei Stellen."} Schritte zählen gleichmäßig über ihre Tage, dazu Stories, Kommentare und Redaktionsrunde.`;
+  /* Breite aus dem Platz auf dem Schirm, damit Beschriftung und Höhe am Handy lesbar bleiben. */
+  const Bw=Math.max(320, Math.min(1000, Math.round(($("#kmLast").clientWidth)||920))), H=Bw<600?220:240, L=34, R=8, T=14, U=26;
+  const n=W.length, bx=(Bw-L-R)/n;
+  const maxH=Math.max(4*KL.STELLE_STUNDEN+10, Math.ceil(spitze.gesamt/20)*20+10);
+  const y=v=>T+(H-T-U)*(1-v/maxH);
+  const x=i=>L+i*bx;
+  const ks=fs.map(f=>f.kuerzel);
+  /* gestapelte Flächen */
+  let unten=W.map(()=>0); const flaechen=[];
+  ks.forEach((k,j)=>{
+    const oben=W.map((w,i)=>unten[i]+(w.je[k]||0));
+    let d=`M${x(0)},${y(unten[0])}`;
+    W.forEach((w,i)=>{ d+=` L${x(i)},${y(oben[i])} L${x(i)+bx},${y(oben[i])}`; });
+    for(let i=n-1;i>=0;i--) d+=` L${x(i)+bx},${y(unten[i])} L${x(i)},${y(unten[i])}`;
+    flaechen.push(`<path d="${d} Z" fill="${FARBEN[j%FARBEN.length]}" fill-opacity="0.85" stroke="var(--surface)" stroke-width="0.5"><title>${gfEsc(k)}</title></path>`);
+    unten=oben;
+  });
+  const idx=iso=>{ const i=W.findIndex(w=>w.woche>KL.montag(iso)); return i<0?n:Math.max(0,i-1)+((iso>=W[0].woche)?0:0); };
+  const xDat=iso=>{ const m=KL.montag(iso); const i=W.findIndex(w=>w.woche===m); if(i>=0) return x(i)+bx*(KL.wochentag(iso)/7); return iso<W[0].woche?x(0):x(n); };
+  const v=D.verbund||{};
+  const vpVon=v.stichtag?KL.plus(v.stichtag,-(v.fenster||84)):null;
+  const saisonVon=fs.map(f=>f.F).filter(Boolean).sort()[0], saisonBis=fs.map(f=>f.Z).filter(Boolean).sort().pop();
+  const baender=[];
+  if(vpVon) baender.push(`<rect class="band" x="${xDat(vpVon)}" y="${T}" width="${Math.max(0,xDat(v.stichtag)-xDat(vpVon))}" height="${H-T-U}"/><text class="band-t" x="${xDat(vpVon)+4}" y="${T+11}">Vorproduktion bis ${fmtK(v.stichtag)}</text>`);
+  if(saisonVon) baender.push(`<rect class="band" x="${xDat(saisonVon)}" y="${T}" width="${Math.max(0,xDat(saisonBis)-xDat(saisonVon))}" height="${H-T-U}" style="fill:url(#kmMuster)"/><text class="band-t" x="${xDat(saisonVon)+4}" y="${T+24}">Festivalsaison</text>`);
+  const linien=[1,2,3,4].map(s=>`<line class="linie" x1="${L}" x2="${Bw-R}" y1="${y(s*KL.STELLE_STUNDEN)}" y2="${y(s*KL.STELLE_STUNDEN)}"/><text class="linie-t" x="${L-4}" y="${y(s*KL.STELLE_STUNDEN)+4}" text-anchor="end">${s}</text>`).join("");
+  const monate=[]; let letzter="";
+  const jedeN=Bw<600?2:1; let mi=0;
+  W.forEach((w,i)=>{ const m=w.woche.slice(0,7); if(m!==letzter){ letzter=m; if((mi++)%jedeN) return; monate.push(`<text x="${x(i)+2}" y="${H-8}">${KL.MONATE[Number(m.slice(5))-1].slice(0,3)}${m.slice(5)==="01"?" "+m.slice(2,4):""}</text>`); } });
+  const heuteX=xDat(HEUTE);
+  const ziele=W.map((w,i)=>`<rect class="ziel" data-i="${i}" x="${x(i)}" y="${T}" width="${bx}" height="${H-T-U}" tabindex="${i===idxHeute(W)?0:-1}" role="img" aria-label="${gfEsc(wochenSatz(w))}"/>`).join("");
+  $("#kmLast").innerHTML=`<svg viewBox="0 0 ${Bw} ${H}" role="group" aria-label="Wochenlast über alle Festivals, Linien für eine bis vier Stellen. Pfeiltasten wechseln die Woche.">
+    <defs><pattern id="kmMuster" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--surface-2)"/><line x1="0" y1="0" x2="0" y2="6" stroke="var(--border-strong)" stroke-width="1"/></pattern></defs>
+    ${baender.join("")}${flaechen.join("")}${linien}
+    <text class="linie-t" x="${L-4}" y="${T-2}" text-anchor="end">Stellen</text>
+    <line class="heute" x1="${heuteX}" x2="${heuteX}" y1="${T}" y2="${H-U}"/>
+    <g class="ach">${monate.join("")}</g>${ziele}</svg><div class="km-tip" id="kmTip" role="status"></div>`;
+  $("#kmLegende").innerHTML=ks.map((k,j)=>`<li><i style="background:${FARBEN[j%FARBEN.length]}"></i>${gfEsc(fs[j].name)} (${gfEsc(k)})</li>`).join("")+`<li><i style="background:var(--surface-2)"></i>Vorproduktionsfenster</li><li><i class="muster"></i>Festivalsaison</li><li><i style="border:0;border-left:2px solid var(--text);border-radius:0;width:2px"></i>heute</li>`;
+  $("#kmLastListe").innerHTML=`<table class="km-tabelle"><thead><tr><th>Woche ab</th><th>Stunden</th><th>Stellen</th>${ks.map(k=>`<th>${gfEsc(k)}</th>`).join("")}</tr></thead><tbody>${W.map(w=>`<tr><td class="z">${fmtD(w.woche)}</td><td class="z">${gfFmtInt(Math.round(w.gesamt))}</td><td>${gfEsc(KL.stellenWort(w.gesamt))}</td>${ks.map(k=>`<td class="z">${gfFmtInt(Math.round(w.je[k]||0))}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  bindeTip();
+}
+function idxHeute(W){ const m=KL.montag(HEUTE); const i=W.findIndex(w=>w.woche===m); return i<0?0:i; }
+function wochenSatz(w){ const fs=D.festivals||[]; return `Woche ab ${fmtD(w.woche)}: ${Math.round(w.gesamt)} Stunden, ${KL.stellenWort(w.gesamt)}. `+fs.map(f=>`${f.kuerzel} ${Math.round(w.je[f.kuerzel]||0)}`).join(", "); }
+function bindeTip(){
+  const box=$("#kmLast"), tip=$("#kmTip"); if(!box||!tip) return;
+  const zeige=el=>{ box.querySelectorAll(".ziel.aktiv").forEach(z=>z.classList.remove("aktiv")); if(!el){ tip.style.display="none"; return; }
+    el.classList.add("aktiv"); const w=D.wochenlast[Number(el.dataset.i)];
+    tip.innerHTML=`<b>Woche ab ${fmtD(w.woche)}</b>${Math.round(w.gesamt)} Stunden, ${gfEsc(KL.stellenWort(w.gesamt))}<br>${(D.festivals||[]).map(f=>`${gfEsc(f.kuerzel)}: ${Math.round(w.je[f.kuerzel]||0)}`).join(" · ")}`;
+    const r=el.getBoundingClientRect(), b=box.getBoundingClientRect();
+    tip.style.display="block"; const tw=tip.offsetWidth;
+    tip.style.left=Math.max(0,Math.min(b.width-tw, r.left-b.left+r.width/2-tw/2))+"px"; tip.style.top="0px"; };
+  box.querySelectorAll(".ziel").forEach(z=>{ z.addEventListener("mouseenter",()=>zeige(z)); z.addEventListener("focus",()=>zeige(z)); z.addEventListener("click",()=>zeige(z)); });
+  box.addEventListener("mouseleave",()=>{ if(!box.contains(document.activeElement)) zeige(null); });
+  box.addEventListener("focusout",e=>{ if(!box.contains(e.relatedTarget)) zeige(null); });
+  box.addEventListener("keydown",e=>{ const z=e.target.closest(".ziel"); if(!z) return; let i=Number(z.dataset.i);
+    if(e.key==="ArrowRight") i++; else if(e.key==="ArrowLeft") i--; else if(e.key==="Home") i=0; else if(e.key==="End") i=D.wochenlast.length-1; else if(e.key==="Escape"){ zeige(null); return; } else return;
+    e.preventDefault(); i=Math.max(0,Math.min(D.wochenlast.length-1,i)); const n=box.querySelector(`.ziel[data-i="${i}"]`); if(n){ z.setAttribute("tabindex","-1"); n.setAttribute("tabindex","0"); n.focus(); } });
+}
+
+/* ---------- Was muss die GF entscheiden? ---------- */
+function renderEntscheiden(){
+  const E=D.entscheiden||[];
+  if(!E.length){ $("#kmEntscheiden").innerHTML=`<li><span class="t">Gerade nichts: alle Festivals besetzt, kein Prüfpunkt auf Gelb oder Rot, keine Extras mit Budget offen, keine Überlast gemeldet.</span></li>`; return; }
+  $("#kmEntscheiden").innerHTML=E.map(e=>{
+    const art=({besetzung:"Besetzung",pruefpunkt:"Prüfpunkt",extras:"Extras mit Budget",ueberlast:"Überlast"})[e.art]||e.art;
+    let acts="";
+    if(e.art==="besetzung") acts=`<a class="btn btn-sm btn-brand" href="saison.html#saF2">Kommunikation besetzen in Saison</a>`;
+    if(e.art==="pruefpunkt") acts=`<button class="btn btn-sm btn-brand" data-act="pp" data-f="${gfEsc(e.festival)}" data-d="${gfEsc(e.datum)}">Stufe und Extras ändern</button>`;
+    if(e.art==="extras") acts=`<button class="btn btn-sm btn-primary" data-act="extras-frei" data-f="${gfEsc(e.festival)}" data-d="${gfEsc(e.datum)}">Extras freigeben als ${wer()}</button><button class="btn btn-sm btn-brand" data-act="pp" data-f="${gfEsc(e.festival)}" data-d="${gfEsc(e.datum)}">Ändern</button>`;
+    return `<li><span class="t"><span class="km-mark stark">${gfEsc(art)}</span> ${gfEsc(e.text)}</span>${acts?`<span class="acts">${acts}</span>`:""}</li>`;
+  }).join("");
+}
+
+/* ---------- Was steht an? ---------- */
+function renderAnstehend(){
+  const fs=D.festivals||[];
+  $("#kmAnstehend").innerHTML=fs.map(f=>{
+    const L=f.pflicht30||[];
+    return `<div class="km-block"><h3>${gfEsc(f.name)}</h3>${L.length?`<table class="km-tabelle stapel"><colgroup><col style="width:3.6em"><col><col style="width:7.5em"></colgroup><thead><tr><th>Datum</th><th>Titel und Kanal</th><th>Stand</th></tr></thead><tbody>${L.map(p=>`<tr><td class="z">${fmtK(p.t)}</td><td>${gfEsc(p.titel)}${p.vorlaeufig?` <span class="km-mark leer">vorläufig</span>`:""}<br><span class="km-muted">${gfEsc(kanalWort(p.kanal))}</span></td><td>${gfEsc(statusWort(p.status))}${p.gesendet?"":`<br><span class="km-muted">nicht in Asana</span>`}</td></tr>`).join("")}</tbody></table>`:`<p class="km-muted">Keine Pflichtveröffentlichung in den nächsten 30 Tagen.</p>`}</div>`;
+  }).join("");
+}
+
+/* ---------- Jahresband ---------- */
+function renderBand(){
+  const fs=D.festivals||[];
+  const von="2026-10-01", bis="2027-09-30", span=KL.tage(von,bis);
+  const pos=iso=>Math.max(0,Math.min(100,KL.tage(von,iso)/span*100));
+  const PHW={verkaufsstart:"Verkaufsstart",winterruhe:"Winterruhe",programmaufbau:"Programmaufbau",heisse_phase:"heiße Phase",festival:"Festival",nachbereitung:"Nachbereitung"};
+  const monate=[]; for(let m=0;m<12;m++){ const d=KL.plus(von,0); const y=2026+Math.floor((9+m)/12), mo=((9+m)%12)+1; const iso=`${y}-${String(mo).padStart(2,"0")}-01`; monate.push(`<span style="left:${pos(iso)}%">${KL.MONATE[mo-1].slice(0,3)}</span>`); }
+  const zeilen=fs.map(f=>{
+    const b=f.jahresband||{};
+    const ph=(b.phasen||[]).map(p=>`<span class="ph${p.id==="festival"?" f":""}" style="left:${pos(p.von)}%;width:${Math.max(0.4,pos(p.bis)-pos(p.von))}%" title="${gfEsc(PHW[p.id]||p.id)}: ${fmtD(p.von)} bis ${fmtD(p.bis)}">${gfEsc(PHW[p.id]||p.id)}</span>`).join("");
+    const mk=[].concat((b.wellen||[]).map(w=>({t:w.t,z:w.lineup?"L":"P"+w.nr,s:w.lineup?"Lineup komplett":"Programmwelle "+w.nr})),(b.videos||[]).map(v=>({t:v.t,z:"V",s:v.titel})),(b.pruefpunkte||[]).map(p=>({t:p.t,z:"◇",s:"Prüfpunkt "+p.nr})))
+      .filter(m=>m.t>=von&&m.t<=bis).map(m=>`<span class="mk" style="left:${pos(m.t)}%" title="${gfEsc(m.s)} am ${fmtD(m.t)}">${gfEsc(m.z)}</span>`).join("");
+    const liste=[].concat((b.wellen||[]).map(w=>`${w.lineup?"Lineup komplett":"Programmwelle "+w.nr} ${fmtD(w.t)}`),(b.videos||[]).map(v=>`${v.titel} ${fmtD(v.t)}`),(b.pruefpunkte||[]).map(p=>`Prüfpunkt ${p.nr} ${fmtD(p.t)}`));
+    return `<div class="zeile"><b>${gfEsc(f.name)}</b><div class="spur" role="img" aria-label="${gfEsc(f.name)}: ${gfEsc((b.phasen||[]).map(p=>`${PHW[p.id]||p.id} ${fmtD(p.von)} bis ${fmtD(p.bis)}`).join(", "))}. ${gfEsc(liste.join(", "))}">${ph}${mk}<span class="heute" style="left:${pos(HEUTE)}%"></span></div></div>`;
+  }).join("");
+  $("#kmBand").innerHTML=`<p class="km-muted">P1 bis P3 Programmwellen, L Lineup komplett, V Video, ◇ Prüfpunkt. Der senkrechte Strich ist heute. Phasen nach dem Regelwerk, gerechnet von der Gästeöffnung.</p><div class="km-band"><div class="monate" aria-hidden="true">${monate.join("")}</div>${zeilen}</div>`;
+}
+function renderVerlauf(){
+  const L=D.log||[];
+  $("#kmVerlauf").innerHTML=L.length?L.map(l=>`<li><span class="t">${gfEsc(({komm_berechnen:"Berechnet",komm_send:"An Asana gesendet",komm_send_test:"Testversand",komm_pruefpunkt_set:"Prüfpunkt",komm_tabelle_sync:"Redaktionstabelle",komm_test_aufraeumen:"Testprojekt gelöscht"})[l.what]||l.what)}: ${gfEsc(l.kurz||"")}</span><span class="d">${gfEsc(l.by||"")} · ${fmtD(String(l.at).slice(0,10))}</span></li>`).join(""):`<li><span class="t">Noch keine Einträge.</span></li>`;
+}
+function renderAll(){ renderKopf(); renderLast(); renderEntscheiden(); renderAnstehend(); renderBand(); renderVerlauf(); }
+
+/* ---------- Bedienung ---------- */
+async function vorschau(s){
+  OFFEN.vorschau[s]={ laedt:true }; renderKopf();
+  try{ const r=await gfApi("komm_send",{ festival:s, by:wer(), vorschau:true }); OFFEN.vorschau[s]={ saetze:r.saetze||[] }; }
+  catch(err){ OFFEN.vorschau[s]={ fehler:err.message }; }
+  renderKopf(); const b=document.querySelector(`#fest-${s} .vorschau button`); if(b) b.focus();
+}
+async function senden(s){
+  if(!confirm(`Rahmen für ${fest(s).name} als ${wer()} an Asana senden?`)) return;
+  let runde=1, ergebnis=null; const summe={ neu:0, aktualisiert:0, fehler:[] };
+  try{
+    while(runde<=8){
+      OFFEN.vorschau[s]={ sendet:true, runde }; renderKopf();
+      const r=await gfApi("komm_send",{ festival:s, by:wer(), bestaetigt:true });
+      summe.neu+=r.neu||0; summe.aktualisiert+=r.aktualisiert||0; summe.fehler.push(...(r.fehler||[]));
+      ergebnis=Object.assign({}, r, summe);
+      if(!r.weiter) break; runde++;
+    }
+    OFFEN.vorschau[s]={ ergebnis };
+  }catch(err){ OFFEN.vorschau[s]={ fehler:err.message }; }
+  await load(true);
+}
+async function ppSpeichern(form){
+  const s=form.dataset.f, d=form.dataset.d;
+  const stufe=(form.querySelector('input[name="stufe"]')||{}).value||"offen";
+  const extras=[...form.querySelectorAll('input[name="extra"]:checked')].map(x=>x.value);
+  const notiz=form.querySelector('textarea[name="notiz"]').value;
+  const pp=((fest(s)||{}).pruefpunkte||[]).find(x=>x.datum===d)||{};
+  try{ await gfApi("komm_pruefpunkt_set",{ festival:s, datum:d, stufe, extras, notiz, by:wer(), expect_stufe:pp.stufe||"offen" }); gfToast(`Prüfpunkt ${fmtK(d)}: Stufe ${stufeWort(stufe)}${extras.length?", "+extras.join(", "):""}`); delete OFFEN.pp[s]; await load(true); }
+  catch(err){ gfToast("Fehler: "+err.message); }
+}
+document.addEventListener("click", async e=>{
+  const a=e.target.closest("[data-act]"); if(!a) return;
+  const s=a.dataset.f;
+  if(a.dataset.act==="vorschau"){ if(OFFEN.vorschau[s]&&!OFFEN.vorschau[s].ergebnis){ delete OFFEN.vorschau[s]; renderKopf(); } else vorschau(s); return; }
+  if(a.dataset.act==="vorschau-zu"){ delete OFFEN.vorschau[s]; renderKopf(); const b=document.querySelector(`#fest-${s} [data-act="vorschau"]`); if(b) b.focus(); return; }
+  if(a.dataset.act==="senden"){ senden(s); return; }
+  if(a.dataset.act==="pp"){ if(OFFEN.pp[s]&&OFFEN.pp[s].datum===a.dataset.d){ delete OFFEN.pp[s]; } else OFFEN.pp[s]={ datum:a.dataset.d }; renderKopf();
+    const z=document.getElementById("fest-"+s); if(z){ z.scrollIntoView({block:"nearest"}); const c=z.querySelector(".pp-form input"); if(c) c.focus(); } return; }
+  if(a.dataset.act==="pp-zu"){ delete OFFEN.pp[s]; renderKopf(); return; }
+  if(a.dataset.act==="extras-frei"){
+    const f=fest(s); const pp=(f.pruefpunkte||[]).find(x=>x.datum===a.dataset.d); if(!pp) return;
+    if(!confirm(`Extras ${pp.extras.join(", ")} für ${f.name} als ${wer()} freigeben?`)) return;
+    try{ await gfApi("komm_pruefpunkt_set",{ festival:s, datum:pp.datum, stufe:pp.stufe, extras:pp.extras, by:wer() }); gfToast("Freigegeben"); await load(true); }
+    catch(err){ gfToast("Fehler: "+err.message); }
+  }
+});
+document.addEventListener("submit", e=>{ const f=e.target.closest(".pp-form"); if(!f) return; e.preventDefault(); ppSpeichern(f); });
+document.addEventListener("gf-who", ()=>{ if(D) renderAll(); });
+let kmBreite=0; window.addEventListener("resize",()=>{ const b=($("#kmLast")||{}).clientWidth||0; if(D&&Math.abs(b-kmBreite)>40){ kmBreite=b; renderLast(); } });
+
+async function load(still){
+  const d=await gfApi("komm_list",{});
+  D=d; HEUTE=d.heute||new Date().toISOString().slice(0,10);
+  renderAll();
+  if(!still && (D.festivals||[]).every(f=>!f.anzahl)) $("#kmLastSatz").textContent="Noch nichts berechnet. Die Berechnung läuft täglich mit dem Tick oder über komm_berechnen.";
+}
+gfGate(async()=>{
+  $("#app").style.display="block"; gfMountTopbar("kommunikation");
+  gfMountHero("buehne","Kommunikation 2027","Wer zuständig ist, wo es eng wird, was die Geschäftsführung entscheiden muss.",{slim:true});
+  try{ await load(); }catch(e){ $("#kmFest").innerHTML=`<li><span class="km-muted">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</span></li>`; }
+});
+</script>
+</body>
+</html>

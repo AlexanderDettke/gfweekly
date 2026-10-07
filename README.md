@@ -1,5 +1,10 @@
 # Das Hohe Haus (vormals GF Weekly)
 
+> **Stand 07.10.2026: V32 Kommunikation** auf dem Branch `paket/v32-kommunikation`: Postingplan-Standard für alle fünf
+> Festivals, neue Seite `site/kommunikation.html` (Navigation „Arbeiten“, unter Saison), Tabellen `komm_*`, Edge Function
+> `gfweekly` v39 mit den Aktionen `komm_*` (Modul `supabase/functions/gfweekly/komm.ts`). Migration und Deploy stehen aus,
+> bis sie in der Sitzung freigegeben sind. Einzelheiten in `docs/TECHNIKSTAND.md`, Abschnitt V32 Kommunikation.
+
 > **Stand 05.10.2026: V32 Organisation** auf dem Branch `paket/v32-organisation`: neue Seite `site/organisation.html`
 > (Navigation „Arbeiten“, vor Besetzung), Edge Function `organisation` v1 deployt, Migration `20261005053521` angewendet.
 > Einzelheiten in `docs/TECHNIKSTAND.md`, Abschnitt V32.

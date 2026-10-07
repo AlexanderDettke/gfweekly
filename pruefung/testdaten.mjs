@@ -455,3 +455,53 @@ export const SCHREIBEND = new Set(['wahl','freigabe','begruendung','log_verknuep
 
 /* Schreibende Aktionen darf der Lauf mit einem leeren Erfolg beantworten; alles andere ohne Testdaten ist ein Testfehler. */
 Object.assign(ANTWORT, VH_ANTWORT);
+
+/* V32 Kommunikation: komm_list aus der echten Rechenlogik, Termine relativ zu heute, damit die Testdaten nicht altern.
+   Lusatia ohne verantwortliche Person (zeigt „Kommunikation nicht besetzt“), Draußenbande mit gesendetem Rahmen und
+   einem Prüfpunkt auf Gelb mit Budget-Extra (zeigt „Was muss die GF entscheiden?“). */
+import { createRequire as kommRequire } from 'node:module';
+const KR = kommRequire(import.meta.url);
+const KL = KR('../site/assets/komm-logik.js');
+const KRW = KR('../docs/referenz/postingplan/habitat-postingplan-regelwerk.json');
+const KOMM_EV = [['LUSRD27', 'Lusatia 2027', 8, 289, 291], ['FAMRD27', 'Malina, Morio & die Draußenbande 2027', -6, 296, 298], ['BYNRD27', 'by nature 2027', 25, 303, 305],
+  ['WMRD27', 'Wilde Möhre Freude Edition 2027', -36, 317, 320], ['FLRD27', 'Fluidity 2027', 18, 324, 326]];
+export const KOMM_LIST = (() => {
+  const fs = KOMM_EV.map(([s, n, v, f, z]) => KL.festivalAus(KRW, { id: 'ev-' + s, short_name: s, name: n, sales_start_on: tag(v), starts_on: tag(f), ends_on: tag(z) }));
+  const saison = KL.saisonStart(fs);
+  const fuerLast = [], festivals = [], entscheiden = [];
+  for (const f of fs) {
+    const e = KL.berechne(KRW, f, heute, { saison_start: saison });
+    const pubs = e.pubs.map(p => Object.assign({}, p, { status_bearbeitung: 'offen', gesendet_am: f.short_name === 'FAMRD27' ? zeit(-1) : null }));
+    fuerLast.push({ kuerzel: f.kuerzel, pubs, wochen: e.wochen });
+    const kurzP = p => ({ id: p.id, titel: p.titel, t: p.t, kanal: p.kanal, klasse: p.klasse, pflicht: p.pflicht, partnerfaehig: p.partnerfaehig, status: p.status_bearbeitung, vorlaeufig: p.vorlaeufig, gesendet: !!p.gesendet_am, t_neu: null });
+    const pp = pubs.filter(p => p.regel_id === 'PRUEF').map((p, i) => ({ datum: p.t, nr: p.nr, stufe: f.short_name === 'FAMRD27' && i === 0 ? 'gelb' : 'offen', extras: f.short_name === 'FAMRD27' && i === 0 ? ['E01', 'E03'] : [], entschieden_von: f.short_name === 'FAMRD27' && i === 0 ? 'Christian Linck' : null, entschieden_am: null, notiz: null }));
+    const ue = KL.ueberfaellig(pubs, heute);
+    festivals.push({ short_name: f.short_name, kuerzel: f.kuerzel, name: f.name, event_id: f.event_id, V: f.V, F: f.F, Z: f.Z, pruefen: f.pruefen,
+      person: f.short_name === 'LUSRD27' ? null : { name: 'Testperson Kommunikation', typ: 'extern', status: f.short_name === 'WMRD27' ? 'vorschlag' : 'bestaetigt', bestaetigt_von: 'Alex', hat_asana: true },
+      rahmen: f.short_name === 'FAMRD27' ? { gesendet_am: zeit(-1), url: 'https://app.asana.com/0/1200000000000002', von: 'Alex', neu: 70, aktualisiert: 0, weiter: false, fehler: 0 } : null,
+      gesendet: f.short_name === 'FAMRD27' ? pubs.length : 0, zu_pruefen: f.short_name === 'FAMRD27' ? [kurzP(pubs[3])].map(x => Object.assign(x, { status: 'zu_pruefen', t_neu: tag(40) })) : [],
+      anzahl: pubs.length, stunden: KL.runde(pubs.reduce((s, p) => s + p.stunden, 0), 1), pflicht: pubs.filter(p => p.pflicht).length, partnerfaehig: pubs.filter(p => p.partnerfaehig).length,
+      ueberfaellig: ue, ueberfaellig_liste: [], naechster_pruefpunkt: pp.find(x => x.datum >= heute) || null, pruefpunkte: pp,
+      naechste14: KL.naechste(pubs, heute, 14, false).map(kurzP), pflicht30: KL.naechste(pubs, heute, 30, true).map(kurzP), jahresband: KL.jahresband(KRW, f, pubs), berechnet_am: zeit(-0.1) });
+    if (f.short_name === 'LUSRD27') entscheiden.push({ art: 'besetzung', festival: f.short_name, kuerzel: f.kuerzel, text: `Kommunikation nicht besetzt: ${f.name}. Bis dahin ist die Leitung Marketing zuständig.` });
+    if (f.short_name === 'FAMRD27') {
+      entscheiden.push({ art: 'pruefpunkt', festival: f.short_name, kuerzel: f.kuerzel, datum: pp[0].datum, stufe: 'gelb', extras: ['E01', 'E03'], text: `${f.name}: Prüfpunkt ${KL.kurz(pp[0].datum)} steht auf gelb, Extras E01, E03.` });
+      entscheiden.push({ art: 'extras', festival: f.short_name, kuerzel: f.kuerzel, datum: pp[0].datum, extras: ['E01'], text: `${f.name}: Extras mit Budget oder Stufe Rot gewählt (E01), Freigabe der GF fehlt.` });
+    }
+  }
+  entscheiden.push({ art: 'ueberlast', festival: 'WMRD27', text: 'Überlast gemeldet für WMRD27 von Testperson am ' + KL.kurz(tag(-2)) + ': Mai reicht eine Person nicht.' });
+  return { heute, regelwerk: '1.2.0 (2026-10-05)', festivals, entscheiden,
+    extras: (KRW.extras || []).map(e => ({ id: e.id, name: e.name, stufe: e.stufe, budget: !!e.budget_noetig, freigabe: e.freigabe, einsatzfenster: e.einsatzfenster, stunden: e.stunden })),
+    wochenlast: KL.wochenlast(fuerLast, heute, null),
+    verbund: { stichtag: KRW.verbund_2027.stichtag_vorproduktion, fenster: KRW.verbund_2027.vorproduktion_fenster_tage, gaesteinfos: KRW.verbund_2027.stichtag_gaesteinfos_freigegeben, saison_start: saison },
+    asana: { konfiguriert: true }, tabelle: { konfiguriert: false, letzter: null }, hinweise: [],
+    log: [{ at: zeit(-0.1), what: 'komm_berechnen', by: 'Zeitplan', kurz: 'LUS: 102 (neu 0, geändert 1, zu prüfen 0)' }, { at: zeit(-1), what: 'komm_send', by: 'Alex', kurz: 'FAMRD27: 70 neu, 0 aktualisiert' }] };
+})();
+Object.assign(ANTWORT, {
+  komm_list: () => KOMM_LIST,
+  komm_send: (p) => p.vorschau ? ({ ok: true, vorschau: true, saetze: ['Projekt „Kommunikation Testfestival 2027“ in Asana, Eigentum und Zuständigkeit bei Testperson Kommunikation.', '60 Veröffentlichungen als eigene Aufgabe, 9 Prüfpunkte, 11 Monatsbündel für die übrigen Beiträge; Abschnitte je Monat (12).', 'Alle 80 Aufgaben werden neu angelegt.'] })
+    : ({ ok: true, projekt: '1200000000000003', url: 'https://app.asana.com/0/1200000000000003', neu: 80, aktualisiert: 0, rest: 0, weiter: false, fehler: [] }),
+  komm_pruefpunkt_set: (p) => ({ ok: true, pruefpunkt: { festival_short: p.festival, datum: p.datum, stufe: p.stufe, extras: p.extras || [] }, protokoll: true }),
+  komm_berechnen: () => ({ ok: true, ergebnis: [] }),
+});
+SCHREIBEND.add('komm_pruefpunkt_set'); SCHREIBEND.add('komm_berechnen');

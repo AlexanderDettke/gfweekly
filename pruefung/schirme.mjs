@@ -59,7 +59,7 @@ const SEITEN = [
   ['seiten.html', '#groups'], ['bearbeiten.html', '#itemsView'], ['aufraeumen.html', '#list'], ['checkin.html', '#agenda'],
   ['inbox.html', '#list'],
   ['vertretung.html', '#absList'], ['uebergabe.html', '#list'], ['rueckkehr.html', '#entList'],
-  ['saison.html', '#saLage'], ['launch.html', '#lnAufgaben'], ['organisation.html', '#ogDecs'],
+  ['saison.html', '#saLage'], ['kommunikation.html', '#kmFest'], ['launch.html', '#lnAufgaben'], ['organisation.html', '#ogDecs'],
   ['vorhaben.html', '#vhMain'], ['vorhaben.html?view=board&v=xceed', '#vhAkte'], ['vorhaben.html?view=liste&v=xceed&tab=verlauf', '#vhAkte'],
 ];
 const SCHIRME = [ { name:'1440', w:1440, h:900 }, { name:'390', w:390, h:844 } ];
@@ -223,7 +223,7 @@ for (const thema of THEMES) {
       }, kern);
       if (befund.tor) meldungen.push('Tor blieb zu');
       if (!befund.app) meldungen.push('Seiteninhalt blieb verborgen');
-      if (befund.nav !== 17) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 17 Haupteinträgen)');   // 17 seit V32 Organisation (05.10.2026)
+      if (befund.nav !== 18) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 18 Haupteinträgen)');   // 18 seit V32 Kommunikation (07.10.2026)
       if (befund.unternav !== 4) meldungen.push('Unternavigation unvollständig (' + befund.unternav + ' von 4 Einträgen)');
       if (befund.fehltext.length) meldungen.push('Fehlermeldung auf der Seite: ' + befund.fehltext.join(', '));
       if (befund.kern < 0) meldungen.push('Kerninhalt ' + kern + ' fehlt im Aufbau');
