@@ -1,0 +1,10 @@
+# Antwort auf Review V32a, Runde 2 (Codex, Commit 3789c3d)
+
+Alle vier Befunde bestätigt und behoben.
+
+1. **schwer, Neuberechnung während eines Versands.** Versand und Berechnung teilen jetzt eine Sperre je Festival (`festival:<short_name>`). `komm_send` nimmt sie, bevor es die Veröffentlichungen liest, und hält sie bis zum Ende; `komm_berechnen` nimmt sie je Festival und überspringt ein gesperrtes Festival mit Hinweis (der tägliche Lauf holt es nach). `hh_komm_gesendet` liefert die Zahl der getroffenen Zeilen; weicht sie von der Zahl der Kennungen ab, steht das als Fehler im Versandbericht.
+2. **mittel, ältere Berechnung überschreibt neuere.** Die Termine werden erst unter der Sperre gelesen (frisch über `launchFestivals()`, auch für den Saisonbeginn). Weil Lesen und Schreiben unter derselben Sperre liegen, folgt die Reihenfolge der Schreibvorgänge der Reihenfolge des Lesens.
+3. **mittel, Wochenlast beim ersten Lauf nach T.** `berechne()` rechnet die Schritte vergangener Veröffentlichungen mit und liefert sie als `vergangen_voll` (nicht in `pubs`, also nicht in Versand, Vorschau und Einspielen). `komm_list` nimmt davon alles, was noch nicht gespeichert ist, mit Schritten ab dieser Woche in die Last. Probe: Draußenbande mit VVK 01.10.2026, gerechnet am 07.10.2026, V-START mit N2 am 08.10.2026.
+4. **mittel, Projektanlage als Versand.** Die Anlage hat eine eigene Protokollart (`komm_send_projekt`); der Status auf der Seite kommt nur aus Versandberichten (`komm_send`). Abbrüche nach der Anlage (Abschnitte oder Aufgabenliste nicht lesbar) schreiben einen Versandbericht mit `abgebrochen`; die Seite zeigt „abgebrochen“, „begonnen, Rest folgt“ oder „gesendet“ und die Zahl der Veröffentlichungen mit Aufgabe in Asana.
+
+Empfehlungen: `pruefung/komm-sql-probe.mjs` spielt die Migration in einem lokalen Postgres (PGlite) ein und prüft Idempotenz, Schutz gesendeter, nur mit Kennung versehener und übernommener Zeilen, Partnerfelder, Entfernen, Sperre, Prüfpunkte mit gesehener Stufe, Regelwerk und Rechte (27 ok). `pruefung/komm-vergleich.mjs` schreibt keine Dateien mehr (CSV des Python-Rechners über die Standardausgabe). `komm-test.mjs`: 65 ok.

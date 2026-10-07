@@ -128,22 +128,31 @@ export function kommModul(ctx: KommKontext) {
   /* ---------- komm_berechnen ---------- */
   async function berechnen(wer: unknown, by: string) {
     const rw = await regelwerk();
-    const alle = await festivals(rw);
-    const liste = waehle(alle, wer);
-    if (!liste.length) return { status: 404, body: { error: 'Festival unbekannt', festivals: alle.map(f => f.short_name) } };
+    const liste = waehle(await festivals(rw), wer);
+    if (!liste.length) return { status: 404, body: { error: 'Festival unbekannt', festivals: (await festivals(rw)).map(f => f.short_name) } };
     const heute = ctx.heuteBerlin();
-    const saison = K.saisonStart(alle);
     const ergebnis: Any[] = [];
-    for (const f of liste) {
-      const erg = K.berechne(rw, f, heute, { saison_start: saison });
-      if (!erg.pubs.length) { ergebnis.push({ festival: f.short_name, fehler: 'keine Veröffentlichungen berechnet: ' + (erg.offen || []).join(', ') }); continue; }
-      const { data, error } = await admin.rpc('hh_komm_einspielen', { p_festival: f.short_name, p_event_id: f.event_id, p_pubs: erg.pubs, p_heute: heute });
-      if (error) { ergebnis.push({ festival: f.short_name, fehler: error.message }); continue; }
-      ergebnis.push({ festival: f.short_name, kuerzel: f.kuerzel, berechnet: erg.pubs.length, stunden: K.runde(erg.pubs.reduce((s: number, p: Any) => s + p.stunden, 0), 1),
-        vergangen: erg.vergangen.length, ueberfaellig: K.ueberfaellig(erg.pubs, heute).schritte, termine: { V: f.V, F: f.F, Z: f.Z }, ...(data as Any) });
+    for (const f0 of liste) {
+      /* Dieselbe Sperre wie der Versand. Termine werden erst unter der Sperre gelesen; so schreibt ein späterer Lauf nie
+         ältere Termine über einen neueren (Review 32a, Runde 2, Befunde 1 und 2). */
+      const sperre = `festival:${f0.short_name}`;
+      const sperrVon = await sperren(sperre, 120);
+      if (!sperrVon) { ergebnis.push({ festival: f0.short_name, kuerzel: f0.kuerzel, uebersprungen: 'Versand oder Berechnung läuft gerade; der nächste Lauf holt es nach' }); continue; }
+      try {
+        const alle = await festivals(rw);
+        const f = alle.find(x => x.short_name === f0.short_name);
+        if (!f) { ergebnis.push({ festival: f0.short_name, fehler: 'Festival nicht mehr in der Plattform' }); continue; }
+        const erg = K.berechne(rw, f, heute, { saison_start: K.saisonStart(alle) });
+        if (!erg.pubs.length) { ergebnis.push({ festival: f.short_name, fehler: 'keine Veröffentlichungen berechnet: ' + (erg.offen || []).join(', ') }); continue; }
+        const { data, error } = await admin.rpc('hh_komm_einspielen', { p_festival: f.short_name, p_event_id: f.event_id, p_pubs: erg.pubs, p_heute: heute });
+        if (error) { ergebnis.push({ festival: f.short_name, fehler: error.message }); continue; }
+        ergebnis.push({ festival: f.short_name, kuerzel: f.kuerzel, berechnet: erg.pubs.length, stunden: K.runde(erg.pubs.reduce((s: number, p: Any) => s + p.stunden, 0), 1),
+          vergangen: erg.vergangen.length, ueberfaellig: K.ueberfaellig(erg.pubs, heute).schritte, termine: { V: f.V, F: f.F, Z: f.Z }, ...(data as Any) });
+      } finally { await freigeben(sperre, sperrVon); }
     }
-    const protokoll = await log('komm_berechnen', by, { regelwerk: regelwerkVersion(rw), heute, festivale: ergebnis.filter(e => !e.fehler).map(e => e.festival), ergebnis });
-    return { status: 200, body: { ok: ergebnis.every(e => !e.fehler), heute, regelwerk: regelwerkVersion(rw), ergebnis, protokoll } };
+    const ok = ergebnis.every(e => !e.fehler);
+    const protokoll = await log('komm_berechnen', by, { regelwerk: regelwerkVersion(rw), heute, festivale: ergebnis.filter(e => !e.fehler && !e.uebersprungen).map(e => e.festival), ergebnis });
+    return { status: 200, body: { ok, heute, regelwerk: regelwerkVersion(rw), ergebnis, protokoll } };
   }
 
   /* ---------- komm_list ---------- */
@@ -186,7 +195,10 @@ export function kommModul(ctx: KommKontext) {
       /* Für die Last zählen alle Schritte ab dieser Woche, auch nach dem Veröffentlichungstag (Anzeigenkontrolle,
          Nachbereitung); nicht nur kommende Veröffentlichungen (Review 32a, Befund 3). */
       const mo = K.montag(heute);
-      fuerLast.push({ kuerzel: f.kuerzel, pubs: eigene.filter((p: Any) => p.schritte.some((s: Any) => s.faellig >= mo)), wochen: frisch.wochen });
+      /* Restschritte vergangener Veröffentlichungen, die noch nicht gespeichert sind (erster Lauf nach T; Runde 2, Befund 3). */
+      const gespeicherteIds = new Set(eigene.map((p: Any) => p.id));
+      const rest = (frisch.vergangen_voll || []).filter((p: Any) => !gespeicherteIds.has(p.id));
+      fuerLast.push({ kuerzel: f.kuerzel, pubs: eigene.concat(rest).filter((p: Any) => p.schritte.some((s: Any) => s.faellig >= mo)), wochen: frisch.wochen });
       const ueber = K.ueberfaellig(aktuell, heute);
       const person = bes.je[f.short_name];
       const sendLog = sendJe[f.short_name];
@@ -201,7 +213,9 @@ export function kommModul(ctx: KommKontext) {
       aus.push({
         short_name: f.short_name, kuerzel: f.kuerzel, name: f.name, event_id: f.event_id, V: f.V, F: f.F, Z: f.Z, pruefen: f.pruefen,
         person: person ? { name: person.name, typ: person.typ, status: person.status, bestaetigt_von: person.bestaetigt_von, hat_asana: person.hat_asana } : null,
-        rahmen: sendLog ? { gesendet_am: sendLog.at, url: sendLog.detail.url, von: sendLog.by, neu: sendLog.detail.neu, aktualisiert: sendLog.detail.aktualisiert, weiter: !!sendLog.detail.weiter, fehler: (sendLog.detail.fehler || []).length } : null,
+        rahmen: sendLog ? { gesendet_am: sendLog.at, url: sendLog.detail.url, von: sendLog.by, neu: sendLog.detail.neu, aktualisiert: sendLog.detail.aktualisiert,
+          weiter: !!sendLog.detail.weiter, abgebrochen: sendLog.detail.abgebrochen || null, fehler: (sendLog.detail.fehler || []).length,
+          aufgaben_gesendet: eigene.filter((p: Any) => p.asana_task_gid).length } : null,
         gesendet: eigene.filter((p: Any) => p.gesendet_am).length,
         zu_pruefen: zuPruefen.map(kurzP),
         anzahl: aktuell.length, stunden: K.runde(aktuell.reduce((s: number, p: Any) => s + p.stunden, 0), 1),
@@ -342,6 +356,20 @@ export function kommModul(ctx: KommKontext) {
     const f = waehle(fs, t.festival)[0];
     if (!f || !t.festival || t.festival === 'alle') return { status: 404, body: { error: 'Festival unbekannt; je Festival einzeln senden' } };
     const test = !!t.test;
+    if (!t.vorschau) {
+      if (!ctx.ASANA_TOKEN) return { status: 400, body: { error: 'ASANA_TOKEN fehlt', hinweis: 'Secret in Supabase anlegen, dann erneut senden.' } };
+      if (!test && !t.bestaetigt) return { status: 400, body: { error: 'Senden braucht bestaetigt: true (nach der Vorschau)' } };
+    }
+    /* Eine Sperre je Festival für Versand und Berechnung: gelesen wird erst unter der Sperre, damit eine gleichzeitige
+       Neuberechnung keine Veröffentlichung verändert, die gerade nach Asana geht (Review 32a, Runde 1 Befund 2, Runde 2 Befund 1).
+       Sie hält länger als das Zeitbudget und verfällt von selbst. Die Vorschau liest ohne Sperre. */
+    const sperre = `festival:${f.short_name}`;
+    const sperrVon = t.vorschau ? null : await sperren(sperre, 180);
+    if (!t.vorschau && !sperrVon) return { status: 409, body: { error: 'Für dieses Festival läuft gerade ein Versand oder eine Berechnung; bitte gleich noch einmal.' } };
+    try { return await sendenLesen(t, f, test, von); }
+    finally { if (sperrVon) await freigeben(sperre, sperrVon); }
+  }
+  async function sendenLesen(t: Any, f: Any, test: boolean, von: string) {
     const heute = ctx.heuteBerlin();
     const pubs = (await gespeichert([f.short_name])).filter((p: Any) => K.aktuell(p, heute));
     if (!pubs.length) return { status: 400, body: { error: 'Für dieses Festival ist nichts berechnet; zuerst komm_berechnen' } };
@@ -360,20 +388,17 @@ export function kommModul(ctx: KommKontext) {
     if (!test) for (const a of rahmen.aufgaben) if ((a.vid && gidJe.has(a.vid)) || (a.ids && a.ids.some((i: string) => gidJe.has(i)))) bekannt.add(a.name);
     const saetze = K.versandSaetze(f, rahmen, zust.name + (vertretung ? ' (Leitung Marketing, weil Kommunikation nicht besetzt ist)' : ''), bekannt);
     if (t.vorschau) return { status: 200, body: { ok: true, vorschau: true, saetze, projekt: projektName, aufgaben: rahmen.aufgaben.length, einzeln: rahmen.einzeln, buendel: rahmen.buendel, pruefpunkte: rahmen.pruefpunkte, abschnitte: rahmen.abschnitte, person: zust.name, test } };
-    if (!ctx.ASANA_TOKEN) return { status: 400, body: { error: 'ASANA_TOKEN fehlt', hinweis: 'Secret in Supabase anlegen, dann erneut senden.' } };
-    if (!test && !t.bestaetigt) return { status: 400, body: { error: 'Senden braucht bestaetigt: true (nach der Vorschau)', saetze } };
-    /* Ein Versand je Festival zur Zeit (Review 32a, Befund 2). Die Sperre hält länger als ein Lauf und verfällt von selbst. */
-    const sperre = `send:${test ? 'test' : f.short_name}`;
-    const sperrVon = await sperren(sperre, 180);
-    if (!sperrVon) return { status: 409, body: { error: 'Für dieses Festival läuft gerade ein Versand; bitte gleich noch einmal.' } };
-    try { return await sendenGesperrt(t, f, test, von, zust, vertretung, rahmen, projektName, logWhat, pubs, gidJe, saetze); }
-    finally { await freigeben(sperre, sperrVon); }
+    return await sendenGesperrt(t, f, test, von, zust, vertretung, rahmen, projektName, logWhat, pubs, gidJe, saetze);
+  }
+  async function abbruch(logWhat: string, von: string, f: Any, projekt: string, grund: string) {
+    await log(logWhat, von, { festival: f.short_name, projekt, url: `https://app.asana.com/0/${projekt}`, abgebrochen: grund, neu: 0, aktualisiert: 0, weiter: true, fehler: [grund] });
+    return { status: 502, body: { error: grund, projekt } };
   }
   async function sendenGesperrt(_t: Any, f: Any, test: boolean, von: string, zust: Any, vertretung: boolean, rahmen: Any, projektName: string, logWhat: string, pubs: Any[], gidJe: Map<string, string>, saetze: string[]) {
     const beginn = Date.now();
 
     /* Projekt: Kennung aus dem letzten Versand, sonst Suche nach dem Namen, sonst neu (Eigentum bei der verantwortlichen Person). */
-    const { data: letzter } = await admin.from('komm_log').select('detail').eq('what', logWhat).eq('detail->>festival', f.short_name).not('detail->>projekt', 'is', null).order('at', { ascending: false }).limit(1);
+    const { data: letzter } = await admin.from('komm_log').select('detail').in('what', [logWhat, logWhat + '_projekt']).eq('detail->>festival', f.short_name).not('detail->>projekt', 'is', null).order('at', { ascending: false }).limit(1);
     let projekt: string | null = null;
     try { projekt = await projektFinden(projektName, (letzter || [])[0]?.detail?.projekt || null); }
     catch (e) { return { status: 502, body: { error: 'Projekt nicht erreichbar: ' + String((e as Error).message).slice(0, 200), hinweis: 'Nichts geändert.' } }; }
@@ -387,7 +412,8 @@ export function kommModul(ctx: KommKontext) {
         try { delete daten.owner; projekt = String((await asana('/projects', 'POST', daten)).gid); try { await asana(`/projects/${projekt}`, 'PUT', { owner: zust.asana_gid }); } catch (e2) { fehler.push('Eigentum nicht übertragen: ' + String((e2 as Error).message).slice(0, 160)); } }
         catch (e3) { return { status: 400, body: { error: String((e3 as Error).message), erster_fehler: String((e as Error).message).slice(0, 200), hinweis: 'Projekt nicht angelegt; nichts geändert.' } }; }
       }
-      const ok = await log(logWhat, von, { festival: f.short_name, projekt, url: `https://app.asana.com/0/${projekt}`, schritt: 'Projekt angelegt', neu: 0, aktualisiert: 0 });
+      /* Eigene Protokollart: die Anlage ist kein Versand (Review 32a, Runde 2, Befund 4). */
+      const ok = await log(logWhat + '_projekt', von, { festival: f.short_name, projekt, url: `https://app.asana.com/0/${projekt}`, schritt: 'Projekt angelegt' });
       if (!ok) return { status: 500, body: { error: 'Das Projekt steht in Asana, ließ sich aber nicht protokollieren.', projekt, hinweis: 'Noch keine Aufgabe angelegt. Später erneut senden; das Projekt wird über den Namen gefunden.' } };
       try { await asana(`/projects/${projekt}/addMembers`, 'POST', { members: zust.asana_gid }); } catch (_e) { /* Eigentum genügt */ }
     } else {
@@ -396,7 +422,7 @@ export function kommModul(ctx: KommKontext) {
     /* Abschnitte je Monat, chronologisch; fehlende vor dem nächsten späteren Abschnitt einfügen. */
     let sektionen: Any[] = [];
     try { sektionen = await asana(`/projects/${projekt}/sections?opt_fields=name`); }
-    catch (e) { return { status: 502, body: { error: 'Abschnitte nicht lesbar: ' + String((e as Error).message).slice(0, 160), projekt } }; }
+    catch (e) { return await abbruch(logWhat, von, f, projekt!, 'Abschnitte nicht lesbar: ' + String((e as Error).message).slice(0, 160)); }
     const abschnitt: Record<string, string> = {};
     for (const s of sektionen || []) abschnitt[s.name] = s.gid;
     for (let i = 0; i < rahmen.abschnitte.length; i++) {
@@ -413,7 +439,7 @@ export function kommModul(ctx: KommKontext) {
     /* Aufgaben im Projekt nach Namen (wie launch_send seit v35): ohne gemerkte Kennung wird eine vorhandene weiterverwendet. */
     const imProjekt = new Map<string, string>();
     try { for (const a of await asanaAlle(`/projects/${projekt}/tasks?opt_fields=name&limit=100`)) if (a?.name && !imProjekt.has(norm(a.name))) imProjekt.set(norm(a.name), String(a.gid)); }
-    catch (e) { return { status: 502, body: { error: 'Aufgabenliste nicht lesbar: ' + String((e as Error).message).slice(0, 160), projekt, hinweis: 'Nichts geändert, sonst könnten Aufgaben doppelt entstehen.' } }; }
+    catch (e) { return await abbruch(logWhat, von, f, projekt!, 'Aufgabenliste nicht lesbar: ' + String((e as Error).message).slice(0, 160) + '. Keine Aufgabe angelegt, sonst könnten Aufgaben doppelt entstehen.'); }
 
     let neu = 0, aktualisiert = 0, rest = 0;
     const aufgaben = rahmen.aufgaben.slice().sort((a: Any, b: Any) => (a.due_on < b.due_on ? -1 : a.due_on > b.due_on ? 1 : 0));
@@ -439,13 +465,14 @@ export function kommModul(ctx: KommKontext) {
       }
       if (!test && ids.length) {
         /* Kennung sofort merken, damit ein Abbruch keine Dublette erzeugt; das erste Sendedatum bleibt. */
-        const { error: e1 } = await admin.rpc('hh_komm_gesendet', { p_ids: ids, p_gid: gid });
+        const { data: n1, error: e1 } = await admin.rpc('hh_komm_gesendet', { p_ids: ids, p_gid: gid });
         if (e1) fehler.push(`${a.name}: Aufgabe ${gid} steht in Asana, ließ sich aber nicht merken: ${e1.message}`);
+        else if (Number(n1) !== ids.length) fehler.push(`${a.name}: Aufgabe ${gid} steht in Asana, aber nur ${n1} von ${ids.length} Veröffentlichungen im Haus gefunden`);
         else for (const i of ids) gidJe.set(i, gid);
       }
     }
     const url = `https://app.asana.com/0/${projekt}`;
-    const detail = { festival: f.short_name, projekt, url, neu, aktualisiert, rest, weiter: rest > 0, fehler, person: zust.name, vertretung, aufgaben: rahmen.aufgaben.length, abschnitte: rahmen.abschnitte.length };
+    const detail = { festival: f.short_name, projekt, url, neu, aktualisiert, rest, weiter: rest > 0, abgeschlossen: rest === 0, fehler, person: zust.name, vertretung, aufgaben: rahmen.aufgaben.length, abschnitte: rahmen.abschnitte.length };
     const protokoll = await log(logWhat, von, detail);
     if (!protokoll) fehler.push('Der Versand ließ sich nicht protokollieren (komm_log); die Projektkennung ' + projekt + ' steht nur in dieser Antwort.');
     return { status: 200, body: Object.assign({ ok: true, test, protokoll, saetze }, detail) };

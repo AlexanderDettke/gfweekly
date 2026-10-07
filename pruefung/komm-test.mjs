@@ -192,6 +192,16 @@ console.log('\n10. Wochenlast');
   const bis = K.wochenlast([{ kuerzel: 'LUS', pubs: erg.pubs, wochen: erg.wochen }], STICHTAG, K.plus(LUS.Z, 31));
   /* Die Produktion des Aftermovies zieht Rechenregel 7 in die Vorproduktion vor; nach Z+31 bleiben Freigabe, Posting, Nachbereitung. */
   wahr('ein zu kurzer Horizont schneidet die späten Aftermovie-Schritte ab (deshalb Horizont aus dem letzten Schritt)', bis.reduce((a, w) => a + w.gesamt, 0) < summe - 1 && L[L.length - 1].woche >= K.montag(after.t));
+  /* Erster Lauf nach T: Draußenbande mit VVK 01.10.2026, gerechnet am 07.10.2026. V-START liegt in der Vergangenheit,
+     sein Schritt N2 (Link und Ergebnis dokumentieren) am 08.10. gehört trotzdem zur Last (Review 32a, Runde 2, Befund 3). */
+  const dbd = rw.festivals_2027.find(f => f.id === 'dbd');
+  const DB = { fid: 'dbd', name: 'Draußenbande', ausgabe: 2027, V: '2026-10-01', F: dbd.F, Z: dbd.Z, merkmale: dbd.merkmale };
+  const e2 = K.berechne(rw, DB, '2026-10-07', { saison_start: SAISON });
+  const vs = e2.vergangen_voll.find(p => p.regel_id === 'V-START');
+  wahr('vergangene Veröffentlichung V-START ist nicht in pubs, aber mit Schritten in vergangen_voll', !e2.pubs.some(p => p.regel_id === 'V-START') && !!vs && vs.schritte.some(x => x.schritt_id === 'N2' && x.faellig === '2026-10-08'));
+  const l2 = K.wochenlast([{ kuerzel: 'DB', pubs: e2.pubs.concat(e2.vergangen_voll), wochen: e2.wochen }], '2026-10-07', null);
+  const ohne = K.wochenlast([{ kuerzel: 'DB', pubs: e2.pubs, wochen: e2.wochen }], '2026-10-07', null);
+  wahr('mit den Restschritten ist die Last dieser Woche höher', l2[0].gesamt > ohne[0].gesamt);
   gleich('Wörter für Stellen', [K.stellenWort(30), K.stellenWort(70), K.stellenWort(151)], ['bis eine Stelle', 'bis zwei Stellen', 'über vier Stellen']);
 }
 

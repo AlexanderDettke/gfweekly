@@ -194,11 +194,12 @@
     const vz = pubs.map((p, i) => ({ p, i })).filter(o => SAISON && o.p.T >= SAISON && ['M', 'P', 'L'].includes(o.p.regel.klasse))
       .sort((a, b) => (a.p.T < b.p.T ? -1 : a.p.T > b.p.T ? 1 : a.i - b.i));
     const rang = new Map(vz.map((o, i) => [o.p.regel.id + '|' + o.p.T, i]));
+    /* Vergangene Veröffentlichungen werden nicht nachgeholt, ihre Schritte aber mitgerechnet: was nach T noch läuft
+       (Anzeigenkontrolle, Nachbereitung), gehört zur Wochenlast (Review 32a, Runde 2, Befund 3). */
     const vergangen = pubs.filter(p => (p.T < heute && p.regel.id !== 'V-SHOP') || (p.regel.id === 'V-SHOP' && V < heute));
     const vergSet = new Set(vergangen);
-    pubs = pubs.filter(p => !vergSet.has(p));
     pubs.sort((a, b) => (a.T < b.T ? -1 : a.T > b.T ? 1 : (a.regel.id < b.regel.id ? -1 : a.regel.id > b.regel.id ? 1 : 0)));
-    const aus = [];
+    const aus = [], ausVergangen = [];
     for (const p of pubs) {
       const r = p.regel, T = p.T, kl = r.klasse, kanal = r.kanal || '';
       const bez = r.bezug + ((r.bezug === 'P' || r.bezug === 'S-NL' || r.id === 'SLOT' || r.id === 'PRUEF') ? String(p.nr) : '');
@@ -244,7 +245,7 @@
       const partnerfaehig = r.id === 'SLOT' ? info.partnerThemen.has(r.thema) : !!r.partnerfaehig;
       const vorlaeufig = !!(festival.pruefen && ['F', 'Z', 'R', 'P'].includes(r.bezug));
       const ff = r.fachfreigabe || 'KOM';
-      aus.push({
+      (vergSet.has(p) ? ausVergangen : aus).push({
         id, regel_id: r.id, titel: r.titel, kanal, klasse: kl, thema: thema || null, bezug: r.bezug, abstand: r.abstand || 0, nr: p.nr, t: T,
         vorlaeufig, pflicht: r.id !== 'SLOT', partnerfaehig,
         briefing: { zielgruppe: r.zielgruppe || null, zweck: r.zweck || null, inhalt: r.inhalt || null, fachfreigabe: ff, faktenquelle: FAKTENQUELLE[ff] || FAKTENQUELLE.KOM,
@@ -270,7 +271,7 @@
       wochen.push({ id: `${festival.fid}-${festival.ausgabe}-${wa.id}`, regel_id: wa.id, titel: wa.titel, rolle: wa.rolle, werkzeug: wa.werkzeug || null,
         von: grenzen[0][1], bis: grenzen[grenzen.length - 1][2], teile });
     }
-    return { pubs: aus, vergangen: vergangen.map(p => ({ regel_id: p.regel.id, t: p.T })), wochen, offen };
+    return { pubs: aus, vergangen: vergangen.map(p => ({ regel_id: p.regel.id, t: p.T })), vergangen_voll: ausVergangen, wochen, offen };
   }
   function themaZurRegel(rw, regelId) {
     const t = (rw.themenbibliothek || []).find(x => (x.regeln || []).includes(regelId));
