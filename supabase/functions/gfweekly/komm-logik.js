@@ -454,9 +454,16 @@
      Frei ist eine Zelle ohne Inhalt und ohne fremden Hinweis, oder eine eigene (Hinweis beginnt mit komm:), deren Inhalt
      noch genau dem entspricht, was wir geschrieben haben (Zeile „Inhalt:“ im Hinweis). Hat jemand eine eigene Zelle
      geändert, gilt sie als fremd (Review 32a, Runde 3, Befund 4). */
-  function zelleFrei(roh, notiz) {
+  function zelleFrei(roh, notiz, datum) {
     const n = String(notiz || ''), r = String(roh ?? '');
-    if (/^komm:/.test(n)) { const m = /\nInhalt: (.*)$/m.exec(n); return !m || m[1] === r; }
+    if (/^komm:/.test(n)) {
+      /* Nur ein vollständiger eigener Hinweis gilt: Kennung mit Datum (passend zur Spalte, wenn bekannt) und Inhaltszeile,
+         die genau dem Zellinhalt entspricht. Unvollständige Hinweise sind ein Konflikt (Review 32d, Befund 1). */
+      const m = /^komm:fix-(\d{4}-\d{2}-\d{2})\nInhalt: (.*)\n/.exec(n);
+      if (!m) return false;
+      if (datum && m[1] !== datum) return false;
+      return m[2] === r;
+    }
     return !r.length && !n.trim();
   }
   function zellNotiz(x) { return `${x.notiz}\nInhalt: ${x.text}\nAus dem Hohen Haus (Fixtermine), wird täglich abgeglichen.`; }

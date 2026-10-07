@@ -255,7 +255,7 @@ export function kommModul(ctx: KommKontext) {
       verbund: { stichtag: rw.verbund_2027?.stichtag_vorproduktion, fenster: rw.verbund_2027?.vorproduktion_fenster_tage, gaesteinfos: rw.verbund_2027?.stichtag_gaesteinfos_freigegeben, saison_start: saison },
       asana: { konfiguriert: !!ctx.ASANA_TOKEN },
       tabelle: { konfiguriert: !!Deno.env.get(DIENSTKONTO_SECRET), letzter: tabelle ? { at: tabelle.at, by: tabelle.by, ergebnis: tabelle.detail?.ergebnis || null, geschrieben: tabelle.detail?.geschrieben ?? null, fremd: (tabelle.detail?.fremd || []).length } : null },
-      hinweise: logs.filter((l: Any) => l.what === 'komm_hinweis' || l.what === 'komm_rueckfall').slice(0, 30).map((l: Any) => ({ at: l.at, what: l.what, detail: l.detail })),
+      hinweise: logs.filter((l: Any) => l.what === 'komm_hinweis' || l.what === 'komm_hinweis_offen' || l.what === 'komm_rueckfall').slice(0, 30).map((l: Any) => ({ at: l.at, what: l.what, detail: l.detail })),
       log: logs.filter((l: Any) => ['komm_berechnen', 'komm_send', 'komm_send_test', 'komm_pruefpunkt_set', 'komm_tabelle_sync', 'komm_test_aufraeumen'].includes(l.what)).slice(0, 40)
         .map((l: Any) => ({ at: l.at, what: l.what, by: l.by, kurz: kurzLog(l) })),
     };
@@ -642,28 +642,39 @@ export function kommModul(ctx: KommKontext) {
   }
 
   async function tabelleSync(t: Any, by: string) {
-    const rw = await regelwerk();
-    const fs = await festivals(rw);
-    const heute = ctx.heuteBerlin();
-    const wahl = (t.festival && t.festival !== 'alle') ? waehle(fs, t.festival) : fs;
-    if (!wahl.length) return { status: 404, body: { error: 'Festival unbekannt' } };
-    const saison = K.saisonStart(fs);
-    const ber: Record<string, Any[]> = {};
-    for (const f of fs) ber[f.short_name] = K.berechne(rw, f, heute, { saison_start: saison }).pubs;
-    const alleTermine = K.fixtermine(rw, fs, ber);
-    const wahlFid = new Set(wahl.map(f => f.fid));
-    const betrifft = (x: Any) => wahl.length === fs.length || x.eintraege.some((e: Any) => wahlFid.has(String(e.id).split('-')[0]));
-    const termine = alleTermine.filter(betrifft);
     if (!Deno.env.get(DIENSTKONTO_SECRET)) {
+      const { termine } = await tabelleTermine(t);
+      if (!termine) return { status: 404, body: { error: 'Festival unbekannt' } };
       const ergebnis = 'nicht konfiguriert';
       const protokoll = await log('komm_tabelle_sync', by, { ergebnis, fehlt: DIENSTKONTO_SECRET, zellen: termine.length, festival: t.festival || 'alle' });
       return { status: 200, body: { ok: false, konfiguriert: false, fehlt: DIENSTKONTO_SECRET, hinweis: 'Dienstkonto im Google-Cloud-Projekt „Wilde Habitate Kalender“ anlegen, Sheets API aktivieren, Schlüssel als Secret eintragen und die Tabelle mit dem Dienstkonto teilen.',
         zellen: termine.length, vorschau: termine.slice(0, 12).map((x: Any) => ({ datum: x.datum, text: x.text })), protokoll } };
     }
+    /* Erst die Sperre, dann Termine lesen und den Schreibplan bilden: ein älterer Lauf schreibt so nie veraltete Termine
+       über einen neueren (Review 32d, Befund 3). */
     const sperrVon = await sperren('tabelle', 120);
     if (!sperrVon) return { status: 409, body: { error: 'Der Abgleich der Redaktionstabelle läuft gerade.' } };
-    try { return await tabelleGesperrt(t, by, fs, wahl, termine); }
-    finally { await freigeben('tabelle', sperrVon); }
+    try {
+      const { termine, fs, wahl } = await tabelleTermine(t);
+      if (!termine) return { status: 404, body: { error: 'Festival unbekannt' } };
+      return await tabelleGesperrt(t, by, fs!, wahl!, termine);
+    } finally { await freigeben('tabelle', sperrVon); }
+  }
+  /* Fixtermine aus den aktuellen Plattformterminen. Prüfpunkte unabhängig vom heutigen Tag: vergangene bleiben in der
+     Tabelle, solange es sie gibt (Review 32d, Befund 5). */
+  async function tabelleTermine(t: Any) {
+    const rw = await regelwerk();
+    const fs = await festivals(rw);
+    const heute = ctx.heuteBerlin();
+    const wahl = (t.festival && t.festival !== 'alle') ? waehle(fs, t.festival) : fs;
+    if (!wahl.length) return { termine: null };
+    const saison = K.saisonStart(fs);
+    const ber: Record<string, Any[]> = {};
+    for (const f of fs) { const e = K.berechne(rw, f, heute, { saison_start: saison }); ber[f.short_name] = e.pubs.concat(e.vergangen_voll || []); }
+    const alleTermine = K.fixtermine(rw, fs, ber);
+    const wahlFid = new Set(wahl.map(f => f.fid));
+    const betrifft = (x: Any) => wahl.length === fs.length || x.eintraege.some((e: Any) => wahlFid.has(String(e.id).split('-')[0]));
+    return { termine: alleTermine.filter(betrifft), fs, wahl };
   }
   async function tabelleGesperrt(t: Any, by: string, fs: Any[], wahl: Any[], termine: Any[]) {
     const token = await googleToken();
@@ -680,53 +691,82 @@ export function kommModul(ctx: KommKontext) {
     let zeilen = await lesen();
     const kopf = (zeilen[1]?.values || []).slice(0, SHEET_ERSTE_SPALTE).map(zellText).join(' ');
     if (!/fixtermin/i.test(kopf)) return { status: 409, body: { error: `Zeile ${SHEET_ZEILE} trägt nicht „Fixtermine & Meilensteine“ (gefunden: „${kopf.slice(0, 80)}“); Aufbau geändert, nichts geschrieben` } };
-    /* F5: Freigabe Alex 06.10.2026, Kalender ab 01.10.2026. Nur die bekannte alte Formel wird ersetzt. */
+    /* F5: Freigabe Alex 06.10.2026, Kalender ab 01.10.2026. Genau einmal und nur aus der bekannten alten Formel
+       (Review 32d, Befund 4). Wird F5 nach der Umstellung zurückgestellt, bleibt es so und steht als Konflikt im Bericht. */
     const f5 = zeilen[0]?.values?.[SHEET_ERSTE_SPALTE]?.userEnteredValue?.formulaValue || '';
-    let f5Ergebnis = 'unverändert';
-    if (f5.replace(/\s/g, '').toUpperCase() !== SHEET_START_FORMEL) {
-      if (f5.replace(/\s/g, '').toUpperCase() === SHEET_ALT_FORMEL.toUpperCase() && !t.trocken) {
-        await sheets(token, ':batchUpdate', 'POST', { requests: [{ updateCells: { start: { sheetId, rowIndex: SHEET_DATUMSZEILE - 1, columnIndex: SHEET_ERSTE_SPALTE },
-          rows: [{ values: [{ userEnteredValue: { formulaValue: SHEET_START_FORMEL } }] }], fields: 'userEnteredValue' } }] });
-        await log('komm_tabelle_f5', by, { vorher: f5, nachher: SHEET_START_FORMEL });
-        f5Ergebnis = `von ${f5} auf ${SHEET_START_FORMEL}`;
-        zeilen = await lesen();
-      } else f5Ergebnis = t.trocken ? `würde ${f5} auf ${SHEET_START_FORMEL} setzen` : `F5 trägt „${f5}“, nicht die erwartete Formel; nicht geändert`;
+    const f5n = f5.replace(/\s/g, '').toUpperCase();
+    const { data: f5Log } = await admin.from('komm_log').select('id').eq('what', 'komm_tabelle_f5').limit(1);
+    const f5Erledigt = (f5Log || []).length > 0;
+    let f5Ergebnis = 'unverändert', konflikt: string[] = [];
+    if (f5n !== SHEET_START_FORMEL) {
+      if (f5n === SHEET_ALT_FORMEL.toUpperCase() && !f5Erledigt && !t.trocken) {
+        const frisch = (await lesen())[0]?.values?.[SHEET_ERSTE_SPALTE]?.userEnteredValue?.formulaValue || '';
+        if (frisch !== f5) { f5Ergebnis = 'F5 hat sich während des Abgleichs geändert; nicht geändert'; konflikt.push(f5Ergebnis); }
+        else {
+          await sheets(token, ':batchUpdate', 'POST', { requests: [{ updateCells: { start: { sheetId, rowIndex: SHEET_DATUMSZEILE - 1, columnIndex: SHEET_ERSTE_SPALTE },
+            rows: [{ values: [{ userEnteredValue: { formulaValue: SHEET_START_FORMEL } }] }], fields: 'userEnteredValue' } }] });
+          await log('komm_tabelle_f5', by, { vorher: f5, nachher: SHEET_START_FORMEL });
+          f5Ergebnis = `von ${f5} auf ${SHEET_START_FORMEL}`;
+          zeilen = await lesen();
+        }
+      } else if (f5Erledigt) { f5Ergebnis = `F5 trägt „${f5}“, obwohl es schon einmal umgestellt wurde; bleibt so (Rückstellung durch die Redaktion?)`; konflikt.push(f5Ergebnis); }
+      else f5Ergebnis = t.trocken ? `würde ${f5} auf ${SHEET_START_FORMEL} setzen` : `F5 trägt „${f5}“, nicht die erwartete Formel; nicht geändert`;
     }
-    const datumZu = new Map<string, number>();
-    (zeilen[0]?.values || []).forEach((c: Any, i: number) => { const n = c?.effectiveValue?.numberValue; if (i >= SHEET_ERSTE_SPALTE && typeof n === 'number') datumZu.set(serienDatum(n), i); });
+    const plan = planen(zeilen, termine, wahl.length === fs.length);
+    /* Unmittelbar vor dem Schreiben frisch lesen und nur Zellen schreiben, die seit der Planung unverändert sind
+       (Review 32d, Befund 2). Die Sheets-API kennt kein bedingtes Schreiben; ein Rest zwischen dieser Prüfung und dem
+       Schreiben (Sekundenbruchteile) bleibt und ist im Technikstand benannt. */
+    let anfragen: Any[] = [];
+    if (plan.anfragen.length && !t.trocken) {
+      const jetzt = (await lesen())[1]?.values || [];
+      for (const r of plan.anfragen) {
+        const i = r.spalte, vorher = plan.zeile6[i] || {}, nun = jetzt[i] || {};
+        if (zellRoh(vorher) !== zellRoh(nun) || String(vorher.note || '') !== String(nun.note || '')) { plan.fremd.push({ zelle: `${K.spaltenName(i)}${SHEET_ZEILE}`, datum: r.datum, vorhanden: zellText(nun).slice(0, 80), soll: r.text, grund: 'während des Abgleichs geändert' }); continue; }
+        anfragen.push({ updateCells: { start: { sheetId, rowIndex: SHEET_ZEILE - 1, columnIndex: i }, rows: [{ values: [r.wert] }], fields: 'userEnteredValue,note' } });
+      }
+      if (anfragen.length) await sheets(token, ':batchUpdate', 'POST', { requests: anfragen });
+    } else anfragen = plan.anfragen;
+    const geleert = t.trocken ? 0 : anfragen.filter((a: Any) => !a.updateCells?.rows?.[0]?.values?.[0]?.userEnteredValue && a.updateCells).length;
+    const unvollstaendig = !plan.reichtBis || plan.reichtBis < '2027-12-31' || plan.doppelt.length > 0 || plan.ausserhalb.length > 0;
+    const ergebnis = t.trocken ? 'Trockenlauf' : (unvollstaendig ? 'geschrieben, unvollständig' : 'geschrieben');
+    const detail = { ergebnis, festival: t.festival || 'alle', f5: f5Ergebnis, konflikt, geschrieben: t.trocken ? 0 : anfragen.length - geleert, geleert, geplant: plan.anfragen.length,
+      unveraendert: plan.unveraendert, fremd: plan.fremd, ausserhalb: plan.ausserhalb, doppelte_daten: plan.doppelt, spalten_bis: plan.reichtBis, reicht_bis_2027: !!plan.reichtBis && plan.reichtBis >= '2027-12-31' };
+    const protokoll = await log('komm_tabelle_sync', by, detail);
+    return { status: 200, body: Object.assign({ ok: !unvollstaendig && !konflikt.length, konfiguriert: true, protokoll }, detail) };
+  }
+  /* Schreibplan aus gelesenen Zeilen 5 und 6: Spalte je Datum aus den tatsächlichen Datumswerten (doppelte Daten werden
+     nicht beschrieben), eigene Zellen nur mit vollständigem Nachweis (Review 32d, Befund 1). */
+  function planen(zeilen: Any[], termine: Any[], voll: boolean) {
+    const datumZu = new Map<string, number>(), doppelt: string[] = [];
+    (zeilen[0]?.values || []).forEach((c: Any, i: number) => {
+      const n = c?.effectiveValue?.numberValue; if (i < SHEET_ERSTE_SPALTE || typeof n !== 'number') return;
+      const d = serienDatum(n); if (datumZu.has(d)) { doppelt.push(d); return; } datumZu.set(d, i);
+    });
+    for (const d of doppelt) datumZu.delete(d);
     const tage = Array.from(datumZu.keys()).sort();
     const reichtBis = tage[tage.length - 1] || null;
     const zeile6 = zeilen[1]?.values || [];
-    const anfragen: Any[] = [];
-    const fremd: Any[] = [], ausserhalb: Any[] = [];
+    const anfragen: Any[] = [], fremd: Any[] = [], ausserhalb: Any[] = [];
     let unveraendert = 0;
     const soll = new Map(termine.map((x: Any) => [x.datum, x]));
     for (const x of termine) {
       const i = datumZu.get(x.datum);
-      if (i === undefined) { ausserhalb.push({ datum: x.datum, text: x.text }); continue; }
+      if (i === undefined) { ausserhalb.push({ datum: x.datum, text: x.text, grund: doppelt.includes(x.datum) ? 'Datum steht mehrfach in Zeile 5' : 'Datum nicht in Zeile 5' }); continue; }
       const c = zeile6[i] || {};
-      if (!K.zelleFrei(zellRoh(c), c.note)) { fremd.push({ zelle: `${K.spaltenName(i)}${SHEET_ZEILE}`, datum: x.datum, vorhanden: zellText(c).slice(0, 80), soll: x.text }); continue; }
+      if (!K.zelleFrei(zellRoh(c), c.note, x.datum)) { fremd.push({ zelle: `${K.spaltenName(i)}${SHEET_ZEILE}`, datum: x.datum, vorhanden: zellText(c).slice(0, 80), soll: x.text }); continue; }
       const notiz = K.zellNotiz(x);
       if (zellRoh(c) === x.text && c.note === notiz) { unveraendert++; continue; }
-      anfragen.push({ updateCells: { start: { sheetId, rowIndex: SHEET_ZEILE - 1, columnIndex: i }, rows: [{ values: [{ userEnteredValue: { stringValue: x.text }, note: notiz }] }], fields: 'userEnteredValue,note' } });
+      anfragen.push({ spalte: i, datum: x.datum, text: x.text, wert: { userEnteredValue: { stringValue: x.text }, note: notiz } });
     }
-    /* Eigene Zellen, deren Termin es nicht mehr gibt, leeren (nur bei vollem Lauf; nur mit Kennung komm:). */
-    let geleert = 0;
-    if (wahl.length === fs.length) {
-      zeile6.forEach((c: Any, i: number) => {
-        if (i < SHEET_ERSTE_SPALTE || !/^komm:/.test(String(c?.note || '')) || !K.zelleFrei(zellRoh(c), c.note)) return;
-        const d = Array.from(datumZu.entries()).find(([, j]) => j === i)?.[0];
-        if (d && soll.has(d)) return;
-        anfragen.push({ updateCells: { start: { sheetId, rowIndex: SHEET_ZEILE - 1, columnIndex: i }, rows: [{ values: [{}] }], fields: 'userEnteredValue,note' } });
-        geleert++;
-      });
+    /* Eigene Zellen, deren Termin es nicht mehr gibt, leeren: nur bei vollem Lauf und nur mit vollständigem Nachweis. */
+    if (voll) {
+      for (const [d, i] of datumZu.entries()) {
+        const c = zeile6[i] || {};
+        if (!/^komm:/.test(String(c?.note || '')) || soll.has(d) || !K.zelleFrei(zellRoh(c), c.note, d)) continue;
+        anfragen.push({ spalte: i, datum: d, text: '', wert: {} });
+      }
     }
-    if (anfragen.length && !t.trocken) await sheets(token, ':batchUpdate', 'POST', { requests: anfragen });
-    const ergebnis = t.trocken ? 'Trockenlauf' : 'geschrieben';
-    const detail = { ergebnis, festival: t.festival || 'alle', f5: f5Ergebnis, geschrieben: t.trocken ? 0 : anfragen.length - geleert, geleert: t.trocken ? 0 : geleert, geplant: anfragen.length,
-      unveraendert, fremd, ausserhalb, spalten_bis: reichtBis, reicht_bis_2027: !!reichtBis && reichtBis >= '2027-12-31' };
-    const protokoll = await log('komm_tabelle_sync', by, detail);
-    return { status: 200, body: Object.assign({ ok: true, konfiguriert: true, protokoll }, detail) };
+    return { anfragen, fremd, ausserhalb, unveraendert, zeile6, reichtBis, doppelt };
   }
 
   /* ---------- Partner-Slots (32e) ---------- */
@@ -795,18 +835,27 @@ export function kommModul(ctx: KommKontext) {
         else if ((data || []).length) { await log('komm_rueckfall', 'Zeitplan', { ids: (data || []).map((x: Any) => x.id) }); bericht.push(`${(data || []).length} an die Redaktion zurück`); }
       }
       if (ent.hinweis.length) {
-        const { data: schon } = await admin.from('komm_log').select('detail').eq('what', 'komm_hinweis').in('detail->>id', ent.hinweis);
-        const gemeldet = new Set((schon || []).map((l: Any) => l.detail?.id));
-        for (const id of ent.hinweis.filter((i: string) => !gemeldet.has(i))) {
-          const p = zeilen.find((x: Any) => x.id === id);
-          let asanaOk = false;
-          if (p?.asana_task_gid && ctx.ASANA_TOKEN) {
-            try { await asana(`/tasks/${p.asana_task_gid}/stories`, 'POST', { text: `Hinweis aus dem Hohen Haus: Für „${p.titel}“ am ${K.kurz(p.t)} liegt eine Abgabe eines Partners vor, die Freigabe fehlt noch. Bitte im Habitat Hub freigeben oder Korrektur anfordern.` }); asanaOk = true; }
-            catch (e) { bericht.push('Hinweis an Asana: ' + String((e as Error).message).slice(0, 120)); }
+        /* Unter einer Sperre und nur bestätigte Zustellungen entdoppeln: ein fehlgeschlagener Versuch wird beim nächsten
+           Tick wiederholt, zwei gleichzeitige Ticks schicken nichts doppelt (Review 32e, Befunde 1 und 2). */
+        const hv = await sperren('hinweise', 120);
+        if (!hv) bericht.push('Hinweise: ein anderer Lauf ist dabei');
+        else try {
+          const { data: schon, error: se } = await admin.from('komm_log').select('detail').eq('what', 'komm_hinweis').in('detail->>id', ent.hinweis);
+          if (se) throw se;
+          const gemeldet = new Set((schon || []).filter((l: Any) => l.detail?.asana === true).map((l: Any) => l.detail?.id));
+          let zugestellt = 0, offen = 0;
+          for (const id of ent.hinweis.filter((i: string) => !gemeldet.has(i))) {
+            const p = zeilen.find((x: Any) => x.id === id);
+            if (!p?.asana_task_gid || !ctx.ASANA_TOKEN) { offen++; await log('komm_hinweis_offen', 'Zeitplan', { id, festival: p?.festival_short, titel: p?.titel, t: p?.t, grund: 'keine Asana-Aufgabe' }); continue; }
+            try {
+              await asana(`/tasks/${p.asana_task_gid}/stories`, 'POST', { text: `Hinweis aus dem Hohen Haus: Für „${p.titel}“ am ${K.kurz(p.t)} liegt eine Abgabe eines Partners vor, die Freigabe fehlt noch. Bitte im Habitat Hub freigeben oder Korrektur anfordern.` });
+              const ok = await log('komm_hinweis', 'Zeitplan', { id, festival: p.festival_short, titel: p.titel, t: p.t, asana: true });
+              if (!ok) bericht.push(`Hinweis zu ${id} zugestellt, aber nicht protokolliert`);
+              zugestellt++;
+            } catch (e) { offen++; await log('komm_hinweis_offen', 'Zeitplan', { id, festival: p.festival_short, titel: p.titel, t: p.t, grund: String((e as Error).message).slice(0, 160) }); }
           }
-          await log('komm_hinweis', 'Zeitplan', { id, festival: p?.festival_short, titel: p?.titel, t: p?.t, asana: asanaOk });
-        }
-        bericht.push(`${ent.hinweis.length - gemeldet.size} Hinweise zu Abgaben ohne Freigabe`);
+          bericht.push(`${zugestellt} Hinweise zugestellt, ${offen} offen (nächster Tick versucht es erneut)`);
+        } finally { await freigeben('hinweise', hv); }
       }
     } catch (e) { bericht.push('Partner-Slots: ' + String((e as Error).message).slice(0, 160)); }
     try {

@@ -156,6 +156,9 @@ console.log('\n7. Fixtermine für die Redaktionstabelle');
   const eigen = K.zellNotiz({ notiz: 'komm:fix-2027-07-23', text: 'LUS F' });
   gleich('Zelle frei: leer oder unverändert von uns', [K.zelleFrei('', ''), K.zelleFrei('LUS F', eigen), K.zelleFrei('Christians Eintrag', ''), K.zelleFrei('', 'Notiz von Christian')], [true, true, false, false]);
   gleich('fremde Formel mit leerem Ergebnis ist nicht frei', K.zelleFrei('=""', ''), false);
+  gleich('eigene Kennung ohne Inhaltszeile ist ein Konflikt', K.zelleFrei('=""', 'komm:fix-2027-07-23'), false);
+  gleich('eigener Hinweis mit anderem Datum als die Spalte ist ein Konflikt', K.zelleFrei('LUS F', eigen, '2027-07-24'), false);
+  gleich('eigener Hinweis mit passendem Datum ist frei', K.zelleFrei('LUS F', eigen, '2027-07-23'), true);
   gleich('eigene Zelle, von Hand geändert, ist fremd', K.zelleFrei('LUS F, Aufbau ab 15.07.', eigen), false);
 }
 

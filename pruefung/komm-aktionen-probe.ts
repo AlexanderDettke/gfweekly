@@ -150,7 +150,7 @@ function asanaFake(methode: string, url: URL, body: any) {
   return asanaAntwort(400, { errors: [{ message: 'nicht nachgebaut: ' + methode + ' ' + pfad }] });
 }
 /* Sheets: Zeilen 1 bis 7, Spalten A bis ..., Zeile 5 Datum per Formel, Zeile 6 Fixtermine. */
-const S = { spalten: 740, f5: '=DATE($B$2,1,1)', zeile6: new Map<number, any>(), schreibe: [] as any[], token: 0 };
+const S = { spalten: 740, f5: '=DATE($B$2,1,1)', zeile6: new Map<number, any>(), schreibe: [] as any[], token: 0, gelesen: 0, nachLesen: null as null | ((n: number) => void) };
 const serie = (iso: string) => Math.round((Date.parse(iso + 'T00:00:00Z') - Date.parse('1899-12-30T00:00:00Z')) / 86400000);
 const isoPlus = (iso: string, n: number) => new Date(Date.parse(iso + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 const startDatum = () => S.f5 === '=DATE(2026,10,1)' ? '2026-10-01' : (S.f5 === '=DATE($B$2,1,1)' ? '2027-01-01' : '2027-01-01');
@@ -161,6 +161,7 @@ function sheetsFake(methode: string, url: URL, body: any) {
   if (url.hostname === 'oauth2.googleapis.com') { S.token++; return asanaAntwort(200, { access_token: 'tok' + S.token, expires_in: 3600 }); }
   if (methode === 'GET' && url.searchParams.get('fields')?.startsWith('sheets(properties')) return asanaAntwort(200, { sheets: [{ properties: { sheetId: 7, title: 'Contentplan', gridProperties: { columnCount: S.spalten, rowCount: 60 } } }] });
   if (methode === 'GET') {
+    S.gelesen++; if (S.nachLesen) S.nachLesen(S.gelesen);
     const r5 = [], r6 = [];
     for (let i = 0; i < S.spalten; i++) {
       if (i === 5) r5.push({ userEnteredValue: { formulaValue: S.f5 }, effectiveValue: { numberValue: serie(spalteDatum(5)) } });
@@ -434,6 +435,7 @@ wahr('Trockenlauf schreibt nichts, auch F5 nicht', tr.body.ergebnis === 'Trocken
 const ts = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
 gleich('F5 auf =DATE(2026,10,1) gesetzt', S.f5, '=DATE(2026,10,1)');
 wahr('geschrieben nur in Zeile 6 und F5', S.schreibe.every(w => w.zeile === 6 || (w.zeile === 5 && w.spalte === 5)) && S.schreibe.filter(w => w.zeile === 5).length === 1);
+wahr('Feldmasken nur Wert und Hinweis (keine Auswahllisten, keine Formate)', S.schreibe.every(w => w.felder === 'userEnteredValue,note' || (w.zeile === 5 && w.felder === 'userEnteredValue')));
 gleich('fremde Zellen nicht überschrieben, gemeldet', [S.zeile6.get(spalteVon('2026-10-15')).userEnteredValue.stringValue, S.zeile6.get(spalteVon('2027-06-15')).userEnteredValue.formulaValue, ts.body.fremd.map((x: any) => x.datum)], ['Takeover Christian', '=""', ['2026-10-15', '2027-06-15']]);
 const lus = S.zeile6.get(spalteVon('2027-07-23'));
 wahr('Lusatia öffnet am 23.07.2027: Text und Kennung im Hinweis', lus?.userEnteredValue?.stringValue === 'LUS F' && /^komm:fix-2027-07-23/.test(lus.note));
@@ -453,6 +455,63 @@ wahr('verschobener Termin: alte eigene Zelle geleert, neuer Tag gesetzt', !S.zei
 FESTE[0].starts_on = '2027-07-23'; FESTE[0].ends_on = '2027-07-25';
 const sperrTest = await Promise.all([ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' }), ruf('komm_tabelle_sync', { festival: 'alle', by: 'Lea' })]);
 gleich('zwei gleichzeitige Abgleiche: einer 409', sperrTest.map(r => r.status).sort(), [200, 409]);
+
+
+console.log('\n14. Tabelle und Hinweise nach den Reviews 32d und 32e');
+{
+  /* Eigene Kennung ohne Inhaltszeile: Konflikt, nicht überschreiben. */
+  zelle6(spalteVon('2027-08-06'), { formulaValue: '=A1' }, 'komm:fix-2027-08-06');
+  const r1 = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+  wahr('unvollständiger eigener Hinweis: Zelle bleibt, als fremd gemeldet', S.zeile6.get(spalteVon('2027-08-06')).userEnteredValue.formulaValue === '=A1' && r1.body.fremd.some((x: any) => x.datum === '2027-08-06'));
+  /* Änderung zwischen Lesen und Schreiben: frisch gelesen, Zelle nicht überschrieben. */
+  zelle6(spalteVon('2027-08-06'), undefined, undefined);
+  const zielSpalte = spalteVon('2027-08-06'), start = S.gelesen;
+  S.nachLesen = (n) => { if (n === start + 2) zelle6(zielSpalte, { stringValue: 'Christian tippt gerade' }); };
+  const r2 = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+  S.nachLesen = null;
+  wahr('Änderung während des Abgleichs: nicht überschrieben, gemeldet', S.zeile6.get(zielSpalte).userEnteredValue.stringValue === 'Christian tippt gerade' && r2.body.fremd.some((x: any) => x.datum === '2027-08-06' && x.grund), JSON.stringify(r2.body.fremd.slice(-2)));
+  /* Laufender Abgleich hält die Sperre: ein zweiter liest gar nicht erst. */
+  await q(`select public.hh_komm_sperre('tabelle', 60, 'fremd')`);
+  const vorher = S.gelesen;
+  const r3 = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Lea' });
+  await q(`select public.hh_komm_frei('tabelle', 'fremd')`);
+  gleich('gesperrt: 409 ohne Lesen der Tabelle', [r3.status, S.gelesen - vorher], [409, 0]);
+  /* F5 nur einmal: nach Rückstellung durch die Redaktion bleibt es und steht als Konflikt im Bericht. */
+  S.f5 = '=DATE($B$2,1,1)';
+  const r4 = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+  wahr('zurückgestelltes F5 bleibt, Konflikt gemeldet', S.f5 === '=DATE($B$2,1,1)' && r4.body.konflikt.length === 1 && r4.body.ok === false, JSON.stringify(r4.body.konflikt));
+  S.f5 = '=DATE(2026,10,1)';
+  /* Vergangene Prüfpunkte bleiben: Lauf nach dem Prüfpunkt am 08.06.2027. */
+  HEUTE = '2027-06-09';
+  await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+  HEUTE = '2026-10-07';
+  wahr('Prüfpunkt Lusatia am 08.06.2027 steht nach dem Tag weiter in der Tabelle', (S.zeile6.get(spalteVon('2027-06-08'))?.userEnteredValue?.stringValue || '').includes('LUS Prüfpunkt'));
+}
+{
+  /* Hinweise: fehlgeschlagene Zustellung wird wiederholt, gleichzeitige Ticks schicken nicht doppelt. */
+  const k = (await q(`select id, t, asana_task_gid from komm_veroeffentlichungen where partnerfaehig and festival_short = 'LUSRD27' and t > '2026-12-01' and asana_task_gid is not null order by t limit 1`))[0];
+  await q(`update komm_veroeffentlichungen set partner_uebernommen_am = now(), partner_name = 'Kollektiv', abgabe_am = now(), freigabe_status = 'offen' where id = $1`, [k.id]);
+  HEUTE = isoPlus(k.t, -2);
+  A.stoerung.push({ methode: 'POST', muster: /\/stories$/, status: 503, text: 'Probe: Asana nicht erreichbar' });
+  const vorher = A.stories.filter(x => x.task === k.asana_task_gid).length;
+  await K.tick();
+  gleich('Zustellung gescheitert: kein Kommentar, als offen protokolliert', [A.stories.filter(x => x.task === k.asana_task_gid).length - vorher, (await q(`select count(*)::int n from komm_log where what = 'komm_hinweis_offen' and detail->>'id' = $1`, [k.id]))[0].n], [0, 1]);
+  A.verzoegerung = 30;
+  await Promise.all([K.tick(), K.tick()]);
+  A.verzoegerung = 0;
+  gleich('nächste Ticks, gleichzeitig: genau ein Kommentar', A.stories.filter(x => x.task === k.asana_task_gid).length - vorher, 1);
+  await K.tick();
+  gleich('danach kein weiterer Kommentar', A.stories.filter(x => x.task === k.asana_task_gid).length - vorher, 1);
+  HEUTE = '2026-10-07';
+}
+{
+  /* Vertraulichkeit der Slot-Details: Freigabename, Freigabenotiz und E-Mail des Partners gehen nicht hinaus. */
+  const z = (await q(`select id from komm_veroeffentlichungen where partnerfaehig and t > '2027-03-01' limit 1`))[0];
+  await q(`update komm_veroeffentlichungen set partner_email = 'kollektiv@example.org', partner_name = 'Kollektiv', freigabe_von = 'Christian Linck', freigabe_notiz = 'interne Notiz' where id = $1`, [z.id]);
+  const d = await ruf('komm_slot_details', { id: z.id });
+  const text = JSON.stringify(d.body);
+  wahr('Details ohne E-Mail, Freigabename und Freigabenotiz', d.status === 200 && !text.includes('@') && !text.includes('Christian Linck') && !text.includes('interne Notiz'));
+}
 
 console.log(`\n${ok} ok, ${fehler} Fehler`);
 Deno.exit(fehler ? 1 : 0);
