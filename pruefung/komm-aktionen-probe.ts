@@ -8,7 +8,7 @@ const PGLITE = Deno.env.get('PGLITE_MODUL');
 if (!PGLITE) { console.log('PGLITE_MODUL fehlt'); Deno.exit(2); }
 const { PGlite } = await import(PGLITE.startsWith('file:') ? PGLITE : 'file://' + PGLITE);
 const BASIS = new URL('../', import.meta.url);
-const MIGRATION = ['20261007052131_hh_komm_v32a', '20261007070401_hh_komm_v32b', '20261007073224_hh_komm_v32c']
+const MIGRATION = ['20261007052131_hh_komm_v32a', '20261007070401_hh_komm_v32b', '20261007073224_hh_komm_v32c', '20261007074130_hh_komm_v32d']
   .map(n => Deno.readTextFileSync(new URL(`supabase/migrations/${n}.sql`, BASIS))).join('\n');
 
 let ok = 0, fehler = 0;
@@ -80,10 +80,12 @@ class Q {
     })().then(ok, nein);
   }
 }
+const RPC_STOERUNG = new Set<string>();
 const admin = {
   from: (t: string) => new Q(t),
   /* Wie PostgREST: Argumenttypen aus der Signatur der Funktion. */
   rpc: async (name: string, args: Record<string, unknown>) => {
+    if (RPC_STOERUNG.has(name)) { RPC_STOERUNG.delete(name); return { data: null, error: { message: 'Probe: Datenbank nicht erreichbar', code: '08006' } }; }
     const sig = (await db.query(`select a.n as name, format_type(a.t, null) as typ from pg_proc p, unnest(p.proargnames, p.proargtypes::oid[]) a(n, t) where p.proname = $1`, [name])).rows as any[];
     const typ = new Map(sig.map(r => [r.name, r.typ]));
     const teile: string[] = [], p: unknown[] = [];
@@ -104,7 +106,7 @@ function asanaAntwort(status: number, body: unknown) { return new Response(JSON.
 function asanaFake(methode: string, url: URL, body: any) {
   const pfad = url.pathname.replace('/api/1.0', '');
   A.aufrufe.push(`${methode} ${pfad}`);
-  const st = A.stoerung.findIndex(s => s.methode === methode && s.muster.test(pfad));
+  const st = A.stoerung.findIndex(s => !s.netzNachher && s.methode === methode && s.muster.test(pfad));
   if (st >= 0) { const s = A.stoerung.splice(st, 1)[0]; if (s.vorher) s.vorher(body); const r = asanaAntwort(s.status, { errors: [{ message: s.text }] }); if (s.retryAfter) r.headers.set('retry-after', String(s.retryAfter)); return r; }
   const d = body?.data || {};
   let m: RegExpExecArray | null;
@@ -189,7 +191,10 @@ globalThis.fetch = (async (eingabe: any, init: any = {}) => {
   if (url.hostname === 'app.asana.com') {
     if (A.verzoegerung) await new Promise(r => setTimeout(r, A.verzoegerung));
     if (A.haenger) { const h = A.haenger(methode, url.pathname); if (h) await h; }
-    return asanaFake(methode, url, body);
+    const antwort = asanaFake(methode, url, body);
+    const nf = A.stoerung.findIndex(x => x.netzNachher && x.methode === methode && x.muster.test(url.pathname.replace('/api/1.0', '')));
+    if (nf >= 0) { A.stoerung.splice(nf, 1); throw new TypeError('Probe: Verbindung nach der Anlage abgerissen'); }
+    return antwort;
   }
   return sheetsFake(methode, url, body);
 }) as typeof fetch;
@@ -405,8 +410,12 @@ console.log('\n13. Fortsetzung, Mitgliedschaft, Sperre, Aufräumen, Ratenlimit (
   A.stoerung.push({ methode: 'PUT', muster: /^\/tasks\/\d+$/, status: 429, text: 'rate limit', retryAfter: 120 });
   const r = await ruf('komm_send', { festival: 'FAMRD27', by: 'Alex', bestaetigt: true });
   wahr('Ratenlimit 120 s (länger als das Budget): unterbrochen, weiter, fortsetzen_ab rund zwei Minuten später', r.body.weiter === true && !!r.body.unterbrochen && Date.parse(r.body.fortsetzen_ab) - Date.now() > 100000 && r.body.rest > 0, JSON.stringify([r.body.unterbrochen, r.body.fortsetzen_ab, r.body.rest]));
+  A.aufrufe = [];
   const r2 = await ruf('komm_send', { festival: 'FAMRD27', by: 'Alex', bestaetigt: true });
-  gleich('Fortsetzung bearbeitet nur den Rest', [r2.body.weiter, r2.body.neu + r2.body.aktualisiert], [false, r.body.rest]);
+  wahr('vor dem gespeicherten Zeitpunkt: keine Anfrage an Asana, Hinweis mit Uhrzeit', A.aufrufe.length === 0 && r2.body.weiter === true && /frühestens/.test(r2.body.unterbrochen || ''), JSON.stringify([A.aufrufe.length, r2.body.unterbrochen]));
+  await q(`update komm_versandlauf set fortsetzen_ab = now() - interval '1 second' where schluessel = 'FAMRD27'`);
+  const r3 = await ruf('komm_send', { festival: 'FAMRD27', by: 'Alex', bestaetigt: true });
+  gleich('nach dem Zeitpunkt bearbeitet die Fortsetzung nur den Rest', [r3.body.weiter, r3.body.neu + r3.body.aktualisiert], [false, r.body.rest]);
 }
 {
   /* Aufräumen mit einer nicht löschbaren Aufgabe: Projekt bleibt, zweiter Aufruf räumt fertig auf. */
@@ -417,6 +426,66 @@ console.log('\n13. Fortsetzung, Mitgliedschaft, Sperre, Aufräumen, Ratenlimit (
   wahr('eine Aufgabe nicht gelöscht: Projekt bleibt, Fehler gemeldet', c1.body.ok === false && !!pt && aufgabenIn(pt.gid).length === 1, JSON.stringify(c1.body));
   const c2 = await ruf('komm_test_aufraeumen', { by: 'Alex' });
   wahr('zweiter Aufruf räumt fertig auf', c2.body.ok === true && c2.body.aufgaben === 1 && pt!.geloescht === true, JSON.stringify(c2.body));
+}
+
+console.log('\n15. Nach Review 32c, Runde 2');
+{
+  /* Anlage mit verlorener Antwort: im selben Aufruf keine zweite Anlage (auch kein Nachsehen, das scheitern könnte). */
+  const pl = [...A.projekte.values()].find(p => p.name === 'Kommunikation Lusatia 2027' && !p.archived)!;
+  const eine = aufgabenIn(pl.gid).find(t => t.name.startsWith('Prüfpunkt'))!;
+  eine.geloescht = true;
+  await q(`update komm_veroeffentlichungen set asana_task_gid = null, gesendet_am = null where asana_task_gid = $1`, [eine.gid]);
+  await q(`delete from komm_versandlauf where schluessel = 'LUSRD27'`);
+  A.stoerung.push({ methode: 'POST', muster: /^\/tasks$/, netzNachher: true });
+  const r1 = await ruf('komm_send', { festival: 'LUSRD27', by: 'Alex', bestaetigt: true });
+  A.stoerung = [];
+  const namen1 = aufgabenIn(pl.gid).map(t => t.name);
+  wahr('unklare Anlage: Lauf unterbricht, keine Dublette', !!r1.body.unterbrochen && /unklar/.test(r1.body.unterbrochen) && namen1.length === new Set(namen1).size, JSON.stringify([r1.status, r1.body.unterbrochen, r1.body.error]));
+  const r2 = await ruf('komm_send', { festival: 'LUSRD27', by: 'Alex', bestaetigt: true });
+  const namen2 = aufgabenIn(pl.gid).map(t => t.name);
+  wahr('nächster Aufruf findet die doch angelegte Aufgabe, schließt ab, keine Dublette', r2.body.abgeschlossen === true && namen2.length === new Set(namen2).size && namen2.length === r2.body.aufgaben, JSON.stringify([r2.body.neu, r2.body.aktualisiert, namen2.length, r2.body.aufgaben]));
+}
+{
+  /* Sperre läuft während der Teamsuche vor der Projektanlage ab: kein zweites Projekt, Fortschritt des Nachfolgers bleibt. */
+  await q(`delete from komm_versandlauf where schluessel = 'test:LUSRD27'`);
+  let los: () => void = () => {};
+  const warte = new Promise<void>(r => { los = r; });
+  let einmal = true;
+  A.haenger = (m, p) => (einmal && m === 'GET' && p.endsWith('/projects') ) ? (einmal = false, warte) : null;
+  const a = ruf('komm_send', { festival: 'LUSRD27', by: 'Alex', test: true });
+  await new Promise(r => setTimeout(r, 200));
+  await q(`update komm_sperre set bis = now() - interval '1 second' where schluessel = 'festival:LUSRD27'`);
+  A.haenger = null;
+  const b = await ruf('komm_send', { festival: 'LUSRD27', by: 'Lea', test: true });
+  los();
+  const ra = await a;
+  const testProjekte = [...A.projekte.values()].filter(p => p.name === 'Kommunikation TEST' && !p.geloescht);
+  const lauf = (await q(`select abgeschlossen, cardinality(erledigt) n from komm_versandlauf where schluessel = 'test:LUSRD27'`))[0];
+  wahr('abgelöster Lauf legt kein zweites Projekt an und lässt den Fortschritt des Nachfolgers stehen', testProjekte.length === 1 && ra.status === 409 && b.body.abgeschlossen === true && lauf.abgeschlossen === true && lauf.n === b.body.aufgaben, JSON.stringify([testProjekte.length, ra.status, lauf]));
+  await ruf('komm_test_aufraeumen', { by: 'Alex' });
+}
+{
+  /* Projektwechsel mitten in einem Lauf: der neue Lauf prüft alle Aufgaben gegen das neue Projekt. */
+  await q(`delete from komm_versandlauf where schluessel = 'WMRD27'`);
+  Deno.env.set('KOMM_SEND_BUDGET_MS', '0');
+  const t1 = await ruf('komm_send', { festival: 'WMRD27', by: 'Alex', bestaetigt: true });
+  Deno.env.delete('KOMM_SEND_BUDGET_MS');
+  const alt = [...A.projekte.values()].find(p => p.gid === t1.body.projekt)!;
+  alt.archived = true;
+  const t2 = await ruf('komm_send', { festival: 'WMRD27', by: 'Alex', bestaetigt: true });
+  const neuP = [...A.projekte.values()].find(p => p.name === alt.name && !p.archived)!;
+  gleich('nach Archivieren mitten im Lauf: vollständig im neuen Projekt', [t1.body.weiter, t2.body.abgeschlossen, aufgabenIn(neuP.gid).length], [true, true, t2.body.aufgaben]);
+}
+{
+  /* Kennung nicht gespeichert: die Aufgabe gilt nicht als erledigt und wird beim nächsten Aufruf nachgeholt. */
+  await q(`delete from komm_versandlauf where schluessel = 'BYNRD27'`);
+  await q(`update komm_veroeffentlichungen set asana_task_gid = null, gesendet_am = null where festival_short = 'BYNRD27' and regel_id = 'SLOT'`);
+  RPC_STOERUNG.add('hh_komm_gesendet');
+  const s1 = await ruf('komm_send', { festival: 'BYNRD27', by: 'Alex', bestaetigt: true });
+  wahr('ein Speicherfehler: Lauf nicht abgeschlossen, Fehler gemeldet', s1.body.abgeschlossen === false && s1.body.weiter === true && s1.body.fehler.some((x: string) => /nicht merken/.test(x)), JSON.stringify([s1.body.abgeschlossen, s1.body.rest, s1.body.fehler.slice(0, 2)]));
+  const s2 = await ruf('komm_send', { festival: 'BYNRD27', by: 'Alex', bestaetigt: true });
+  const ohne = (await q(`select count(*)::int n from komm_veroeffentlichungen where festival_short = 'BYNRD27' and t >= '2026-10-07' and asana_task_gid is null`))[0].n;
+  gleich('Fortsetzung holt die Kennung nach: alle Veröffentlichungen gemerkt, Lauf abgeschlossen', [s2.body.abgeschlossen, ohne], [true, 0]);
 }
 
 console.log('\n12. Redaktionstabelle');
