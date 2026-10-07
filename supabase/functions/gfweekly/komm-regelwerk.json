@@ -1,0 +1,3406 @@
+{
+ "meta": {
+  "name": "Postingplan-Standard Habitat-Festivals",
+  "schema_version": "1.2.0",
+  "stand": "2026-10-05",
+  "zweck": "Mindeststandard und Extras für die Festivalkommunikation. Aus Ereignisdaten werden Veröffentlichungen und deren Arbeitsschritte rückwärts berechnet, Rollen zugeteilt und als Aufgaben an Asana oder Kalender übergeben. Generatoren des Werkzeugkastens erzeugen Entwürfe, Menschen geben frei.",
+  "zeitzone": "Europe/Berlin",
+  "abstand_einheit": "Kalendertage relativ zum Veröffentlichungstag T (negativ = davor)",
+  "quelle_festivaldaten": "Prognoseplattform (Termine, Vorverkauf, Preise, Zielgrößen). Das Regelwerk liest nur.",
+  "hinweis": "Alle Mengen, Stunden und Vorläufe sind Planungsannahmen. Nach der ersten Saison mit echten Zeiten nachstellen."
+ },
+ "rollen": [
+  {
+   "id": "KOM",
+   "name": "Kommunikationsleitung",
+   "aufgaben": "Briefings, Redaktionsfreigabe, Prüfpunkte, Kapazität"
+  },
+  {
+   "id": "RED",
+   "name": "Redaktion",
+   "aufgaben": "Texte, Skripte, Newsletter, Abstimmung mit Beteiligten"
+  },
+  {
+   "id": "GRA",
+   "name": "Gestaltung",
+   "aufgaben": "Grafiken, Karussells, Anzeigenmotive"
+  },
+  {
+   "id": "VID",
+   "name": "Video",
+   "aufgaben": "Drehplanung, Dreh, Schnitt, Untertitel"
+  },
+  {
+   "id": "CM",
+   "name": "Community-Betreuung",
+   "aufgaben": "Einplanen, Posten, Stories, Kommentare und Nachrichten, Dokumentation"
+  },
+  {
+   "id": "WEB",
+   "name": "Website und Shop",
+   "aufgaben": "Infoseiten, Programmseite, Ticketshop, Links"
+  },
+  {
+   "id": "ADS",
+   "name": "Anzeigen",
+   "aufgaben": "Zielgruppen, Tracking, Start, Kontrolle, Stopp"
+  },
+  {
+   "id": "PRESSE",
+   "name": "Presse",
+   "aufgaben": "Mitteilungen, Akkreditierung, Medienkontakte"
+  },
+  {
+   "id": "FACH-TIX",
+   "name": "Fachfreigabe Ticketing",
+   "aufgaben": "Preise, Kontingente, Fristen, Kaufweg"
+  },
+  {
+   "id": "FACH-PROG",
+   "name": "Fachfreigabe Programm",
+   "aufgaben": "Namen, Schreibweisen, Zeiten, Embargos"
+  },
+  {
+   "id": "FACH-CARE",
+   "name": "Fachfreigabe Care",
+   "aufgaben": "Care-Angebote, Kontaktwege, Zugänglichkeit"
+  },
+  {
+   "id": "FACH-BETR",
+   "name": "Fachfreigabe Betrieb",
+   "aufgaben": "Anreise, Gelände, Einlass, Sicherheit, Wetter, Anwohner"
+  },
+  {
+   "id": "GF",
+   "name": "Geschäftsführung",
+   "aufgaben": "Budgets, Rabatte, Extras der Stufe Rot"
+  }
+ ],
+ "rollen_hinweis": "Zuständigkeit in zwei Ebenen: Die Geschäftsführung legt im Hohen Haus je Festival nur die verantwortliche Person für die Kommunikation fest (Rolle KOM) und entscheidet über Budget und Extras der Stufe Rot. Die verantwortliche Person verteilt alle übrigen Rollen und Schritte selbst, in ihrer Redaktionstabelle oder in Asana (Feld besetzung: E-Mail, Vertretung, Wochenstunden). Die Rollen und Schritte des Regelwerks sind dabei ein Vorschlag, keine Vorgabe. Eine Person kann mehrere Rollen haben. Externe Beteiligte (Artists, Crews, Kollektive) sind keine Rolle, sondern stehen im Feld beteiligte.",
+ "werkzeuge": [
+  {
+   "id": "GEN-TEXT",
+   "name": "Textgenerator",
+   "liefert": "Post-, Newsletter-, Mail-, Website- und Pressetexte",
+   "eingaben": [
+    "festival",
+    "zielgruppe",
+    "zweck",
+    "kernbotschaft",
+    "belegtes_detail",
+    "kanal",
+    "format",
+    "naechster_schritt",
+    "faktenquelle",
+    "tonalitaet"
+   ]
+  },
+  {
+   "id": "GEN-SKRIPT",
+   "name": "Skriptschreiber",
+   "liefert": "Video- und Reel-Skripte mit 2 bis 3 Einstiegen",
+   "eingaben": [
+    "festival",
+    "zielgruppe",
+    "motiv_oder_einwand",
+    "kernbotschaft",
+    "belegtes_detail",
+    "dauer_sekunden",
+    "beteiligte",
+    "material",
+    "naechster_schritt"
+   ]
+  },
+  {
+   "id": "GEN-GRAFIK",
+   "name": "Grafikgenerator",
+   "liefert": "Feedgrafiken, Storygrafiken, Anzeigenmotive",
+   "eingaben": [
+    "festival_ci",
+    "format",
+    "motiv",
+    "textbausteine",
+    "material",
+    "credits"
+   ]
+  },
+  {
+   "id": "GEN-CONTENT",
+   "name": "Content-Generatoren",
+   "liefert": "Karussellfolgen, Storysequenzen, Varianten für Kanäle",
+   "eingaben": [
+    "festival",
+    "zielgruppe",
+    "frage_oder_thema",
+    "anzahl_teile",
+    "kanal",
+    "material"
+   ]
+  }
+ ],
+ "werkzeug_regel": "Generatoren erzeugen immer den Status entwurf. Ein Entwurf wird erst nach den Schritten Faktencheck und Freigabe veröffentlicht. Preise, Namen, Zusagen, Bestände, Gästestimmen und Care-Maßnahmen kommen nur aus bestätigten Quellen.",
+ "formate": {
+  "feed": "Instagram-Feed 1080 x 1350 (4:5), Karussell bis 10 Teile",
+  "reel": "Hochformat 1080 x 1920 (9:16), Kernaussage in den ersten 2 Sekunden, Untertitel",
+  "story": "1080 x 1920, eine Aussage je Teil, Link-Sticker",
+  "newsletter": "600 px Breite, Betreff, Vorschautext, ein Hauptlink",
+  "website": "Infoseite oder Programmseite des Festivals",
+  "presse": "Mitteilung mit Pressefotos und Ansprechperson",
+  "anzeige": "Varianten 4:5 und 9:16, je Motiv oder Einwand eine Variante",
+  "mail_ticketinhabende": "Servicemail an Käufer:innen über das Ticketsystem"
+ },
+ "schrittphasen": [
+  "planung",
+  "erstellung",
+  "abstimmung",
+  "freigabe",
+  "posting",
+  "nachbereitung"
+ ],
+ "klassen": {
+  "S": {
+   "name": "Einfacher Beitrag",
+   "beispiel": "Erinnerung, Foto-Post mit vorhandenem Material",
+   "schritte": [
+    {
+     "id": "P1",
+     "phase": "planung",
+     "titel": "Briefing anlegen (Zielgruppe, Zweck, Kernbotschaft, Faktenquelle)",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": -7,
+     "bis": -7,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "E1",
+     "phase": "erstellung",
+     "titel": "Text erzeugen und überarbeiten",
+     "rolle": "RED",
+     "werkzeug": "GEN-TEXT",
+     "von": -6,
+     "bis": -5,
+     "stunden": 0.5,
+     "werktag": true
+    },
+    {
+     "id": "E2",
+     "phase": "erstellung",
+     "titel": "Grafik erzeugen und anpassen",
+     "rolle": "GRA",
+     "werkzeug": "GEN-GRAFIK",
+     "von": -6,
+     "bis": -4,
+     "stunden": 1.0,
+     "werktag": true
+    },
+    {
+     "id": "F1",
+     "phase": "freigabe",
+     "titel": "Faktencheck",
+     "rolle": "{fachfreigabe}",
+     "werkzeug": null,
+     "von": -4,
+     "bis": -3,
+     "stunden": 0.25,
+     "werktag": true,
+     "hinweis_rolle": "Fachrolle aus der Veröffentlichungsregel"
+    },
+    {
+     "id": "F2",
+     "phase": "freigabe",
+     "titel": "Redaktionsfreigabe",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": -3,
+     "bis": -3,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "X1",
+     "phase": "posting",
+     "titel": "Einplanen, Links und Markierungen prüfen",
+     "rolle": "CM",
+     "werkzeug": null,
+     "von": -1,
+     "bis": -1,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "X2",
+     "phase": "posting",
+     "titel": "Veröffentlichung kontrollieren",
+     "rolle": "CM",
+     "werkzeug": null,
+     "von": 0,
+     "bis": 0,
+     "stunden": 0.1,
+     "werktag": false
+    },
+    {
+     "id": "N1",
+     "phase": "nachbereitung",
+     "titel": "Kommentare und Nachrichten betreuen",
+     "rolle": "CM",
+     "werkzeug": null,
+     "von": 0,
+     "bis": 2,
+     "stunden": 0.5,
+     "werktag": false
+    },
+    {
+     "id": "N2",
+     "phase": "nachbereitung",
+     "titel": "Link und Ergebnis dokumentieren",
+     "rolle": "CM",
+     "werkzeug": null,
+     "von": 7,
+     "bis": 7,
+     "stunden": 0.1,
+     "werktag": true
+    }
+   ],
+   "stunden_gesamt": 3.2
+  },
+  "M": {
+   "name": "Mittlerer Beitrag",
+   "beispiel": "Karussell, Reel aus vorhandenem Material, Infobündel",
+   "schritte": [
+    {
+     "id": "P1",
+     "phase": "planung",
+     "titel": "Briefing anlegen",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": -14,
+     "bis": -14,
+     "stunden": 0.5,
+     "werktag": true
+    },
+    {
+     "id": "P2",
+     "phase": "planung",
+     "titel": "Material und Beteiligte anfragen",
+     "rolle": "RED",
+     "werkzeug": null,
+     "von": -14,
+     "bis": -10,
+     "stunden": 0.5,
+     "werktag": true
+    },
+    {
+     "id": "E1",
+     "phase": "erstellung",
+     "titel": "Text oder Skript erzeugen und überarbeiten",
+     "rolle": "RED",
+     "werkzeug": "GEN-TEXT|GEN-SKRIPT",
+     "von": -10,
+     "bis": -8,
+     "stunden": 1.5,
+     "werktag": true
+    },
+    {
+     "id": "E2",
+     "phase": "erstellung",
+     "titel": "Karussell oder Schnitt erstellen",
+     "rolle": "GRA",
+     "werkzeug": "GEN-CONTENT|GEN-GRAFIK",
+     "von": -9,
+     "bis": -6,
+     "stunden": 3.0,
+     "werktag": true
+    },
+    {
+     "id": "A1",
+     "phase": "abstimmung",
+     "titel": "Mit Beteiligten abstimmen, Collab-Einladung klären",
+     "rolle": "RED",
+     "werkzeug": null,
+     "von": -7,
+     "bis": -5,
+     "stunden": 0.75,
+     "werktag": true
+    },
+    {
+     "id": "F1",
+     "phase": "freigabe",
+     "titel": "Faktencheck",
+     "rolle": "{fachfreigabe}",
+     "werkzeug": null,
+     "von": -5,
+     "bis": -4,
+     "stunden": 0.25,
+     "werktag": true,
+     "hinweis_rolle": "Fachrolle aus der Veröffentlichungsregel"
+    },
+    {
+     "id": "F2",
+     "phase": "freigabe",
+     "titel": "Redaktionsfreigabe",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": -3,
+     "bis": -3,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "X1",
+     "phase": "posting",
+     "titel": "Einplanen, Collab und Markierungen setzen",
+     "rolle": "CM",
+     "werkzeug": null,
+     "von": -1,
+     "bis": -1,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "X2",
+     "phase": "posting",
+     "titel": "Veröffentlichung kontrollieren, Beteiligte informieren",
+     "rolle": "CM",
+     "werkzeug": null,
+     "von": 0,
+     "bis": 0,
+     "stunden": 0.25,
+     "werktag": false
+    },
+    {
+     "id": "N1",
+     "phase": "nachbereitung",
+     "titel": "Kommentare und Nachrichten betreuen",
+     "rolle": "CM",
+     "werkzeug": null,
+     "von": 0,
+     "bis": 3,
+     "stunden": 0.75,
+     "werktag": false
+    },
+    {
+     "id": "N2",
+     "phase": "nachbereitung",
+     "titel": "Link und Ergebnis dokumentieren",
+     "rolle": "CM",
+     "werkzeug": null,
+     "von": 7,
+     "bis": 7,
+     "stunden": 0.25,
+     "werktag": true
+    }
+   ],
+   "stunden_gesamt": 8.25
+  },
+  "P": {
+   "name": "Programmwelle",
+   "beispiel": "Lineup-Ankündigung mit mehreren Artists und Kollektiven",
+   "schritte": [
+    {
+     "id": "P1",
+     "phase": "planung",
+     "titel": "Namensliste und Briefing mit Programmteam",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": -28,
+     "bis": -28,
+     "stunden": 0.5,
+     "werktag": true
+    },
+    {
+     "id": "P2",
+     "phase": "planung",
+     "titel": "Embargo, Material, Accounts und Schreibweisen bei Artists einholen",
+     "rolle": "RED",
+     "werkzeug": null,
+     "von": -28,
+     "bis": -14,
+     "stunden": 1.5,
+     "werktag": true
+    },
+    {
+     "id": "E1",
+     "phase": "erstellung",
+     "titel": "Texte je Act erzeugen und überarbeiten",
+     "rolle": "RED",
+     "werkzeug": "GEN-TEXT",
+     "von": -14,
+     "bis": -10,
+     "stunden": 2.0,
+     "werktag": true
+    },
+    {
+     "id": "E2",
+     "phase": "erstellung",
+     "titel": "Lineup-Grafik und Einzelkacheln erstellen",
+     "rolle": "GRA",
+     "werkzeug": "GEN-GRAFIK",
+     "von": -12,
+     "bis": -8,
+     "stunden": 3.0,
+     "werktag": true
+    },
+    {
+     "id": "A1",
+     "phase": "abstimmung",
+     "titel": "Freigabe durch Artists, gemeinsame Veröffentlichung vereinbaren",
+     "rolle": "RED",
+     "werkzeug": null,
+     "von": -8,
+     "bis": -5,
+     "stunden": 1.0,
+     "werktag": true
+    },
+    {
+     "id": "F1",
+     "phase": "freigabe",
+     "titel": "Programm-Fakten prüfen",
+     "rolle": "FACH-PROG",
+     "werkzeug": null,
+     "von": -5,
+     "bis": -4,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "F2",
+     "phase": "freigabe",
+     "titel": "Redaktionsfreigabe",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": -3,
+     "bis": -3,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "W1",
+     "phase": "posting",
+     "titel": "Programmseite der Website vorbereiten",
+     "rolle": "WEB",
+     "werkzeug": null,
+     "von": -2,
+     "bis": -1,
+     "stunden": 0.5,
+     "werktag": true
+    },
+    {
+     "id": "X1",
+     "phase": "posting",
+     "titel": "Einplanen, Materialpaket an Beteiligte senden",
+     "rolle": "CM",
+     "werkzeug": null,
+     "von": -1,
+     "bis": -1,
+     "stunden": 0.5,
+     "werktag": true
+    },
+    {
+     "id": "N1",
+     "phase": "nachbereitung",
+     "titel": "Kommentare betreuen, geteilte Beiträge sammeln",
+     "rolle": "CM",
+     "werkzeug": null,
+     "von": 0,
+     "bis": 3,
+     "stunden": 0.5,
+     "werktag": false
+    }
+   ],
+   "stunden_gesamt": 10.0
+  },
+  "L": {
+   "name": "Video mit Dreh",
+   "beispiel": "Erlebnis-, Menschen-, Anreise- oder Care-Video, Aftermovie",
+   "schritte": [
+    {
+     "id": "P1",
+     "phase": "planung",
+     "titel": "Konzept und Briefing",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": -42,
+     "bis": -42,
+     "stunden": 1.0,
+     "werktag": true
+    },
+    {
+     "id": "P2",
+     "phase": "planung",
+     "titel": "Skript mit 2 bis 3 Einstiegen erzeugen und auswählen",
+     "rolle": "RED",
+     "werkzeug": "GEN-SKRIPT",
+     "von": -40,
+     "bis": -35,
+     "stunden": 2.0,
+     "werktag": true
+    },
+    {
+     "id": "P3",
+     "phase": "planung",
+     "titel": "Drehplanung, Termine, Einverständnisse, Musikrechte",
+     "rolle": "VID",
+     "werkzeug": null,
+     "von": -35,
+     "bis": -28,
+     "stunden": 2.0,
+     "werktag": true
+    },
+    {
+     "id": "E1",
+     "phase": "erstellung",
+     "titel": "Dreh",
+     "rolle": "VID",
+     "werkzeug": null,
+     "von": -28,
+     "bis": -21,
+     "stunden": 6.0,
+     "werktag": true
+    },
+    {
+     "id": "E2",
+     "phase": "erstellung",
+     "titel": "Rohschnitt",
+     "rolle": "VID",
+     "werkzeug": null,
+     "von": -21,
+     "bis": -14,
+     "stunden": 5.0,
+     "werktag": true
+    },
+    {
+     "id": "A1",
+     "phase": "abstimmung",
+     "titel": "Feedback von Beteiligten einholen",
+     "rolle": "RED",
+     "werkzeug": null,
+     "von": -14,
+     "bis": -10,
+     "stunden": 1.0,
+     "werktag": true
+    },
+    {
+     "id": "E3",
+     "phase": "erstellung",
+     "titel": "Finalschnitt, Untertitel, Formate",
+     "rolle": "VID",
+     "werkzeug": null,
+     "von": -10,
+     "bis": -6,
+     "stunden": 2.0,
+     "werktag": true
+    },
+    {
+     "id": "F1",
+     "phase": "freigabe",
+     "titel": "Fakten, Personen- und Musikrechte prüfen",
+     "rolle": "{fachfreigabe}",
+     "werkzeug": null,
+     "von": -6,
+     "bis": -5,
+     "stunden": 0.5,
+     "werktag": true,
+     "hinweis_rolle": "Fachrolle aus der Veröffentlichungsregel"
+    },
+    {
+     "id": "F2",
+     "phase": "freigabe",
+     "titel": "Redaktionsfreigabe",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": -5,
+     "bis": -5,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "X1",
+     "phase": "posting",
+     "titel": "Einplanen",
+     "rolle": "CM",
+     "werkzeug": null,
+     "von": -2,
+     "bis": -2,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "N1",
+     "phase": "nachbereitung",
+     "titel": "Kommentare betreuen, Ergebnis dokumentieren",
+     "rolle": "CM",
+     "werkzeug": null,
+     "von": 0,
+     "bis": 3,
+     "stunden": 0.5,
+     "werktag": false
+    }
+   ],
+   "stunden_gesamt": 20.5
+  },
+  "NL": {
+   "name": "Newsletter",
+   "beispiel": "je Empfängergruppe",
+   "schritte": [
+    {
+     "id": "P1",
+     "phase": "planung",
+     "titel": "Thema und Empfängergruppe festlegen",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": -10,
+     "bis": -10,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "E1",
+     "phase": "erstellung",
+     "titel": "Betreff, Vorschau und Text erzeugen und überarbeiten",
+     "rolle": "RED",
+     "werkzeug": "GEN-TEXT",
+     "von": -7,
+     "bis": -5,
+     "stunden": 1.5,
+     "werktag": true
+    },
+    {
+     "id": "E2",
+     "phase": "erstellung",
+     "titel": "Bilder erstellen",
+     "rolle": "GRA",
+     "werkzeug": "GEN-GRAFIK",
+     "von": -6,
+     "bis": -4,
+     "stunden": 0.75,
+     "werktag": true
+    },
+    {
+     "id": "F1",
+     "phase": "freigabe",
+     "titel": "Faktencheck",
+     "rolle": "{fachfreigabe}",
+     "werkzeug": null,
+     "von": -4,
+     "bis": -3,
+     "stunden": 0.25,
+     "werktag": true,
+     "hinweis_rolle": "Fachrolle aus der Veröffentlichungsregel"
+    },
+    {
+     "id": "F2",
+     "phase": "freigabe",
+     "titel": "Redaktionsfreigabe",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": -3,
+     "bis": -3,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "X1",
+     "phase": "posting",
+     "titel": "Testversand, Links und Segment prüfen",
+     "rolle": "RED",
+     "werkzeug": null,
+     "von": -2,
+     "bis": -2,
+     "stunden": 0.5,
+     "werktag": true
+    },
+    {
+     "id": "X2",
+     "phase": "posting",
+     "titel": "Versand",
+     "rolle": "RED",
+     "werkzeug": null,
+     "von": 0,
+     "bis": 0,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "N1",
+     "phase": "nachbereitung",
+     "titel": "Klicks, Antworten, Abmeldungen auswerten",
+     "rolle": "RED",
+     "werkzeug": null,
+     "von": 3,
+     "bis": 3,
+     "stunden": 0.25,
+     "werktag": true
+    }
+   ],
+   "stunden_gesamt": 4.0
+  },
+  "TM": {
+   "name": "Mail an Ticketinhabende",
+   "beispiel": "Service- und Orientierungsmail",
+   "schritte": [
+    {
+     "id": "P1",
+     "phase": "planung",
+     "titel": "Inhalt und Segment festlegen",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": -7,
+     "bis": -7,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "E1",
+     "phase": "erstellung",
+     "titel": "Text aus Vorlage erzeugen und überarbeiten",
+     "rolle": "RED",
+     "werkzeug": "GEN-TEXT",
+     "von": -6,
+     "bis": -5,
+     "stunden": 1.25,
+     "werktag": true
+    },
+    {
+     "id": "F1",
+     "phase": "freigabe",
+     "titel": "Faktencheck",
+     "rolle": "{fachfreigabe}",
+     "werkzeug": null,
+     "von": -4,
+     "bis": -3,
+     "stunden": 0.5,
+     "werktag": true,
+     "hinweis_rolle": "Fachrolle aus der Veröffentlichungsregel"
+    },
+    {
+     "id": "F2",
+     "phase": "freigabe",
+     "titel": "Redaktionsfreigabe",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": -3,
+     "bis": -3,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "X1",
+     "phase": "posting",
+     "titel": "Testversand und Links prüfen",
+     "rolle": "RED",
+     "werkzeug": null,
+     "von": -1,
+     "bis": -1,
+     "stunden": 0.5,
+     "werktag": true
+    },
+    {
+     "id": "X2",
+     "phase": "posting",
+     "titel": "Versand",
+     "rolle": "RED",
+     "werkzeug": null,
+     "von": 0,
+     "bis": 0,
+     "stunden": 0.25,
+     "werktag": true
+    }
+   ],
+   "stunden_gesamt": 3.0
+  },
+  "WEB": {
+   "name": "Website-Update",
+   "beispiel": "Infoseite, FAQ, Programmseite",
+   "schritte": [
+    {
+     "id": "E1",
+     "phase": "erstellung",
+     "titel": "Seite aktualisieren",
+     "rolle": "WEB",
+     "werkzeug": "GEN-TEXT",
+     "von": -3,
+     "bis": -2,
+     "stunden": 1.0,
+     "werktag": true
+    },
+    {
+     "id": "F1",
+     "phase": "freigabe",
+     "titel": "Faktencheck",
+     "rolle": "{fachfreigabe}",
+     "werkzeug": null,
+     "von": -1,
+     "bis": -1,
+     "stunden": 0.25,
+     "werktag": true,
+     "hinweis_rolle": "Fachrolle aus der Veröffentlichungsregel"
+    },
+    {
+     "id": "X1",
+     "phase": "posting",
+     "titel": "Live schalten, Links prüfen",
+     "rolle": "WEB",
+     "werkzeug": null,
+     "von": 0,
+     "bis": 0,
+     "stunden": 0.25,
+     "werktag": true
+    }
+   ],
+   "stunden_gesamt": 1.5
+  },
+  "PR": {
+   "name": "Pressemitteilung",
+   "beispiel": "Launch, Programm, Akkreditierung, Bilanz",
+   "schritte": [
+    {
+     "id": "P1",
+     "phase": "planung",
+     "titel": "Anlass und Verteiler festlegen",
+     "rolle": "PRESSE",
+     "werkzeug": null,
+     "von": -14,
+     "bis": -14,
+     "stunden": 0.5,
+     "werktag": true
+    },
+    {
+     "id": "E1",
+     "phase": "erstellung",
+     "titel": "Mitteilung erzeugen und überarbeiten",
+     "rolle": "PRESSE",
+     "werkzeug": "GEN-TEXT",
+     "von": -12,
+     "bis": -9,
+     "stunden": 2.0,
+     "werktag": true
+    },
+    {
+     "id": "E2",
+     "phase": "erstellung",
+     "titel": "Pressefotos auswählen, Credits",
+     "rolle": "GRA",
+     "werkzeug": null,
+     "von": -10,
+     "bis": -8,
+     "stunden": 1.0,
+     "werktag": true
+    },
+    {
+     "id": "F1",
+     "phase": "freigabe",
+     "titel": "Faktencheck",
+     "rolle": "{fachfreigabe}",
+     "werkzeug": null,
+     "von": -7,
+     "bis": -6,
+     "stunden": 0.5,
+     "werktag": true,
+     "hinweis_rolle": "Fachrolle aus der Veröffentlichungsregel"
+    },
+    {
+     "id": "F2",
+     "phase": "freigabe",
+     "titel": "Freigabe",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": -5,
+     "bis": -5,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "X1",
+     "phase": "posting",
+     "titel": "Versand",
+     "rolle": "PRESSE",
+     "werkzeug": null,
+     "von": 0,
+     "bis": 0,
+     "stunden": 0.5,
+     "werktag": true
+    },
+    {
+     "id": "N1",
+     "phase": "nachbereitung",
+     "titel": "Nachfassen, Veröffentlichungen sammeln",
+     "rolle": "PRESSE",
+     "werkzeug": null,
+     "von": 2,
+     "bis": 5,
+     "stunden": 0.25,
+     "werktag": true
+    }
+   ],
+   "stunden_gesamt": 5.0
+  },
+  "AD": {
+   "name": "Anzeigenkampagne",
+   "beispiel": "Laufzeit aus der Regel; Kontrolle wöchentlich",
+   "schritte": [
+    {
+     "id": "P1",
+     "phase": "planung",
+     "titel": "Ziel, Budget, Laufzeit und Stoppregeln festlegen",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": -14,
+     "bis": -14,
+     "stunden": 0.5,
+     "werktag": true
+    },
+    {
+     "id": "E1",
+     "phase": "erstellung",
+     "titel": "Motive je Einwand oder Motiv erstellen",
+     "rolle": "GRA",
+     "werkzeug": "GEN-GRAFIK",
+     "von": -12,
+     "bis": -8,
+     "stunden": 2.0,
+     "werktag": true
+    },
+    {
+     "id": "E2",
+     "phase": "erstellung",
+     "titel": "Textvarianten erzeugen",
+     "rolle": "RED",
+     "werkzeug": "GEN-TEXT",
+     "von": -12,
+     "bis": -9,
+     "stunden": 1.0,
+     "werktag": true
+    },
+    {
+     "id": "E3",
+     "phase": "erstellung",
+     "titel": "Zielgruppen und Tracking einrichten",
+     "rolle": "ADS",
+     "werkzeug": null,
+     "von": -8,
+     "bis": -4,
+     "stunden": 1.0,
+     "werktag": true
+    },
+    {
+     "id": "F1",
+     "phase": "freigabe",
+     "titel": "Preise, Bestand und Kaufweg prüfen",
+     "rolle": "FACH-TIX",
+     "werkzeug": null,
+     "von": -4,
+     "bis": -3,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "F2",
+     "phase": "freigabe",
+     "titel": "Freigabe mit Budget",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": -3,
+     "bis": -3,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "X1",
+     "phase": "posting",
+     "titel": "Kampagne starten",
+     "rolle": "ADS",
+     "werkzeug": null,
+     "von": 0,
+     "bis": 0,
+     "stunden": 0.25,
+     "werktag": true
+    },
+    {
+     "id": "N1",
+     "phase": "nachbereitung",
+     "titel": "Wöchentliche Kontrolle, bei Ausverkauf oder falschem Preis sofort anpassen",
+     "rolle": "ADS",
+     "werkzeug": null,
+     "wiederholung": "woechentlich_bis_laufzeitende",
+     "stunden_je_wiederholung": 1.0,
+     "werktag": true
+    },
+    {
+     "id": "N2",
+     "phase": "nachbereitung",
+     "titel": "Abschluss und Kosten je Ergebnis dokumentieren",
+     "rolle": "ADS",
+     "werkzeug": null,
+     "von": "ende+3",
+     "bis": "ende+3",
+     "stunden": 0.5,
+     "werktag": true
+    }
+   ],
+   "stunden_gesamt": 5.75
+  },
+  "INT": {
+   "name": "Interne Aufgabe",
+   "beispiel": "Shop einrichten, Prüfpunkt, Vorlagen; Schritte stehen in der Regel",
+   "schritte": [],
+   "stunden_gesamt": 0
+  }
+ },
+ "wochenaufgaben": [
+  {
+   "id": "W-STORY",
+   "titel": "Wochenpaket Stories",
+   "rolle": "CM",
+   "werkzeug": "GEN-CONTENT",
+   "stunden_je_woche": {
+    "winterruhe": 0.5,
+    "programmaufbau": 1.0,
+    "heisse_phase": 2.0,
+    "festival": 4.0,
+    "nachbereitung": 1.0
+   }
+  },
+  {
+   "id": "W-CM",
+   "titel": "Kommentare und Nachrichten",
+   "rolle": "CM",
+   "werkzeug": null,
+   "stunden_je_woche": {
+    "winterruhe": 1.0,
+    "programmaufbau": 2.0,
+    "heisse_phase": 4.0,
+    "festival": 12.0,
+    "nachbereitung": 3.0
+   },
+   "servicezeit": "werktags innerhalb von 24 Stunden; ab F minus 7 bis Z am selben Tag"
+  },
+  {
+   "id": "W-RUNDE",
+   "titel": "Redaktionsrunde: Termine, Fragen, Ergebnisse",
+   "rolle": "KOM",
+   "werkzeug": null,
+   "stunden_je_woche": {
+    "alle_aktiven_phasen": 1.0
+   },
+   "hinweis": "Im Verbund eine gemeinsame Runde für alle Festivals"
+  }
+ ],
+ "phasen": [
+  {
+   "id": "verkaufsstart",
+   "von": "V",
+   "bis": "V+28",
+   "feedbeitraege_pro_woche": 1.25
+  },
+  {
+   "id": "winterruhe",
+   "von": "V+28",
+   "bis": "F-150",
+   "feedbeitraege_pro_woche": 0.6,
+   "hinweis": "plus Saisonanlässe"
+  },
+  {
+   "id": "programmaufbau",
+   "von": "F-150",
+   "bis": "F-60",
+   "feedbeitraege_pro_woche": 1.0
+  },
+  {
+   "id": "heisse_phase",
+   "von": "F-60",
+   "bis": "F",
+   "feedbeitraege_pro_woche": 2.0
+  },
+  {
+   "id": "festival",
+   "von": "F",
+   "bis": "Z",
+   "feedbeitraege_pro_woche": 1.0,
+   "hinweis": "Orientierung läuft zusätzlich über Stories und App"
+  },
+  {
+   "id": "nachbereitung",
+   "von": "Z",
+   "bis": "Z+30",
+   "feedbeitraege_pro_woche": 1.25
+  }
+ ],
+ "phasen_hinweis": "Ereignisbeiträge zählen in die Wochenmenge. Fehlende Beiträge füllt das Werkzeug mit Redaktionsslots (Regel SLOT). Pflichtinformationen werden nie wegen der Menge gestrichen.",
+ "ereignisse": [
+  {
+   "kuerzel": "L",
+   "name": "Öffentlicher Launch der Ausgabe",
+   "pflicht": false
+  },
+  {
+   "kuerzel": "V",
+   "name": "Vorverkaufsbeginn",
+   "pflicht": true
+  },
+  {
+   "kuerzel": "VC",
+   "name": "Community- oder Frühzugangsfenster",
+   "pflicht": false
+  },
+  {
+   "kuerzel": "P",
+   "name": "Programmwelle (je Welle ein Ereignis)",
+   "pflicht": true,
+   "standard_abstaende_zu_F": [
+    -200,
+    -150,
+    -100,
+    -45
+   ],
+   "hinweis": "-45 = Lineup komplett"
+  },
+  {
+   "kuerzel": "D-PREIS",
+   "name": "Fester Preiswechsel",
+   "pflicht": false
+  },
+  {
+   "kuerzel": "B-OPEN",
+   "name": "Bewerbung öffnet",
+   "pflicht": false
+  },
+  {
+   "kuerzel": "D-BEW",
+   "name": "Bewerbungsschluss",
+   "pflicht": false
+  },
+  {
+   "kuerzel": "D-ADDON",
+   "name": "Buchungsschluss Camping, Shuttle, Parken oder Zusatzangebot",
+   "pflicht": false
+  },
+  {
+   "kuerzel": "D-TRANSFER",
+   "name": "Frist Ticketumschreibung",
+   "pflicht": false
+  },
+  {
+   "kuerzel": "G",
+   "name": "Begleitende Veranstaltung",
+   "pflicht": false
+  },
+  {
+   "kuerzel": "A",
+   "name": "Aufbaubeginn",
+   "pflicht": false,
+   "hinweis": "löst A-AUFRUF und A-EINBLICK aus"
+  },
+  {
+   "kuerzel": "F",
+   "name": "Erste Öffnung für Gäste",
+   "pflicht": true
+  },
+  {
+   "kuerzel": "PS",
+   "name": "Programmstart, falls abweichend von F",
+   "pflicht": false
+  },
+  {
+   "kuerzel": "Z",
+   "name": "Festivalende",
+   "pflicht": true
+  },
+  {
+   "kuerzel": "R",
+   "name": "Materialfreigabe (Fotogalerie, Aftermovie)",
+   "pflicht": false,
+   "standard": "Z+60"
+  },
+  {
+   "kuerzel": "S-BF",
+   "name": "Saisonanlass Black Friday",
+   "pflicht": false,
+   "datum_2026": "2026-11-27"
+  },
+  {
+   "kuerzel": "S-XMAS",
+   "name": "Saisonanlass Geschenk-Tickets",
+   "pflicht": false,
+   "datum_2026": "2026-12-15"
+  },
+  {
+   "kuerzel": "S-NL",
+   "name": "Saisonnewsletter (Urlaubsplanung, Frühling)",
+   "pflicht": false,
+   "daten_2027": [
+    "2027-01-20",
+    "2027-03-17",
+    "2027-04-28"
+   ]
+  },
+  {
+   "kuerzel": "REB",
+   "name": "Vorverkauf der nächsten Ausgabe (Rebooking)",
+   "pflicht": false,
+   "hinweis": "kann vor Z liegen; dann mit Nachbereitung zusammenlegen"
+  }
+ ],
+ "regeln": [
+  {
+   "id": "L-NEUGIER",
+   "bezug": "L",
+   "abstand": -7,
+   "klasse": "S",
+   "titel": "Neugier wecken, Interessentenliste öffnen",
+   "kanal": "feed",
+   "zielgruppe": "interessierte",
+   "zweck": "entdeckung",
+   "inhalt": "Was kommt, Datum der Ankündigung, Eintrag in die Liste",
+   "fachfreigabe": "KOM",
+   "bedingung": "erstauflage_oder_relaunch",
+   "partnerfaehig": false
+  },
+  {
+   "id": "L-HAUPT",
+   "bezug": "L",
+   "abstand": 0,
+   "klasse": "M",
+   "titel": "Ausgabe vorstellen",
+   "kanal": "feed",
+   "zielgruppe": "alle",
+   "zweck": "entdeckung",
+   "inhalt": "Profil, Datum, Ort, Erlebnis, nächster Schritt",
+   "fachfreigabe": "KOM",
+   "begleitend": [
+    "story",
+    "website"
+   ],
+   "partnerfaehig": false
+  },
+  {
+   "id": "L-PRESSE",
+   "bezug": "L",
+   "abstand": 0,
+   "klasse": "PR",
+   "titel": "Pressemitteilung Launch",
+   "kanal": "presse",
+   "zielgruppe": "medien",
+   "zweck": "entdeckung",
+   "inhalt": "Profil, Datum, Ort, Ansprechperson",
+   "fachfreigabe": "KOM",
+   "partnerfaehig": false
+  },
+  {
+   "id": "L-VERTIEF",
+   "bezug": "L",
+   "abstand": 3,
+   "klasse": "S",
+   "titel": "Festivalidee vertiefen, erste Fragen beantworten",
+   "kanal": "feed",
+   "zielgruppe": "interessierte",
+   "zweck": "vertrauen",
+   "inhalt": "Häufigste Fragen nach dem Launch",
+   "fachfreigabe": "KOM",
+   "partnerfaehig": false
+  },
+  {
+   "id": "V-SHOP",
+   "bezug": "V",
+   "abstand": -42,
+   "klasse": "INT",
+   "titel": "Ticketarten, Gesamtpreise, Kontingente und Shop einrichten",
+   "kanal": "intern",
+   "schritte": [
+    {
+     "id": "I1",
+     "phase": "planung",
+     "titel": "Ticketstruktur aus der Prognoseplattform übernehmen",
+     "rolle": "FACH-TIX",
+     "werkzeug": null,
+     "von": 0,
+     "bis": 0,
+     "stunden": 1.0,
+     "werktag": true
+    },
+    {
+     "id": "I2",
+     "phase": "erstellung",
+     "titel": "Shop konfigurieren, Texte und Bilder einsetzen",
+     "rolle": "WEB",
+     "werkzeug": "GEN-TEXT",
+     "von": 0,
+     "bis": 14,
+     "stunden": 4.0,
+     "werktag": true
+    },
+    {
+     "id": "I3",
+     "phase": "freigabe",
+     "titel": "Testkauf mit allen Ticketarten, Mails und Links",
+     "rolle": "FACH-TIX",
+     "werkzeug": null,
+     "von": 28,
+     "bis": 28,
+     "stunden": 1.0,
+     "werktag": true
+    }
+   ],
+   "hinweis": "Schrittabstände hier relativ zum Regeltermin V-42; der Testkauf liegt damit auf V-14.",
+   "partnerfaehig": false
+  },
+  {
+   "id": "V-ANK",
+   "bezug": "V",
+   "abstand": -7,
+   "klasse": "M",
+   "titel": "Vorverkauf ankündigen",
+   "kanal": "feed",
+   "zielgruppe": "interessierte",
+   "zweck": "entscheidung",
+   "inhalt": "Datum, Uhrzeit, Ticketarten, Gesamtpreise, Kaufweg",
+   "fachfreigabe": "FACH-TIX",
+   "begleitend": [
+    "story"
+   ],
+   "bedingung": "testkauf_erfolgreich",
+   "partnerfaehig": false
+  },
+  {
+   "id": "V-NL-ANK",
+   "bezug": "V",
+   "abstand": -7,
+   "klasse": "NL",
+   "titel": "Newsletter Ankündigung Vorverkauf",
+   "kanal": "newsletter",
+   "zielgruppe": "interessierte_und_fruehere_gaeste",
+   "zweck": "entscheidung",
+   "inhalt": "Datum, Uhrzeit, Angebot, Erinnerungsoption",
+   "fachfreigabe": "FACH-TIX",
+   "partnerfaehig": false
+  },
+  {
+   "id": "V-ERINN",
+   "bezug": "V",
+   "abstand": -1,
+   "klasse": "S",
+   "titel": "Erinnerung am Vortag",
+   "kanal": "story",
+   "zielgruppe": "interessierte",
+   "zweck": "entscheidung",
+   "inhalt": "Uhrzeit und Link",
+   "fachfreigabe": "FACH-TIX",
+   "partnerfaehig": false
+  },
+  {
+   "id": "V-START",
+   "bezug": "V",
+   "abstand": 0,
+   "klasse": "M",
+   "titel": "Verkaufsstart",
+   "kanal": "feed",
+   "zielgruppe": "alle",
+   "zweck": "entscheidung",
+   "inhalt": "Kaufweg, Angebot, wichtigste Bedingungen",
+   "fachfreigabe": "FACH-TIX",
+   "begleitend": [
+    "story",
+    "website"
+   ],
+   "partnerfaehig": false
+  },
+  {
+   "id": "V-NL-START",
+   "bezug": "V",
+   "abstand": 0,
+   "klasse": "NL",
+   "titel": "Newsletter Verkaufsstart",
+   "kanal": "newsletter",
+   "zielgruppe": "interessentenliste",
+   "zweck": "entscheidung",
+   "inhalt": "Kauflink",
+   "fachfreigabe": "FACH-TIX",
+   "partnerfaehig": false
+  },
+  {
+   "id": "V-PRUEF",
+   "bezug": "V",
+   "abstand": 2,
+   "klasse": "INT",
+   "titel": "Fragen und Kaufabbrüche prüfen, Missverständnisse beheben",
+   "kanal": "intern",
+   "schritte": [
+    {
+     "id": "I1",
+     "phase": "nachbereitung",
+     "titel": "Abbrüche, Fragen und Fehler sichten, Korrekturen beauftragen",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": 0,
+     "bis": 1,
+     "stunden": 1.0,
+     "werktag": true
+    }
+   ],
+   "partnerfaehig": false
+  },
+  {
+   "id": "P-WELLE",
+   "bezug": "P",
+   "abstand": 0,
+   "klasse": "P",
+   "titel": "Programmwelle veröffentlichen",
+   "kanal": "feed",
+   "zielgruppe": "alle",
+   "zweck": "vertrauen",
+   "inhalt": "Namen, Charakter, Erlebnis; bei unbekannten Acts der Grund für den Besuch",
+   "fachfreigabe": "FACH-PROG",
+   "begleitend": [
+    "story",
+    "website"
+   ],
+   "partnerfaehig": false
+  },
+  {
+   "id": "P-VERTIEF",
+   "bezug": "P",
+   "abstand": 3,
+   "klasse": "S",
+   "titel": "Einzelne Acts oder Kollektive vorstellen",
+   "kanal": "feed",
+   "zielgruppe": "alle",
+   "zweck": "vertrauen",
+   "inhalt": "Eigene Geschichte des Acts",
+   "fachfreigabe": "FACH-PROG",
+   "partnerfaehig": true
+  },
+  {
+   "id": "PREIS-7",
+   "bezug": "D-PREIS",
+   "abstand": -7,
+   "klasse": "S",
+   "titel": "Preiswechsel ankündigen",
+   "kanal": "feed",
+   "zielgruppe": "kaufinteressierte",
+   "zweck": "entscheidung",
+   "inhalt": "Aktueller Preis, neuer Preis, genaue Frist, Link",
+   "fachfreigabe": "FACH-TIX",
+   "bedingung": "verknappung_erlaubt",
+   "partnerfaehig": false
+  },
+  {
+   "id": "PREIS-2",
+   "bezug": "D-PREIS",
+   "abstand": -2,
+   "klasse": "S",
+   "titel": "Preiswechsel erinnern",
+   "kanal": "story",
+   "zielgruppe": "kaufinteressierte",
+   "zweck": "entscheidung",
+   "inhalt": "Frist und Link",
+   "fachfreigabe": "FACH-TIX",
+   "bedingung": "verknappung_erlaubt",
+   "partnerfaehig": false
+  },
+  {
+   "id": "PREIS-0",
+   "bezug": "D-PREIS",
+   "abstand": 0,
+   "klasse": "WEB",
+   "titel": "Preise aktualisieren, laufende Anzeigen prüfen",
+   "kanal": "website",
+   "zielgruppe": "alle",
+   "zweck": "orientierung",
+   "inhalt": "Neue Preise",
+   "fachfreigabe": "FACH-TIX",
+   "partnerfaehig": false
+  },
+  {
+   "id": "BEW-OPEN",
+   "bezug": "B-OPEN",
+   "abstand": 0,
+   "klasse": "M",
+   "titel": "Bewerbung öffnet",
+   "kanal": "feed",
+   "zielgruppe": "mitwirkende",
+   "zweck": "entscheidung",
+   "inhalt": "Gesuchte Beiträge, Voraussetzungen, Frist, Bewerbungsweg",
+   "fachfreigabe": "FACH-PROG",
+   "begleitend": [
+    "website"
+   ],
+   "partnerfaehig": false
+  },
+  {
+   "id": "BEW-14",
+   "bezug": "D-BEW",
+   "abstand": -14,
+   "klasse": "S",
+   "titel": "Bewerbungsschluss in zwei Wochen",
+   "kanal": "feed",
+   "zielgruppe": "mitwirkende",
+   "zweck": "entscheidung",
+   "inhalt": "Noch gesuchte Beiträge",
+   "fachfreigabe": "FACH-PROG",
+   "partnerfaehig": false
+  },
+  {
+   "id": "BEW-3",
+   "bezug": "D-BEW",
+   "abstand": -3,
+   "klasse": "S",
+   "titel": "Bewerbungsschluss in drei Tagen",
+   "kanal": "story",
+   "zielgruppe": "mitwirkende",
+   "zweck": "entscheidung",
+   "inhalt": "Frist und Link",
+   "fachfreigabe": "FACH-PROG",
+   "partnerfaehig": false
+  },
+  {
+   "id": "ADDON-14",
+   "bezug": "D-ADDON",
+   "abstand": -14,
+   "klasse": "TM",
+   "titel": "Buchungsschluss Zusatzangebot",
+   "kanal": "mail_ticketinhabende",
+   "zielgruppe": "ticketinhabende",
+   "zweck": "orientierung",
+   "inhalt": "Was, bis wann, wie buchen",
+   "fachfreigabe": "FACH-TIX",
+   "partnerfaehig": false
+  },
+  {
+   "id": "ADDON-3",
+   "bezug": "D-ADDON",
+   "abstand": -3,
+   "klasse": "S",
+   "titel": "Buchungsschluss erinnern",
+   "kanal": "story",
+   "zielgruppe": "ticketinhabende",
+   "zweck": "orientierung",
+   "inhalt": "Frist und Link",
+   "fachfreigabe": "FACH-TIX",
+   "partnerfaehig": false
+  },
+  {
+   "id": "TRANS-14",
+   "bezug": "D-TRANSFER",
+   "abstand": -14,
+   "klasse": "TM",
+   "titel": "Frist Ticketumschreibung",
+   "kanal": "mail_ticketinhabende",
+   "zielgruppe": "ticketinhabende",
+   "zweck": "orientierung",
+   "inhalt": "Frist, Verfahren, Kosten",
+   "fachfreigabe": "FACH-TIX",
+   "partnerfaehig": false
+  },
+  {
+   "id": "G-ANK",
+   "bezug": "G",
+   "abstand": -21,
+   "klasse": "M",
+   "titel": "Veranstaltung ankündigen",
+   "kanal": "feed",
+   "zielgruppe": "passende_gruppe",
+   "zweck": "vertrauen",
+   "inhalt": "Eigener Nutzen, Ort, Teilnahmeweg, Verbindung zum Festival",
+   "fachfreigabe": "KOM",
+   "partnerfaehig": true
+  },
+  {
+   "id": "G-ERKL",
+   "bezug": "G",
+   "abstand": -7,
+   "klasse": "S",
+   "titel": "Veranstaltung erklären",
+   "kanal": "feed",
+   "zielgruppe": "passende_gruppe",
+   "zweck": "entscheidung",
+   "inhalt": "Ablauf, Anmeldung",
+   "fachfreigabe": "KOM",
+   "partnerfaehig": true
+  },
+  {
+   "id": "G-ERINN",
+   "bezug": "G",
+   "abstand": -1,
+   "klasse": "S",
+   "titel": "Erinnerung",
+   "kanal": "story",
+   "zielgruppe": "angemeldete",
+   "zweck": "orientierung",
+   "inhalt": "Uhrzeit, Ort",
+   "fachfreigabe": "KOM",
+   "partnerfaehig": false
+  },
+  {
+   "id": "G-NACH",
+   "bezug": "G",
+   "abstand": 2,
+   "klasse": "S",
+   "titel": "Nachbereitung",
+   "kanal": "feed",
+   "zielgruppe": "alle",
+   "zweck": "wiederkehr",
+   "inhalt": "Eindrücke, nächste Möglichkeit",
+   "fachfreigabe": "KOM",
+   "partnerfaehig": true
+  },
+  {
+   "id": "S-BF",
+   "bezug": "S-BF",
+   "abstand": 0,
+   "klasse": "S",
+   "titel": "Black Friday",
+   "kanal": "feed",
+   "zielgruppe": "kaufinteressierte",
+   "zweck": "entscheidung",
+   "inhalt": "Nur mit echtem Angebot aus der Preisarchitektur",
+   "fachfreigabe": "FACH-TIX",
+   "begleitend": [
+    "story"
+   ],
+   "bedingung": "angebot_freigegeben",
+   "partnerfaehig": false
+  },
+  {
+   "id": "S-XMAS",
+   "bezug": "S-XMAS",
+   "abstand": 0,
+   "klasse": "S",
+   "titel": "Tickets als Geschenk",
+   "kanal": "feed",
+   "zielgruppe": "kaufinteressierte",
+   "zweck": "entscheidung",
+   "inhalt": "Geschenkoption, letzte Liefer- oder Versandfrist",
+   "fachfreigabe": "FACH-TIX",
+   "begleitend": [
+    "story"
+   ],
+   "partnerfaehig": false
+  },
+  {
+   "id": "S-NL",
+   "bezug": "S-NL",
+   "abstand": 0,
+   "klasse": "NL",
+   "titel": "Saisonnewsletter",
+   "kanal": "newsletter",
+   "zielgruppe": "interessierte",
+   "zweck": "vertrauen",
+   "inhalt": "Urlaubsplanung, Programmstand, Anreise-Grundlagen",
+   "fachfreigabe": "KOM",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F120-VID",
+   "bezug": "F",
+   "abstand": -120,
+   "klasse": "L",
+   "titel": "Video Erlebnis",
+   "kanal": "reel",
+   "zielgruppe": "interessierte",
+   "zweck": "vertrauen",
+   "inhalt": "Atmosphäre und konkrete Situationen",
+   "fachfreigabe": "KOM",
+   "thema": "erlebnis",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F90-NL",
+   "bezug": "F",
+   "abstand": -90,
+   "klasse": "NL",
+   "titel": "Newsletter Planung und Aufenthalt",
+   "kanal": "newsletter",
+   "zielgruppe": "interessierte_und_ticketinhabende",
+   "zweck": "entscheidung",
+   "inhalt": "Camping, Unterkunft, Gruppen, Familien, Buchungsfristen",
+   "fachfreigabe": "FACH-BETR",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F75-VID",
+   "bezug": "F",
+   "abstand": -75,
+   "klasse": "L",
+   "titel": "Video Menschen",
+   "kanal": "reel",
+   "zielgruppe": "interessierte",
+   "zweck": "vertrauen",
+   "inhalt": "Artists, Crews, Kollektive mit eigener Perspektive",
+   "fachfreigabe": "KOM",
+   "thema": "menschen",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F60-WERTE",
+   "bezug": "F",
+   "abstand": -60,
+   "klasse": "M",
+   "titel": "Werte anhand echter Maßnahmen",
+   "kanal": "feed",
+   "zielgruppe": "alle",
+   "zweck": "vertrauen",
+   "inhalt": "Nachhaltigkeit, Zugänglichkeit, Gemeinschaft, Unterstützung",
+   "fachfreigabe": "FACH-CARE",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F60-NL",
+   "bezug": "F",
+   "abstand": -60,
+   "klasse": "NL",
+   "titel": "Newsletter Entscheidungshilfe",
+   "kanal": "newsletter",
+   "zielgruppe": "interessierte",
+   "zweck": "entscheidung",
+   "inhalt": "Gründe für den Besuch, offene Einwände",
+   "fachfreigabe": "KOM",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F42-TM",
+   "bezug": "F",
+   "abstand": -42,
+   "klasse": "TM",
+   "titel": "Mail Anreise und Aufenthalt",
+   "kanal": "mail_ticketinhabende",
+   "zielgruppe": "ticketinhabende",
+   "zweck": "orientierung",
+   "inhalt": "Anreise, Shuttle, Mitfahren, Fahrrad, Unterkünfte, Buchungsfristen",
+   "fachfreigabe": "FACH-BETR",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F42-WEB",
+   "bezug": "F",
+   "abstand": -42,
+   "klasse": "WEB",
+   "titel": "Infoseite Anreise und Aufenthalt",
+   "kanal": "website",
+   "zielgruppe": "alle",
+   "zweck": "orientierung",
+   "inhalt": "Bestätigte Anreisewege und Aufenthaltsmöglichkeiten",
+   "fachfreigabe": "FACH-BETR",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F40-VID",
+   "bezug": "F",
+   "abstand": -40,
+   "klasse": "L",
+   "titel": "Video Anreise",
+   "kanal": "reel",
+   "zielgruppe": "unentschlossene",
+   "zweck": "entscheidung",
+   "inhalt": "Weg und realer Aufwand",
+   "fachfreigabe": "FACH-BETR",
+   "thema": "orientierung",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F30-PR",
+   "bezug": "F",
+   "abstand": -30,
+   "klasse": "PR",
+   "titel": "Pressemitteilung Programm und Akkreditierung",
+   "kanal": "presse",
+   "zielgruppe": "medien",
+   "zweck": "entdeckung",
+   "inhalt": "Programm, Akkreditierungsschluss, Pressebereich",
+   "fachfreigabe": "FACH-PROG",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F30-NL",
+   "bezug": "F",
+   "abstand": -30,
+   "klasse": "NL",
+   "titel": "Newsletter letzte Entscheidung",
+   "kanal": "newsletter",
+   "zielgruppe": "interessierte",
+   "zweck": "entscheidung",
+   "inhalt": "Programmauswahl, Anreise, Kaufweg",
+   "fachfreigabe": "FACH-TIX",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F21-VID",
+   "bezug": "F",
+   "abstand": -21,
+   "klasse": "L",
+   "titel": "Video Care und Vorfreude",
+   "kanal": "reel",
+   "zielgruppe": "alle",
+   "zweck": "vertrauen",
+   "inhalt": "Care-Angebote, Kontaktwege, Atmosphäre",
+   "fachfreigabe": "FACH-CARE",
+   "thema": "orientierung",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F21-WEB",
+   "bezug": "F",
+   "abstand": -21,
+   "klasse": "WEB",
+   "titel": "Infoseite Care, Einlass, Packliste, Bezahlen",
+   "kanal": "website",
+   "zielgruppe": "ticketinhabende",
+   "zweck": "orientierung",
+   "inhalt": "Care, Einlassregeln, Packliste, Cashless, Rückzahlung",
+   "fachfreigabe": "FACH-CARE",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F21-PACK",
+   "bezug": "F",
+   "abstand": -21,
+   "klasse": "S",
+   "titel": "Packliste und Einlass",
+   "kanal": "feed",
+   "zielgruppe": "ticketinhabende",
+   "zweck": "orientierung",
+   "inhalt": "Wichtigste Regeln, Link zur Infoseite",
+   "fachfreigabe": "FACH-BETR",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F14-TT",
+   "bezug": "F",
+   "abstand": -14,
+   "klasse": "M",
+   "titel": "Timetable und Geländeplan",
+   "kanal": "feed",
+   "zielgruppe": "alle",
+   "zweck": "orientierung",
+   "inhalt": "Freigegebener Timetable, Geländeplan, Programmauswahl",
+   "fachfreigabe": "FACH-PROG",
+   "begleitend": [
+    "story",
+    "website"
+   ],
+   "partnerfaehig": false
+  },
+  {
+   "id": "F14-TM",
+   "bezug": "F",
+   "abstand": -14,
+   "klasse": "TM",
+   "titel": "Mail Care, Regeln, Timetable",
+   "kanal": "mail_ticketinhabende",
+   "zielgruppe": "ticketinhabende",
+   "zweck": "orientierung",
+   "inhalt": "Care-Angebote, Regeln, Timetable-Link",
+   "fachfreigabe": "FACH-CARE",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F14-NL",
+   "bezug": "F",
+   "abstand": -14,
+   "klasse": "NL",
+   "titel": "Newsletter Programmauswahl",
+   "kanal": "newsletter",
+   "zielgruppe": "interessierte",
+   "zweck": "entscheidung",
+   "inhalt": "Highlights je Tag, Kaufweg",
+   "fachfreigabe": "FACH-PROG",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F14-ANW",
+   "bezug": "F",
+   "abstand": -14,
+   "klasse": "INT",
+   "titel": "Anwohner, Gemeinde und Behörden informieren",
+   "kanal": "brief_und_mail",
+   "schritte": [
+    {
+     "id": "I1",
+     "phase": "erstellung",
+     "titel": "Anwohnerinfo erzeugen (Verkehr, Lärm, Zeiten, Kontakt)",
+     "rolle": "RED",
+     "werkzeug": "GEN-TEXT",
+     "von": -10,
+     "bis": -7,
+     "stunden": 1.0,
+     "werktag": true
+    },
+    {
+     "id": "I2",
+     "phase": "freigabe",
+     "titel": "Betrieb prüft und gibt frei",
+     "rolle": "FACH-BETR",
+     "werkzeug": null,
+     "von": -6,
+     "bis": -5,
+     "stunden": 0.5,
+     "werktag": true
+    },
+    {
+     "id": "I3",
+     "phase": "posting",
+     "titel": "Verteilen und an Gemeinde senden",
+     "rolle": "FACH-BETR",
+     "werkzeug": null,
+     "von": 0,
+     "bis": 0,
+     "stunden": 1.0,
+     "werktag": true
+    }
+   ],
+   "partnerfaehig": false
+  },
+  {
+   "id": "F14-KRISE",
+   "bezug": "F",
+   "abstand": -14,
+   "klasse": "INT",
+   "titel": "Krisenvorlagen freigeben und Rufbereitschaft festlegen",
+   "kanal": "intern",
+   "verbund": true,
+   "schritte": [
+    {
+     "id": "I1",
+     "phase": "erstellung",
+     "titel": "Vorlagen Unwetter, Einlassstopp, Programmänderung, Absage erzeugen",
+     "rolle": "RED",
+     "werkzeug": "GEN-TEXT",
+     "von": -21,
+     "bis": -14,
+     "stunden": 2.0,
+     "werktag": true
+    },
+    {
+     "id": "I2",
+     "phase": "freigabe",
+     "titel": "Betrieb und Geschäftsführung geben frei, Freigabeweg festlegen",
+     "rolle": "FACH-BETR",
+     "werkzeug": null,
+     "von": -7,
+     "bis": -1,
+     "stunden": 1.0,
+     "werktag": true
+    },
+    {
+     "id": "I3",
+     "phase": "posting",
+     "titel": "Rufbereitschaft und Kontakte im Dienstplan eintragen",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": 0,
+     "bis": 0,
+     "stunden": 0.5,
+     "werktag": true
+    }
+   ],
+   "partnerfaehig": false
+  },
+  {
+   "id": "F7-BUENDEL",
+   "bezug": "F",
+   "abstand": -7,
+   "klasse": "M",
+   "titel": "Wichtigste Infos bündeln",
+   "kanal": "feed",
+   "zielgruppe": "ticketinhabende",
+   "zweck": "orientierung",
+   "inhalt": "Öffnungszeiten, Anreise, Einlass, Care, Links",
+   "fachfreigabe": "FACH-BETR",
+   "begleitend": [
+    "story",
+    "website"
+   ],
+   "partnerfaehig": false
+  },
+  {
+   "id": "F7-PR",
+   "bezug": "F",
+   "abstand": -7,
+   "klasse": "PR",
+   "titel": "Pressemitteilung Festivalstart",
+   "kanal": "presse",
+   "zielgruppe": "medien",
+   "zweck": "entdeckung",
+   "inhalt": "Programmhöhepunkte, Pressekontakt vor Ort",
+   "fachfreigabe": "FACH-PROG",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F3-TM",
+   "bezug": "F",
+   "abstand": -3,
+   "klasse": "TM",
+   "titel": "Mail letzte Infos",
+   "kanal": "mail_ticketinhabende",
+   "zielgruppe": "ticketinhabende",
+   "zweck": "orientierung",
+   "inhalt": "Öffnungszeiten, Check-in, bestätigte Änderungen, Wetter",
+   "fachfreigabe": "FACH-BETR",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F1-STORY",
+   "bezug": "F",
+   "abstand": -1,
+   "klasse": "S",
+   "titel": "Letzte Orientierung",
+   "kanal": "story",
+   "zielgruppe": "ticketinhabende",
+   "zweck": "orientierung",
+   "inhalt": "Ankunft, Check-in, Wetter",
+   "fachfreigabe": "FACH-BETR",
+   "partnerfaehig": false
+  },
+  {
+   "id": "F-LIVE",
+   "bezug": "F",
+   "abstand": 0,
+   "klasse": "INT",
+   "titel": "Tagesorientierung während des Festivals",
+   "kanal": "story_app",
+   "wiederholung": "taeglich_F_bis_Z",
+   "schritte": [
+    {
+     "id": "I1",
+     "phase": "posting",
+     "titel": "Tagesprogramm, Änderungen, Care-Hinweise ausspielen",
+     "rolle": "CM",
+     "werkzeug": "GEN-CONTENT",
+     "von": 0,
+     "bis": 0,
+     "stunden": 1.5,
+     "werktag": false
+    }
+   ],
+   "partnerfaehig": false
+  },
+  {
+   "id": "Z1-DANK",
+   "bezug": "Z",
+   "abstand": 1,
+   "klasse": "S",
+   "titel": "Dank und Fundsachen",
+   "kanal": "feed",
+   "zielgruppe": "alle",
+   "zweck": "wiederkehr",
+   "inhalt": "Dank, Fundsachen, Kontaktwege",
+   "fachfreigabe": "KOM",
+   "begleitend": [
+    "story"
+   ],
+   "partnerfaehig": false
+  },
+  {
+   "id": "Z1-TM",
+   "bezug": "Z",
+   "abstand": 1,
+   "klasse": "TM",
+   "titel": "Mail Dank, Fundsachen, Feedback",
+   "kanal": "mail_ticketinhabende",
+   "zielgruppe": "ticketinhabende",
+   "zweck": "wiederkehr",
+   "inhalt": "Dank, Fundsachen, Feedbackformular, Rückzahlung falls relevant",
+   "fachfreigabe": "FACH-BETR",
+   "partnerfaehig": false
+  },
+  {
+   "id": "Z2-PR",
+   "bezug": "Z",
+   "abstand": 2,
+   "klasse": "PR",
+   "titel": "Pressemitteilung Bilanz",
+   "kanal": "presse",
+   "zielgruppe": "medien",
+   "zweck": "wiederkehr",
+   "inhalt": "Bilanz, nächste Ausgabe falls bestätigt",
+   "fachfreigabe": "KOM",
+   "partnerfaehig": false
+  },
+  {
+   "id": "Z5-NL",
+   "bezug": "Z",
+   "abstand": 5,
+   "klasse": "NL",
+   "titel": "Newsletter Rückblick und nächste Ausgabe",
+   "kanal": "newsletter",
+   "zielgruppe": "fruehere_gaeste",
+   "zweck": "wiederkehr",
+   "inhalt": "Rückblick, Feedback, nächste Ausgabe falls bestätigt",
+   "fachfreigabe": "KOM",
+   "partnerfaehig": false
+  },
+  {
+   "id": "Z14-DANKSERIE",
+   "bezug": "Z",
+   "abstand": 14,
+   "klasse": "M",
+   "titel": "Dankesserie für Beteiligte",
+   "kanal": "feed",
+   "zielgruppe": "alle",
+   "zweck": "wiederkehr",
+   "inhalt": "Crews, Kollektive, Artists mit Credits",
+   "fachfreigabe": "KOM",
+   "partnerfaehig": true
+  },
+  {
+   "id": "Z30-AUSW",
+   "bezug": "Z",
+   "abstand": 30,
+   "klasse": "INT",
+   "titel": "Auswertung: beibehalten, verändern, beenden",
+   "kanal": "intern",
+   "schritte": [
+    {
+     "id": "I1",
+     "phase": "nachbereitung",
+     "titel": "Ergebnisse, Aufwand und Erkenntnisse festhalten",
+     "rolle": "KOM",
+     "werkzeug": null,
+     "von": -5,
+     "bis": 0,
+     "stunden": 3.0,
+     "werktag": true
+    }
+   ],
+   "partnerfaehig": false
+  },
+  {
+   "id": "R-AFTER",
+   "bezug": "R",
+   "abstand": 0,
+   "klasse": "L",
+   "titel": "Aftermovie",
+   "kanal": "reel",
+   "zielgruppe": "fruehere_gaeste",
+   "zweck": "wiederkehr",
+   "inhalt": "Freigegebenes Material, Credits, Anlass für Wiederkehr",
+   "fachfreigabe": "KOM",
+   "thema": "erlebnis",
+   "partnerfaehig": false
+  },
+  {
+   "id": "AD-WINTER",
+   "bezug": "S-BF",
+   "abstand": -7,
+   "klasse": "AD",
+   "titel": "Anzeigen Black Friday und Geschenk-Tickets",
+   "kanal": "anzeige",
+   "zielgruppe": "kaufinteressierte",
+   "zweck": "entscheidung",
+   "inhalt": "Motive zu Geschenk und Planungssicherheit",
+   "fachfreigabe": "FACH-TIX",
+   "bedingung": "budget_freigegeben",
+   "laufzeit_tage": 32,
+   "partnerfaehig": false
+  },
+  {
+   "id": "AD-FRUEH",
+   "bezug": "F",
+   "abstand": -140,
+   "klasse": "AD",
+   "titel": "Anzeigen Frühjahr",
+   "kanal": "anzeige",
+   "zielgruppe": "neue_passende_gruppen",
+   "zweck": "entdeckung",
+   "inhalt": "Erlebnis und Programm",
+   "fachfreigabe": "FACH-TIX",
+   "bedingung": "budget_freigegeben",
+   "laufzeit_tage": 30,
+   "partnerfaehig": false
+  },
+  {
+   "id": "AD-FINAL",
+   "bezug": "F",
+   "abstand": -60,
+   "klasse": "AD",
+   "titel": "Anzeigen Abschluss",
+   "kanal": "anzeige",
+   "zielgruppe": "kaufinteressierte",
+   "zweck": "entscheidung",
+   "inhalt": "Gründe, Anreise, Kaufweg",
+   "fachfreigabe": "FACH-TIX",
+   "bedingung": "budget_freigegeben",
+   "laufzeit_tage": 50,
+   "partnerfaehig": false
+  },
+  {
+   "id": "A-AUFRUF",
+   "bezug": "A",
+   "abstand": -7,
+   "klasse": "S",
+   "titel": "Aufruf zum Mitbauen",
+   "kanal": "feed",
+   "zielgruppe": "mitwirkende",
+   "zweck": "entscheidung",
+   "inhalt": "Aufgaben, Zeiträume, Zugang, Anmeldung",
+   "fachfreigabe": "FACH-BETR",
+   "bedingung": "aufbau_mitmachen_offen",
+   "thema": "B13",
+   "partnerfaehig": false
+  },
+  {
+   "id": "A-EINBLICK",
+   "bezug": "A",
+   "abstand": 1,
+   "klasse": "S",
+   "titel": "Einblick in den Aufbau",
+   "kanal": "feed",
+   "zielgruppe": "alle",
+   "zweck": "vertrauen",
+   "inhalt": "Menschen, Fortschritt, Gestaltung, Bildnachweise",
+   "fachfreigabe": "FACH-BETR",
+   "begleitend": [
+    "story"
+   ],
+   "thema": "B13",
+   "partnerfaehig": true
+  },
+  {
+   "id": "CD-100",
+   "bezug": "F",
+   "abstand": -100,
+   "klasse": "S",
+   "titel": "Countdown 100 Tage mit neuem Inhalt",
+   "kanal": "feed",
+   "zielgruppe": "alle",
+   "zweck": "vertrauen",
+   "inhalt": "Eine neue Information oder Geschichte, keine bloße Zahl",
+   "fachfreigabe": "KOM",
+   "bedingung": "countdown_aktiv",
+   "thema": "B23",
+   "partnerfaehig": false
+  },
+  {
+   "id": "CD-30",
+   "bezug": "F",
+   "abstand": -30,
+   "klasse": "S",
+   "titel": "Countdown 30 Tage mit neuem Inhalt",
+   "kanal": "story",
+   "zielgruppe": "alle",
+   "zweck": "vertrauen",
+   "inhalt": "Eine neue Information oder Geschichte",
+   "fachfreigabe": "KOM",
+   "bedingung": "countdown_aktiv",
+   "thema": "B23",
+   "partnerfaehig": false
+  },
+  {
+   "id": "Z10-GALERIE",
+   "bezug": "Z",
+   "abstand": 10,
+   "klasse": "M",
+   "titel": "Fotogalerie und Rückblick",
+   "kanal": "feed",
+   "zielgruppe": "fruehere_gaeste",
+   "zweck": "wiederkehr",
+   "inhalt": "Freigegebene Fotos mit Credits, gezeigte Beteiligte markiert",
+   "fachfreigabe": "KOM",
+   "thema": "B31",
+   "partnerfaehig": true
+  },
+  {
+   "id": "SLOT",
+   "bezug": "phase",
+   "klasse": "S|M",
+   "titel": "Redaktionsslot",
+   "kanal": "feed",
+   "regel": "Fehlt in einer Woche die Phasenmenge, wird ein Slot ergänzt. Das Thema kommt aus der Themenbibliothek: Kandidaten sind Einträge mit slot=true, deren Zeitfenster den Tag enthält und deren Umfang zum Festival passt; gewählt wird das bisher am seltensten genutzte. Ohne Kandidat rotieren die Grundthemen erlebnis, menschen, entscheidung, orientierung. Klassen wechseln S, M, S, M, S. Kein Slot innerhalb von 2 Tagen vor oder nach einem anderen Feedbeitrag.",
+   "zielgruppe": "aus_zielgruppenanalyse",
+   "fachfreigabe": "KOM",
+   "partnerfaehig": true
+  }
+ ],
+ "partnerfaehig_themen": [
+  "B06",
+  "B07",
+  "B11",
+  "B12",
+  "B13",
+  "B30",
+  "B31"
+ ],
+ "partner_regel": "Zentral bleiben alle Beiträge mit Fakten: Tickets, Preise, Fristen, Anreise, Care, Einlass, Timetable, Krisen, Presse, Mails an Ticketinhabende, Anzeigen. Partnerfähig sind Beiträge, die von Menschen leben: Kollektiv- und Bühnenporträts, Rahmenprogramm, Artistporträts, Festivalerlebnis, Aufbau, Galerie, Dankesserie, begleitende Veranstaltungen. Ein Redaktionsslot ist nur partnerfähig, wenn sein Thema in PARTNERFAEHIG_THEMEN steht. Partner erstellen im Baukasten aus gesperrten Vorlagen; Freigabe durch die verantwortliche Person Kommunikation, Faktencheck durch die Fachrolle. Veröffentlicht wird als gemeinsamer Beitrag mit dem Partneraccount. Ist ein partnerfähiger Beitrag 10 Tage vor T nicht übernommen, fällt er an die Redaktion zurück.",
+ "themenbibliothek": [
+  {
+   "id": "B01",
+   "titel": "Festivalankündigung",
+   "inhalt": "Datum, Ort, Idee, erster Handlungsaufruf",
+   "umfang": "basis",
+   "fenster": "L; bei Fortsetzung Z Vorjahr +7 bis +30",
+   "beteiligte": "Veranstaltende, mitveranstaltende Crew",
+   "regeln": [
+    "L-HAUPT",
+    "L-PRESSE",
+    "V-START"
+   ]
+  },
+  {
+   "id": "B02",
+   "titel": "Ticketstart",
+   "inhalt": "Ticketarten, Gesamtpreise, Kaufweg",
+   "umfang": "basis",
+   "fenster": "V-7, V-1, V",
+   "beteiligte": "Ticketing für Fakten",
+   "regeln": [
+    "V-ANK",
+    "V-NL-ANK",
+    "V-ERINN",
+    "V-START",
+    "V-NL-START"
+   ]
+  },
+  {
+   "id": "B03",
+   "titel": "Mitmachen: Programm und Kollektive",
+   "inhalt": "Gesuchte Beiträge, Voraussetzungen, Bewerbungsweg",
+   "umfang": "bedarf",
+   "fenster": "F-240 bis F-150 oder Bewerbungsstart",
+   "beteiligte": "Programmteam, aufnehmende Kollektive",
+   "regeln": [
+    "BEW-OPEN",
+    "BEW-14",
+    "BEW-3"
+   ],
+   "hinweis": "eigenes Ereignis B-OPEN/D-BEW je Bereich"
+  },
+  {
+   "id": "B04",
+   "titel": "Jobs und Praktika",
+   "inhalt": "Rollen, Voraussetzungen, Bewerbung",
+   "umfang": "bedarf",
+   "fenster": "F-180 bis F-90 oder Bewerbungsstart",
+   "beteiligte": "betroffene Arbeitsbereiche",
+   "regeln": [
+    "BEW-OPEN",
+    "BEW-14",
+    "BEW-3"
+   ]
+  },
+  {
+   "id": "B05",
+   "titel": "Erste Programmwelle",
+   "inhalt": "Bestätigte Namen und Festivalprofil",
+   "umfang": "basis",
+   "fenster": "F-200 (Welle 1)",
+   "beteiligte": "Programm, gezeigte Artists",
+   "regeln": [
+    "P-WELLE",
+    "P-VERTIEF"
+   ]
+  },
+  {
+   "id": "B06",
+   "titel": "Kollektive und Bühnen",
+   "inhalt": "Wer gestaltet welchen Ort?",
+   "umfang": "basis_bei_beteiligung",
+   "fenster": "F-120 bis F-45",
+   "beteiligte": "Kollektive, zuständige Crew als Collab",
+   "regeln": [],
+   "slot": {
+    "bezug": "F",
+    "von": -120,
+    "bis": -45,
+    "klasse": "M"
+   }
+  },
+  {
+   "id": "B07",
+   "titel": "Rahmenprogramm",
+   "inhalt": "Workshops, Kultur, Erholung, Mitmachen",
+   "umfang": "basis_bei_angebot",
+   "fenster": "F-120 bis F-45",
+   "beteiligte": "Leitende der Angebote als Collab",
+   "regeln": [],
+   "slot": {
+    "bezug": "F",
+    "von": -120,
+    "bis": -45,
+    "klasse": "M"
+   }
+  },
+  {
+   "id": "B08",
+   "titel": "Helfendenaufruf",
+   "inhalt": "Aufgaben, Zeiträume, Gegenleistung, Bewerbung",
+   "umfang": "bedarf",
+   "fenster": "F-120 bis F-60, Erinnerung F-30",
+   "beteiligte": "Helfendenkoordination, suchende Bereiche",
+   "regeln": [
+    "BEW-OPEN",
+    "BEW-14",
+    "BEW-3"
+   ]
+  },
+  {
+   "id": "B09",
+   "titel": "Camping, Camper, Glamping",
+   "inhalt": "Optionen, Buchung, Regeln",
+   "umfang": "bedarf",
+   "fenster": "F-90 bis F-45, Fristen vorrangig",
+   "beteiligte": "Campingteam, Unterkunftsanbietende",
+   "regeln": [
+    "F90-NL",
+    "ADDON-14",
+    "ADDON-3"
+   ],
+   "slot": {
+    "bezug": "F",
+    "von": -90,
+    "bis": -45,
+    "klasse": "S"
+   }
+  },
+  {
+   "id": "B10",
+   "titel": "Gruppenangebote, besondere Ticketarten",
+   "inhalt": "Angebot und Bedingungen",
+   "umfang": "bedarf",
+   "fenster": "am Freigabetag, vor der Reiseplanung",
+   "beteiligte": "beteiligte Communities",
+   "regeln": [],
+   "hinweis": "als Extra E04 oder eigenes Ereignis"
+  },
+  {
+   "id": "B11",
+   "titel": "Artistporträts und Musik",
+   "inhalt": "Warum diesen Auftritt sehen?",
+   "umfang": "ergaenzung",
+   "fenster": "F-120 bis F-7, an Programmwellen gekoppelt",
+   "beteiligte": "Artist als Collab, Label oder Crew",
+   "regeln": [
+    "P-VERTIEF"
+   ],
+   "slot": {
+    "bezug": "F",
+    "von": -120,
+    "bis": -7,
+    "klasse": "S"
+   }
+  },
+  {
+   "id": "B12",
+   "titel": "Festivalerlebnis",
+   "inhalt": "Lieblingsorte, Essen, Spa, Kunst, Besonderheiten",
+   "umfang": "ergaenzung",
+   "fenster": "F-90 bis F-14",
+   "beteiligte": "die Menschen und Crews hinter dem Angebot",
+   "regeln": [
+    "F120-VID"
+   ],
+   "slot": {
+    "bezug": "F",
+    "von": -150,
+    "bis": -14,
+    "klasse": "M"
+   }
+  },
+  {
+   "id": "B13",
+   "titel": "Aufbau und Gestaltung",
+   "inhalt": "Was entsteht gerade?",
+   "umfang": "ergaenzung",
+   "fenster": "A-7 (Aufruf) und ab A bis F-1",
+   "beteiligte": "Aufbau, Gestaltung, Technik, Kollektive",
+   "regeln": [
+    "A-AUFRUF",
+    "A-EINBLICK"
+   ]
+  },
+  {
+   "id": "B14",
+   "titel": "Werte und konkrete Maßnahmen",
+   "inhalt": "Nachhaltigkeit, Zugänglichkeit, Gemeinschaft",
+   "umfang": "basis",
+   "fenster": "F-60 bis F-21",
+   "beteiligte": "zuständiges Team, umsetzende Partner",
+   "regeln": [
+    "F60-WERTE"
+   ]
+  },
+  {
+   "id": "B15",
+   "titel": "Anreiseübersicht",
+   "inhalt": "Bahn, Shuttle, Bus, Fahrrad, Auto, Adresse",
+   "umfang": "basis",
+   "fenster": "Grundlagen ab V, Details F-42, Aktualisierung F-7",
+   "beteiligte": "Mobilitätspartner, sofern bestätigt",
+   "regeln": [
+    "F42-TM",
+    "F42-WEB",
+    "F40-VID",
+    "F7-BUENDEL"
+   ]
+  },
+  {
+   "id": "B16",
+   "titel": "Mitfahren und gemeinsame Anreise",
+   "inhalt": "Vermittlungsweg, Communities",
+   "umfang": "bedarf",
+   "fenster": "F-30 bis F-21, Erinnerung F-7",
+   "beteiligte": "anreisende Crews und Communities",
+   "regeln": [
+    "F7-BUENDEL"
+   ],
+   "slot": {
+    "bezug": "F",
+    "von": -30,
+    "bis": -21,
+    "klasse": "S"
+   }
+  },
+  {
+   "id": "B17",
+   "titel": "Care und Unterstützung",
+   "inhalt": "Care-Angebote, Erreichbarkeit, Verhalten (Begriff Care statt Awareness)",
+   "umfang": "basis",
+   "fenster": "F-21 bis F-14, Kurzfassung F-3",
+   "beteiligte": "Care-Team",
+   "regeln": [
+    "F21-VID",
+    "F21-WEB",
+    "F14-TM",
+    "F3-TM"
+   ]
+  },
+  {
+   "id": "B18",
+   "titel": "Cashless und Bezahlen",
+   "inhalt": "Einrichtung, Nutzung, Rückzahlung",
+   "umfang": "bedarf",
+   "fenster": "F-21 bis F-14, Erinnerung F-3",
+   "beteiligte": "Zahlungsteam",
+   "regeln": [
+    "F21-WEB",
+    "F3-TM"
+   ]
+  },
+  {
+   "id": "B19",
+   "titel": "Camping, Packliste, Einlassregeln",
+   "inhalt": "Was mitbringen, was beachten",
+   "umfang": "basis",
+   "fenster": "F-21 bis F-10",
+   "beteiligte": "Camping, Einlass, Gästeservice",
+   "regeln": [
+    "F21-PACK",
+    "F21-WEB"
+   ]
+  },
+  {
+   "id": "B20",
+   "titel": "Geländeplan",
+   "inhalt": "Flächen, Bühnen, Wege, Wasser, Unterstützung",
+   "umfang": "basis",
+   "fenster": "F-14 bis F-7",
+   "beteiligte": "Bühnen und Crews mit eigenen Ausschnitten",
+   "regeln": [
+    "F14-TT"
+   ]
+  },
+  {
+   "id": "B21",
+   "titel": "Timetable",
+   "inhalt": "Spielzeiten, Orte, Download",
+   "umfang": "basis",
+   "fenster": "F-14 bis F-7",
+   "beteiligte": "Artists und Bühnencrews mit eigenen Ausschnitten",
+   "regeln": [
+    "F14-TT",
+    "F14-NL"
+   ]
+  },
+  {
+   "id": "B22",
+   "titel": "Letzte Fragen",
+   "inhalt": "Kompakte Zusammenfassung mit aktuellen Links",
+   "umfang": "basis",
+   "fenster": "F-7",
+   "beteiligte": "Gästeservice, Fachbereiche",
+   "regeln": [
+    "F7-BUENDEL"
+   ]
+  },
+  {
+   "id": "B23",
+   "titel": "Countdown mit neuem Inhalt",
+   "inhalt": "Jeder Countdown zeigt etwas Neues",
+   "umfang": "ergaenzung",
+   "fenster": "F-100, F-30, F-7",
+   "beteiligte": "bestätigte Artists oder Crews im Motiv",
+   "regeln": [
+    "CD-100",
+    "CD-30",
+    "F7-BUENDEL"
+   ],
+   "hinweis": "aktiv über Festivalmerkmal countdown_aktiv; historisch WM 2026 mit 100, 70, 50, 40, 30, 20 Tagen"
+  },
+  {
+   "id": "B24",
+   "titel": "Aktuelle Lage und Brandschutz",
+   "inhalt": "Bestätigte Maßnahmen",
+   "umfang": "bedarf",
+   "fenster": "F-7 bis F-1 oder sofort nach Entscheidung",
+   "beteiligte": "Betriebsleitung, Sicherheit",
+   "regeln": [
+    "F14-KRISE"
+   ],
+   "hinweis": "ereignisgetrieben, Vorlagen aus F14-KRISE"
+  },
+  {
+   "id": "B25",
+   "titel": "Ankunft und Einlass",
+   "inhalt": "Öffnungszeiten, Check-in, Parken",
+   "umfang": "basis",
+   "fenster": "F-1 und F",
+   "beteiligte": "Einlass, Camping, Gästeservice",
+   "regeln": [
+    "F3-TM",
+    "F1-STORY"
+   ]
+  },
+  {
+   "id": "B26",
+   "titel": "Orientierung während des Festivals",
+   "inhalt": "Tagesprogramm, freie Angebote, Änderungen",
+   "umfang": "basis",
+   "fenster": "täglich F bis Z",
+   "beteiligte": "tagesaktuelle Artists und Bühnen",
+   "regeln": [
+    "F-LIVE"
+   ]
+  },
+  {
+   "id": "B27",
+   "titel": "Erster Dank",
+   "inhalt": "Dank an Gäste und Beteiligte",
+   "umfang": "basis",
+   "fenster": "Z+1 bis Z+3",
+   "beteiligte": "Crews, Artists, Kollektive, Helfende",
+   "regeln": [
+    "Z1-DANK",
+    "Z1-TM"
+   ]
+  },
+  {
+   "id": "B28",
+   "titel": "Fundsachen",
+   "inhalt": "Wo und wie nachfragen",
+   "umfang": "basis",
+   "fenster": "Z+1 bis Z+3",
+   "beteiligte": "Fundsachenkoordination",
+   "regeln": [
+    "Z1-DANK",
+    "Z1-TM"
+   ]
+  },
+  {
+   "id": "B29",
+   "titel": "Feedback und offene Fragen",
+   "inhalt": "Feedback, gegebenenfalls Rückzahlung",
+   "umfang": "basis",
+   "fenster": "Z+3 bis Z+7",
+   "beteiligte": "Gästeservice, Rückzahlungsteam",
+   "regeln": [
+    "Z1-TM",
+    "Z5-NL"
+   ]
+  },
+  {
+   "id": "B30",
+   "titel": "Dankesserie und Kollektivporträts",
+   "inhalt": "Einzelne Würdigung der Arbeit",
+   "umfang": "ergaenzung",
+   "fenster": "Z+7 bis Z+30",
+   "beteiligte": "je Beitrag die gezeigte Crew als Collab",
+   "regeln": [
+    "Z14-DANKSERIE"
+   ]
+  },
+  {
+   "id": "B31",
+   "titel": "Fotogalerie und Rückblick",
+   "inhalt": "Freigegebenes Material mit Credits",
+   "umfang": "ergaenzung",
+   "fenster": "Z+7 bis Z+21",
+   "beteiligte": "Fotografierende, gezeigte Beteiligte",
+   "regeln": [
+    "Z10-GALERIE"
+   ]
+  },
+  {
+   "id": "B32",
+   "titel": "Sets und Aftermovie",
+   "inhalt": "Material, Credits, Anlass für Wiederkehr",
+   "umfang": "ergaenzung",
+   "fenster": "R, Planungsfenster Z+14 bis Z+60",
+   "beteiligte": "Artists, Filmteam, Crews",
+   "regeln": [
+    "R-AFTER"
+   ]
+  }
+ ],
+ "beteiligung": [
+  {
+   "inhalt": "Einzelner Artist oder Set",
+   "beteiligte": "Artist, gegebenenfalls Crew",
+   "form": "Collab, wenn vereinbart; sonst Markierung und Material zum Weiterteilen"
+  },
+  {
+   "inhalt": "Programmwelle",
+   "beteiligte": "alle gezeigten Artists, Programmcrew",
+   "form": "Namen und Accounts vollständig, ausgewählte Collabs, Einzelmotive zum Weiterteilen"
+  },
+  {
+   "inhalt": "Bühne oder Kollektivfläche",
+   "beteiligte": "verantwortliche Crew, Gestaltung",
+   "form": "Collab mit Crewaccount"
+  },
+  {
+   "inhalt": "Workshop, Kunst, Rahmenprogramm",
+   "beteiligte": "Person oder Gruppe hinter dem Angebot",
+   "form": "Collab oder kurzes Interview"
+  },
+  {
+   "inhalt": "Aufbau und Technik",
+   "beteiligte": "Aufbaucrew, Werkstätten, Gestaltung, Technik",
+   "form": "Erwähnung, Porträt oder Collab"
+  },
+  {
+   "inhalt": "Care, Barrierearmut, Rückzugsräume",
+   "beteiligte": "zuständiges Team, Initiative",
+   "form": "gemeinsamer erklärender Beitrag nach Abstimmung"
+  },
+  {
+   "inhalt": "Anreise, Camping, Essen",
+   "beteiligte": "zuständige Anbieter und Teams",
+   "form": "Erwähnung oder gemeinsamer Servicebeitrag"
+  },
+  {
+   "inhalt": "Ticketaktion oder Verlosung",
+   "beteiligte": "Partner der Aktion",
+   "form": "Collab nach Abstimmung"
+  },
+  {
+   "inhalt": "Fotos und Videos",
+   "beteiligte": "Fotografierende, Filmteam, gezeigte Beteiligte",
+   "form": "Credits und Markierungen"
+  },
+  {
+   "inhalt": "Dank und Nachbereitung",
+   "beteiligte": "Crews, Kollektive, Artists, Helfende",
+   "form": "gezielte Dankesserie statt Sammelmarkierung"
+  }
+ ],
+ "beteiligung_regel": "Collab heißt abgestimmte gemeinsame Veröffentlichung. Markierung und Erwähnung sind etwas anderes. Ein eingetragener Account belegt keine Zusage. Abstimmungsstatus: nicht angefragt, angefragt, zugesagt, umgesetzt, entfällt. Historische Namen werden je Ausgabe neu geprüft.",
+ "pruefpunkte": {
+  "termine": [
+   "V+7",
+   "V+28",
+   "alle 28 Tage bis F-90",
+   "F-90",
+   "F-60",
+   "F-45",
+   "F-30",
+   "F-21"
+  ],
+  "schritt": {
+   "titel": "Prüfpunkt: Verkauf, Fragen und Reichweite gegen Zielpfad",
+   "rolle": "KOM",
+   "mit": "FACH-TIX",
+   "stunden": 0.5
+  },
+  "messgroessen": [
+   "verkaufte Tickets laut Ticketsystem gegen Zielpfad",
+   "Kaufabbrüche",
+   "wiederkehrende Fragen pro Woche",
+   "Reichweite passender Menschen",
+   "Klicks auf den Kaufweg"
+  ],
+  "stufen": {
+   "gruen": "auf oder über Zielpfad; nichts ändern",
+   "gelb": "unter 90 Prozent des Zielpfads oder ein klares Warnsignal; bis zu zwei Extras der Stufe Gelb wählen",
+   "rot": "unter 75 Prozent des Zielpfads oder zwei Prüfpunkte in Folge gelb; Extras der Stufe Rot mit Freigabe der Geschäftsführung",
+   "knapp": "Restbestand unter 10 Prozent; Verknappung nur bei verknappung_erlaubt kommunizieren, Anzeigen drosseln"
+  },
+  "zielpfad": {
+   "quelle": "Verkaufsplan der Prognoseplattform je Festival",
+   "platzhalter_anteil_am_ziel": {
+    "V+28": 0.15,
+    "F-150": 0.35,
+    "F-90": 0.55,
+    "F-60": 0.7,
+    "F-30": 0.85,
+    "F-7": 0.95
+   },
+   "hinweis": "Platzhalter ohne Datengrundlage. Nur verwenden, bis der Verkaufsplan aus der Prognoseplattform hinterlegt ist. Erstauflagen verkaufen erfahrungsgemäß später."
+  }
+ },
+ "extras": [
+  {
+   "id": "E01",
+   "name": "Zusätzliche Anzeigenwelle",
+   "stufe": "gelb",
+   "ausloeser": "Verkauf unter Zielpfad bei funktionierendem Kaufweg",
+   "einsatzfenster": "V+28 bis F-10",
+   "vorlauf_tage": 7,
+   "stunden": "5 + 1 je Woche",
+   "budget_noetig": true,
+   "freigabe": "KOM, Budget GF",
+   "formatregel": null,
+   "aufgaben": [
+    {
+     "klasse": "AD",
+     "abstand": 0,
+     "titel": "Zusatzwelle mit neuen Motiven zu den häufigsten Einwänden"
+    }
+   ],
+   "erfolgsmass": "Käufe und Kosten je Kauf laut Ticketsystem",
+   "stoppregel": "Kosten je Kauf über Grenzwert oder zwei Wochen ohne Wirkung"
+  },
+  {
+   "id": "E02",
+   "name": "Retargeting für Seitenbesucher und Kaufabbrüche",
+   "stufe": "gelb",
+   "ausloeser": "Kaufabbrüche oder viele Shopbesuche ohne Kauf",
+   "einsatzfenster": "V+7 bis F-7",
+   "vorlauf_tage": 7,
+   "stunden": "4 + 0,5 je Woche",
+   "budget_noetig": true,
+   "freigabe": "KOM",
+   "formatregel": "nur mit gültiger Einwilligung und eingerichtetem Tracking",
+   "aufgaben": [
+    {
+     "klasse": "AD",
+     "abstand": 0,
+     "titel": "Retargeting mit Antworten auf Abbruchgründe"
+    }
+   ],
+   "erfolgsmass": "Abschlussquote der Abbrecher",
+   "stoppregel": "keine Verbesserung nach drei Wochen"
+  },
+  {
+   "id": "E03",
+   "name": "Artists und Kollektive posten selbst",
+   "stufe": "gelb",
+   "ausloeser": "Reichweite unter Erwartung oder Programmwelle mit wenig Resonanz",
+   "einsatzfenster": "ab erster Programmwelle bis F-14",
+   "vorlauf_tage": 21,
+   "stunden": 6,
+   "budget_noetig": false,
+   "freigabe": "KOM",
+   "formatregel": null,
+   "aufgaben": [
+    {
+     "klasse": "M",
+     "abstand": 0,
+     "titel": "Materialpaket und gemeinsame Beiträge mit 3 bis 5 Acts"
+    }
+   ],
+   "erfolgsmass": "neue Follower aus Collabs, Klicks auf Kaufweg",
+   "stoppregel": "Acts sagen ab oder Material wird nicht genutzt"
+  },
+  {
+   "id": "E04",
+   "name": "Gruppenangebot",
+   "stufe": "rot",
+   "ausloeser": "Verkauf unter 75 Prozent des Zielpfads",
+   "einsatzfenster": "F-150 bis F-30",
+   "vorlauf_tage": 14,
+   "stunden": 8,
+   "budget_noetig": false,
+   "freigabe": "FACH-TIX und GF",
+   "formatregel": "nur innerhalb der Preisarchitektur; bei Draußenbande keine Verknappung, Kinderpreise bleiben",
+   "aufgaben": [
+    {
+     "klasse": "INT",
+     "abstand": -14,
+     "titel": "Angebot im Shop anlegen und testen"
+    },
+    {
+     "klasse": "M",
+     "abstand": 0,
+     "titel": "Gruppenangebot vorstellen"
+    },
+    {
+     "klasse": "NL",
+     "abstand": 0,
+     "titel": "Gruppenangebot an frühere Gäste"
+    }
+   ],
+   "erfolgsmass": "verkaufte Gruppenpakete",
+   "stoppregel": "Ende der festgelegten Laufzeit"
+  },
+  {
+   "id": "E05",
+   "name": "Reaktivierung früherer Gäste",
+   "stufe": "gelb",
+   "ausloeser": "Wiederkehrer kaufen später als im Vorjahr",
+   "einsatzfenster": "V+28 bis F-45",
+   "vorlauf_tage": 7,
+   "stunden": 4,
+   "budget_noetig": false,
+   "freigabe": "KOM",
+   "formatregel": "nur Empfänger:innen mit gültiger Einwilligung",
+   "aufgaben": [
+    {
+     "klasse": "NL",
+     "abstand": 0,
+     "titel": "Persönlicher Newsletter an frühere Gäste mit Neuem dieser Ausgabe"
+    }
+   ],
+   "erfolgsmass": "Klicks und Käufe aus dem Segment",
+   "stoppregel": "nach einem Versand ohne Wirkung nicht wiederholen"
+  },
+  {
+   "id": "E06",
+   "name": "Serie zu den häufigsten Einwänden",
+   "stufe": "gelb",
+   "ausloeser": "dieselbe Frage mehr als fünfmal pro Woche oder Stufe rot",
+   "einsatzfenster": "jederzeit ab V",
+   "vorlauf_tage": 10,
+   "stunden": 18,
+   "budget_noetig": false,
+   "freigabe": "KOM",
+   "formatregel": null,
+   "aufgaben": [
+    {
+     "klasse": "M",
+     "abstand": 0,
+     "titel": "Einwand 1 beantworten (zum Beispiel Anreise)"
+    },
+    {
+     "klasse": "M",
+     "abstand": 7,
+     "titel": "Einwand 2 beantworten (zum Beispiel Atmosphäre)"
+    },
+    {
+     "klasse": "WEB",
+     "abstand": 0,
+     "titel": "FAQ ergänzen"
+    }
+   ],
+   "erfolgsmass": "weniger wiederkehrende Fragen, gespeicherte Beiträge",
+   "stoppregel": "Fragen gehen zurück"
+  },
+  {
+   "id": "E07",
+   "name": "Live-Fragestunde mit Team oder Artists",
+   "stufe": "gelb",
+   "ausloeser": "viele Fragen oder Unsicherheit über Atmosphäre",
+   "einsatzfenster": "F-120 bis F-14",
+   "vorlauf_tage": 14,
+   "stunden": 5,
+   "budget_noetig": false,
+   "freigabe": "KOM",
+   "formatregel": null,
+   "aufgaben": [
+    {
+     "klasse": "S",
+     "abstand": -7,
+     "titel": "Live ankündigen"
+    },
+    {
+     "klasse": "INT",
+     "abstand": 0,
+     "titel": "Live durchführen und Fragen sammeln"
+    }
+   ],
+   "erfolgsmass": "Zuschauende, gestellte Fragen, Käufe in den Folgetagen",
+   "stoppregel": "einmalig je Phase"
+  },
+  {
+   "id": "E08",
+   "name": "Regionale Medienpartnerschaft oder Verlosung",
+   "stufe": "rot",
+   "ausloeser": "Stufe rot bei Festivals mit regionalem Publikum",
+   "einsatzfenster": "F-120 bis F-21",
+   "vorlauf_tage": 28,
+   "stunden": 8,
+   "budget_noetig": true,
+   "freigabe": "KOM, Budget GF",
+   "formatregel": "Teilnahmebedingungen bei Verlosungen",
+   "aufgaben": [
+    {
+     "klasse": "PR",
+     "abstand": 0,
+     "titel": "Partnerschaft vereinbaren und Material liefern"
+    }
+   ],
+   "erfolgsmass": "Reichweite im Zielgebiet, Käufe mit Partnercode",
+   "stoppregel": "Laufzeit der Vereinbarung"
+  },
+  {
+   "id": "E09",
+   "name": "Warm-up-Veranstaltung in einer Großstadt",
+   "stufe": "rot",
+   "ausloeser": "Stufe rot und mindestens 60 Tage bis F",
+   "einsatzfenster": "F-150 bis F-45",
+   "vorlauf_tage": 35,
+   "stunden": 25,
+   "budget_noetig": true,
+   "freigabe": "GF",
+   "formatregel": null,
+   "aufgaben": [
+    {
+     "regel": "G-ANK"
+    },
+    {
+     "regel": "G-ERKL"
+    },
+    {
+     "regel": "G-ERINN"
+    },
+    {
+     "regel": "G-NACH"
+    }
+   ],
+   "erfolgsmass": "Teilnehmende, Käufe mit Eventcode",
+   "stoppregel": "einmalig"
+  },
+  {
+   "id": "E10",
+   "name": "Programmhöhepunkt vorziehen",
+   "stufe": "rot",
+   "ausloeser": "Stufe rot und bestätigter Höhepunkt vorhanden",
+   "einsatzfenster": "bis F-45",
+   "vorlauf_tage": 14,
+   "stunden": 10,
+   "budget_noetig": false,
+   "freigabe": "FACH-PROG und GF",
+   "formatregel": "nur mit Zustimmung der Artists",
+   "aufgaben": [
+    {
+     "klasse": "P",
+     "abstand": 0,
+     "titel": "Vorgezogene Programmwelle"
+    }
+   ],
+   "erfolgsmass": "Käufe in den 7 Tagen danach",
+   "stoppregel": "entfällt"
+  },
+  {
+   "id": "E11",
+   "name": "Empfehlungscode für Ticketinhabende",
+   "stufe": "gelb",
+   "ausloeser": "früh in der Saison zu wenig neue Käufer:innen",
+   "einsatzfenster": "V+28 bis F-90",
+   "vorlauf_tage": 21,
+   "stunden": 6,
+   "budget_noetig": false,
+   "freigabe": "FACH-TIX",
+   "formatregel": "Gegenleistung aus der Preisarchitektur",
+   "aufgaben": [
+    {
+     "klasse": "INT",
+     "abstand": -14,
+     "titel": "Code im Shop einrichten"
+    },
+    {
+     "klasse": "TM",
+     "abstand": 0,
+     "titel": "Code an Ticketinhabende"
+    }
+   ],
+   "erfolgsmass": "eingelöste Codes",
+   "stoppregel": "Ende der Laufzeit"
+  },
+  {
+   "id": "E12",
+   "name": "Plakate und Flyer in der Region",
+   "stufe": "rot",
+   "ausloeser": "regionales Publikum erreicht zu wenig",
+   "einsatzfenster": "F-90 bis F-21",
+   "vorlauf_tage": 28,
+   "stunden": 10,
+   "budget_noetig": true,
+   "freigabe": "KOM, Budget GF",
+   "formatregel": "Druckvorlauf beachten",
+   "aufgaben": [
+    {
+     "klasse": "INT",
+     "abstand": -28,
+     "titel": "Motiv aus Grafikgenerator, Druck, Verteilung planen"
+    }
+   ],
+   "erfolgsmass": "Käufe mit Regionalcode oder Abfrage im Checkout",
+   "stoppregel": "einmalig"
+  },
+  {
+   "id": "E13",
+   "name": "Last-Minute-Paket",
+   "stufe": "rot",
+   "ausloeser": "Stufe rot am Prüfpunkt F-30",
+   "einsatzfenster": "F-30 bis F-3",
+   "vorlauf_tage": 7,
+   "stunden": 8,
+   "budget_noetig": false,
+   "freigabe": "FACH-TIX und GF",
+   "formatregel": "keine Preissenkung gegenüber Frühkäufer:innen ohne Begründung",
+   "aufgaben": [
+    {
+     "klasse": "M",
+     "abstand": 0,
+     "titel": "Tagestickets oder Anreisehilfe vorstellen"
+    },
+    {
+     "klasse": "AD",
+     "abstand": 0,
+     "titel": "Kurze Kampagne im Umkreis"
+    }
+   ],
+   "erfolgsmass": "Käufe bis F",
+   "stoppregel": "F"
+  },
+  {
+   "id": "E14",
+   "name": "Warteliste und Rückläuferbörse",
+   "stufe": "knapp",
+   "ausloeser": "Restbestand unter 10 Prozent",
+   "einsatzfenster": "ab Knappheit",
+   "vorlauf_tage": 3,
+   "stunden": 4,
+   "budget_noetig": false,
+   "freigabe": "FACH-TIX",
+   "formatregel": null,
+   "aufgaben": [
+    {
+     "klasse": "WEB",
+     "abstand": 0,
+     "titel": "Warteliste oder Börse einrichten"
+    },
+    {
+     "klasse": "S",
+     "abstand": 0,
+     "titel": "Verfügbarkeit ehrlich kommunizieren"
+    }
+   ],
+   "erfolgsmass": "Einträge, weitergegebene Tickets",
+   "stoppregel": "Ausverkauf oder F"
+  },
+  {
+   "id": "E15",
+   "name": "Ersatzbeitrag bei Absage eines Acts",
+   "stufe": "betrieb",
+   "ausloeser": "bestätigte Absage",
+   "einsatzfenster": "jederzeit",
+   "vorlauf_tage": 1,
+   "stunden": 3,
+   "budget_noetig": false,
+   "freigabe": "FACH-PROG",
+   "formatregel": null,
+   "aufgaben": [
+    {
+     "klasse": "S",
+     "abstand": 0,
+     "titel": "Absage und Ersatz klar benennen"
+    },
+    {
+     "klasse": "WEB",
+     "abstand": 0,
+     "titel": "Programmseite und laufende Anzeigen korrigieren"
+    }
+   ],
+   "erfolgsmass": "Fragen dazu beantwortet",
+   "stoppregel": "entfällt"
+  }
+ ],
+ "rechenregeln": [
+  "1. Ereignisse aus der Prognoseplattform lesen. Nur bestätigte Daten erzeugen verbindliche Aufgaben; vorläufige Daten erzeugen sichtbar vorläufige Aufgaben; fehlende Daten bleiben offen.",
+  "2. Regeln anwenden: Veröffentlichungstermin T = Ereignisdatum + abstand. Regeln mit bedingung nur, wenn das Festivalmerkmal zutrifft.",
+  "3. Zusammenführen: gleiche Regel-ID, gleicher Kanal, gleicher Tag wird ein Datensatz. Fallen L und V zusammen, entsteht ein gemeinsames Paket.",
+  "4. Redaktionsslots ergänzen, bis die Phasenmenge je Woche erreicht ist (Regel SLOT).",
+  "5. Schritte aus der Klasse erzeugen: Schritttermin = T + von bzw. T + bis. Begleitend story fügt einen Schritt CM 0,5 h an T hinzu, begleitend website eine Aufgabe der Klasse WEB.",
+  "6. Werktagsregel: Schritte mit werktag=true rücken von Samstag, Sonntag oder Feiertag (Brandenburg und Berlin) auf den Werktag davor. Veröffentlichungen am Wochenende sind erlaubt, wenn CM besetzt ist.",
+  "7. Verbund-Stichtag: Für Veröffentlichungen ab dem Tag F-21 des ersten Festivals der Saison bis zum Ende der Saison enden alle Schritte der Phasen planung, erstellung und abstimmung der Klassen M, P und L spätestens am Stichtag Vorproduktion. Die vorgezogenen Aufgaben werden gleichmäßig über das Vorproduktionsfenster (84 Tage vor dem Stichtag) verteilt, früheste Veröffentlichung zuerst. Dafür wird ein Schritt E9 Fakten aktualisieren und Fassung finalisieren (RED, T-7 bis T-6, 0,5 h), danach folgen Faktencheck und Freigabe wie gewohnt ergänzt.",
+  "8. Liegt ein Schritt vor dem Berechnungstag, wird er als überfällig markiert und nicht als erledigt eingetragen. Priorität: Sicherheit und Betrieb, dann Fristen und Gästeinformationen, dann Kampagne, dann Geschichten.",
+  "9. Kapazität prüfen: Die verantwortliche Person gleicht Stunden je Rolle und Woche mit ihrer Besetzung ab. Bei Überlast zuerst vorziehen, dann bündeln, dann Slots streichen; Pflichtregeln nie streichen. Reicht das nicht, meldet sie es an die Geschäftsführung (Hohes Haus), die über zusätzliche Leute, Agentur oder Verschiebung entscheidet.",
+  "10. Stabile ID je Aufgabe: {festival}-{ausgabe}-{regel}-{bezug}{nr}-{kanal}; Schritte mit Suffix -{schritt}. Neuberechnung aktualisiert vorhandene Datensätze und erzeugt keine Kopien.",
+  "11. Ändert sich ein Ereignis, werden offene Aufgaben neu berechnet. Bereits extern terminierte Veröffentlichungen werden als zu prüfen markiert. Erledigte Schritte behalten ihr Datum.",
+  "12. Generatoren erzeugen Entwürfe. Veröffentlichung, Versand und Anzeigenstart erst nach den Freigabeschritten."
+ ],
+ "status": {
+  "bearbeitung": [
+   "offen",
+   "in_arbeit",
+   "entwurf",
+   "in_abstimmung",
+   "freigegeben",
+   "eingeplant",
+   "veroeffentlicht",
+   "dokumentiert",
+   "ueberfaellig",
+   "zu_pruefen"
+  ],
+  "fakten": [
+   "unbestaetigt",
+   "vorlaeufig",
+   "bestaetigt"
+  ],
+  "regel": "Bearbeitungsstatus und Faktenstatus bleiben getrennt. veroeffentlicht nur nach überprüfter Veröffentlichung."
+ },
+ "export": {
+  "asana": {
+   "projekt": "je Festival und Ausgabe ein Projekt (z. B. Kommunikation Lusatia 2027) oder ein gemeinsames Projekt mit Feld Festival",
+   "abschnitt": "Monat des Veröffentlichungstermins",
+   "hauptaufgabe": {
+    "name": "{titel} · {kanal} · {festival}",
+    "faellig": "T",
+    "zustaendig": "verantwortliche Person des Festivals aus dem Hohen Haus",
+    "beschreibung": "Briefing: Zielgruppe, Zweck, Inhalt, Faktenquelle, Bezugsereignis und Abstand, Link zum Entwurf im Werkzeugkasten"
+   },
+   "unteraufgaben": {
+    "name": "{schritt_titel}",
+    "start": "von",
+    "faellig": "bis",
+    "zustaendig": "Person der Rolle",
+    "hinweis": "Werkzeug-Link, wenn ein Generator zugeordnet ist"
+   },
+   "abhaengigkeiten": "planung vor erstellung vor abstimmung vor freigabe vor posting",
+   "felder": [
+    "Festival",
+    "Klasse",
+    "Kanal",
+    "Bezugsereignis",
+    "Abstand",
+    "Status Bearbeitung",
+    "Status Fakten",
+    "Werkzeug",
+    "Regel-ID"
+   ],
+   "regel": "Das Hohe Haus übergibt je Festival den Rahmen an die verantwortliche Person: Pflichtveröffentlichungen, Fristen, Prüfpunkte und Stunden. Eine Hauptaufgabe je Veröffentlichung; die Unteraufgaben je Schritt sind ein Vorschlag, den die verantwortliche Person in Asana oder in ihrer Redaktionstabelle selbst verteilt und anpasst. Die Geschäftsführung verteilt keine Einzelschritte. Wochenaufgaben als wiederkehrende Aufgabe, nicht als Einzelaufgaben. Interne Aufgaben ohne Veröffentlichung als Hauptaufgabe ohne Kanal."
+  },
+  "kalender": {
+   "redaktionskalender": "gemeinsamer Google-Kalender je Festival oder Verbund: ein Termin je Veröffentlichung an T (Uhrzeit, falls festgelegt), Titel {festival}: {titel} ({kanal})",
+   "fristen": "Freigabetermine (F2) und Drehtermine (L-E1) als Termine bei den zuständigen Personen",
+   "redaktionstabelle": "Die bestehende Redaktionstabelle Social Media - Wilde Habitate (Google Sheets, Christian) bleibt das Arbeitswerkzeug der Redaktion. Das Hohe Haus liefert ihr Pflichttermine und Meilensteine (Zeile Fixtermine & Meilensteine); die Aufteilung nach Kanal, Format und Person macht die Redaktion dort selbst.",
+   "regel": "Arbeitsschritte laufen über Asana-Fälligkeiten. Der Kalender zeigt nur Veröffentlichungen, Freigaben und Drehs, damit nichts doppelt auftaucht."
+  },
+  "csv_spalten": [
+   "aufgabe_id",
+   "eltern_id",
+   "festival",
+   "ausgabe",
+   "regel_id",
+   "titel",
+   "schritt",
+   "phase",
+   "rolle",
+   "person",
+   "werkzeug",
+   "start",
+   "faellig",
+   "stunden",
+   "kanal",
+   "klasse",
+   "bezug",
+   "abstand",
+   "veroeffentlichung",
+   "status",
+   "hinweis"
+  ]
+ },
+ "festivals_2027": [
+  {
+   "id": "lus",
+   "name": "Lusatia",
+   "ausgabe": 2027,
+   "V": "2026-10-15",
+   "F": "2027-07-23",
+   "Z": "2027-07-25",
+   "merkmale": {
+    "erstauflage_oder_relaunch": true,
+    "verknappung_erlaubt": true,
+    "countdown_aktiv": false
+   },
+   "ziel_gaeste": 4000
+  },
+  {
+   "id": "dbd",
+   "name": "Malina, Morio & die Draußenbande",
+   "kurz": "Draußenbande",
+   "ausgabe": 2027,
+   "V": "2026-10-10",
+   "F": "2027-07-30",
+   "Z": "2027-08-01",
+   "merkmale": {
+    "erstauflage_oder_relaunch": true,
+    "verknappung_erlaubt": false,
+    "countdown_aktiv": false
+   },
+   "ziel_gaeste": 3000,
+   "pruefen": "F 29.07. oder 30.07., Ende 01.08. oder 02.08."
+  },
+  {
+   "id": "bn",
+   "name": "by nature",
+   "ausgabe": 2027,
+   "V": "2026-11-01",
+   "F": "2027-08-06",
+   "Z": "2027-08-08",
+   "merkmale": {
+    "erstauflage_oder_relaunch": true,
+    "verknappung_erlaubt": true,
+    "countdown_aktiv": false
+   },
+   "ziel_gaeste": 3500
+  },
+  {
+   "id": "wm",
+   "name": "Wilde Möhre",
+   "ausgabe": 2027,
+   "V": "2026-09-01",
+   "F": "2027-08-20",
+   "Z": "2027-08-23",
+   "merkmale": {
+    "erstauflage_oder_relaunch": false,
+    "verknappung_erlaubt": true,
+    "community_fenster": true,
+    "countdown_aktiv": false
+   },
+   "ziel_gaeste": 5000,
+   "pruefen": "Ende 22.08. oder 23.08."
+  },
+  {
+   "id": "flu",
+   "name": "Fluidity",
+   "ausgabe": 2027,
+   "V": "2026-08-01",
+   "F": "2027-08-27",
+   "Z": "2027-08-29",
+   "merkmale": {
+    "erstauflage_oder_relaunch": false,
+    "verknappung_erlaubt": true,
+    "community_fenster": false,
+    "countdown_aktiv": false
+   },
+   "ziel_gaeste": 5000
+  }
+ ],
+ "verbund_2027": {
+  "stichtag_vorproduktion": "2027-06-15",
+  "vorproduktion_fenster_tage": 84,
+  "stichtag_gaesteinfos_freigegeben": "2027-07-01",
+  "konfliktregel": "In Wochen, in denen ein Festival läuft, haben dessen Betriebsinformationen Vorrang vor Kampagneninhalten anderer Festivals. Jede Festivalwoche hat eine eigene CM-Person.",
+  "feiertage": [
+   "2026-10-03",
+   "2026-10-31",
+   "2026-12-25",
+   "2026-12-26",
+   "2027-01-01",
+   "2027-03-08",
+   "2027-03-26",
+   "2027-03-28",
+   "2027-03-29",
+   "2027-05-01",
+   "2027-05-06",
+   "2027-05-16",
+   "2027-05-17",
+   "2027-10-03",
+   "2027-10-31",
+   "2027-12-25",
+   "2027-12-26"
+  ],
+  "feiertage_hinweis": "Brandenburg und Berlin (8. März nur Berlin)"
+ }
+}

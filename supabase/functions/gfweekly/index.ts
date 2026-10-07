@@ -1,4 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { kommModul } from './komm.ts';
 
 const PASSWORD = Deno.env.get('GFWEEKLY_PASSWORD') ?? '';
 const PROJECT_URL = Deno.env.get('SUPABASE_URL')!;
@@ -1355,19 +1356,30 @@ async function vhDossier(item: any){
     verlauf: vl || [] };
 }
 
+/* V32 Kommunikation: Aktionen komm_* im eigenen Modul (komm.ts), mit den Helfern dieses Hauses. */
+const KOMM = kommModul({ admin, json, heuteBerlin, whoNorm, launchFestivals, launchPersonen,
+  ASANA_TOKEN, ASANA_WORKSPACE, ASANA_TEAM, HH_BASIS, MAIL_ALEX });
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method === 'GET') { try { await ensurePageInStorage(); } catch(_e){} return new Response(null,{ status:302, headers:{ 'Location':PUBLIC_PAGE, 'Cache-Control':'no-store' } }); }
   if (req.method !== 'POST') return json({ error:'method' }, 405);
   let body: any; try { body = await req.json(); } catch { return json({ error:'bad json' }, 400); }
   const { action, password, payload } = body ?? {};
+  /* V32: Habitat Hub und Baukasten lesen Partner-Slots mit dem Schlüssel der Anbindung (nur Server zu Server). */
+  if (typeof action === 'string' && KOMM.ANBINDUNG_AKTIONEN.has(action) && KOMM.anbindungGueltig(req, body)) {
+    try { return await KOMM.handle(action, payload ?? {}, 'Anbindung'); }
+    catch (e) { return json({ error: String((e as Error).message || e).slice(0, 300) }, 500); }
+  }
   const given = (password ?? '').toString() || keyFromHeaders(req);
   if (!PASSWORD || given !== PASSWORD) return json({ error:'unauthorized' }, 401);
   const t = payload ?? {};
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:38, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY') });
+    if (action === 'ping') return json({ ok:true, version:39, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY'), kommTabelleConfigured: !!Deno.env.get('GOOGLE_DIENSTKONTO_JSON') });
+    /* V32 Kommunikation */
+    if (typeof action === 'string' && action.startsWith('komm_')) return await KOMM.handle(action, t, WHO);
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -2179,7 +2191,10 @@ Deno.serve(async (req: Request) => {
         if (absence.status === 'beendet') await asanaArchivieren(absence);
         bericht.push({ id:absence.id, person:absence.person, status:absence.status, stufe:absence.stufe, schritte });
       }
-      return json({ ok:true, heute, absences:bericht.length, bericht });
+      /* V32: Kommunikation im selben täglichen Lauf (Neuberechnung, Partner-Slots, Fixtermine); Fehler bleiben im Bericht. */
+      let komm: string[] = [];
+      try { komm = await KOMM.tick(); } catch (e) { komm = ['Kommunikation: ' + String((e as Error).message).slice(0, 160)]; }
+      return json({ ok:true, heute, absences:bericht.length, bericht, komm });
     }
 
     /* ----- Asana (v29, V24c): Export der bestätigten Übergabe und Rücksync. Ohne ASANA_TOKEN passiert nichts. ----- */
