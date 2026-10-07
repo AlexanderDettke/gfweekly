@@ -148,11 +148,14 @@ function asanaFake(methode: string, url: URL, body: any) {
     if (methode === 'DELETE') { t.geloescht = true; return asanaAntwort(200, { data: {} }); }
   }
   if ((m = /^\/tasks\/(\d+)\/addProject$/.exec(pfad))) { const t = A.aufgaben.get(m[1]); t.mitglied.push({ project: d.project, section: d.section || null }); return asanaAntwort(200, { data: {} }); }
-  if ((m = /^\/tasks\/(\d+)\/stories$/.exec(pfad))) { A.stories.push({ task: m[1], text: d.text }); return asanaAntwort(201, { data: { gid: neueGid() } }); }
+  if ((m = /^\/tasks\/(\d+)\/stories$/.exec(pfad))) {
+    if (methode === 'GET') return asanaAntwort(200, { data: A.stories.filter(x => x.task === m![1]).map(x => ({ text: x.text, resource_subtype: 'comment_added' })), next_page: null });
+    A.stories.push({ task: m[1], text: d.text }); return asanaAntwort(201, { data: { gid: neueGid() } });
+  }
   return asanaAntwort(400, { errors: [{ message: 'nicht nachgebaut: ' + methode + ' ' + pfad }] });
 }
 /* Sheets: Zeilen 1 bis 7, Spalten A bis ..., Zeile 5 Datum per Formel, Zeile 6 Fixtermine. */
-const S = { spalten: 740, f5: '=DATE($B$2,1,1)', zeile6: new Map<number, any>(), schreibe: [] as any[], token: 0, gelesen: 0, nachLesen: null as null | ((n: number) => void) };
+const S = { spalten: 740, f5: '=DATE($B$2,1,1)', zeile6: new Map<number, any>(), schreibe: [] as any[], token: 0, gelesen: 0, nachLesen: null as null | ((n: number) => void), postFehler: false };
 const serie = (iso: string) => Math.round((Date.parse(iso + 'T00:00:00Z') - Date.parse('1899-12-30T00:00:00Z')) / 86400000);
 const isoPlus = (iso: string, n: number) => new Date(Date.parse(iso + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 const startDatum = () => S.f5 === '=DATE(2026,10,1)' ? '2026-10-01' : (S.f5 === '=DATE($B$2,1,1)' ? '2027-01-01' : '2027-01-01');
@@ -175,6 +178,7 @@ function sheetsFake(methode: string, url: URL, body: any) {
     return asanaAntwort(200, { sheets: [{ data: [{ rowData: [{ values: r5 }, { values: r6 }] }] }] });
   }
   if (methode === 'POST' && url.pathname.endsWith(':batchUpdate')) {
+    if (S.postFehler) { S.postFehler = false; return asanaAntwort(500, { error: { message: 'Probe: Schreiben scheitert' } }); }
     for (const r of body.requests) {
       const u = r.updateCells; S.schreibe.push({ zeile: u.start.rowIndex + 1, spalte: u.start.columnIndex, felder: u.fields, wert: u.rows[0].values[0] });
       if (u.start.rowIndex === 4 && u.start.columnIndex === 5) S.f5 = u.rows[0].values[0].userEnteredValue.formulaValue;
@@ -644,6 +648,63 @@ console.log('\n14. Tabelle und Hinweise nach den Reviews 32d und 32e');
   const d = await ruf('komm_slot_details', { id: z.id });
   const text = JSON.stringify(d.body);
   wahr('Details ohne E-Mail, Freigabename und Freigabenotiz', d.status === 200 && !text.includes('@') && !text.includes('Christian Linck') && !text.includes('interne Notiz'));
+}
+
+
+console.log('\n17. Nach Review 32d und 32e, Runde 2');
+{
+  /* Datumszeile ändert sich vor der letzten Prüfung: nichts geschrieben, Konflikt. */
+  FESTE[2].starts_on = '2027-08-13'; FESTE[2].ends_on = '2027-08-15';   // by nature verschiebt sich, damit es etwas zu schreiben gibt
+  const vorher = S.schreibe.length, start = S.gelesen;
+  S.nachLesen = (n) => { if (n === start + 2) S.f5 = '=DATE(2026,10,2)'; };
+  const d1 = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+  S.nachLesen = null; S.f5 = '=DATE(2026,10,1)';
+  wahr('Datumszeile geändert: nichts geschrieben, Konflikt, ok false', S.schreibe.length === vorher && d1.body.ok === false && d1.body.konflikt.some((x: string) => /Datumszeile/.test(x)), JSON.stringify([S.schreibe.length - vorher, d1.body.konflikt]));
+  /* Sperre läuft vor dem Schreiben ab: 409, nichts geschrieben. */
+  const v2 = S.schreibe.length, st2 = S.gelesen;
+  S.nachLesen = (n) => { if (n === st2 + 2) q(`update komm_sperre set bis = now() - interval '1 second' where schluessel = 'tabelle'`); };
+  const d2 = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+  S.nachLesen = null;
+  gleich('Sperre vor dem Schreiben verloren: 409, nichts geschrieben', [d2.status, S.schreibe.length - v2], [409, 0]);
+  /* Einzellauf by nature räumt den alten Tag mit. */
+  const d3 = await ruf('komm_tabelle_sync', { festival: 'BYNRD27', by: 'Alex' });
+  const altTag = S.zeile6.get(spalteVon('2027-08-06'))?.userEnteredValue?.stringValue || '';
+  const neuTag = S.zeile6.get(spalteVon('2027-08-13'))?.userEnteredValue?.stringValue || '';
+  wahr('Einzellauf: neuer Tag mit BN F, alter Tag ohne BN F', /BN F/.test(neuTag) && !/BN F/.test(altTag), JSON.stringify([altTag, neuTag, d3.body.ergebnis]));
+  FESTE[2].starts_on = '2027-08-06'; FESTE[2].ends_on = '2027-08-08';
+  await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+  /* Fremde Zelle verhindert einen Termin: ok false, ausgelassen gezählt. */
+  zelle6(spalteVon('2027-07-25'), { stringValue: 'Christian: Abbau-Story' });
+  const d4 = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+  wahr('fremde Zelle: unvollständig, ok false, ausgelassen > 0', d4.body.ok === false && d4.body.ausgelassen > 0 && /unvollständig/.test(d4.body.ergebnis), JSON.stringify([d4.body.ok, d4.body.ausgelassen, d4.body.ergebnis]));
+  wahr('Termine vor dem Kalenderbeginn zählen nicht als unvollständig', d4.body.vor_beginn >= 1 && d4.body.ausserhalb.length === 0, JSON.stringify([d4.body.vor_beginn, d4.body.ausserhalb.length]));
+}
+{
+  /* F5: Reservierung vor dem Schreiben; scheitert das Schreiben, gibt es keinen zweiten Versuch. */
+  await q(`delete from komm_log where what = 'komm_tabelle_f5'`);
+  S.f5 = '=DATE($B$2,1,1)';
+  S.postFehler = true;
+  const f1 = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' }).catch(e => ({ status: 500, body: { error: String(e) } }));
+  const res = (await q(`select detail->>'stand' st from komm_log where what = 'komm_tabelle_f5' order by id`)).map(r => r.st);
+  const v5 = S.schreibe.length;
+  const f2 = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+  wahr('F5 reserviert, Schreiben gescheitert, kein zweiter Versuch, Konflikt', res[0] === 'reserviert' && S.f5 === '=DATE($B$2,1,1)' && !S.schreibe.slice(v5).some(w => w.zeile === 5) && f2.body.konflikt.length > 0, JSON.stringify([f1.status, res, S.f5, f2.body.konflikt]));
+  S.f5 = '=DATE(2026,10,1)';
+}
+{
+  /* Hinweis mit verlorener Antwort: der nächste Tick findet die Marke und sendet nicht noch einmal. */
+  const k = (await q(`select id, t, asana_task_gid from komm_veroeffentlichungen where partnerfaehig and festival_short = 'FLRD27' and t > '2026-12-01' and asana_task_gid is not null order by t limit 1`))[0];
+  await q(`update komm_veroeffentlichungen set partner_uebernommen_am = now(), partner_name = 'Kollektiv', abgabe_am = now(), freigabe_status = 'offen' where id = $1`, [k.id]);
+  HEUTE = isoPlus(k.t, -2);
+  const vorher = A.stories.filter(x => x.task === k.asana_task_gid).length;
+  A.stoerung.push({ methode: 'POST', muster: /\/stories$/, netzNachher: true });
+  await K.tick();
+  A.stoerung = [];
+  const nach1 = A.stories.filter(x => x.task === k.asana_task_gid).length - vorher;
+  await K.tick();
+  const nach2 = A.stories.filter(x => x.task === k.asana_task_gid).length - vorher;
+  gleich('verlorene Antwort: genau ein Kommentar nach zwei Ticks, mit Marke', [nach1, nach2, A.stories.filter(x => x.task === k.asana_task_gid).every(x => !x.text.startsWith('Hinweis') || x.text.includes(`[komm:hinweis:${k.id}]`))], [1, 1, true]);
+  HEUTE = '2026-10-07';
 }
 
 console.log(`\n${ok} ok, ${fehler} Fehler`);

@@ -687,12 +687,19 @@ export function kommModul(ctx: KommKontext) {
     if (!res.ok || !d.access_token) throw new Error('Google-Anmeldung des Dienstkontos fehlgeschlagen: ' + (d.error_description || d.error || res.status));
     return d.access_token;
   }
+  /* Jede Google-Anfrage hat eine Zeitgrenze, damit ein Abgleich seine Sperre nie überdauert (Review 32d, Runde 2, Befund 3). */
   async function sheets(token: string, pfad: string, methode = 'GET', koerper?: unknown) {
-    const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}${pfad}`, { method: methode,
-      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: koerper === undefined ? undefined : JSON.stringify(koerper) });
-    const d = await res.json().catch(() => ({}));
-    if (!res.ok) { const e: Any = new Error(`Sheets ${methode}: ${res.status} ${d?.error?.message || ''}`.trim()); e.status = res.status; throw e; }
-    return d;
+    const ab = new AbortController(); const zeit = setTimeout(() => ab.abort(), ASANA_ZEIT_MS);
+    try {
+      const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}${pfad}`, { method: methode, signal: ab.signal,
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: koerper === undefined ? undefined : JSON.stringify(koerper) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { const e: Any = new Error(`Sheets ${methode}: ${res.status} ${d?.error?.message || ''}`.trim()); e.status = res.status; throw e; }
+      return d;
+    } catch (e) {
+      if (ab.signal.aborted) { const f: Any = new Error(`Sheets ${methode}: keine Antwort in ${ASANA_ZEIT_MS / 1000} s`); f.status = 0; f.unklar = true; throw f; }
+      throw e;
+    } finally { clearTimeout(zeit); }
   }
   function serienDatum(n: number) { return K.plus('1899-12-30', Math.round(n)); }
   function zellText(c: Any) { return (c?.formattedValue ?? c?.userEnteredValue?.stringValue ?? '').toString(); }
@@ -705,6 +712,8 @@ export function kommModul(ctx: KommKontext) {
     if (u.boolValue !== undefined) return String(u.boolValue);
     return JSON.stringify(u);
   }
+  /* Inhalt einer eigenen Zelle laut Hinweis (Zeile „Inhalt:“). */
+  function eigenerInhalt(note: unknown) { const m = /^komm:fix-\d{4}-\d{2}-\d{2}\nInhalt: (.*)\n/.exec(String(note || '')); return m ? m[1] : null; }
 
   async function tabelleSync(t: Any, by: string) {
     if (!Deno.env.get(DIENSTKONTO_SECRET)) {
@@ -715,33 +724,35 @@ export function kommModul(ctx: KommKontext) {
       return { status: 200, body: { ok: false, konfiguriert: false, fehlt: DIENSTKONTO_SECRET, hinweis: 'Dienstkonto im Google-Cloud-Projekt „Wilde Habitate Kalender“ anlegen, Sheets API aktivieren, Schlüssel als Secret eintragen und die Tabelle mit dem Dienstkonto teilen.',
         zellen: termine.length, vorschau: termine.slice(0, 12).map((x: Any) => ({ datum: x.datum, text: x.text })), protokoll } };
     }
-    /* Erst die Sperre, dann Termine lesen und den Schreibplan bilden: ein älterer Lauf schreibt so nie veraltete Termine
-       über einen neueren (Review 32d, Befund 3). */
+    /* Erst die Sperre, dann Termine lesen und den Schreibplan bilden (Review 32d, Runde 1, Befund 3). */
     const sperrVon = await sperren('tabelle', 120);
     if (!sperrVon) return { status: 409, body: { error: 'Der Abgleich der Redaktionstabelle läuft gerade.' } };
     try {
-      const { termine, fs, wahl } = await tabelleTermine(t);
-      if (!termine) return { status: 404, body: { error: 'Festival unbekannt' } };
-      return await tabelleGesperrt(t, by, fs!, wahl!, termine);
+      const daten = await tabelleTermine(t);
+      if (!daten.termine) return { status: 404, body: { error: 'Festival unbekannt' } };
+      const halten = async () => { const { data } = await admin.rpc('hh_komm_sperre_halten', { p_schluessel: 'tabelle', p_von: sperrVon, p_sekunden: 120 }); return data === true; };
+      return await tabelleGesperrt(t, by, daten, halten);
     } finally { await freigeben('tabelle', sperrVon); }
   }
-  /* Fixtermine aus den aktuellen Plattformterminen. Prüfpunkte unabhängig vom heutigen Tag: vergangene bleiben in der
-     Tabelle, solange es sie gibt (Review 32d, Befund 5). */
+  /* Fixtermine aus den aktuellen Plattformterminen. Prüfpunkte unabhängig vom heutigen Tag (Review 32d, Runde 1, Befund 5).
+     termine: was dieser Lauf schreiben soll; alle: alle Fixtermine aller Festivals (für Tage, die mehrere teilen). */
   async function tabelleTermine(t: Any) {
     const rw = await regelwerk();
     const fs = await festivals(rw);
     const heute = ctx.heuteBerlin();
     const wahl = (t.festival && t.festival !== 'alle') ? waehle(fs, t.festival) : fs;
-    if (!wahl.length) return { termine: null };
+    if (!wahl.length) return { termine: null } as Any;
     const saison = K.saisonStart(fs);
     const ber: Record<string, Any[]> = {};
     for (const f of fs) { const e = K.berechne(rw, f, heute, { saison_start: saison }); ber[f.short_name] = e.pubs.concat(e.vergangen_voll || []); }
-    const alleTermine = K.fixtermine(rw, fs, ber);
-    const wahlFid = new Set(wahl.map(f => f.fid));
-    const betrifft = (x: Any) => wahl.length === fs.length || x.eintraege.some((e: Any) => wahlFid.has(String(e.id).split('-')[0]));
-    return { termine: alleTermine.filter(betrifft), fs, wahl };
+    const alle = K.fixtermine(rw, fs, ber);
+    const kuerzel = new Set(wahl.map(f => f.kuerzel));
+    const voll = wahl.length === fs.length;
+    const betrifft = (x: Any) => voll || x.eintraege.some((e: Any) => kuerzel.has(String(e.text).split(' ')[0]));
+    return { termine: alle.filter(betrifft), alle, kuerzel, voll };
   }
-  async function tabelleGesperrt(t: Any, by: string, fs: Any[], wahl: Any[], termine: Any[]) {
+  async function tabelleGesperrt(t: Any, by: string, daten: Any, halten: () => Promise<boolean>) {
+    const { termine, alle, kuerzel, voll } = daten;
     const token = await googleToken();
     const meta = await sheets(token, '?fields=sheets(properties(sheetId,title,gridProperties(columnCount,rowCount)))');
     const reiter = (meta.sheets || []).find((s: Any) => s.properties?.title === SHEET_REITER);
@@ -753,55 +764,84 @@ export function kommModul(ctx: KommKontext) {
       const d = await sheets(token, `?ranges=${r}&includeGridData=true&fields=sheets(data(rowData(values(userEnteredValue,effectiveValue,formattedValue,note))))`);
       return d.sheets?.[0]?.data?.[0]?.rowData || [];
     };
+    const verloren = () => ({ status: 409, body: { error: 'Sperre des Tabellenabgleichs verloren; ein anderer Lauf ist dran. Nichts weiter geschrieben.' } });
     let zeilen = await lesen();
     const kopf = (zeilen[1]?.values || []).slice(0, SHEET_ERSTE_SPALTE).map(zellText).join(' ');
     if (!/fixtermin/i.test(kopf)) return { status: 409, body: { error: `Zeile ${SHEET_ZEILE} trägt nicht „Fixtermine & Meilensteine“ (gefunden: „${kopf.slice(0, 80)}“); Aufbau geändert, nichts geschrieben` } };
-    /* F5: Freigabe Alex 06.10.2026, Kalender ab 01.10.2026. Genau einmal und nur aus der bekannten alten Formel
-       (Review 32d, Befund 4). Wird F5 nach der Umstellung zurückgestellt, bleibt es so und steht als Konflikt im Bericht. */
+    /* F5: genau einmal und nur aus der bekannten alten Formel (Runde 1, Befund 4). Der Nachweis wird vor dem Schreiben
+       reserviert; ist er nicht lesbar oder nicht reservierbar, bleibt F5 unberührt (Runde 2, Befund 4). */
     const f5 = zeilen[0]?.values?.[SHEET_ERSTE_SPALTE]?.userEnteredValue?.formulaValue || '';
     const f5n = f5.replace(/\s/g, '').toUpperCase();
-    const { data: f5Log } = await admin.from('komm_log').select('id').eq('what', 'komm_tabelle_f5').limit(1);
-    const f5Erledigt = (f5Log || []).length > 0;
-    let f5Ergebnis = 'unverändert', konflikt: string[] = [];
+    const konflikt: string[] = [];
+    let f5Ergebnis = 'unverändert';
     if (f5n !== SHEET_START_FORMEL) {
-      if (f5n === SHEET_ALT_FORMEL.toUpperCase() && !f5Erledigt && !t.trocken) {
-        const frisch = (await lesen())[0]?.values?.[SHEET_ERSTE_SPALTE]?.userEnteredValue?.formulaValue || '';
-        if (frisch !== f5) { f5Ergebnis = 'F5 hat sich während des Abgleichs geändert; nicht geändert'; konflikt.push(f5Ergebnis); }
+      const { data: f5Log, error: f5Fehler } = await admin.from('komm_log').select('id,detail').eq('what', 'komm_tabelle_f5').limit(1);
+      if (f5Fehler) { f5Ergebnis = 'Nachweis der F5-Umstellung nicht lesbar; F5 nicht geändert'; konflikt.push(f5Ergebnis); }
+      else if ((f5Log || []).length) { f5Ergebnis = `F5 trägt „${f5}“, obwohl es schon einmal umgestellt oder reserviert wurde; bleibt so`; konflikt.push(f5Ergebnis); }
+      else if (f5n === SHEET_ALT_FORMEL.toUpperCase() && !t.trocken) {
+        const reserviert = await log('komm_tabelle_f5', by, { vorher: f5, nachher: SHEET_START_FORMEL, stand: 'reserviert' });
+        if (!reserviert) { f5Ergebnis = 'Nachweis der F5-Umstellung nicht speicherbar; F5 nicht geändert'; konflikt.push(f5Ergebnis); }
+        else if (!(await halten())) return verloren();
         else {
-          await sheets(token, ':batchUpdate', 'POST', { requests: [{ updateCells: { start: { sheetId, rowIndex: SHEET_DATUMSZEILE - 1, columnIndex: SHEET_ERSTE_SPALTE },
-            rows: [{ values: [{ userEnteredValue: { formulaValue: SHEET_START_FORMEL } }] }], fields: 'userEnteredValue' } }] });
-          await log('komm_tabelle_f5', by, { vorher: f5, nachher: SHEET_START_FORMEL });
-          f5Ergebnis = `von ${f5} auf ${SHEET_START_FORMEL}`;
-          zeilen = await lesen();
+          const frisch = (await lesen())[0]?.values?.[SHEET_ERSTE_SPALTE]?.userEnteredValue?.formulaValue || '';
+          if (frisch !== f5) { f5Ergebnis = 'F5 hat sich während des Abgleichs geändert; nicht geändert'; konflikt.push(f5Ergebnis); }
+          else {
+            try {
+              await sheets(token, ':batchUpdate', 'POST', { requests: [{ updateCells: { start: { sheetId, rowIndex: SHEET_DATUMSZEILE - 1, columnIndex: SHEET_ERSTE_SPALTE },
+                rows: [{ values: [{ userEnteredValue: { formulaValue: SHEET_START_FORMEL } }] }], fields: 'userEnteredValue' } }] });
+              await log('komm_tabelle_f5', by, { vorher: f5, nachher: SHEET_START_FORMEL, stand: 'geschrieben' });
+              f5Ergebnis = `von ${f5} auf ${SHEET_START_FORMEL}`;
+            } catch (e) { f5Ergebnis = 'F5-Umstellung mit unklarem Ausgang: ' + String((e as Error).message).slice(0, 120); konflikt.push(f5Ergebnis); }
+            zeilen = await lesen();
+          }
         }
-      } else if (f5Erledigt) { f5Ergebnis = `F5 trägt „${f5}“, obwohl es schon einmal umgestellt wurde; bleibt so (Rückstellung durch die Redaktion?)`; konflikt.push(f5Ergebnis); }
-      else f5Ergebnis = t.trocken ? `würde ${f5} auf ${SHEET_START_FORMEL} setzen` : `F5 trägt „${f5}“, nicht die erwartete Formel; nicht geändert`;
+      } else f5Ergebnis = t.trocken ? `würde ${f5} auf ${SHEET_START_FORMEL} setzen` : `F5 trägt „${f5}“, nicht die erwartete Formel; nicht geändert`;
     }
-    const plan = planen(zeilen, termine, wahl.length === fs.length);
-    /* Unmittelbar vor dem Schreiben frisch lesen und nur Zellen schreiben, die seit der Planung unverändert sind
-       (Review 32d, Befund 2). Die Sheets-API kennt kein bedingtes Schreiben; ein Rest zwischen dieser Prüfung und dem
-       Schreiben (Sekundenbruchteile) bleibt und ist im Technikstand benannt. */
+    const plan = planen(zeilen, termine, alle, kuerzel, voll);
+    /* Unmittelbar vor dem Schreiben: Sperre noch unser, Zeile 5 und F5 unverändert, Zeile 6 je Zelle unverändert
+       (Runde 1, Befund 2; Runde 2, Befunde 2 und 3). Ändert sich die Datumszeile, wird nichts geschrieben. Die Sheets-API
+       kennt kein bedingtes Schreiben; ein Rest zwischen dieser Prüfung und dem Schreiben bleibt (Technikstand, FRAGEN). */
     let anfragen: Any[] = [];
     if (plan.anfragen.length && !t.trocken) {
-      const jetzt = (await lesen())[1]?.values || [];
-      for (const r of plan.anfragen) {
-        const i = r.spalte, vorher = plan.zeile6[i] || {}, nun = jetzt[i] || {};
-        if (zellRoh(vorher) !== zellRoh(nun) || String(vorher.note || '') !== String(nun.note || '')) { plan.fremd.push({ zelle: `${K.spaltenName(i)}${SHEET_ZEILE}`, datum: r.datum, vorhanden: zellText(nun).slice(0, 80), soll: r.text, grund: 'während des Abgleichs geändert' }); continue; }
-        anfragen.push({ updateCells: { start: { sheetId, rowIndex: SHEET_ZEILE - 1, columnIndex: i }, rows: [{ values: [r.wert] }], fields: 'userEnteredValue,note' } });
+      if (!(await halten())) return verloren();
+      const jetzt = await lesen();
+      const datumVorher = JSON.stringify((zeilen[0]?.values || []).map((c: Any) => c?.effectiveValue?.numberValue ?? null));
+      const datumJetzt = JSON.stringify((jetzt[0]?.values || []).map((c: Any) => c?.effectiveValue?.numberValue ?? null));
+      const f5Jetzt = jetzt[0]?.values?.[SHEET_ERSTE_SPALTE]?.userEnteredValue?.formulaValue || '';
+      const f5Vorher = zeilen[0]?.values?.[SHEET_ERSTE_SPALTE]?.userEnteredValue?.formulaValue || '';
+      if (datumVorher !== datumJetzt || f5Jetzt !== f5Vorher) {
+        konflikt.push('Datumszeile oder F5 hat sich während des Abgleichs geändert; nichts geschrieben, nächster Lauf plant neu');
+        plan.anfragen = [];
+      } else {
+        const z6 = jetzt[1]?.values || [];
+        for (const r of plan.anfragen) {
+          const i = r.spalte, vorher = plan.zeile6[i] || {}, nun = z6[i] || {};
+          if (zellRoh(vorher) !== zellRoh(nun) || String(vorher.note || '') !== String(nun.note || '')) { plan.fremd.push({ zelle: `${K.spaltenName(i)}${SHEET_ZEILE}`, datum: r.datum, vorhanden: zellText(nun).slice(0, 80), soll: r.text, grund: 'während des Abgleichs geändert' }); continue; }
+          anfragen.push({ updateCells: { start: { sheetId, rowIndex: SHEET_ZEILE - 1, columnIndex: i }, rows: [{ values: [r.wert] }], fields: 'userEnteredValue,note' } });
+        }
+        if (anfragen.length) {
+          if (!(await halten())) return verloren();
+          await sheets(token, ':batchUpdate', 'POST', { requests: anfragen });
+        }
       }
-      if (anfragen.length) await sheets(token, ':batchUpdate', 'POST', { requests: anfragen });
-    } else anfragen = plan.anfragen;
-    const geleert = t.trocken ? 0 : anfragen.filter((a: Any) => !a.updateCells?.rows?.[0]?.values?.[0]?.userEnteredValue && a.updateCells).length;
-    const unvollstaendig = !plan.reichtBis || plan.reichtBis < '2027-12-31' || plan.doppelt.length > 0 || plan.ausserhalb.length > 0;
-    const ergebnis = t.trocken ? 'Trockenlauf' : (unvollstaendig ? 'geschrieben, unvollständig' : 'geschrieben');
+    } else anfragen = t.trocken ? [] : plan.anfragen;
+    const geleert = anfragen.filter((a: Any) => a.updateCells && !a.updateCells.rows?.[0]?.values?.[0]?.userEnteredValue).length;
+    /* Unvollständig, sobald ein Fixtermin nicht geschrieben werden konnte: fremde oder geänderte Zellen, Daten innerhalb
+       des Kalenders ohne Spalte, doppelte Daten, fehlende Abdeckung (Runde 2, Befund 6). Termine vor dem Kalenderbeginn
+       (01.10.2026) gehören nicht in die Tabelle und stehen nur als Zahl im Bericht. */
+    const unvollstaendig = !plan.reichtBis || plan.reichtBis < '2027-12-31' || plan.doppelt.length > 0 || plan.ausserhalb.length > 0 || plan.fremd.length > 0;
+    const ergebnis = t.trocken ? 'Trockenlauf' : (unvollstaendig || konflikt.length ? 'geschrieben, unvollständig' : 'geschrieben');
     const detail = { ergebnis, festival: t.festival || 'alle', f5: f5Ergebnis, konflikt, geschrieben: t.trocken ? 0 : anfragen.length - geleert, geleert, geplant: plan.anfragen.length,
-      unveraendert: plan.unveraendert, fremd: plan.fremd, ausserhalb: plan.ausserhalb, doppelte_daten: plan.doppelt, spalten_bis: plan.reichtBis, reicht_bis_2027: !!plan.reichtBis && plan.reichtBis >= '2027-12-31' };
+      unveraendert: plan.unveraendert, fremd: plan.fremd, ausgelassen: plan.fremd.length + plan.ausserhalb.length, ausserhalb: plan.ausserhalb, vor_beginn: plan.vorBeginn,
+      doppelte_daten: plan.doppelt, spalten_bis: plan.reichtBis, reicht_bis_2027: !!plan.reichtBis && plan.reichtBis >= '2027-12-31' };
     const protokoll = await log('komm_tabelle_sync', by, detail);
     return { status: 200, body: Object.assign({ ok: !unvollstaendig && !konflikt.length, konfiguriert: true, protokoll }, detail) };
   }
-  /* Schreibplan aus gelesenen Zeilen 5 und 6: Spalte je Datum aus den tatsächlichen Datumswerten (doppelte Daten werden
-     nicht beschrieben), eigene Zellen nur mit vollständigem Nachweis (Review 32d, Befund 1). */
-  function planen(zeilen: Any[], termine: Any[], voll: boolean) {
+  /* Schreibplan aus gelesenen Zeilen 5 und 6. Spalte je Datum aus den tatsächlichen Datumswerten (doppelte Daten werden
+     nicht beschrieben); eigene Zellen nur mit vollständigem Nachweis (Runde 1, Befund 1). Ein Lauf für ein Festival
+     gleicht auch die Tage ab, an denen eine eigene Zelle dieses Festival noch nennt, und schreibt dort den Stand aller
+     Festivals (Runde 2, Befund 5). */
+  function planen(zeilen: Any[], termine: Any[], alle: Any[], kuerzel: Set<string>, voll: boolean) {
     const datumZu = new Map<string, number>(), doppelt: string[] = [];
     (zeilen[0]?.values || []).forEach((c: Any, i: number) => {
       const n = c?.effectiveValue?.numberValue; if (i < SHEET_ERSTE_SPALTE || typeof n !== 'number') return;
@@ -809,29 +849,38 @@ export function kommModul(ctx: KommKontext) {
     });
     for (const d of doppelt) datumZu.delete(d);
     const tage = Array.from(datumZu.keys()).sort();
-    const reichtBis = tage[tage.length - 1] || null;
+    const beginn = tage[0] || null, reichtBis = tage[tage.length - 1] || null;
     const zeile6 = zeilen[1]?.values || [];
     const anfragen: Any[] = [], fremd: Any[] = [], ausserhalb: Any[] = [];
-    let unveraendert = 0;
-    const soll = new Map(termine.map((x: Any) => [x.datum, x]));
-    for (const x of termine) {
-      const i = datumZu.get(x.datum);
-      if (i === undefined) { ausserhalb.push({ datum: x.datum, text: x.text, grund: doppelt.includes(x.datum) ? 'Datum steht mehrfach in Zeile 5' : 'Datum nicht in Zeile 5' }); continue; }
+    let unveraendert = 0, vorBeginn = 0;
+    const allesJe = new Map(alle.map((x: Any) => [x.datum, x]));
+    /* Zu prüfende Tage: alle Termine dieses Laufs, dazu eigene Zellen ohne Termin (voller Lauf) oder mit einem Eintrag
+       eines der gewählten Festivals (Einzellauf). */
+    const tageZuPruefen = new Set<string>(termine.map((x: Any) => x.datum));
+    for (const [d, i] of datumZu.entries()) {
+      const c = zeile6[i] || {}; const inhalt = eigenerInhalt(c.note);
+      if (inhalt === null) continue;
+      if (voll ? !allesJe.has(d) : inhalt.split(' · ').some(e => kuerzel.has(e.split(' ')[0]))) tageZuPruefen.add(d);
+    }
+    for (const d of Array.from(tageZuPruefen).sort()) {
+      const x = allesJe.get(d) || null;
+      const i = datumZu.get(d);
+      if (i === undefined) {
+        if (!x) continue;
+        if (beginn && d < beginn) { vorBeginn++; continue; }
+        ausserhalb.push({ datum: d, text: x.text, grund: doppelt.includes(d) ? 'Datum steht mehrfach in Zeile 5' : 'Datum nicht in Zeile 5' }); continue;
+      }
       const c = zeile6[i] || {};
-      if (!K.zelleFrei(zellRoh(c), c.note, x.datum)) { fremd.push({ zelle: `${K.spaltenName(i)}${SHEET_ZEILE}`, datum: x.datum, vorhanden: zellText(c).slice(0, 80), soll: x.text }); continue; }
+      if (!K.zelleFrei(zellRoh(c), c.note, d)) { if (x) fremd.push({ zelle: `${K.spaltenName(i)}${SHEET_ZEILE}`, datum: d, vorhanden: zellText(c).slice(0, 80), soll: x.text }); continue; }
+      if (!x) {
+        if (/^komm:/.test(String(c.note || ''))) anfragen.push({ spalte: i, datum: d, text: '', wert: {} });
+        continue;
+      }
       const notiz = K.zellNotiz(x);
       if (zellRoh(c) === x.text && c.note === notiz) { unveraendert++; continue; }
-      anfragen.push({ spalte: i, datum: x.datum, text: x.text, wert: { userEnteredValue: { stringValue: x.text }, note: notiz } });
+      anfragen.push({ spalte: i, datum: d, text: x.text, wert: { userEnteredValue: { stringValue: x.text }, note: notiz } });
     }
-    /* Eigene Zellen, deren Termin es nicht mehr gibt, leeren: nur bei vollem Lauf und nur mit vollständigem Nachweis. */
-    if (voll) {
-      for (const [d, i] of datumZu.entries()) {
-        const c = zeile6[i] || {};
-        if (!/^komm:/.test(String(c?.note || '')) || soll.has(d) || !K.zelleFrei(zellRoh(c), c.note, d)) continue;
-        anfragen.push({ spalte: i, datum: d, text: '', wert: {} });
-      }
-    }
-    return { anfragen, fremd, ausserhalb, unveraendert, zeile6, reichtBis, doppelt };
+    return { anfragen, fremd, ausserhalb, unveraendert, zeile6, reichtBis, doppelt, vorBeginn };
   }
 
   /* ---------- Partner-Slots (32e) ---------- */
@@ -909,13 +958,24 @@ export function kommModul(ctx: KommKontext) {
           if (se) throw se;
           const gemeldet = new Set((schon || []).filter((l: Any) => l.detail?.asana === true).map((l: Any) => l.detail?.id));
           let zugestellt = 0, offen = 0;
+          const beginnH = Date.now();
           for (const id of ent.hinweis.filter((i: string) => !gemeldet.has(i))) {
+            /* Zeitbudget und Sperrbesitz vor jeder Zustellung (Review 32e, Runde 2, Befund 1). */
+            if (Date.now() - beginnH > 60000) { offen++; continue; }
+            const { data: haelt } = await admin.rpc('hh_komm_sperre_halten', { p_schluessel: 'hinweise', p_von: hv, p_sekunden: 120 });
+            if (haelt !== true) { bericht.push('Hinweise: Sperre verloren, Rest im nächsten Tick'); break; }
             const p = zeilen.find((x: Any) => x.id === id);
             if (!p?.asana_task_gid || !ctx.ASANA_TOKEN) { offen++; await log('komm_hinweis_offen', 'Zeitplan', { id, festival: p?.festival_short, titel: p?.titel, t: p?.t, grund: 'keine Asana-Aufgabe' }); continue; }
+            /* Stabile Marke im Kommentar: vor jedem Senden nachsehen, ob er schon da ist (verlorene Antwort, fehlendes
+               Protokoll; Runde 2, Befund 2). */
+            const marke = `[komm:hinweis:${id}]`;
             try {
-              await asana(`/tasks/${p.asana_task_gid}/stories`, 'POST', { text: `Hinweis aus dem Hohen Haus: Für „${p.titel}“ am ${K.kurz(p.t)} liegt eine Abgabe eines Partners vor, die Freigabe fehlt noch. Bitte im Habitat Hub freigeben oder Korrektur anfordern.` });
+              const stories = await asanaAlle(`/tasks/${p.asana_task_gid}/stories?opt_fields=text,resource_subtype&limit=100`);
+              if (!stories.some((x: Any) => String(x?.text || '').includes(marke))) {
+                await asana(`/tasks/${p.asana_task_gid}/stories`, 'POST', { text: `Hinweis aus dem Hohen Haus: Für „${p.titel}“ am ${K.kurz(p.t)} liegt eine Abgabe eines Partners vor, die Freigabe fehlt noch. Bitte im Habitat Hub freigeben oder Korrektur anfordern. ${marke}` });
+              }
               const ok = await log('komm_hinweis', 'Zeitplan', { id, festival: p.festival_short, titel: p.titel, t: p.t, asana: true });
-              if (!ok) bericht.push(`Hinweis zu ${id} zugestellt, aber nicht protokolliert`);
+              if (!ok) bericht.push(`Hinweis zu ${id} zugestellt, aber nicht protokolliert; der nächste Tick findet ihn über die Marke`);
               zugestellt++;
             } catch (e) { offen++; await log('komm_hinweis_offen', 'Zeitplan', { id, festival: p.festival_short, titel: p.titel, t: p.t, grund: String((e as Error).message).slice(0, 160) }); }
           }
@@ -924,7 +984,7 @@ export function kommModul(ctx: KommKontext) {
       }
     } catch (e) { bericht.push('Partner-Slots: ' + String((e as Error).message).slice(0, 160)); }
     try {
-      if (Deno.env.get(DIENSTKONTO_SECRET)) { const r: Any = await tabelleSync({ festival: 'alle' }, 'Zeitplan'); bericht.push(`Tabelle: ${r.body.ergebnis || r.body.error}${r.body.geschrieben !== undefined ? ', ' + r.body.geschrieben + ' Zellen' : ''}`); }
+      if (Deno.env.get(DIENSTKONTO_SECRET)) { const r: Any = await tabelleSync({ festival: 'alle' }, 'Zeitplan'); bericht.push(`Tabelle: ${r.body.ergebnis || r.body.error}${r.body.geschrieben !== undefined ? ', ' + r.body.geschrieben + ' Zellen' : ''}${r.body.ausgelassen ? ', ' + r.body.ausgelassen + ' Termine ausgelassen' : ''}${(r.body.konflikt || []).length ? ', Konflikt: ' + r.body.konflikt.join('; ') : ''}`); }
       else bericht.push('Tabelle: Dienstkonto fehlt');
     } catch (e) { bericht.push('Tabelle: ' + String((e as Error).message).slice(0, 160)); }
     return bericht;
