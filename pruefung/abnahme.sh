@@ -52,7 +52,7 @@ cat > pruefung/letzte-abnahme.json <<JSON
   "stand": "$STAND",
   "commit": "$(git rev-parse HEAD)",
   "datum": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "laeufe": ["tokens", "farbscan", "kontrast", "matrix", "schirme (Oberfläche)", "bedienung (Oberfläche)", "kommunikation (Logik, Vergleich, Bedienung, SQL-Probe lokal)", "waechter"],
+  "laeufe": ["tokens", "farbscan", "kontrast", "matrix", "schirme (Oberfläche)", "bedienung (Oberfläche)", "kommunikation", "waechter"],
   "ungeprueft": "Wirkung in der Datenbank, Asana-Lebenszyklus, Nebenläufigkeit, verborgene Oberflächenteile"
 }
 JSON
