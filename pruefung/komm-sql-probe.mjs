@@ -10,7 +10,8 @@ const require = createRequire(import.meta.url);
 const K = require('../site/assets/komm-logik.js');
 const rw = JSON.parse(fs.readFileSync(new URL('../docs/referenz/postingplan/habitat-postingplan-regelwerk.json', import.meta.url), 'utf8'));
 const MIGRATION = fs.readFileSync(new URL('../supabase/migrations/20261007052131_hh_komm_v32a.sql', import.meta.url), 'utf8')
-  + '\n' + fs.readFileSync(new URL('../supabase/migrations/20261007070401_hh_komm_v32b.sql', import.meta.url), 'utf8');
+  + '\n' + ['20261007070401_hh_komm_v32b', '20261007073224_hh_komm_v32c', '20261007074130_hh_komm_v32d', '20261007091500_hh_komm_v32e']
+    .map(n => fs.readFileSync(new URL(`../supabase/migrations/${n}.sql`, import.meta.url), 'utf8')).join('\n');
 
 let ok = 0, fehler = 0;
 const gleich = (name, ist, soll) => { const a = JSON.stringify(ist), b = JSON.stringify(soll); if (a === b) { ok++; console.log('  ok     ' + name); } else { fehler++; console.log('  FEHLT  ' + name + '\n         ist  ' + a + '\n         soll ' + b); } };
@@ -91,6 +92,15 @@ await q(`update komm_sperre set bis = now() - interval '1 second' where schluess
 const s5 = (await q(`select public.hh_komm_sperre('festival:LUSRD27', 60, 'e') ok`))[0].ok;
 gleich('erste nimmt, zweite nicht, fremde Freigabe wirkt nicht, eigene schon, abgelaufene wird übernommen', [s1, s2, s3, s4, s5], [true, false, false, true, true]);
 
+{
+  /* Fortschritt nur unter gehaltener Sperre (Review 32c, Runde 3, Befund 2). */
+  await q(`select public.hh_komm_sperre('festival:WMRD27', 60, 'neu')`);
+  const fremd = (await q(`select public.hh_komm_versandlauf_speichern('WMRD27', 'festival:WMRD27', 'alt', gen_random_uuid(), 'P1', array['x'], '{}'::jsonb, null, now(), false) ok`))[0].ok;
+  const eigen = (await q(`select public.hh_komm_versandlauf_speichern('WMRD27', 'festival:WMRD27', 'neu', gen_random_uuid(), 'P1', array['a','b'], '{}'::jsonb, null, now(), true) ok`))[0].ok;
+  const zeile = (await q(`select cardinality(erledigt) n, abgeschlossen from komm_versandlauf where schluessel = 'WMRD27'`))[0];
+  gleich('abgelöster Lauf speichert nichts, Halter der Sperre schon', [fremd, eigen, zeile.n, zeile.abgeschlossen], [false, true, 2, true]);
+}
+
 console.log('\n5. Prüfpunkte');
 const pp = erg.pubs.find(p => p.regel_id === 'PRUEF').t;
 await q(`select public.hh_komm_pruefpunkt_set('LUSRD27', $1::date, 'gelb', array['E01'], 'erste', true, 'Christian Linck', null, null)`, [pp]);
@@ -117,7 +127,7 @@ console.log('\n7. Rechte');
 const rechte = await q(`select c.relname, c.relrowsecurity rls, has_table_privilege('anon', c.oid, 'select') anon, has_table_privilege('authenticated', c.oid, 'select') auth, has_table_privilege('service_role', c.oid, 'insert') svc
   from pg_class c where c.relname like 'komm\\_%' and c.relkind = 'r' order by 1`);
 gleich('RLS an, anon und authenticated ohne Lesen, service_role schreibt', rechte.map(r => [r.relname, r.rls, r.anon, r.auth, r.svc]),
-  ['komm_log', 'komm_pruefpunkte', 'komm_regelwerk', 'komm_schritte', 'komm_sperre', 'komm_veroeffentlichungen'].map(n => [n, true, false, false, true]));
+  ['komm_log', 'komm_pruefpunkte', 'komm_regelwerk', 'komm_schritte', 'komm_sperre', 'komm_veroeffentlichungen', 'komm_versandlauf'].map(n => [n, true, false, false, true]));
 const fx = await q(`select p.proname, has_function_privilege('anon', p.oid, 'execute') anon, has_function_privilege('service_role', p.oid, 'execute') svc from pg_proc p where p.proname like 'hh_komm\\_%' and p.proname <> 'hh_komm_touch' order by 1`);
 gleich('Funktionen nur für service_role', fx.map(r => [r.proname, r.anon, r.svc]), fx.map(r => [r.proname, false, true]));
 

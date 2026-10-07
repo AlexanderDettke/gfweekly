@@ -8,7 +8,7 @@ const PGLITE = Deno.env.get('PGLITE_MODUL');
 if (!PGLITE) { console.log('PGLITE_MODUL fehlt'); Deno.exit(2); }
 const { PGlite } = await import(PGLITE.startsWith('file:') ? PGLITE : 'file://' + PGLITE);
 const BASIS = new URL('../', import.meta.url);
-const MIGRATION = ['20261007052131_hh_komm_v32a', '20261007070401_hh_komm_v32b', '20261007073224_hh_komm_v32c', '20261007074130_hh_komm_v32d']
+const MIGRATION = ['20261007052131_hh_komm_v32a', '20261007070401_hh_komm_v32b', '20261007073224_hh_komm_v32c', '20261007074130_hh_komm_v32d', '20261007091500_hh_komm_v32e']
   .map(n => Deno.readTextFileSync(new URL(`supabase/migrations/${n}.sql`, BASIS))).join('\n');
 
 let ok = 0, fehler = 0;
@@ -121,7 +121,7 @@ function asanaFake(methode: string, url: URL, body: any) {
   }
   if ((m = /^\/projects\/(\d+)$/.exec(pfad))) {
     const p = A.projekte.get(m[1]); if (!p || p.geloescht) return asanaAntwort(404, { errors: [{ message: 'Unknown object' }] });
-    if (methode === 'GET') return asanaAntwort(200, { data: { gid: p.gid, name: p.name, archived: p.archived } });
+    if (methode === 'GET') return asanaAntwort(200, { data: { gid: p.gid, name: p.name, archived: p.archived, owner: p.owner ? { gid: p.owner } : null } });
     if (methode === 'PUT') { Object.assign(p, d); return asanaAntwort(200, { data: p }); }
     if (methode === 'DELETE') { p.geloescht = true; return asanaAntwort(200, { data: {} }); }
   }
@@ -136,7 +136,7 @@ function asanaFake(methode: string, url: URL, body: any) {
   }
   if ((m = /^\/sections\/(\d+)\/tasks$/.exec(pfad))) return asanaAntwort(200, { data: [...A.aufgaben.values()].filter(t => !t.geloescht && t.mitglied.some((x: any) => x.section === m![1])).map(t => ({ gid: t.gid })), next_page: null });
   if ((m = /^\/sections\/(\d+)$/.exec(pfad)) && methode === 'DELETE') { A.abschnitte.get(m[1]).geloescht = true; return asanaAntwort(200, { data: {} }); }
-  if ((m = /^\/projects\/(\d+)\/tasks$/.exec(pfad))) return asanaAntwort(200, { data: [...A.aufgaben.values()].filter(t => !t.geloescht && t.mitglied.some((x: any) => x.project === m![1])).map(t => ({ gid: t.gid, name: t.name })), next_page: null });
+  if ((m = /^\/projects\/(\d+)\/tasks$/.exec(pfad))) return asanaAntwort(200, { data: [...A.aufgaben.values()].filter(t => !t.geloescht && t.mitglied.some((x: any) => x.project === m![1])).filter(t => !(t.unsichtbar > 0 && t.unsichtbar--)).map(t => ({ gid: t.gid, name: t.name })), next_page: null });
   if (methode === 'POST' && pfad === '/tasks') {
     const gid = neueGid();
     const mitglied = d.memberships ? d.memberships.map((x: any) => ({ project: x.project, section: x.section })) : (d.projects || []).map((x: string) => ({ project: x, section: null }));
@@ -486,6 +486,70 @@ console.log('\n15. Nach Review 32c, Runde 2');
   const s2 = await ruf('komm_send', { festival: 'BYNRD27', by: 'Alex', bestaetigt: true });
   const ohne = (await q(`select count(*)::int n from komm_veroeffentlichungen where festival_short = 'BYNRD27' and t >= '2026-10-07' and asana_task_gid is null`))[0].n;
   gleich('Fortsetzung holt die Kennung nach: alle Veröffentlichungen gemerkt, Lauf abgeschlossen', [s2.body.abgeschlossen, ohne], [true, 0]);
+}
+
+console.log('\n16. Nach Review 32c, Runde 3');
+{
+  /* Unklare Anlage, die beim nächsten Lesen noch nicht sichtbar ist: keine zweite Anlage, als ungeklärt gemeldet. */
+  const pl = [...A.projekte.values()].find(p => p.name === 'Kommunikation Lusatia 2027' && !p.archived)!;
+  const eine = aufgabenIn(pl.gid).find(t => t.name.startsWith('Prüfpunkt 2'))!;
+  eine.geloescht = true;
+  await q(`update komm_veroeffentlichungen set asana_task_gid = null, gesendet_am = null where asana_task_gid = $1`, [eine.gid]);
+  await q(`delete from komm_versandlauf where schluessel = 'LUSRD27'`);
+  let neueGidVorher = A.n;
+  A.stoerung.push({ methode: 'POST', muster: /^\/tasks$/, netzNachher: true });
+  const u1 = await ruf('komm_send', { festival: 'LUSRD27', by: 'Alex', bestaetigt: true });
+  A.stoerung = [];
+  const angelegt = [...A.aufgaben.values()].find(t => Number(t.gid) > neueGidVorher && t.name === eine.name)!;
+  angelegt.unsichtbar = 1;   // beim nächsten Lesen der Projektliste noch nicht sichtbar
+  const u2 = await ruf('komm_send', { festival: 'LUSRD27', by: 'Alex', bestaetigt: true });
+  const gleichnamig = aufgabenIn(pl.gid).filter(t => t.name === eine.name).length;
+  wahr('verzögerte Sichtbarkeit: keine zweite Anlage, „ungeklärt“ gemeldet, nicht abgeschlossen', gleichnamig === 1 && u2.body.abgeschlossen === false && u2.body.fehler.some((x: string) => /ungeklärt/.test(x)), JSON.stringify([gleichnamig, u2.body.abgeschlossen, u2.body.fehler]));
+  const u3 = await ruf('komm_send', { festival: 'LUSRD27', by: 'Alex', bestaetigt: true });
+  wahr('sobald sichtbar: übernommen, abgeschlossen, weiterhin genau eine', u3.body.abgeschlossen === true && aufgabenIn(pl.gid).filter(t => t.name === eine.name).length === 1, JSON.stringify([u1.body.unterbrochen, u3.body.abgeschlossen, u3.body.fehler]));
+}
+{
+  /* Abschnitt lässt sich nicht anlegen: Aufgaben dieses Monats warten, beim nächsten Senden kommen sie in den Abschnitt. */
+  const alt = [...A.projekte.values()].find(p => p.name === 'Kommunikation Fluidity 2027' && !p.archived)!;
+  alt.archived = true;
+  await q(`update komm_veroeffentlichungen set asana_task_gid = null, gesendet_am = null where festival_short = 'FLRD27'`);
+  for (const t of [...A.aufgaben.values()]) if (t.mitglied.some((x: any) => x.project === alt.gid)) t.geloescht = true;
+  A.stoerung.push({ methode: 'POST', muster: /^\/projects\/\d+\/sections$/, status: 503, text: 'Probe: Abschnitt nicht angelegt' });
+  const a1 = await ruf('komm_send', { festival: 'FLRD27', by: 'Alex', bestaetigt: true });
+  const pn = [...A.projekte.values()].find(p => p.name === alt.name && !p.archived)!;
+  const ohneAbschnitt = aufgabenIn(pn.gid).filter(t => t.mitglied.some((x: any) => x.project === pn.gid && !x.section)).length;
+  wahr('fehlender Abschnitt: keine Aufgabe ohne Abschnitt, weiter, gemeldet', ohneAbschnitt === 0 && a1.body.weiter === true && a1.body.fehler.some((x: string) => /Abschnitt fehlt/.test(x)), JSON.stringify([ohneAbschnitt, a1.body.weiter, a1.body.fehler.slice(0, 2)]));
+  const a2 = await ruf('komm_send', { festival: 'FLRD27', by: 'Alex', bestaetigt: true });
+  const ohne2 = aufgabenIn(pn.gid).filter(t => t.mitglied.some((x: any) => x.project === pn.gid && !x.section)).length;
+  gleich('nächstes Senden: alle Aufgaben im Projekt, alle in einem Monatsabschnitt', [a2.body.abgeschlossen, aufgabenIn(pn.gid).length, ohne2], [true, a2.body.aufgaben, 0]);
+}
+{
+  /* Eigentum: abgelehntes owner beim Anlegen und gescheiterte Übertragung, beim nächsten Senden nachgeholt. */
+  const alt = [...A.projekte.values()].find(p => p.name === 'Kommunikation Wilde Möhre 2027' && !p.archived)!;
+  alt.archived = true;
+  A.stoerung.push({ methode: 'POST', muster: /^\/projects$/, status: 400, text: 'owner: Not a recognized ID' });
+  A.stoerung.push({ methode: 'PUT', muster: /^\/projects\/\d+$/, status: 500, text: 'Probe: Eigentum nicht übertragen' });
+  A.stoerung.push({ methode: 'PUT', muster: /^\/projects\/\d+$/, status: 500, text: 'Probe: Eigentum nicht übertragen' });
+  const o1 = await ruf('komm_send', { festival: 'WMRD27', by: 'Alex', bestaetigt: true });
+  A.stoerung = [];
+  const pn = [...A.projekte.values()].find(p => p.name === alt.name && !p.archived)!;
+  wahr('Eigentum offen: nicht abgeschlossen, gemeldet', !pn.owner && o1.body.abgeschlossen === false && o1.body.fehler.some((x: string) => /Eigentum/.test(x)), JSON.stringify([pn.owner, o1.body.abgeschlossen, o1.body.fehler.slice(0, 3)]));
+  const o2 = await ruf('komm_send', { festival: 'WMRD27', by: 'Alex', bestaetigt: true });
+  gleich('nächstes Senden holt das Eigentum nach und schließt ab', [pn.owner, o2.body.abgeschlossen], ['U-CHR', true]);
+  pn.owner = 'U-ANNIE';
+  await ruf('komm_send', { festival: 'WMRD27', by: 'Alex', bestaetigt: true });
+  gleich('ein gesetztes Eigentum bleibt, wer es auch hält', pn.owner, 'U-ANNIE');
+}
+{
+  /* Ratenlimit im Vorlauf: Zeitpunkt gespeichert, nächster Aufruf ohne Anfrage an Asana. */
+  await q(`delete from komm_versandlauf where schluessel = 'BYNRD27'`);
+  A.stoerung.push({ methode: 'GET', muster: /^\/projects\/\d+\/sections$/, status: 429, text: 'rate limit', retryAfter: 120 });
+  const r1 = await ruf('komm_send', { festival: 'BYNRD27', by: 'Alex', bestaetigt: true });
+  A.aufrufe = [];
+  const r2 = await ruf('komm_send', { festival: 'BYNRD27', by: 'Alex', bestaetigt: true });
+  const lauf = (await q(`select fortsetzen_ab from komm_versandlauf where schluessel = 'BYNRD27'`))[0];
+  wahr('429 im Vorlauf: weiter mit Zeitpunkt, gespeichert, Folgeaufruf ohne Asana', r1.status === 200 && r1.body.weiter === true && !!r1.body.fortsetzen_ab && !!lauf?.fortsetzen_ab && A.aufrufe.length === 0, JSON.stringify([r1.status, r1.body.fortsetzen_ab, lauf, A.aufrufe.length]));
+  await q(`update komm_versandlauf set fortsetzen_ab = null where schluessel = 'BYNRD27'`);
 }
 
 console.log('\n12. Redaktionstabelle');

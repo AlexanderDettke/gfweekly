@@ -427,7 +427,23 @@ export function kommModul(ctx: KommKontext) {
     return { status: 502, body: { error: grund, projekt } };
   }
   async function sendenGesperrt(halt: { schluessel: string, von: string }, f: Any, test: boolean, von: string, zust: Any, vertretung: boolean, rahmen: Any, projektName: string, logWhat: string, gidJe: Map<string, string>, saetze: string[]) {
+    try { return await sendenInnen(halt, f, test, von, zust, vertretung, rahmen, projektName, logWhat, gidJe, saetze); }
+    catch (e) {
+      if ((e as Any).status !== 429) throw e;
+      /* Ratenlimit im Vorlauf (Projekt, Abschnitte, Liste): Zeitpunkt speichern, ganzer Lauf pausiert (Review 32c, Runde 3, Befund 5). */
+      const ab = new Date(Date.now() + Number((e as Any).retryAfter || 30) * 1000).toISOString();
+      const laufSchluessel = test ? `test:${f.short_name}` : f.short_name;
+      const { data: alt } = await admin.from('komm_versandlauf').select('*').eq('schluessel', laufSchluessel).maybeSingle();
+      await admin.rpc('hh_komm_versandlauf_speichern', { p_schluessel: laufSchluessel, p_sperre: halt.schluessel, p_von: halt.von, p_lauf: alt?.lauf || crypto.randomUUID(),
+        p_projekt: alt?.projekt || null, p_erledigt: alt?.erledigt || [], p_unklar: alt?.unklar || {}, p_fortsetzen_ab: ab, p_gestartet_am: alt?.gestartet_am || new Date().toISOString(), p_abgeschlossen: false });
+      await log(logWhat, von, { festival: f.short_name, neu: 0, aktualisiert: 0, weiter: true, unterbrochen: String((e as Error).message), fortsetzen_ab: ab, fehler: [String((e as Error).message)] });
+      return { status: 200, body: { ok: true, test, festival: f.short_name, neu: 0, aktualisiert: 0, rest: null, weiter: true, abgeschlossen: false, unterbrochen: String((e as Error).message), fortsetzen_ab: ab, fehler: [], saetze } };
+    }
+  }
+  async function sendenInnen(halt: { schluessel: string, von: string }, f: Any, test: boolean, von: string, zust: Any, vertretung: boolean, rahmen: Any, projektName: string, logWhat: string, gidJe: Map<string, string>, saetze: string[]) {
     const beginn = Date.now();
+    /* Ratenlimit nie verschlucken: die Hülle speichert den Fortsetzungszeitpunkt. */
+    const r429 = (e: unknown) => { if ((e as Any)?.status === 429) throw e; };
     const haltOk = async () => {
       const { data } = await admin.rpc('hh_komm_sperre_halten', { p_schluessel: halt.schluessel, p_von: halt.von, p_sekunden: SPERRE_SEKUNDEN });
       return data === true;
@@ -446,23 +462,24 @@ export function kommModul(ctx: KommKontext) {
     let projekt: string | null = null;
     const vorherProjekt: string | null = (letzter || [])[0]?.detail?.projekt || null;
     try { projekt = await projektFinden(projektName, vorherProjekt); }
-    catch (e) { return { status: 502, body: { error: 'Projekt nicht erreichbar: ' + String((e as Error).message).slice(0, 200), hinweis: 'Nichts geändert.' } }; }
+    catch (e) { r429(e); return { status: 502, body: { error: 'Projekt nicht erreichbar: ' + String((e as Error).message).slice(0, 200), hinweis: 'Nichts geändert.' } }; }
     const fehler: string[] = [];
     const verloren = { status: 409, body: { error: 'Sperre verloren; ein anderer Lauf ist dran. Nichts weiter geändert.' } };
     if (!projekt) {
       const daten: Any = { name: projektName, workspace: ctx.ASANA_WORKSPACE, notes: projektNotiz(f, zust.name, test), owner: zust.asana_gid, default_view: 'list' };
-      try { const team = await teamFinden(); if (team) daten.team = team; } catch (_e) { /* ohne Team versuchen */ }
+      try { const team = await teamFinden(); if (team) daten.team = team; } catch (e) { r429(e); /* ohne Team versuchen */ }
       /* Sperre unmittelbar vor der Anlage prüfen, nach jeder vorangehenden Anfrage (Review 32c, Runde 2, Befund 2). */
       if (!(await haltOk())) return verloren;
       try { projekt = String((await asana('/projects', 'POST', daten)).gid); }
       catch (e) {
+        r429(e);
         /* Unklarer Ausgang (Netz, 5xx, verlorene Antwort): erst nach dem Projekt suchen, nie blind ein zweites anlegen
            (Review 32a, Runde 3, Befund 2). Ein zweiter Versuch ohne owner nur, wenn Asana das Feld ausdrücklich ablehnt. */
         const st = (e as Any).status, text = String((e as Error).message);
         try { projekt = await projektFinden(projektName, null); } catch (_e) { projekt = null; }
         if (!projekt && st === 400 && /owner/i.test(text)) {
           if (!(await haltOk())) return verloren;
-          try { delete daten.owner; projekt = String((await asana('/projects', 'POST', daten)).gid); try { await asana(`/projects/${projekt}`, 'PUT', { owner: zust.asana_gid }); } catch (e2) { fehler.push('Eigentum nicht übertragen: ' + String((e2 as Error).message).slice(0, 160)); } }
+          try { delete daten.owner; projekt = String((await asana('/projects', 'POST', daten)).gid); try { await asana(`/projects/${projekt}`, 'PUT', { owner: zust.asana_gid }); } catch (e2) { r429(e2); fehler.push('Eigentum nicht übertragen: ' + String((e2 as Error).message).slice(0, 160)); } }
           catch (e3) { return { status: 400, body: { error: String((e3 as Error).message), erster_fehler: text.slice(0, 200), hinweis: 'Projekt nicht angelegt; nichts geändert.' } }; }
         } else if (!projekt) return { status: 502, body: { error: 'Projekt nicht angelegt: ' + text.slice(0, 200), hinweis: 'Nichts geändert. Beim nächsten Senden wird zuerst nach dem Projekt gesucht.' } };
       }
@@ -470,15 +487,26 @@ export function kommModul(ctx: KommKontext) {
       const ok = await log(logWhat + '_projekt', von, { festival: f.short_name, projekt, url: `https://app.asana.com/0/${projekt}`, schritt: 'Projekt angelegt' });
       if (!ok) return { status: 500, body: { error: 'Das Projekt steht in Asana, ließ sich aber nicht protokollieren.', projekt, hinweis: 'Noch keine Aufgabe angelegt. Später erneut senden; das Projekt wird über den Namen gefunden.' } };
       if (!(await haltOk())) return verloren;
-      try { await asana(`/projects/${projekt}/addMembers`, 'POST', { members: zust.asana_gid }); } catch (_e) { /* Eigentum genügt */ }
+      try { await asana(`/projects/${projekt}/addMembers`, 'POST', { members: zust.asana_gid }); } catch (e) { r429(e); /* Eigentum genügt */ }
     } else {
       if (!(await haltOk())) return verloren;
-      try { await asana(`/projects/${projekt}`, 'PUT', { notes: projektNotiz(f, zust.name, test) }); } catch (e) { fehler.push('Projektbeschreibung nicht aktualisiert: ' + String((e as Error).message).slice(0, 160)); }
+      try { await asana(`/projects/${projekt}`, 'PUT', { notes: projektNotiz(f, zust.name, test) }); } catch (e) { r429(e); fehler.push('Projektbeschreibung nicht aktualisiert: ' + String((e as Error).message).slice(0, 160)); }
     }
+    /* Eigentum: ist es (noch) leer, wird es bei jedem Versand nachgeholt; ein gesetztes Eigentum bleibt, wer es auch hält
+       (Review 32c, Runde 3, Befund 4). */
+    let eigentumOffen = false;
+    try {
+      const pr = await asana(`/projects/${projekt}?opt_fields=owner`);
+      if (!pr?.owner?.gid) {
+        if (!(await haltOk())) return verloren;
+        try { await asana(`/projects/${projekt}`, 'PUT', { owner: zust.asana_gid }); }
+        catch (e) { r429(e); eigentumOffen = true; fehler.push('Eigentum nicht übertragen: ' + String((e as Error).message).slice(0, 160)); }
+      }
+    } catch (e) { r429(e); eigentumOffen = true; fehler.push('Eigentum nicht lesbar: ' + String((e as Error).message).slice(0, 160)); }
     /* Abschnitte je Monat, chronologisch; fehlende vor dem nächsten späteren Abschnitt einfügen. */
     let sektionen: Any[] = [];
     try { sektionen = await asana(`/projects/${projekt}/sections?opt_fields=name`); }
-    catch (e) { return await abbruch(logWhat, von, f, projekt!, 'Abschnitte nicht lesbar: ' + String((e as Error).message).slice(0, 160)); }
+    catch (e) { r429(e); return await abbruch(logWhat, von, f, projekt!, 'Abschnitte nicht lesbar: ' + String((e as Error).message).slice(0, 160)); }
     const abschnitt: Record<string, string> = {};
     for (const s of sektionen || []) abschnitt[s.name] = s.gid;
     for (let i = 0; i < rahmen.abschnitte.length; i++) {
@@ -487,16 +515,16 @@ export function kommModul(ctx: KommKontext) {
       if (!(await haltOk())) return await abbruch(logWhat, von, f, projekt!, 'Sperre verloren beim Anlegen der Abschnitte; ein anderer Lauf ist dran');
       const spaeter = rahmen.abschnitte.slice(i + 1).find((n: string) => abschnitt[n]);
       try { abschnitt[name] = String((await asana(`/projects/${projekt}/sections`, 'POST', spaeter ? { name, insert_before: abschnitt[spaeter] } : { name })).gid); }
-      catch (e) { fehler.push(`Abschnitt ${name}: ` + String((e as Error).message).slice(0, 120)); }
+      catch (e) { r429(e); fehler.push(`Abschnitt ${name}: ` + String((e as Error).message).slice(0, 120)); }
     }
     for (const s of sektionen || []) {
       if (!/^(unbenannter abschnitt|untitled section)$/i.test((s.name || '').trim())) continue;
-      try { const drin = await asana(`/sections/${s.gid}/tasks?limit=1`); if (!(drin.data || []).length && await haltOk()) await asana(`/sections/${s.gid}`, 'DELETE'); } catch (_e) { /* bleibt */ }
+      try { const drin = await asana(`/sections/${s.gid}/tasks?limit=1`); if (!(drin.data || []).length && await haltOk()) await asana(`/sections/${s.gid}`, 'DELETE'); } catch (e) { r429(e); /* bleibt */ }
     }
     /* Aufgaben im Projekt nach Namen (wie launch_send seit v35): ohne gemerkte Kennung wird eine vorhandene weiterverwendet. */
     const imProjekt = new Map<string, string>();
     try { for (const a of await asanaAlle(`/projects/${projekt}/tasks?opt_fields=name&limit=100`)) if (a?.name && !imProjekt.has(norm(a.name))) imProjekt.set(norm(a.name), String(a.gid)); }
-    catch (e) { return await abbruch(logWhat, von, f, projekt!, 'Aufgabenliste nicht lesbar: ' + String((e as Error).message).slice(0, 160) + '. Keine Aufgabe angelegt, sonst könnten Aufgaben doppelt entstehen.'); }
+    catch (e) { r429(e); return await abbruch(logWhat, von, f, projekt!, 'Aufgabenliste nicht lesbar: ' + String((e as Error).message).slice(0, 160) + '. Keine Aufgabe angelegt, sonst könnten Aufgaben doppelt entstehen.'); }
 
     /* Zeitbudget je Aufruf; der Rest folgt beim nächsten Senden. KOMM_SEND_BUDGET_MS nur für die Probe. */
     const budget = Number(Deno.env.get('KOMM_SEND_BUDGET_MS') || SEND_BUDGET_MS);
@@ -509,17 +537,23 @@ export function kommModul(ctx: KommKontext) {
     const laufId = fortsetzen ? laufAlt.lauf : crypto.randomUUID();
     /* Fortschritt nur speichern, solange die Sperre gehalten wird; ein abgelöster Lauf überschreibt nie den seines
        Nachfolgers (Runde 2, Befund 2). */
+    /* Anlagen mit unklarem Ausgang je Name und Zeitpunkt, auch über Läufe hinweg (Runde 3, Befund 1). */
+    const unklar: Record<string, string> = Object.assign({}, laufAlt?.projekt === projekt ? (laufAlt?.unklar || {}) : {});
     const laufSpeichern = async (fertig: boolean) => {
-      if (sperreWeg || !(await haltOk())) { sperreWeg = true; return; }
-      const { error } = await admin.from('komm_versandlauf').upsert({ schluessel: laufSchluessel, lauf: laufId, projekt, erledigt: Array.from(erledigt), fortsetzen_ab: fortsetzenAb,
-        gestartet_am: fortsetzen ? laufAlt.gestartet_am : new Date(beginn).toISOString(), aktualisiert_am: new Date().toISOString(), abgeschlossen: fertig }, { onConflict: 'schluessel' });
+      if (sperreWeg) return;
+      /* Sperrprüfung und Schreiben in einer Transaktion (Runde 3, Befund 2). */
+      const { data, error } = await admin.rpc('hh_komm_versandlauf_speichern', { p_schluessel: laufSchluessel, p_sperre: halt.schluessel, p_von: halt.von, p_lauf: laufId,
+        p_projekt: projekt, p_erledigt: Array.from(erledigt), p_unklar: unklar, p_fortsetzen_ab: fortsetzenAb,
+        p_gestartet_am: fortsetzen ? laufAlt.gestartet_am : new Date(beginn).toISOString(), p_abgeschlossen: fertig });
       if (error) fehler.push('Fortschritt des Versands nicht gespeichert: ' + error.message);
+      else if (data !== true) sperreWeg = true;
     };
     await laufSpeichern(false);
     /* Zugehörigkeit zum Zielprojekt je gemerkter Aufgabe, nicht nur beim erkannten Projektwechsel (Review 32c, Befund 1). */
     const gidsImProjekt = new Set(imProjekt.values());
     const aufgaben = rahmen.aufgaben.slice().sort((a: Any, b: Any) => (a.due_on < b.due_on ? -1 : a.due_on > b.due_on ? 1 : 0)).filter((a: Any) => !erledigt.has(a.name));
     let seitSpeichern = 0;
+    const abschnittFehlt = new Set<string>(), offenUnklar: string[] = [];
     for (let i = 0; i < aufgaben.length; i++) {
       const a = aufgaben[i];
       /* Mindestens eine Aufgabe je Aufruf, damit auch ein langsamer Vorlauf den Versand nie zum Stehen bringt. */
@@ -529,6 +563,16 @@ export function kommModul(ctx: KommKontext) {
       gid = gid || imProjekt.get(norm(a.name)) || null;
       const warteBis = beginn + budget;
       let erfolg = false, neuAngelegt = false;
+      /* Ohne Monatsabschnitt wird nichts angelegt oder übernommen; der Monat bleibt offen und folgt beim nächsten Senden
+         (Runde 3, Befund 3). */
+      if (!abschnitt[a.abschnitt] && (!gid || !gidsImProjekt.has(gid))) { abschnittFehlt.add(a.abschnitt); continue; }
+      /* Ungeklärte Anlage: steht die Aufgabe inzwischen im Projekt, gilt sie als angelegt. Sonst erst nach 15 Minuten ohne
+         Treffer erneut anlegen, vorher als offen melden. */
+      if (unklar[a.name]) {
+        if (imProjekt.has(norm(a.name))) delete unklar[a.name];
+        else if (Date.now() - Date.parse(unklar[a.name]) < 15 * 60000) { offenUnklar.push(a.name); continue; }
+        else delete unklar[a.name];
+      }
       try {
         /* Vor jeder Änderung: Sperre noch unser? Dann verlängern; sonst sofort aufhören (Review 32c, Befund 3). */
         if (!(await haltOk())) { sperreWeg = true; unterbrochen = 'Sperre verloren; ein anderer Lauf ist dran'; rest = aufgaben.length - i; break; }
@@ -556,6 +600,7 @@ export function kommModul(ctx: KommKontext) {
         else if ((e as Any).unklar && !gid) {
           /* Anlage mit unklarem Ausgang: in diesem Aufruf nie ein zweites Mal anlegen. Der Lauf unterbricht; der nächste
              Aufruf liest das Projekt zu Beginn neu und findet eine doch angelegte Aufgabe über den Namen (Runde 2, Befund 1). */
+          unklar[a.name] = new Date().toISOString();
           unterbrochen = `Anlage von „${a.name}“ mit unklarem Ausgang; beim nächsten Senden wird zuerst im Projekt nachgesehen`;
           fehler.push(`${a.name}: ${String((e as Error).message).slice(0, 160)}`);
         } else fehler.push(`${a.name}: ${String((e as Error).message).slice(0, 160)}`);
@@ -581,8 +626,10 @@ export function kommModul(ctx: KommKontext) {
       if (++seitSpeichern >= 10) { seitSpeichern = 0; await laufSpeichern(false); }
     }
     /* Abgeschlossen nur, wenn wirklich jede Rahmenaufgabe in diesem Lauf bearbeitet und gemerkt ist. */
-    const vollstaendig = rahmen.aufgaben.every((a: Any) => erledigt.has(a.name));
-    if (!vollstaendig && !rest && !unterbrochen) rest = rahmen.aufgaben.filter((a: Any) => !erledigt.has(a.name)).length;
+    const vollstaendig = rahmen.aufgaben.every((a: Any) => erledigt.has(a.name)) && !eigentumOffen;
+    if (abschnittFehlt.size) fehler.push(`Abschnitt fehlt, Aufgaben noch nicht angelegt: ${Array.from(abschnittFehlt).join(', ')}`);
+    if (offenUnklar.length) fehler.push(`Anlage ungeklärt, wird in 15 Minuten erneut geprüft: ${offenUnklar.join(', ')}`);
+    if (!vollstaendig && !rest && !unterbrochen) rest = rahmen.aufgaben.filter((a: Any) => !erledigt.has(a.name)).length || (eigentumOffen ? 1 : 0);
     await laufSpeichern(vollstaendig && !unterbrochen);
     const url = `https://app.asana.com/0/${projekt}`;
     const detail = { festival: f.short_name, projekt, url, neu, aktualisiert, rest, lauf: laufId, im_lauf_erledigt: erledigt.size,
