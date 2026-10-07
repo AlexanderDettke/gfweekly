@@ -1,4 +1,10 @@
-# Fragen für morgen · Stand 03.10.2026 (V31 Vorhaben)
+# Fragen für morgen · Stand 07.10.2026 (V32 Kommunikation)
+
+## V32 Kommunikation: was nur Alex tun kann
+
+1. **Dienstkonto für Christians Redaktionstabelle (Alex, etwa 10 Minuten).** In console.cloud.google.com im Projekt „Wilde Habitate Kalender“: (a) „APIs und Dienste“ → „Google Sheets API“ aktivieren; (b) „IAM und Verwaltung“ → „Dienstkonten“ → „Dienstkonto erstellen“, Name `hohes-haus-redaktion`, keine Rollen; beim Konto „Schlüssel“ → „Schlüssel hinzufügen“ → JSON, Datei lädt herunter; (c) in der Claude-Sitzung `! npx supabase secrets set GOOGLE_DIENSTKONTO_JSON="$(cat ~/Downloads/<datei>.json)" --project-ref bnfmupnmqyrcltrphfak` eingeben und die Datei danach löschen; (d) die Tabelle „Social Media - Wilde Habitate“ mit der Adresse des Dienstkontos (`hohes-haus-redaktion@<projekt-id>.iam.gserviceaccount.com`, steht in der Liste der Dienstkonten) als Bearbeiter teilen. Danach setzt der nächste tägliche Lauf (04:40 UTC) oder „komm_tabelle_sync alle“ `F5` auf `=DATE(2026,10,1)` und füllt Zeile 6; sonst ändert er nichts an der Tabelle. Falls (b) mit „Erstellen von Dienstkontoschlüsseln deaktiviert“ endet, ist die Organisationsrichtlinie `iam.disableServiceAccountKeyCreation` aktiv: sie unter „IAM und Verwaltung“ → „Organisationsrichtlinien“ für dieses Projekt ausnehmen, dann (b) wiederholen.
+
+# Frühere Fragen · Stand 03.10.2026 (V31 Vorhaben)
 
 ## V31: was von euch kommen muss
 
