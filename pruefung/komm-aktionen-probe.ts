@@ -1,0 +1,381 @@
+/* Aktionsprobe V32 Kommunikation: das Modul supabase/functions/gfweekly/komm.ts gegen eine nachgebildete Umgebung.
+   Datenbank: lokales Postgres (PGlite) mit der echten Migration, angesprochen über einen kleinen Nachbau des
+   Supabase-Clients (nur die Aufrufe, die komm.ts macht). Asana, Google-Anmeldung und Google Sheets: nachgebaut über
+   globalThis.fetch, mit Zustand und gezielt eingestreuten Fehlern. Kein Zugriff auf Produktion, Asana oder Google.
+   Aufruf: PGLITE_MODUL=<pfad>/node_modules/@electric-sql/pglite/dist/index.js npx deno run -A pruefung/komm-aktionen-probe.ts */
+// deno-lint-ignore-file no-explicit-any
+const PGLITE = Deno.env.get('PGLITE_MODUL');
+if (!PGLITE) { console.log('PGLITE_MODUL fehlt'); Deno.exit(2); }
+const { PGlite } = await import(PGLITE.startsWith('file:') ? PGLITE : 'file://' + PGLITE);
+const BASIS = new URL('../', import.meta.url);
+const MIGRATION = await Deno.readTextFile(new URL('supabase/migrations/20261007052131_hh_komm_v32a.sql', BASIS));
+
+let ok = 0, fehler = 0;
+const gleich = (name: string, ist: unknown, soll: unknown) => { const a = JSON.stringify(ist), b = JSON.stringify(soll); if (a === b) { ok++; console.log('  ok     ' + name); } else { fehler++; console.log('  FEHLT  ' + name + '\n         ist  ' + a.slice(0, 500) + '\n         soll ' + b.slice(0, 500)); } };
+const wahr = (name: string, b: unknown, info = '') => { if (b) { ok++; console.log('  ok     ' + name); } else { fehler++; console.log('  FEHLT  ' + name + (info ? '\n         ' + info.slice(0, 500) : '')); } };
+
+/* ---------- Datenbank ---------- */
+const db = new PGlite({ parsers: { 1082: (v: string) => v, 1184: (v: string) => new Date(v).toISOString(), 1114: (v: string) => v, 1700: (v: string) => Number(v) } });
+const EV: Record<string, string> = { LUSRD27: '00000000-0000-0000-0000-0000000000a1', FAMRD27: '00000000-0000-0000-0000-0000000000a2', BYNRD27: '00000000-0000-0000-0000-0000000000a3', WMRD27: '00000000-0000-0000-0000-0000000000a4', FLRD27: '00000000-0000-0000-0000-0000000000a5' };
+const P = { christian: '00000000-0000-0000-0000-00000000c001', alex: '00000000-0000-0000-0000-00000000a001', lea: '00000000-0000-0000-0000-00000000b001' };
+await db.exec(`create role anon; create role authenticated; create role service_role;
+  create table public.vvp_events(id uuid primary key);
+  insert into public.vvp_events(id) values ${Object.values(EV).map(i => `('${i}')`).join(',')};
+  create table public.gfweekly_launch_besetzung(event_id uuid, bereich text, person_id uuid, status text, quelle text, notiz text, bestaetigt_von text, bestaetigt_am timestamptz);`);
+await db.exec(MIGRATION);
+for (const s of Object.keys(EV)) if (s !== 'LUSRD27') await db.query(`insert into gfweekly_launch_besetzung values ($1,'komm',$2,'bestaetigt','Probe',null,'Alex',now())`, [EV[s], P.christian]);
+const q = async (sql: string, p: unknown[] = []) => (await db.query(sql, p)).rows as any[];
+
+function spalte(c: string) {
+  if (c === 'by') return '"by"';
+  const m = /^(\w+)->>(\w+)$/.exec(c); if (m) return `${m[1]}->>'${m[2]}'`;
+  return c;
+}
+class Q {
+  op = 'select'; cols = '*'; f: string[] = []; p: unknown[] = []; ord: string[] = []; lim: number | null = null; off = 0; einzeln: '' | 'single' | 'maybe' = ''; daten: any = null; konflikt = ''; rueck = false;
+  constructor(public t: string) {}
+  par(v: unknown) { this.p.push(v); return '$' + this.p.length; }
+  select(c = '*') { if (this.op === 'select') this.cols = c; else this.rueck = true; return this; }
+  eq(c: string, v: unknown) { this.f.push(`${spalte(c)}::text = ${this.par(String(v))}::text`); return this; }
+  in(c: string, v: unknown[]) { this.f.push(`${spalte(c)}::text = any(${this.par('{' + v.map(x => '"' + String(x).replace(/"/g, '\\"') + '"').join(',') + '}')}::text[])`); return this; }
+  not(c: string, _op: string, _v: null) { this.f.push(`${spalte(c)} is not null`); return this; }
+  is(c: string, _v: null) { this.f.push(`${spalte(c)} is null`); return this; }
+  gte(c: string, v: unknown) { this.f.push(`${spalte(c)}::text >= ${this.par(String(v))}`); return this; }
+  lte(c: string, v: unknown) { this.f.push(`${spalte(c)}::text <= ${this.par(String(v))}`); return this; }
+  contains(c: string, v: unknown) { this.f.push(`${spalte(c)} @> ${this.par(JSON.stringify(v))}::jsonb`); return this; }
+  order(c: string, o: any = {}) { this.ord.push(`${spalte(c)} ${o.ascending === false ? 'desc' : 'asc'}`); return this; }
+  limit(n: number) { this.lim = n; return this; }
+  range(a: number, b: number) { this.off = a; this.lim = b - a + 1; return this; }
+  single() { this.einzeln = 'single'; return this; }
+  maybeSingle() { this.einzeln = 'maybe'; return this; }
+  insert(d: any) { this.op = 'insert'; this.daten = d; return this; }
+  update(d: any) { this.op = 'update'; this.daten = d; return this; }
+  upsert(d: any, o: any = {}) { this.op = 'upsert'; this.daten = d; this.konflikt = o.onConflict || ''; return this; }
+  async sql() {
+    const wo = this.f.length ? ' where ' + this.f.join(' and ') : '';
+    if (this.op === 'select') {
+      const embed = /komm_schritte\(\*\)/.test(this.cols);
+      const cols = embed ? `m.*, coalesce((select json_agg(s) from komm_schritte s where s.veroeffentlichung_id = m.id), '[]'::json) as komm_schritte`
+        : this.cols.split(',').map(c => spalte(c.trim())).join(', ');
+      let s = `select ${cols} from ${this.t} m${wo}`;
+      if (this.ord.length) s += ' order by ' + this.ord.join(', ');
+      if (this.lim !== null) s += ` limit ${this.lim} offset ${this.off}`;
+      return s;
+    }
+    const keys = Object.keys(this.daten).map(spalte);
+    const rec = `jsonb_populate_record(null::${this.t}, ${this.par(JSON.stringify(this.daten))}::jsonb)`;
+    if (this.op === 'insert') return `insert into ${this.t} (${keys.join(',')}) select ${keys.join(',')} from ${rec} returning *`;
+    if (this.op === 'upsert') return `insert into ${this.t} (${keys.join(',')}) select ${keys.join(',')} from ${rec} on conflict (${this.konflikt}) do update set ${keys.map(k => `${k} = excluded.${k}`).join(', ')} returning *`;
+    return `update ${this.t} set (${keys.join(',')}) = (select ${keys.join(',')} from ${rec})${wo} returning *`;
+  }
+  then(ok: any, nein: any) {
+    return (async () => {
+      try {
+        const rows = (await db.query(await this.sql(), this.p)).rows as any[];
+        if (this.einzeln === 'single') return rows.length === 1 ? { data: rows[0], error: null } : { data: null, error: { message: 'keine Zeile', code: 'PGRST116' } };
+        if (this.einzeln === 'maybe') return { data: rows[0] || null, error: null };
+        return { data: this.op === 'select' || this.rueck ? rows : null, error: null };
+      } catch (e) { return { data: null, error: { message: (e as Error).message, code: (e as any).code } }; }
+    })().then(ok, nein);
+  }
+}
+const admin = {
+  from: (t: string) => new Q(t),
+  /* Wie PostgREST: Argumenttypen aus der Signatur der Funktion. */
+  rpc: async (name: string, args: Record<string, unknown>) => {
+    const sig = (await db.query(`select a.n as name, format_type(a.t, null) as typ from pg_proc p, unnest(p.proargnames, p.proargtypes::oid[]) a(n, t) where p.proname = $1`, [name])).rows as any[];
+    const typ = new Map(sig.map(r => [r.name, r.typ]));
+    const teile: string[] = [], p: unknown[] = [];
+    for (const [k, v] of Object.entries(args)) {
+      const t = typ.get(k) || 'text';
+      p.push(v === null ? null : t === 'jsonb' ? JSON.stringify(v) : Array.isArray(v) ? '{' + v.map(x => '"' + String(x).replace(/"/g, '\\"') + '"').join(',') + '}' : v);
+      teile.push(`${k} => $${p.length}::${t}`);
+    }
+    try { const r = (await db.query(`select public.${name}(${teile.join(', ')}) as r`, p)).rows as any[]; return { data: r[0]?.r ?? null, error: null }; }
+    catch (e) { return { data: null, error: { message: (e as Error).message, code: (e as any).code } }; }
+  },
+};
+
+/* ---------- Asana, Google, Sheets ---------- */
+const A = { projekte: new Map<string, any>(), abschnitte: new Map<string, any>(), aufgaben: new Map<string, any>(), stories: [] as any[], n: 1000, aufrufe: [] as string[], stoerung: [] as any[] };
+const neueGid = () => String(++A.n);
+function asanaAntwort(status: number, body: unknown) { return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }); }
+function asanaFake(methode: string, url: URL, body: any) {
+  const pfad = url.pathname.replace('/api/1.0', '');
+  A.aufrufe.push(`${methode} ${pfad}`);
+  const st = A.stoerung.findIndex(s => s.methode === methode && s.muster.test(pfad));
+  if (st >= 0) { const s = A.stoerung.splice(st, 1)[0]; if (s.vorher) s.vorher(body); return asanaAntwort(s.status, { errors: [{ message: s.text }] }); }
+  const d = body?.data || {};
+  let m: RegExpExecArray | null;
+  if (methode === 'GET' && pfad === '/projects') {
+    const alle = [...A.projekte.values()].filter(p => !p.geloescht && (url.searchParams.get('archived') !== 'false' || !p.archived));
+    return asanaAntwort(200, { data: alle.map(p => ({ gid: p.gid, name: p.name, archived: p.archived, team: { gid: 'TEAM1' } })), next_page: null });
+  }
+  if (methode === 'POST' && pfad === '/projects') {
+    const gid = neueGid(); A.projekte.set(gid, { gid, name: d.name, notes: d.notes, owner: d.owner || null, team: d.team, archived: false, members: [] });
+    const s = neueGid(); A.abschnitte.set(s, { gid: s, projekt: gid, name: 'Untitled section', ord: 0 });
+    return asanaAntwort(201, { data: { gid } });
+  }
+  if ((m = /^\/projects\/(\d+)$/.exec(pfad))) {
+    const p = A.projekte.get(m[1]); if (!p || p.geloescht) return asanaAntwort(404, { errors: [{ message: 'Unknown object' }] });
+    if (methode === 'GET') return asanaAntwort(200, { data: { gid: p.gid, name: p.name, archived: p.archived } });
+    if (methode === 'PUT') { Object.assign(p, d); return asanaAntwort(200, { data: p }); }
+    if (methode === 'DELETE') { p.geloescht = true; return asanaAntwort(200, { data: {} }); }
+  }
+  if ((m = /^\/projects\/(\d+)\/addMembers$/.exec(pfad))) { A.projekte.get(m[1]).members.push(d.members); return asanaAntwort(200, { data: {} }); }
+  if ((m = /^\/projects\/(\d+)\/sections$/.exec(pfad))) {
+    const eigene = [...A.abschnitte.values()].filter(s => s.projekt === m![1] && !s.geloescht).sort((a, b) => a.ord - b.ord);
+    if (methode === 'GET') return asanaAntwort(200, { data: eigene.map(s => ({ gid: s.gid, name: s.name })) });
+    const gid = neueGid();
+    let ord = (eigene[eigene.length - 1]?.ord ?? 0) + 1;
+    if (d.insert_before) { const vor = A.abschnitte.get(d.insert_before); ord = vor.ord - 0.001; }
+    A.abschnitte.set(gid, { gid, projekt: m[1], name: d.name, ord }); return asanaAntwort(201, { data: { gid } });
+  }
+  if ((m = /^\/sections\/(\d+)\/tasks$/.exec(pfad))) return asanaAntwort(200, { data: [...A.aufgaben.values()].filter(t => !t.geloescht && t.mitglied.some((x: any) => x.section === m![1])).map(t => ({ gid: t.gid })), next_page: null });
+  if ((m = /^\/sections\/(\d+)$/.exec(pfad)) && methode === 'DELETE') { A.abschnitte.get(m[1]).geloescht = true; return asanaAntwort(200, { data: {} }); }
+  if ((m = /^\/projects\/(\d+)\/tasks$/.exec(pfad))) return asanaAntwort(200, { data: [...A.aufgaben.values()].filter(t => !t.geloescht && t.mitglied.some((x: any) => x.project === m![1])).map(t => ({ gid: t.gid, name: t.name })), next_page: null });
+  if (methode === 'POST' && pfad === '/tasks') {
+    const gid = neueGid();
+    const mitglied = d.memberships ? d.memberships.map((x: any) => ({ project: x.project, section: x.section })) : (d.projects || []).map((x: string) => ({ project: x, section: null }));
+    A.aufgaben.set(gid, { gid, name: d.name, notes: d.notes, due_on: d.due_on, assignee: d.assignee, mitglied }); return asanaAntwort(201, { data: { gid } });
+  }
+  if ((m = /^\/tasks\/(\d+)$/.exec(pfad))) {
+    const t = A.aufgaben.get(m[1]); if (!t || t.geloescht) return asanaAntwort(404, { errors: [{ message: 'Unknown object' }] });
+    if (methode === 'PUT') { Object.assign(t, d); return asanaAntwort(200, { data: t }); }
+    if (methode === 'DELETE') { t.geloescht = true; return asanaAntwort(200, { data: {} }); }
+  }
+  if ((m = /^\/tasks\/(\d+)\/addProject$/.exec(pfad))) { const t = A.aufgaben.get(m[1]); t.mitglied.push({ project: d.project, section: d.section || null }); return asanaAntwort(200, { data: {} }); }
+  if ((m = /^\/tasks\/(\d+)\/stories$/.exec(pfad))) { A.stories.push({ task: m[1], text: d.text }); return asanaAntwort(201, { data: { gid: neueGid() } }); }
+  return asanaAntwort(400, { errors: [{ message: 'nicht nachgebaut: ' + methode + ' ' + pfad }] });
+}
+/* Sheets: Zeilen 1 bis 7, Spalten A bis ..., Zeile 5 Datum per Formel, Zeile 6 Fixtermine. */
+const S = { spalten: 740, f5: '=DATE($B$2,1,1)', zeile6: new Map<number, any>(), schreibe: [] as any[], token: 0 };
+const serie = (iso: string) => Math.round((Date.parse(iso + 'T00:00:00Z') - Date.parse('1899-12-30T00:00:00Z')) / 86400000);
+const isoPlus = (iso: string, n: number) => new Date(Date.parse(iso + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
+const startDatum = () => S.f5 === '=DATE(2026,10,1)' ? '2026-10-01' : (S.f5 === '=DATE($B$2,1,1)' ? '2027-01-01' : '2027-01-01');
+const spalteDatum = (i: number) => isoPlus(startDatum(), i - 5);
+function zelle6(i: number, wert?: any, note?: string) { S.zeile6.set(i, { userEnteredValue: wert, note }); }
+zelle6(0, { stringValue: 'Fixtermine & Meilensteine' });
+function sheetsFake(methode: string, url: URL, body: any) {
+  if (url.hostname === 'oauth2.googleapis.com') { S.token++; return asanaAntwort(200, { access_token: 'tok' + S.token, expires_in: 3600 }); }
+  if (methode === 'GET' && url.searchParams.get('fields')?.startsWith('sheets(properties')) return asanaAntwort(200, { sheets: [{ properties: { sheetId: 7, title: 'Contentplan', gridProperties: { columnCount: S.spalten, rowCount: 60 } } }] });
+  if (methode === 'GET') {
+    const r5 = [], r6 = [];
+    for (let i = 0; i < S.spalten; i++) {
+      if (i === 5) r5.push({ userEnteredValue: { formulaValue: S.f5 }, effectiveValue: { numberValue: serie(spalteDatum(5)) } });
+      else if (i > 5) r5.push({ userEnteredValue: { formulaValue: '=' + 'X' + (i - 1) + '+1' }, effectiveValue: { numberValue: serie(spalteDatum(i)) } });
+      else r5.push({});
+      const z = S.zeile6.get(i) || {}; const u = z.userEnteredValue;
+      r6.push({ userEnteredValue: u, note: z.note, formattedValue: u ? (u.stringValue ?? (u.formulaValue === '=""' ? '' : u.formulaValue)) : undefined });
+    }
+    return asanaAntwort(200, { sheets: [{ data: [{ rowData: [{ values: r5 }, { values: r6 }] }] }] });
+  }
+  if (methode === 'POST' && url.pathname.endsWith(':batchUpdate')) {
+    for (const r of body.requests) {
+      const u = r.updateCells; S.schreibe.push({ zeile: u.start.rowIndex + 1, spalte: u.start.columnIndex, felder: u.fields, wert: u.rows[0].values[0] });
+      if (u.start.rowIndex === 4 && u.start.columnIndex === 5) S.f5 = u.rows[0].values[0].userEnteredValue.formulaValue;
+      else if (u.start.rowIndex === 5) { const v = u.rows[0].values[0]; zelle6(u.start.columnIndex, v.userEnteredValue, v.note); }
+    }
+    return asanaAntwort(200, {});
+  }
+  return asanaAntwort(400, { error: { message: 'nicht nachgebaut' } });
+}
+globalThis.fetch = (async (eingabe: any, init: any = {}) => {
+  const url = new URL(typeof eingabe === 'string' ? eingabe : eingabe.url);
+  const methode = (init.method || 'GET').toUpperCase();
+  let body: any = null; if (init.body && typeof init.body === 'string') { try { body = JSON.parse(init.body); } catch (_e) { body = null; } }
+  if (url.hostname === 'app.asana.com') return asanaFake(methode, url, body);
+  return sheetsFake(methode, url, body);
+}) as typeof fetch;
+
+/* ---------- Modul ---------- */
+const { kommModul } = await import(new URL('supabase/functions/gfweekly/komm.ts', BASIS).href);
+let HEUTE = '2026-10-07';
+const FESTE: any[] = [
+  ['LUSRD27', 'Lusatia 2027', '2026-10-15', '2027-07-23', '2027-07-25'], ['FAMRD27', 'Malina, Morio & die Draußenbande 2027', '2026-10-01', '2027-07-30', '2027-08-01'],
+  ['BYNRD27', 'by nature 2027', '2026-11-01', '2027-08-06', '2027-08-08'], ['WMRD27', 'Wilde Möhre Freude Edition 2027', '2026-09-01', '2027-08-20', '2027-08-23'],
+  ['FLRD27', 'Fluidity 2027', '2026-10-25', '2027-08-27', '2027-08-29']].map(([s, n, v, f, z]) => ({ plan_id: 'plan-' + s, event_id: EV[s], short_name: s, name: n, sales_start_on: v, starts_on: f, ends_on: z }));
+const LEUTE = [{ id: P.christian, name: 'Christian Linck', typ: 'extern', asana_gid: 'U-CHR', email: 'christian@example.org' }, { id: P.alex, name: 'Alexander Dettke', typ: 'gf', asana_gid: 'U-ALEX', email: 'alex@wildemoehre.org' }, { id: P.lea, name: 'Lea Luce', typ: 'gf', asana_gid: 'U-LEA', email: 'lea@wildemoehre.org' }];
+const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'content-type': 'application/json' } });
+const whoNorm = (w: unknown) => { const s = String(w ?? '').toLowerCase(); return s.includes('lea') ? 'Lea' : s.includes('alex') ? 'Alex' : 'Team'; };
+const K = kommModul({ admin, json, heuteBerlin: () => HEUTE, whoNorm, launchFestivals: async () => FESTE.map(f => ({ ...f })), launchPersonen: async () => LEUTE,
+  ASANA_TOKEN: 'test', ASANA_WORKSPACE: 'WS', ASANA_TEAM: '', HH_BASIS: 'https://hohes-haus.example', MAIL_ALEX: 'alex@wildemoehre.org' });
+const ruf = async (action: string, t: any = {}) => { const r: Response = await K.handle(action, t, 'Alex'); return { status: r.status, body: await r.json() }; };
+const aufgabenIn = (projekt: string) => [...A.aufgaben.values()].filter(t => !t.geloescht && t.mitglied.some((x: any) => x.project === projekt));
+
+console.log('\n1. Berechnen und Liste');
+const b1 = await ruf('komm_berechnen', { festival: 'alle', by: 'Alex' }); if (!b1.body.ergebnis?.[0]?.berechnet) console.log(JSON.stringify(b1.body).slice(0, 1500));
+gleich('alle fünf berechnet', b1.body.ergebnis.map((e: any) => [e.festival, e.berechnet]), [['LUSRD27', 102], ['FAMRD27', 94], ['BYNRD27', 101], ['WMRD27', 96], ['FLRD27', 105]]);
+const b2 = await ruf('komm_berechnen', { festival: 'alle', by: 'Alex' });
+gleich('zweiter Lauf: nichts neu, nichts geändert', b2.body.ergebnis.map((e: any) => [e.neu, e.aktualisiert]), Array(5).fill([0, 0]));
+gleich('Regelwerk eingespielt', (await q('select version from komm_regelwerk where aktiv'))[0].version, '1.2.0 (2026-10-05)');
+const l1 = await ruf('komm_list');
+wahr('komm_list: fünf Festivals, Wochenlast, Lusatia ohne Person, Entscheidung „Besetzung“', l1.body.festivals.length === 5 && l1.body.wochenlast.length > 40 && l1.body.festivals[0].person === null && l1.body.entscheiden.some((e: any) => e.art === 'besetzung' && e.festival === 'LUSRD27'));
+const fam = l1.body.festivals.find((f: any) => f.short_name === 'FAMRD27');
+wahr('Draußenbande: VVK vorbei, V-START nicht mehr in der Liste, Restschritte in der Wochenlast', fam.anzahl === 94 && l1.body.wochenlast[0].je.DB > 0);
+gleich('Wochenlast reicht bis zur Woche des letzten Schritts (Aftermovie Fluidity, Z+60 = 28.10.2027)', l1.body.wochenlast[l1.body.wochenlast.length - 1].woche >= '2027-10-25', true);
+
+console.log('\n2. Prüfpunkte');
+const ppDat = fam.pruefpunkte[0].datum;
+gleich('Rot von Christian: 403', (await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: ppDat, stufe: 'rot', extras: [], by: 'Christian Linck' })).status, 403);
+const p1 = await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: ppDat, stufe: 'gelb', extras: ['E03', 'E05'], by: 'Christian Linck', notiz: 'Reichweite schwach' });
+gleich('Gelb mit Extras ohne Budget von Christian: gespeichert mit Namen', [p1.status, p1.body.pruefpunkt.entschieden_von, p1.body.pruefpunkt.stufe], [200, 'Christian Linck', 'gelb']);
+gleich('Extra mit Budget von Christian: 403', (await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: ppDat, stufe: 'gelb', extras: ['E01'], by: 'Christian Linck' })).status, 403);
+gleich('veraltete gesehene Stufe: 409', (await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: ppDat, stufe: 'rot', extras: ['E04'], by: 'Alex', expect_stufe: 'offen' })).status, 409);
+gleich('Tag ohne Prüfpunkt: 404', (await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: '2027-01-01', stufe: 'gelb', by: 'Alex' })).status, 404);
+const l2 = await ruf('komm_list');
+wahr('Entscheidungen zeigen den gelben Prüfpunkt', l2.body.entscheiden.some((e: any) => e.art === 'pruefpunkt' && e.datum === ppDat && e.stufe === 'gelb'));
+
+console.log('\n3. Versand an Asana');
+gleich('Team darf nicht senden', (await ruf('komm_send', { festival: 'FAMRD27', by: 'Team', bestaetigt: true })).status, 403);
+const v0 = await ruf('komm_send', { festival: 'FAMRD27', by: 'Lea', vorschau: true });
+wahr('Vorschau in Worten mit Christian, ohne Asana-Aufruf', v0.status === 200 && v0.body.saetze[0].includes('Christian Linck') && A.aufrufe.length === 0, JSON.stringify(v0.body.saetze));
+gleich('ohne bestaetigt kein Versand', (await ruf('komm_send', { festival: 'FAMRD27', by: 'Lea' })).status, 400);
+const s1 = await ruf('komm_send', { festival: 'FAMRD27', by: 'Lea', bestaetigt: true });
+const proj = [...A.projekte.values()].find(p => p.name === 'Kommunikation Draußenbande 2027');
+wahr('Projekt angelegt mit Eigentum bei Christian', !!proj && proj.owner === 'U-CHR' && proj.members.includes('U-CHR'));
+const auf1 = aufgabenIn(proj.gid);
+gleich('alle Aufgaben angelegt, alle bei Christian', [s1.body.neu, auf1.length, auf1.every(t => t.assignee === 'U-CHR')], [v0.body.aufgaben, v0.body.aufgaben, true]);
+const abschn = [...A.abschnitte.values()].filter(s => s.projekt === proj.gid && !s.geloescht).sort((a, b) => a.ord - b.ord).map(s => s.name);
+gleich('Abschnitte je Monat in Reihenfolge, ohne „Untitled section“', abschn.slice(0, 3), ['Oktober 2026', 'November 2026', 'Dezember 2026']);
+wahr('Abschnitte vollständig', abschn.length === v0.body.abschnitte.length && !abschn.includes('Untitled section'));
+const ohneGid = await q(`select count(*)::int n from komm_veroeffentlichungen where festival_short = 'FAMRD27' and t >= '2026-10-07' and asana_task_gid is null`);
+gleich('jede kommende Veröffentlichung hat eine Asana-Kennung', ohneGid[0].n, 0);
+wahr('Schritte als abhakbare Liste in der Beschreibung, keine Unteraufgaben', auf1.filter(t => /Prüfpunkt|Redaktion/.test(t.name) === false).every(t => t.notes.includes('Vorschlag aus dem Regelwerk, Verteilung durch dich:') && t.notes.includes('[ ] ')) && !A.aufrufe.some(a => a.includes('subtasks')));
+wahr('Monatsbündel „Redaktion <Monat>: n Beiträge“ mit Partner-Slots', auf1.some(t => /^Redaktion \S+ 2026: \d+ Beiträge/.test(t.name)) && auf1.some(t => t.notes.includes('Partner-Slot')));
+wahr('Prüfpunkte als Aufgaben mit Link auf kommunikation.html', auf1.filter(t => t.name.startsWith('Prüfpunkt')).every(t => t.notes.includes('/kommunikation.html?festival=FAMRD27')));
+const logs1 = await q(`select what from komm_log where what like 'komm_send%' order by id`);
+gleich('Protokoll: Projektanlage und Versandbericht getrennt', logs1.map(r => r.what), ['komm_send_projekt', 'komm_send']);
+
+console.log('\n4. Erneut senden');
+const eine = auf1.find(t => !t.name.startsWith('Redaktion') && !t.name.startsWith('Prüfpunkt'))!;
+eine.assignee = 'U-ANNIE'; eine.mitglied[0].section = 'umsortiert'; eine.kommentar = 'bleibt';
+A.aufrufe = [];
+const s2 = await ruf('komm_send', { festival: 'FAMRD27', by: 'Alex', bestaetigt: true });
+gleich('nichts neu, alles aktualisiert', [s2.body.neu, s2.body.aktualisiert], [0, auf1.length]);
+gleich('Zuständigkeit und Abschnitt in Asana nicht überschrieben', [eine.assignee, eine.mitglied[0].section, eine.kommentar], ['U-ANNIE', 'umsortiert', 'bleibt']);
+wahr('keine Aufgabe angelegt, kein Projekt angelegt', !A.aufrufe.includes('POST /tasks') && !A.aufrufe.includes('POST /projects'));
+
+console.log('\n5. Termin verschiebt sich nach dem Versand');
+const tt = (await q(`select id, t from komm_veroeffentlichungen where festival_short = 'FAMRD27' and regel_id = 'F14-TT'`))[0];
+FESTE[1].starts_on = '2027-07-29'; FESTE[1].ends_on = '2027-07-31';
+const b3 = await ruf('komm_berechnen', { festival: 'FAMRD27', by: 'Zeitplan' });
+const tt2 = (await q(`select t, t_neu, status_bearbeitung from komm_veroeffentlichungen where id = $1`, [tt.id]))[0];
+gleich('gesendeter Timetable bleibt, t_neu und zu prüfen', [tt2.t, tt2.t_neu, tt2.status_bearbeitung], [tt.t, '2027-07-15', 'zu_pruefen']);
+wahr('Berechnung meldet zu prüfen', b3.body.ergebnis[0].zu_pruefen > 0);
+const l3 = await ruf('komm_list');
+wahr('Seite zeigt „zu prüfen“ mit neuem Termin', l3.body.festivals.find((f: any) => f.short_name === 'FAMRD27').zu_pruefen.some((x: any) => x.id === tt.id && x.t_neu === '2027-07-15'));
+FESTE[1].starts_on = '2027-07-30'; FESTE[1].ends_on = '2027-08-01';
+await ruf('komm_berechnen', { festival: 'FAMRD27', by: 'Zeitplan' });
+
+console.log('\n6. Zeitbudget und Fortsetzung');
+Deno.env.set('KOMM_SEND_BUDGET_MS', '0');
+A.aufrufe = [];
+const w1 = await ruf('komm_send', { festival: 'BYNRD27', by: 'Alex', bestaetigt: true });
+Deno.env.delete('KOMM_SEND_BUDGET_MS');
+wahr('erster Teil bricht nach dem Budget ab und meldet weiter', w1.body.weiter === true && w1.body.rest > 0 && w1.body.neu <= 1, JSON.stringify({ neu: w1.body.neu, rest: w1.body.rest }));
+const l4 = await ruf('komm_list');
+wahr('Seite zeigt „begonnen, Rest folgt“', l4.body.festivals.find((f: any) => f.short_name === 'BYNRD27').rahmen.weiter === true);
+const w2 = await ruf('komm_send', { festival: 'BYNRD27', by: 'Alex', bestaetigt: true });
+const pbn = [...A.projekte.values()].find(p => p.name === 'Kommunikation by nature 2027');
+gleich('Fortsetzung legt den Rest an, ohne Dubletten', [w2.body.weiter, aufgabenIn(pbn.gid).length, new Set(aufgabenIn(pbn.gid).map(t => t.name)).size], [false, w2.body.aufgaben, w2.body.aufgaben]);
+
+console.log('\n7. Gleichzeitig');
+const [g1, g2] = await Promise.all([ruf('komm_send', { festival: 'WMRD27', by: 'Alex', bestaetigt: true }), ruf('komm_send', { festival: 'WMRD27', by: 'Lea', bestaetigt: true })]);
+gleich('zwei gleichzeitige Versände: einer 200, einer 409', [g1.status, g2.status].sort(), [200, 409]);
+gleich('genau ein Projekt Wilde Möhre', [...A.projekte.values()].filter(p => p.name.startsWith('Kommunikation Wilde Möhre')).length, 1);
+const [c1, c2] = await Promise.all([ruf('komm_send', { festival: 'WMRD27', by: 'Alex', bestaetigt: true }), ruf('komm_berechnen', { festival: 'WMRD27', by: 'Zeitplan' })]);
+wahr('Versand und Berechnung zugleich: die Berechnung überspringt das gesperrte Festival oder läuft danach', c1.status === 200 && (c2.body.ergebnis[0].uebersprungen || c2.body.ergebnis[0].berechnet));
+
+console.log('\n8. Projektanlage mit Störungen');
+A.stoerung.push({ methode: 'POST', muster: /^\/projects$/, status: 400, text: 'owner: Not a recognized ID' });
+const o1 = await ruf('komm_send', { festival: 'FLRD27', by: 'Alex', bestaetigt: true });
+const pfl = [...A.projekte.values()].filter(p => p.name === 'Kommunikation Fluidity 2027');
+gleich('owner abgelehnt: ein Projekt, Eigentum danach gesetzt', [o1.status, pfl.length, pfl[0]?.owner], [200, 1, 'U-CHR']);
+/* Lusatia: Kommunikation nicht besetzt, Versand geht an die Leitung Marketing. Die Antwort auf das Anlegen geht verloren. */
+A.stoerung.push({ methode: 'POST', muster: /^\/projects$/, status: 502, text: 'Bad Gateway', vorher: (b: any) => { const gid = neueGid(); A.projekte.set(gid, { gid, name: b.data.name, owner: b.data.owner, archived: false, members: [] }); } });
+const o2 = await ruf('komm_send', { festival: 'LUSRD27', by: 'Alex', bestaetigt: true });
+const plu = [...A.projekte.values()].filter(p => p.name === 'Kommunikation Lusatia 2027');
+gleich('verlorene Antwort: kein zweites Projekt, Versand läuft weiter', [o2.status, plu.length], [200, 1]);
+wahr('Lusatia ohne Besetzung: Aufgaben bei der Leitung Marketing (Alex)', aufgabenIn(plu[0].gid).every(t => t.assignee === 'U-ALEX') && o2.body.vertretung === true);
+
+console.log('\n9. Projektwechsel');
+proj.archived = true;
+const pw = await ruf('komm_send', { festival: 'FAMRD27', by: 'Alex', bestaetigt: true });
+const neuP = [...A.projekte.values()].find(p => p.name === proj.name && !p.archived)!;
+wahr('neues Projekt, alle gemerkten Aufgaben dorthin übernommen, keine neuen Aufgaben', !!neuP && neuP.gid !== proj.gid && pw.body.projektwechsel?.uebernommen === auf1.length && pw.body.neu === 0 && aufgabenIn(neuP.gid).length === auf1.length, JSON.stringify(pw.body.projektwechsel));
+
+console.log('\n10. Testprojekt');
+const t1 = await ruf('komm_send', { festival: 'LUSRD27', by: 'Alex', test: true });
+const ptest = [...A.projekte.values()].find(p => p.name === 'Kommunikation TEST' && !p.geloescht)!;
+wahr('Testprojekt bei Alex, Aufgaben bei Alex', !!ptest && ptest.owner === 'U-ALEX' && aufgabenIn(ptest.gid).every(t => t.assignee === 'U-ALEX') && t1.body.test === true);
+const gidLus = await q(`select count(*)::int n from komm_veroeffentlichungen where festival_short = 'LUSRD27' and asana_task_gid in (select gid from (select unnest($1::text[]) gid) x)`, ['{' + aufgabenIn(ptest.gid).map(t => t.gid).join(',') + '}']);
+gleich('Testversand schreibt keine Kennungen in die Veröffentlichungen', gidLus[0].n, 0);
+const ta = await ruf('komm_test_aufraeumen', { by: 'Alex' });
+wahr('Aufräumen löscht erst die Aufgaben, dann das Projekt', ta.body.aufgaben === t1.body.neu && ta.body.projekte === 1 && ptest.geloescht && aufgabenIn(ptest.gid).length === 0, JSON.stringify(ta.body));
+gleich('echte Projekte unberührt', [...A.projekte.values()].filter(p => p.name.startsWith('Kommunikation ') && p.name !== 'Kommunikation TEST' && !p.geloescht).length, 6);
+
+console.log('\n11. Partner-Slots und Tick');
+Deno.env.set('ANBINDUNG_SCHLUESSEL', 'geheim-geheim-geheim-geheim-1234');
+const reqOk = new Request('http://x', { headers: { 'x-anbindung-schluessel': 'geheim-geheim-geheim-geheim-1234' } });
+const reqNein = new Request('http://x', { headers: { 'x-anbindung-schluessel': 'falsch' } });
+gleich('Anbindungsschlüssel geprüft', [K.anbindungGueltig(reqOk, {}), K.anbindungGueltig(reqNein, {}), K.anbindungGueltig(new Request('http://x'), {})], [true, false, false]);
+const so = await ruf('komm_slots_offen', {});
+wahr('offene Slots: partnerfähig, mindestens 14 Tage entfernt, mit Abgabefrist T-7 und Thema', so.body.slots.length > 20 && so.body.slots.every((x: any) => x.t >= '2026-10-21' && x.abgabefrist < x.t && x.briefing && x.thema));
+const sd = await ruf('komm_slot_details', { id: so.body.slots[0].id });
+wahr('Details mit Schritten, ohne E-Mail', sd.status === 200 && sd.body.slot.schritte.length > 0 && !JSON.stringify(sd.body).includes('@'));
+gleich('Details zu einem zentralen Beitrag: 404', (await ruf('komm_slot_details', { id: (await q(`select id from komm_veroeffentlichungen where not partnerfaehig limit 1`))[0].id })).status, 404);
+/* Tick in zehn Tagen: unübernommene Slots fallen zurück; einer mit Abgabe ohne Freigabe bekommt einen Hinweis in Asana. */
+const kandidat = (await q(`select id, t, asana_task_gid from komm_veroeffentlichungen where partnerfaehig and festival_short = 'FAMRD27' and t > '2026-10-20' order by t limit 2`));
+const tickTag = isoPlus(kandidat[1].t, -3);
+await q(`update komm_veroeffentlichungen set partner_uebernommen_am = now(), partner_name = 'Kollektiv', abgabe_am = now() where id = $1`, [kandidat[1].id]);
+HEUTE = tickTag;
+const tk = await K.tick();
+/* Erwartet zurück: jeder partnerfähige, nicht übernommene Beitrag mit T zwischen Ticktag und Ticktag + 10. */
+const sollZurueck = await q(`select id, freigabe_status from komm_veroeffentlichungen where partnerfaehig and partner_uebernommen_am is null and t >= $1::date and t <= ($1::date + 10)`, [tickTag]);
+const z0 = { freigabe_status: sollZurueck.length && sollZurueck.every(r => r.freigabe_status === 'zurueck_an_redaktion') ? 'zurueck_an_redaktion' : 'offen' };
+const z1 = (await q(`select freigabe_status, partner_name from komm_veroeffentlichungen where id = $1`, [kandidat[1].id]))[0];
+wahr('Tick: unübernommener Slot zurück an die Redaktion, übernommener bleibt', z0.freigabe_status === 'zurueck_an_redaktion' && z1.freigabe_status === 'offen' && z1.partner_name === 'Kollektiv', JSON.stringify([z0, z1, tk]));
+wahr('Tick: Hinweis an Asana bei Abgabe ohne Freigabe', A.stories.some(s => s.task === kandidat[1].asana_task_gid && s.text.includes('Freigabe fehlt')));
+const anz = A.stories.length; await K.tick();
+gleich('Hinweis nur einmal', A.stories.length, anz);
+HEUTE = '2026-10-07';
+
+console.log('\n12. Redaktionstabelle');
+const t0 = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+wahr('ohne Dienstkonto: nicht konfiguriert, Vorschau, nichts geschrieben', t0.body.konfiguriert === false && t0.body.zellen > 50 && S.schreibe.length === 0);
+const schluessel = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
+const pkcs8 = new Uint8Array(await crypto.subtle.exportKey('pkcs8', (schluessel as CryptoKeyPair).privateKey));
+const pem = '-----BEGIN PRIVATE KEY-----\n' + btoa(String.fromCharCode(...pkcs8)).replace(/(.{64})/g, '$1\n') + '\n-----END PRIVATE KEY-----\n';
+Deno.env.set('GOOGLE_DIENSTKONTO_JSON', JSON.stringify({ client_email: 'hohes-haus@probe.iam.gserviceaccount.com', private_key: pem }));
+/* Fremde Inhalte: Christians Eintrag am 15.10.2026 (Lusatia VVK) und eine fremde Formel mit leerem Ergebnis am 15.06.2027. */
+const spalteVon = (iso: string) => 5 + Math.round((Date.parse(iso) - Date.parse('2026-10-01')) / 86400000);
+zelle6(spalteVon('2026-10-15'), { stringValue: 'Takeover Christian' });
+zelle6(spalteVon('2027-06-15'), { formulaValue: '=""' });
+const tr = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex', trocken: true });
+wahr('Trockenlauf schreibt nichts, auch F5 nicht', tr.body.ergebnis === 'Trockenlauf' && S.schreibe.length === 0 && S.f5 === '=DATE($B$2,1,1)', JSON.stringify(tr.body).slice(0, 300));
+const ts = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+gleich('F5 auf =DATE(2026,10,1) gesetzt', S.f5, '=DATE(2026,10,1)');
+wahr('geschrieben nur in Zeile 6 und F5', S.schreibe.every(w => w.zeile === 6 || (w.zeile === 5 && w.spalte === 5)) && S.schreibe.filter(w => w.zeile === 5).length === 1);
+gleich('fremde Zellen nicht überschrieben, gemeldet', [S.zeile6.get(spalteVon('2026-10-15')).userEnteredValue.stringValue, S.zeile6.get(spalteVon('2027-06-15')).userEnteredValue.formulaValue, ts.body.fremd.map((x: any) => x.datum)], ['Takeover Christian', '=""', ['2026-10-15', '2027-06-15']]);
+const lus = S.zeile6.get(spalteVon('2027-07-23'));
+wahr('Lusatia öffnet am 23.07.2027: Text und Kennung im Hinweis', lus?.userEnteredValue?.stringValue === 'LUS F' && /^komm:fix-2027-07-23/.test(lus.note));
+wahr('Spalten reichen bis über den 31.12.2027', ts.body.reicht_bis_2027 === true);
+const n1 = S.schreibe.length;
+const ts2 = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+gleich('zweiter Lauf schreibt nichts (idempotent)', [S.schreibe.length - n1, ts2.body.geplant], [0, 0]);
+/* Christian ändert eine unserer Zellen: sie gilt danach als fremd. */
+S.zeile6.get(spalteVon('2027-07-23')).userEnteredValue = { stringValue: 'LUS F (Aufbau ab 15.07.)' };
+const ts3 = await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+wahr('von Hand geänderte eigene Zelle bleibt und wird gemeldet', S.zeile6.get(spalteVon('2027-07-23')).userEnteredValue.stringValue === 'LUS F (Aufbau ab 15.07.)' && ts3.body.fremd.some((x: any) => x.datum === '2027-07-23'));
+/* Ein Termin entfällt: Lusatia verschiebt F um eine Woche; die alte Zelle wird geleert, die neue gesetzt. */
+FESTE[0].starts_on = '2027-07-30'; FESTE[0].ends_on = '2027-08-01';
+S.zeile6.get(spalteVon('2027-07-23')).userEnteredValue = { stringValue: 'LUS F' };
+await ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' });
+wahr('verschobener Termin: alte eigene Zelle geleert, neuer Tag gesetzt', !S.zeile6.get(spalteVon('2027-07-23'))?.userEnteredValue && /LUS F/.test(S.zeile6.get(spalteVon('2027-07-30'))?.userEnteredValue?.stringValue || ''));
+FESTE[0].starts_on = '2027-07-23'; FESTE[0].ends_on = '2027-07-25';
+const sperrTest = await Promise.all([ruf('komm_tabelle_sync', { festival: 'alle', by: 'Alex' }), ruf('komm_tabelle_sync', { festival: 'alle', by: 'Lea' })]);
+gleich('zwei gleichzeitige Abgleiche: einer 409', sperrTest.map(r => r.status).sort(), [200, 409]);
+
+console.log(`\n${ok} ok, ${fehler} Fehler`);
+Deno.exit(fehler ? 1 : 0);

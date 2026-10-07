@@ -452,13 +452,15 @@ export function kommModul(ctx: KommKontext) {
     try { for (const a of await asanaAlle(`/projects/${projekt}/tasks?opt_fields=name&limit=100`)) if (a?.name && !imProjekt.has(norm(a.name))) imProjekt.set(norm(a.name), String(a.gid)); }
     catch (e) { return await abbruch(logWhat, von, f, projekt!, 'Aufgabenliste nicht lesbar: ' + String((e as Error).message).slice(0, 160) + '. Keine Aufgabe angelegt, sonst könnten Aufgaben doppelt entstehen.'); }
 
+    /* Zeitbudget je Aufruf; der Rest folgt beim nächsten Senden. KOMM_SEND_BUDGET_MS nur für die Probe. */
+    const budget = Number(Deno.env.get('KOMM_SEND_BUDGET_MS') || SEND_BUDGET_MS);
     let neu = 0, aktualisiert = 0, rest = 0, verschoben = 0;
     /* Projektwechsel (altes Projekt archiviert oder gelöscht): gemerkte Aufgaben kommen in das neue Projekt, statt nur
        im alten aktualisiert zu werden (Review 32a, Runde 3, Befund 3). */
     const wechsel = !test && !!vorherProjekt && vorherProjekt !== projekt;
     const aufgaben = rahmen.aufgaben.slice().sort((a: Any, b: Any) => (a.due_on < b.due_on ? -1 : a.due_on > b.due_on ? 1 : 0));
     for (const a of aufgaben) {
-      if (Date.now() - beginn > SEND_BUDGET_MS) { rest++; continue; }
+      if (Date.now() - beginn > budget) { rest++; continue; }
       const ids: string[] = a.vid ? [a.vid] : (a.ids || []);
       let gid: string | null = test ? null : ((a.vid && gidJe.get(a.vid)) || ids.map(i => gidJe.get(i)).find(Boolean) || null);
       gid = gid || imProjekt.get(norm(a.name)) || null;
