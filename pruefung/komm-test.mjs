@@ -172,6 +172,29 @@ console.log('\n8. Partner-Slots und Tick');
   gleich('Rückfall 10 Tage vor T ohne Übernahme, Hinweis 3 Tage vor T bei Abgabe ohne Freigabe', tick, { zurueck: ['a'], hinweis: ['c'] });
 }
 
+console.log('\n10. Wochenlast');
+{
+  const erg = K.berechne(rw, LUS, STICHTAG, { saison_start: SAISON });
+  /* Erwartet: jeder Schritt mit dem Anteil seiner Tage ab dieser Woche (Überfälliges davor zählt nicht mehr zur Last). */
+  const mo = K.montag(STICHTAG);
+  const alle = erg.pubs.reduce((a, p) => a + p.schritte.reduce((b, x) => { const n = Math.max(1, K.tage(x.start, x.faellig) + 1); let m = 0; for (let i = 0; i < n; i++) if (K.plus(x.start, i) >= mo) m++; return b + Number(x.stunden) * m / n; }, 0), 0);
+  const woche = erg.wochen.reduce((a, w) => a + w.teile.reduce((b, t) => b + t.stunden, 0), 0);
+  const L = K.wochenlast([{ kuerzel: 'LUS', pubs: erg.pubs, wochen: erg.wochen }], STICHTAG, null);
+  const summe = L.reduce((a, w) => a + w.gesamt, 0);
+  wahr('alle Stunden ab dieser Woche landen in der Wochenlast (Abweichung nur durch Runden)', Math.abs(summe - (alle + woche)) < L.length * 0.06 + 1);
+  const ad = erg.pubs.find(p => p.regel_id === 'AD-WINTER');
+  const kontrolle = ad.schritte.filter(x => /w\d+$/.test(x.schritt_id));
+  wahr('Anzeigenkontrolle läuft wöchentlich nach dem Kampagnenstart weiter', kontrolle.length >= 4 && kontrolle.every(x => x.faellig > ad.t));
+  const nachT = K.wochenlast([{ kuerzel: 'LUS', pubs: [ad], wochen: [] }], K.plus(ad.t, 8), null);
+  wahr('eine Woche nach dem Start zählt die Kontrolle noch zur Last', nachT.length > 0 && nachT[0].gesamt > 0);
+  const after = erg.pubs.find(p => p.regel_id === 'R-AFTER');
+  wahr('Aftermovie bei Z+60 mit Schritten nach Z+30', after.t === K.plus(LUS.Z, 60) && after.schritte.some(x => x.faellig > K.plus(LUS.Z, 30)));
+  const bis = K.wochenlast([{ kuerzel: 'LUS', pubs: erg.pubs, wochen: erg.wochen }], STICHTAG, K.plus(LUS.Z, 31));
+  /* Die Produktion des Aftermovies zieht Rechenregel 7 in die Vorproduktion vor; nach Z+31 bleiben Freigabe, Posting, Nachbereitung. */
+  wahr('ein zu kurzer Horizont schneidet die späten Aftermovie-Schritte ab (deshalb Horizont aus dem letzten Schritt)', bis.reduce((a, w) => a + w.gesamt, 0) < summe - 1 && L[L.length - 1].woche >= K.montag(after.t));
+  gleich('Wörter für Stellen', [K.stellenWort(30), K.stellenWort(70), K.stellenWort(151)], ['bis eine Stelle', 'bis zwei Stellen', 'über vier Stellen']);
+}
+
 console.log('\n9. Kopien in der Edge Function');
 {
   const a = fs.readFileSync(new URL('../site/assets/komm-logik.js', import.meta.url));

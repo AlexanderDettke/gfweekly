@@ -55,16 +55,13 @@ export function kommModul(ctx: KommKontext) {
     const { data: aktiv, error } = await admin.from('komm_regelwerk').select('version,inhalt').eq('aktiv', true).maybeSingle();
     if (error) throw error;
     if (aktiv && aktiv.version === version) return aktiv.inhalt;
-    const { data: vorhanden } = await admin.from('komm_regelwerk').select('version').eq('version', version).maybeSingle();
-    if (!vorhanden) {
-      if (aktiv) await admin.from('komm_regelwerk').update({ aktiv: false }).eq('version', aktiv.version);
-      const { error: ie } = await admin.from('komm_regelwerk').insert({ version, inhalt: regelwerkDatei, aktiv: true });
-      if (ie && !/duplicate/i.test(ie.message)) throw ie;
-      await log('komm_regelwerk', 'System', { version, vorher: aktiv?.version || null });
-      return regelwerkDatei;
-    }
-    /* Eine ältere Fassung ist aktiv, die Datei kennt die Tabelle schon: die aktive gilt (jemand hat bewusst zurückgestellt). */
-    return aktiv ? aktiv.inhalt : regelwerkDatei;
+    /* Neue Fassung aus der Datei: in einer Transaktion aktivieren (alte aus, neue an, Protokoll). Kennt die Tabelle die
+       Fassung schon, bleibt die aktive (jemand hat bewusst zurückgestellt). */
+    const { data: gilt, error: re } = await admin.rpc('hh_komm_regelwerk_aktivieren', { p_version: version, p_inhalt: regelwerkDatei });
+    if (re) throw re;
+    if (gilt === version) return regelwerkDatei;
+    const { data: nun } = await admin.from('komm_regelwerk').select('inhalt').eq('aktiv', true).maybeSingle();
+    return nun ? nun.inhalt : regelwerkDatei;
   }
   function regelwerkVersion(rw: Any) { const m = rw?.meta || {}; return `${m.schema_version || '?'} (${m.stand || '?'})`; }
 
@@ -80,6 +77,15 @@ export function kommModul(ctx: KommKontext) {
     if (!w || w === 'alle') return fs;
     return fs.filter((f: Any) => f.short_name === w || f.event_id === w || f.kuerzel === w || f.fid === w);
   }
+
+  /* Sperre je Vorgang (Versand je Festival, Tabellenabgleich); zeitlich begrenzt, damit ein abgebrochener Lauf nichts blockiert. */
+  async function sperren(schluessel: string, sekunden: number) {
+    const von = crypto.randomUUID();
+    const { data, error } = await admin.rpc('hh_komm_sperre', { p_schluessel: schluessel, p_sekunden: sekunden, p_von: von });
+    if (error) throw error;
+    return data === true ? von : null;
+  }
+  async function freigeben(schluessel: string, von: string) { await admin.rpc('hh_komm_frei', { p_schluessel: schluessel, p_von: von }); }
 
   /* Alle Zeilen einer Abfrage, seitenweise (PostgREST liefert höchstens 1000). */
   async function alleZeilen(bau: () => Any) {
@@ -136,7 +142,7 @@ export function kommModul(ctx: KommKontext) {
       ergebnis.push({ festival: f.short_name, kuerzel: f.kuerzel, berechnet: erg.pubs.length, stunden: K.runde(erg.pubs.reduce((s: number, p: Any) => s + p.stunden, 0), 1),
         vergangen: erg.vergangen.length, ueberfaellig: K.ueberfaellig(erg.pubs, heute).schritte, termine: { V: f.V, F: f.F, Z: f.Z }, ...(data as Any) });
     }
-    const protokoll = await log('komm_berechnen', by, { regelwerk: regelwerkVersion(rw), heute, ergebnis });
+    const protokoll = await log('komm_berechnen', by, { regelwerk: regelwerkVersion(rw), heute, festivale: ergebnis.filter(e => !e.fehler).map(e => e.festival), ergebnis });
     return { status: 200, body: { ok: ergebnis.every(e => !e.fehler), heute, regelwerk: regelwerkVersion(rw), ergebnis, protokoll } };
   }
 
@@ -146,12 +152,23 @@ export function kommModul(ctx: KommKontext) {
     const fs = await festivals(rw);
     const heute = ctx.heuteBerlin();
     const shorts = fs.map(f => f.short_name);
-    const [pubs, bes, pp, logZ] = await Promise.all([
+    /* Letzter Versand und letzte Berechnung je Festival gezielt, nicht aus dem begrenzten Verlauf (Review 32a, Befund 5). */
+    const letzte = (what: string, f: string, mitProjekt: boolean) => {
+      let q = admin.from('komm_log').select('what,detail,by,at').eq('what', what).order('at', { ascending: false }).limit(1);
+      q = mitProjekt ? q.eq('detail->>festival', f).not('detail->>projekt', 'is', null) : q.contains('detail', { festivale: [f] });
+      return q;
+    };
+    const [pubs, bes, pp, logZ, ...je] = await Promise.all([
       gespeichert(shorts),
       besetzung(fs),
       admin.from('komm_pruefpunkte').select('*').in('festival_short', shorts.length ? shorts : ['-']),
       admin.from('komm_log').select('id,what,detail,by,at').order('at', { ascending: false }).limit(200),
+      ...shorts.map(f => letzte('komm_send', f, true)),
+      ...shorts.map(f => letzte('komm_berechnen', f, false)),
     ]);
+    for (const r of je) if ((r as Any).error) throw (r as Any).error;
+    const sendJe: Record<string, Any> = {}, berJe: Record<string, Any> = {};
+    shorts.forEach((f, i) => { sendJe[f] = ((je[i] as Any).data || [])[0] || null; berJe[f] = ((je[shorts.length + i] as Any).data || [])[0] || null; });
     if ((pp as Any).error) throw (pp as Any).error;
     if ((logZ as Any).error) throw (logZ as Any).error;
     const entsch = (pp as Any).data || [];
@@ -166,10 +183,13 @@ export function kommModul(ctx: KommKontext) {
       const eigene = pubs.filter((p: Any) => p.festival_short === f.short_name);
       const aktuell = eigene.filter((p: Any) => K.aktuell(p, heute));
       const frisch = K.berechne(rw, f, heute, { saison_start: saison });
-      fuerLast.push({ kuerzel: f.kuerzel, pubs: aktuell, wochen: frisch.wochen });
+      /* Für die Last zählen alle Schritte ab dieser Woche, auch nach dem Veröffentlichungstag (Anzeigenkontrolle,
+         Nachbereitung); nicht nur kommende Veröffentlichungen (Review 32a, Befund 3). */
+      const mo = K.montag(heute);
+      fuerLast.push({ kuerzel: f.kuerzel, pubs: eigene.filter((p: Any) => p.schritte.some((s: Any) => s.faellig >= mo)), wochen: frisch.wochen });
       const ueber = K.ueberfaellig(aktuell, heute);
       const person = bes.je[f.short_name];
-      const sendLog = logs.find((l: Any) => l.what === 'komm_send' && l.detail?.festival === f.short_name && l.detail?.projekt);
+      const sendLog = sendJe[f.short_name];
       const ppEigene = entsch.filter((e: Any) => e.festival_short === f.short_name);
       const pruefpunkte = eigene.filter((p: Any) => p.regel_id === 'PRUEF').map((p: Any) => {
         const e = ppEigene.find((x: Any) => x.datum === p.t);
@@ -191,7 +211,7 @@ export function kommModul(ctx: KommKontext) {
         naechste14: K.naechste(aktuell, heute, 14, false).map(kurzP),
         pflicht30: K.naechste(aktuell, heute, 30, true).map(kurzP),
         jahresband: K.jahresband(rw, f, eigene),
-        berechnet_am: (logs.find((l: Any) => l.what === 'komm_berechnen' && (l.detail?.ergebnis || []).some((e: Any) => e.festival === f.short_name && !e.fehler)) || {}).at || null,
+        berechnet_am: berJe[f.short_name]?.at || null,
       });
       /* Was muss die GF entscheiden? */
       if (!person) entscheiden.push({ art: 'besetzung', festival: f.short_name, kuerzel: f.kuerzel, text: `Kommunikation nicht besetzt: ${f.name}. Bis dahin ist die Leitung Marketing zuständig.` });
@@ -206,11 +226,16 @@ export function kommModul(ctx: KommKontext) {
     const ueberlast = logs.filter((l: Any) => l.what === 'komm_ueberlast' && (Date.now() - Date.parse(l.at)) < 45 * 86400000)
       .map((l: Any) => ({ at: l.at, by: l.by, festival: l.detail?.festival || null, notiz: l.detail?.notiz || '' }));
     for (const u of ueberlast) entscheiden.push({ art: 'ueberlast', festival: u.festival, text: `Überlast gemeldet${u.festival ? ' für ' + u.festival : ''} von ${u.by || 'unbekannt'} am ${K.kurz(String(u.at).slice(0, 10))}: ${u.notiz}` });
-    const lastBis = fs.map(f => f.Z).filter(Boolean).sort().pop();
+    /* Horizont: späteste Fälligkeit eines Schritts oder Ende einer Wochenaufgabe (Aftermovies bei Z+60; Review 32a, Befund 4). */
+    let lastBis: string | null = null;
+    for (const x of fuerLast) {
+      for (const p of x.pubs) for (const s of p.schritte) if (!lastBis || s.faellig > lastBis) lastBis = s.faellig;
+      for (const w of x.wochen) if (!lastBis || w.bis > lastBis) lastBis = w.bis;
+    }
     const tabelle = logs.find((l: Any) => l.what === 'komm_tabelle_sync');
     return {
       heute, regelwerk: regelwerkVersion(rw), festivals: aus, entscheiden, extras: extrasKatalog,
-      wochenlast: K.wochenlast(fuerLast, heute, lastBis ? K.plus(lastBis, 31) : null),
+      wochenlast: K.wochenlast(fuerLast, heute, lastBis),
       verbund: { stichtag: rw.verbund_2027?.stichtag_vorproduktion, fenster: rw.verbund_2027?.vorproduktion_fenster_tage, gaesteinfos: rw.verbund_2027?.stichtag_gaesteinfos_freigegeben, saison_start: saison },
       asana: { konfiguriert: !!ctx.ASANA_TOKEN },
       tabelle: { konfiguriert: !!Deno.env.get(DIENSTKONTO_SECRET), letzter: tabelle ? { at: tabelle.at, by: tabelle.by, ergebnis: tabelle.detail?.ergebnis || null, geschrieben: tabelle.detail?.geschrieben ?? null, fremd: (tabelle.detail?.fremd || []).length } : null },
@@ -249,13 +274,14 @@ export function kommModul(ctx: KommKontext) {
     if (unbekannt.length) return { status: 400, body: { error: 'Extras unbekannt: ' + unbekannt.join(', ') } };
     const budget = extras.filter(e => { const x: Any = katalog.get(e); return x.budget_noetig || x.stufe === 'rot'; });
     if ((stufe === 'rot' || budget.length) && by !== 'Alex' && by !== 'Lea') return { status: 403, body: { error: 'Stufe Rot und Extras mit Budget entscheiden nur Alex oder Lea', extras: budget } };
-    const notiz = t.notiz === undefined ? undefined : (t.notiz ? String(t.notiz).slice(0, 4000) : null);
-    const { data: vorher } = await admin.from('komm_pruefpunkte').select('*').eq('festival_short', f.short_name).eq('datum', datum).maybeSingle();
-    const zeile: Any = { festival_short: f.short_name, datum, stufe, extras, entschieden_von: by, entschieden_am: new Date().toISOString() };
-    if (notiz !== undefined) zeile.notiz = notiz;
-    const { data, error } = await admin.from('komm_pruefpunkte').upsert(zeile, { onConflict: 'festival_short,datum' }).select().single();
-    if (error) throw error;
-    const protokoll = await log('komm_pruefpunkt_set', by, { festival: f.short_name, datum, stufe, extras, notiz: notiz ?? null, vorher: vorher || null });
+    /* Rechte am normierten Namen prüfen, gespeichert wird der genannte Name (Review 32a, Befund 6). */
+    const name = String(t.by).trim().slice(0, 60);
+    const notizSetzen = t.notiz !== undefined;
+    const notiz = notizSetzen && t.notiz ? String(t.notiz).slice(0, 4000) : null;
+    const { data, error } = await admin.rpc('hh_komm_pruefpunkt_set', { p_festival: f.short_name, p_datum: datum, p_stufe: stufe, p_extras: extras,
+      p_notiz: notiz, p_notiz_setzen: notizSetzen, p_von: by === 'Alex' || by === 'Lea' ? by : name, p_expect: t.expect_stufe ? String(t.expect_stufe) : null });
+    if (error) return { status: error.code === 'PT409' ? 409 : 500, body: { error: error.message } };
+    const protokoll = true;
     return { status: 200, body: { ok: true, pruefpunkt: data, protokoll } };
   }
 
@@ -336,6 +362,14 @@ export function kommModul(ctx: KommKontext) {
     if (t.vorschau) return { status: 200, body: { ok: true, vorschau: true, saetze, projekt: projektName, aufgaben: rahmen.aufgaben.length, einzeln: rahmen.einzeln, buendel: rahmen.buendel, pruefpunkte: rahmen.pruefpunkte, abschnitte: rahmen.abschnitte, person: zust.name, test } };
     if (!ctx.ASANA_TOKEN) return { status: 400, body: { error: 'ASANA_TOKEN fehlt', hinweis: 'Secret in Supabase anlegen, dann erneut senden.' } };
     if (!test && !t.bestaetigt) return { status: 400, body: { error: 'Senden braucht bestaetigt: true (nach der Vorschau)', saetze } };
+    /* Ein Versand je Festival zur Zeit (Review 32a, Befund 2). Die Sperre hält länger als ein Lauf und verfällt von selbst. */
+    const sperre = `send:${test ? 'test' : f.short_name}`;
+    const sperrVon = await sperren(sperre, 180);
+    if (!sperrVon) return { status: 409, body: { error: 'Für dieses Festival läuft gerade ein Versand; bitte gleich noch einmal.' } };
+    try { return await sendenGesperrt(t, f, test, von, zust, vertretung, rahmen, projektName, logWhat, pubs, gidJe, saetze); }
+    finally { await freigeben(sperre, sperrVon); }
+  }
+  async function sendenGesperrt(_t: Any, f: Any, test: boolean, von: string, zust: Any, vertretung: boolean, rahmen: Any, projektName: string, logWhat: string, pubs: Any[], gidJe: Map<string, string>, saetze: string[]) {
     const beginn = Date.now();
 
     /* Projekt: Kennung aus dem letzten Versand, sonst Suche nach dem Namen, sonst neu (Eigentum bei der verantwortlichen Person). */
@@ -382,8 +416,6 @@ export function kommModul(ctx: KommKontext) {
     catch (e) { return { status: 502, body: { error: 'Aufgabenliste nicht lesbar: ' + String((e as Error).message).slice(0, 160), projekt, hinweis: 'Nichts geändert, sonst könnten Aufgaben doppelt entstehen.' } }; }
 
     let neu = 0, aktualisiert = 0, rest = 0;
-    const jetzt = new Date().toISOString();
-    const gesendetJe = new Map(pubs.map((p: Any) => [p.id, p.gesendet_am]));
     const aufgaben = rahmen.aufgaben.slice().sort((a: Any, b: Any) => (a.due_on < b.due_on ? -1 : a.due_on > b.due_on ? 1 : 0));
     for (const a of aufgaben) {
       if (Date.now() - beginn > SEND_BUDGET_MS) { rest++; continue; }
@@ -407,10 +439,8 @@ export function kommModul(ctx: KommKontext) {
       }
       if (!test && ids.length) {
         /* Kennung sofort merken, damit ein Abbruch keine Dublette erzeugt; das erste Sendedatum bleibt. */
-        const neuGesendet = ids.filter(i => !gesendetJe.get(i));
-        const { error: e1 } = await admin.from('komm_veroeffentlichungen').update({ asana_task_gid: gid }).in('id', ids);
-        const { error: e2 } = neuGesendet.length ? await admin.from('komm_veroeffentlichungen').update({ gesendet_am: jetzt }).in('id', neuGesendet) : { error: null } as Any;
-        if (e1 || e2) fehler.push(`${a.name}: Aufgabe ${gid} steht in Asana, ließ sich aber nicht merken: ${(e1 || e2).message}`);
+        const { error: e1 } = await admin.rpc('hh_komm_gesendet', { p_ids: ids, p_gid: gid });
+        if (e1) fehler.push(`${a.name}: Aufgabe ${gid} steht in Asana, ließ sich aber nicht merken: ${e1.message}`);
         else for (const i of ids) gidJe.set(i, gid);
       }
     }
@@ -494,6 +524,12 @@ export function kommModul(ctx: KommKontext) {
       return { status: 200, body: { ok: false, konfiguriert: false, fehlt: DIENSTKONTO_SECRET, hinweis: 'Dienstkonto im Google-Cloud-Projekt „Wilde Habitate Kalender“ anlegen, Sheets API aktivieren, Schlüssel als Secret eintragen und die Tabelle mit dem Dienstkonto teilen.',
         zellen: termine.length, vorschau: termine.slice(0, 12).map((x: Any) => ({ datum: x.datum, text: x.text })), protokoll } };
     }
+    const sperrVon = await sperren('tabelle', 120);
+    if (!sperrVon) return { status: 409, body: { error: 'Der Abgleich der Redaktionstabelle läuft gerade.' } };
+    try { return await tabelleGesperrt(t, by, fs, wahl, termine); }
+    finally { await freigeben('tabelle', sperrVon); }
+  }
+  async function tabelleGesperrt(t: Any, by: string, fs: Any[], wahl: Any[], termine: Any[]) {
     const token = await googleToken();
     const meta = await sheets(token, '?fields=sheets(properties(sheetId,title,gridProperties(columnCount,rowCount)))');
     const reiter = (meta.sheets || []).find((s: Any) => s.properties?.title === SHEET_REITER);

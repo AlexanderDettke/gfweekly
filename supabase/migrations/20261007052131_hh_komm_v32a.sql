@@ -97,6 +97,8 @@ alter table public.komm_pruefpunkte enable row level security;
 alter table public.komm_log enable row level security;
 revoke all on public.komm_regelwerk, public.komm_veroeffentlichungen, public.komm_schritte, public.komm_pruefpunkte, public.komm_log from anon, authenticated;
 revoke all on sequence public.komm_log_id_seq from anon, authenticated;
+grant select, insert, update, delete on public.komm_regelwerk, public.komm_veroeffentlichungen, public.komm_schritte, public.komm_pruefpunkte, public.komm_log to service_role;
+grant usage, select on sequence public.komm_log_id_seq to service_role;
 
 create or replace function public.hh_komm_touch() returns trigger language plpgsql as $$
 begin new.updated_at := now(); return new; end $$;
@@ -105,7 +107,7 @@ create trigger komm_veroeffentlichungen_touch before update on public.komm_veroe
 
 -- Ergebnis einer Berechnung einspielen, in einer Transaktion und je Festival gesperrt (komm_berechnen ist idempotent):
 --  * neu: anlegen mit Schritten.
---  * schon gesendet (gesendet_am) oder von einem Partner übernommen: nie still verändern. Verschiebt sich T, steht der neue
+--  * schon gesendet (gesendet_am oder asana_task_gid) oder von einem Partner übernommen: nie still verändern. Verschiebt sich T, steht der neue
 --    Termin in t_neu und status_bearbeitung wird zu_pruefen; Plan, Briefing und Schritte bleiben.
 --  * sonst: Plan- und Briefingfelder aktualisieren, Schritte ersetzen (sie sind nur ein Vorschlag).
 --  * Zeilen dieses Festivals ab heute, die die Rechnung nicht mehr kennt: ungesendet und nicht übernommen werden gelöscht,
@@ -139,7 +141,7 @@ begin
         select p->>'id', s->>'schritt_id', s->>'phase', s->>'titel', s->>'rolle', s->>'werkzeug', (s->>'start')::date, (s->>'faellig')::date, coalesce((s->>'stunden')::numeric, 0)
         from jsonb_array_elements(coalesce(p->'schritte','[]'::jsonb)) s;
       n_neu := n_neu + 1;
-    elsif e.gesendet_am is not null or e.partner_uebernommen_am is not null then
+    elsif e.gesendet_am is not null or e.asana_task_gid is not null or e.partner_uebernommen_am is not null then
       if e.t <> nt then
         if e.t_neu is distinct from nt or e.status_bearbeitung <> 'zu_pruefen' then
           update komm_veroeffentlichungen set t_neu = nt, status_bearbeitung = 'zu_pruefen' where id = e.id;
@@ -179,7 +181,7 @@ begin
   end loop;
   -- Was die Rechnung ab heute nicht mehr kennt.
   for e in select * from komm_veroeffentlichungen where festival_short = p_festival and t >= p_heute and not (id = any(ids)) for update loop
-    if e.gesendet_am is not null or e.partner_uebernommen_am is not null then
+    if e.gesendet_am is not null or e.asana_task_gid is not null or e.partner_uebernommen_am is not null then
       if e.status_bearbeitung <> 'zu_pruefen' then update komm_veroeffentlichungen set status_bearbeitung = 'zu_pruefen', t_neu = null where id = e.id; n_verwaist := n_verwaist + 1; end if;
     else
       delete from komm_veroeffentlichungen where id = e.id; n_weg := n_weg + 1;
@@ -188,5 +190,78 @@ begin
   return jsonb_build_object('neu', n_neu, 'aktualisiert', n_akt, 'unveraendert', n_gleich, 'zu_pruefen', n_pruefen, 'entfernt', n_weg, 'verwaist_zu_pruefen', n_verwaist);
 end $$;
 revoke all on function public.hh_komm_einspielen(text, uuid, jsonb, date) from public, anon, authenticated;
+grant execute on function public.hh_komm_einspielen(text, uuid, jsonb, date) to service_role;
 comment on function public.hh_komm_einspielen(text, uuid, jsonb, date) is
   'V32 Kommunikation: Berechnung eines Festivals einspielen (idempotent, je Festival gesperrt). Gesendete oder übernommene Veröffentlichungen werden nie still verändert, sondern zu_pruefen mit t_neu. Schreibt nie Partner- oder Freigabefelder.';
+
+-- Versand: Kennung und erstes Sendedatum in einem Schritt (Review 32a, Befund 1). Das erste Sendedatum bleibt.
+create or replace function public.hh_komm_gesendet(p_ids text[], p_gid text)
+returns int language sql set search_path = public as $$
+  with u as (update komm_veroeffentlichungen set asana_task_gid = p_gid, gesendet_am = coalesce(gesendet_am, now()) where id = any(p_ids) returning 1)
+  select count(*)::int from u $$;
+revoke all on function public.hh_komm_gesendet(text[], text) from public, anon, authenticated;
+grant execute on function public.hh_komm_gesendet(text[], text) to service_role;
+
+-- Sperre je Vorgang (Versand je Festival, Tabellenabgleich), zeitlich begrenzt (Review 32a, Befund 2).
+create table if not exists public.komm_sperre(
+  schluessel text primary key,
+  von text,
+  seit timestamptz not null default now(),
+  bis timestamptz not null);
+alter table public.komm_sperre enable row level security;
+revoke all on public.komm_sperre from anon, authenticated;
+grant select, insert, update, delete on public.komm_sperre to service_role;
+create or replace function public.hh_komm_sperre(p_schluessel text, p_sekunden int, p_von text)
+returns boolean language plpgsql set search_path = public as $$
+declare n int;
+begin
+  insert into komm_sperre(schluessel, von, seit, bis) values (p_schluessel, p_von, now(), now() + make_interval(secs => p_sekunden))
+  on conflict (schluessel) do update set von = excluded.von, seit = excluded.seit, bis = excluded.bis where komm_sperre.bis < now();
+  get diagnostics n = row_count;
+  return n > 0;
+end $$;
+create or replace function public.hh_komm_frei(p_schluessel text, p_von text)
+returns void language sql set search_path = public as $$ delete from komm_sperre where schluessel = p_schluessel and von = p_von $$;
+revoke all on function public.hh_komm_sperre(text, int, text) from public, anon, authenticated;
+revoke all on function public.hh_komm_frei(text, text) from public, anon, authenticated;
+grant execute on function public.hh_komm_sperre(text, int, text), public.hh_komm_frei(text, text) to service_role;
+
+-- Prüfpunkt setzen: Vorzustand, Änderung und Protokoll in einer Transaktion mit Zeilensperre (Review 32a, Befund 7).
+-- p_expect: gesehene Stufe; weicht sie ab, PT409 (eine gleichzeitige Entscheidung wird nicht still überschrieben).
+create or replace function public.hh_komm_pruefpunkt_set(p_festival text, p_datum date, p_stufe text, p_extras text[], p_notiz text, p_notiz_setzen boolean, p_von text, p_expect text)
+returns jsonb language plpgsql set search_path = public as $$
+declare alt public.komm_pruefpunkte; neu public.komm_pruefpunkte;
+begin
+  perform pg_advisory_xact_lock(hashtext('komm_pp:' || p_festival || ':' || p_datum));
+  select * into alt from komm_pruefpunkte where festival_short = p_festival and datum = p_datum for update;
+  if p_expect is not null and coalesce(alt.stufe, 'offen') <> p_expect then
+    raise exception 'Inzwischen geändert: Stufe steht auf %', coalesce(alt.stufe, 'offen') using errcode = 'PT409';
+  end if;
+  insert into komm_pruefpunkte(festival_short, datum, stufe, extras, notiz, entschieden_von, entschieden_am)
+  values (p_festival, p_datum, p_stufe, coalesce(p_extras, '{}'), case when p_notiz_setzen then p_notiz else null end, p_von, now())
+  on conflict (festival_short, datum) do update set stufe = excluded.stufe, extras = excluded.extras,
+    notiz = case when p_notiz_setzen then excluded.notiz else komm_pruefpunkte.notiz end, entschieden_von = excluded.entschieden_von, entschieden_am = excluded.entschieden_am
+  returning * into neu;
+  insert into komm_log(what, "by", detail) values ('komm_pruefpunkt_set', p_von, jsonb_build_object('festival', p_festival, 'datum', p_datum, 'stufe', p_stufe, 'extras', to_jsonb(coalesce(p_extras, '{}')),
+    'notiz', case when p_notiz_setzen then p_notiz else null end, 'vorher', case when alt.festival_short is null then null else to_jsonb(alt) end));
+  return to_jsonb(neu);
+end $$;
+revoke all on function public.hh_komm_pruefpunkt_set(text, date, text, text[], text, boolean, text, text) from public, anon, authenticated;
+grant execute on function public.hh_komm_pruefpunkt_set(text, date, text, text[], text, boolean, text, text) to service_role;
+
+-- Regelwerk aktivieren: alte Fassung aus, neue an, in einer Transaktion (Review 32a, Empfehlung 3).
+create or replace function public.hh_komm_regelwerk_aktivieren(p_version text, p_inhalt jsonb)
+returns text language plpgsql set search_path = public as $$
+declare vorher text;
+begin
+  perform pg_advisory_xact_lock(hashtext('komm_regelwerk'));
+  select version into vorher from komm_regelwerk where aktiv;
+  if vorher = p_version then return vorher; end if;
+  if exists (select 1 from komm_regelwerk where version = p_version) then return vorher; end if;
+  update komm_regelwerk set aktiv = false where aktiv;
+  insert into komm_regelwerk(version, inhalt, aktiv) values (p_version, p_inhalt, true);
+  insert into komm_log(what, "by", detail) values ('komm_regelwerk', 'System', jsonb_build_object('version', p_version, 'vorher', vorher));
+  return p_version;
+end $$;
+revoke all on function public.hh_komm_regelwerk_aktivieren(text, jsonb) from public, anon, authenticated;
+grant execute on function public.hh_komm_regelwerk_aktivieren(text, jsonb) to service_role;
