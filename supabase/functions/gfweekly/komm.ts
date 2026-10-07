@@ -403,7 +403,7 @@ export function kommModul(ctx: KommKontext) {
     const bekannt = new Set<string>();
     const gidJe = new Map(pubs.filter((p: Any) => p.asana_task_gid).map((p: Any) => [p.id, p.asana_task_gid]));
     if (!test) for (const a of rahmen.aufgaben) if ((a.vid && gidJe.has(a.vid)) || (a.ids && a.ids.some((i: string) => gidJe.has(i)))) bekannt.add(a.name);
-    const saetze = K.versandSaetze(f, rahmen, zust.name + (vertretung ? ' (Leitung Marketing, weil Kommunikation nicht besetzt ist)' : ''), bekannt);
+    const saetze = K.versandSaetze(f, rahmen, zust.name + (vertretung ? ' (Leitung Marketing, weil Kommunikation nicht besetzt ist)' : ''), bekannt, projektName);
     if (t.vorschau) return { status: 200, body: { ok: true, vorschau: true, saetze, projekt: projektName, aufgaben: rahmen.aufgaben.length, einzeln: rahmen.einzeln, buendel: rahmen.buendel, pruefpunkte: rahmen.pruefpunkte, abschnitte: rahmen.abschnitte, person: zust.name, test } };
     return await sendenGesperrt(t, f, test, von, zust, vertretung, rahmen, projektName, logWhat, pubs, gidJe, saetze);
   }

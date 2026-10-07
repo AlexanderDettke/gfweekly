@@ -418,10 +418,10 @@
     return { aufgaben: alle, abschnitte, einzeln: einzeln.length, buendel: buendelListe.length, pruefpunkte: einzeln.filter(a => a.art === 'pruefpunkt').length };
   }
   /* Vorschau in Worten wie bei launch_send. */
-  function versandSaetze(festival, rahmen, person, bekannt) {
+  function versandSaetze(festival, rahmen, person, bekannt, projektName) {
     const neu = rahmen.aufgaben.filter(a => !(bekannt || new Set()).has(a.name)).length;
     const s = [];
-    s.push(`Projekt „Kommunikation ${festival.name} ${festival.ausgabe || 2027}“ in Asana, Eigentum und Zuständigkeit bei ${person || 'niemandem (Kommunikation nicht besetzt)'}.`);
+    s.push(`Projekt „${projektName || `Kommunikation ${festival.name} ${festival.ausgabe || 2027}`}“ in Asana, Eigentum und Zuständigkeit bei ${person || 'niemandem (Kommunikation nicht besetzt)'}.`);
     s.push(`${rahmen.einzeln - rahmen.pruefpunkte} Veröffentlichungen als eigene Aufgabe, ${rahmen.pruefpunkte} Prüfpunkte, ${rahmen.buendel} Monatsbündel für die übrigen Beiträge; Abschnitte je Monat (${rahmen.abschnitte.length}).`);
     s.push(neu === rahmen.aufgaben.length ? `Alle ${neu} Aufgaben werden neu angelegt.` : `${neu} neu, ${rahmen.aufgaben.length - neu} werden aktualisiert (Fälligkeit und Beschreibung; Zuständigkeit, Unteraufgaben, Kommentare und Abschnitt bleiben).`);
     return s;
