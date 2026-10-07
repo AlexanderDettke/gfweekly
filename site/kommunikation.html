@@ -82,6 +82,8 @@
 .km-scroll{overflow-x:auto;max-width:100%}
 /* Am Handy: Tabellenzeilen gestapelt (Datum links, Rest darunter), keine waagrechte Scrollbreite */
 @media (max-width:600px){
+  .km-tabelle.stapel,.km-tabelle.stapel tbody{display:block;width:100%}
+  .km-tabelle.stapel colgroup{display:none}
   .km-tabelle.stapel thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
   .km-tabelle.stapel tr{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;padding:8px 0;border-bottom:var(--rahmen) solid var(--border)}
   .km-tabelle.stapel td{border:0;padding:0;min-width:0;overflow-wrap:anywhere}
@@ -114,6 +116,8 @@ details[open]>summary .chev{transform:rotate(90deg)}
 .km-band .mk{position:absolute;bottom:1px;transform:translateX(-50%);font-size:10px;line-height:10px;font-weight:700;color:var(--text)}
 .km-band .heute{position:absolute;top:0;bottom:0;border-left:2px solid var(--text)}
 .km-band .monate{position:relative;height:14px;margin-left:118px}
+.km-nurleser{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.km-fehler{display:grid;gap:8px;justify-items:start}
 .km-band .monate span{position:absolute;font-size:10px;color:var(--text-2);transform:translateX(-2px)}
 @media (max-width:520px){ .km-band .zeile{grid-template-columns:1fr} .km-band .monate{margin-left:0} }
 </style>
@@ -137,6 +141,7 @@ details[open]>summary .chev{transform:rotate(90deg)}
   <div id="hero"></div>
 
   <main id="km">
+    <div class="km-nurleser" id="kmStatus" role="status" aria-live="polite"></div>
     <p class="km-lead" id="kmLead">Postingplan-Standard für alle fünf Festivals 2027. Die Geschäftsführung legt je Festival fest, wer die Kommunikation verantwortet, entscheidet über Budget und Extras der Stufe Rot und übergibt einmal den Rahmen. Alles Weitere verteilt die verantwortliche Person selbst.</p>
 
     <section class="km-sec" aria-labelledby="kmF0">
@@ -209,7 +214,8 @@ function renderKopf(){
       :`<b>Kommunikation nicht besetzt</b><br><span class="km-muted">zuständig bis dahin: Leitung Marketing</span>`;
     const r=f.rahmen;
     const am=r?fmtD(String(r.gesendet_am).slice(0,10)):"";
-    const rahmen=!r?"nicht gesendet":(r.abgebrochen?`<b>abgebrochen</b> am ${am}: ${gfEsc(r.abgebrochen)}`:(r.weiter?`<b>begonnen</b> am ${am}, Rest folgt beim nächsten Senden`:`gesendet am ${am}`))
+    const rahmen=!r?"nicht gesendet":(r.abgebrochen?`<b>abgebrochen</b> am ${am}: ${gfEsc(r.abgebrochen)}`:(r.weiter?`<b>begonnen</b> am ${am}, Rest folgt beim nächsten Senden`:(r.fehler?`<b>unvollständig</b> am ${am}: ${r.fehler} ${r.fehler===1?"Fehler":"Fehler"}`:`gesendet am ${am}`)))
+      +(r&&r.fehler&&(r.fehler_liste||[]).length?`<details class="km-auf"><summary>Fehler des letzten Versands <span class="chev" aria-hidden="true">›</span></summary><div class="body"><ul class="km-liste">${r.fehler_liste.map(x=>`<li><span class="t">${gfEsc(x)}</span></li>`).join("")}</ul></div></details>`:"")
       +(r&&r.url?` · <a href="${gfEsc(r.url)}" target="_blank" rel="noopener">in Asana</a>`:"")+(r?`<br><span class="km-muted">${r.aufgaben_gesendet??0} Veröffentlichungen mit Aufgabe in Asana</span>`:"");
     const zp=(f.zu_pruefen||[]).length;
     const pp=f.naechster_pruefpunkt;
@@ -225,7 +231,7 @@ function renderKopf(){
       <div class="f"><span class="l">nächster Prüfpunkt</span>${ppText}</div>
       <div class="f"><span class="l">Überfälliges</span>${ueText}<br><span class="km-muted">${f.anzahl} Veröffentlichungen, ${gfFmtInt(Math.round(f.stunden))} Stunden</span></div>
       <div class="acts">
-        <button class="btn btn-sm btn-brand" data-act="vorschau" data-f="${gfEsc(f.short_name)}" aria-expanded="${vorschau?"true":"false"}">${r?"Rahmen erneut senden":"Rahmen an Asana"}</button>
+        <button class="btn btn-sm" data-act="vorschau" data-f="${gfEsc(f.short_name)}" aria-expanded="${vorschau?"true":"false"}">${r?"Rahmen erneut senden":"Rahmen an Asana"}</button>
         ${pp?`<button class="btn btn-sm" data-act="pp" data-f="${gfEsc(f.short_name)}" data-d="${gfEsc(pp.datum)}" aria-expanded="${form?"true":"false"}">Stufe zum Prüfpunkt ${fmtK(pp.datum)}</button>`:""}
       </div>
       ${vorschau?renderVorschau(f, vorschau):""}
@@ -248,13 +254,14 @@ function renderPpForm(f, form){
   const pp=(f.pruefpunkte||[]).find(x=>x.datum===form.datum)||{};
   const gewaehlt=new Set(form.extras||pp.extras||[]);
   const stufe=form.stufe||pp.stufe||"offen";
+  const notizText=form.notiz!==undefined?form.notiz:(pp.notiz||"");
   return `<form class="pp-form" data-f="${gfEsc(f.short_name)}" data-d="${gfEsc(form.datum)}">
     <p class="km-satz" style="font-size:var(--stufe-2)"><b>Prüfpunkt ${fmtD(form.datum)}</b>: Verkauf laut Ticketsystem gegen Zielpfad, Kaufabbrüche, wiederkehrende Fragen, Reichweite, Klicks auf den Kaufweg. Stufe Rot und Extras mit Budget entscheiden nur Alex oder Lea.</p>
     <div>${gfChips("stufe",[["gruen","grün"],["gelb","gelb"],["rot","rot"],["knapp","knapp"],["offen","offen"]],stufe,{label:"Stufe"})}</div>
     <fieldset style="border:0;padding:0;margin:0"><legend class="km-muted" style="margin-bottom:6px">Extras (bei Gelb bis zu zwei der Stufe Gelb; Rot mit Freigabe der GF)</legend>
       <div class="km-extras">${ex.map(e=>`<label><input type="checkbox" name="extra" value="${gfEsc(e.id)}"${gewaehlt.has(e.id)?" checked":""}><span>${gfEsc(e.id)} ${gfEsc(e.name)}<small>Stufe ${gfEsc(stufeWort(e.stufe)||e.stufe)}${e.budget?", braucht Budget":""}</small></span></label>`).join("")}</div></fieldset>
     <label class="km-muted" for="ppNotiz-${gfEsc(f.short_name)}">Notiz</label>
-    <textarea id="ppNotiz-${gfEsc(f.short_name)}" name="notiz" rows="2" style="width:100%">${gfEsc(pp.notiz||"")}</textarea>
+    <textarea id="ppNotiz-${gfEsc(f.short_name)}" name="notiz" rows="2" style="width:100%">${gfEsc(notizText)}</textarea>
     <div style="display:flex;flex-wrap:wrap;gap:8px"><button class="btn btn-sm btn-primary" type="submit">Speichern als ${wer()}</button><button class="btn btn-sm btn-brand" type="button" data-act="pp-zu" data-f="${gfEsc(f.short_name)}">Abbrechen</button></div>
   </form>`;
 }
@@ -391,8 +398,9 @@ async function senden(s){
       if(!r.weiter) break; runde++;
     }
     OFFEN.vorschau[s]={ ergebnis };
-  }catch(err){ OFFEN.vorschau[s]={ fehler:err.message }; }
-  await load(true);
+    melde(`Rahmen ${fest(s).name}: ${summe.neu} neu, ${summe.aktualisiert} aktualisiert${summe.fehler.length?", "+summe.fehler.length+" Fehler":""}`);
+  }catch(err){ OFFEN.vorschau[s]={ fehler:err.message }; melde("Versand: "+err.message); }
+  await neuLaden();
 }
 async function ppSpeichern(form){
   const s=form.dataset.f, d=form.dataset.d;
@@ -400,8 +408,11 @@ async function ppSpeichern(form){
   const extras=[...form.querySelectorAll('input[name="extra"]:checked')].map(x=>x.value);
   const notiz=form.querySelector('textarea[name="notiz"]').value;
   const pp=((fest(s)||{}).pruefpunkte||[]).find(x=>x.datum===d)||{};
-  try{ await gfApi("komm_pruefpunkt_set",{ festival:s, datum:d, stufe, extras, notiz, by:wer(), expect_stufe:pp.stufe||"offen" }); gfToast(`Prüfpunkt ${fmtK(d)}: Stufe ${stufeWort(stufe)}${extras.length?", "+extras.join(", "):""}`); delete OFFEN.pp[s]; await load(true); }
-  catch(err){ gfToast("Fehler: "+err.message); }
+  try{ await gfApi("komm_pruefpunkt_set",{ festival:s, datum:d, stufe, extras, notiz, by:wer(), expect_stufe:pp.stufe||"offen", expect_extras:pp.extras||[] }); }
+  catch(err){ melde("Nicht gespeichert: "+err.message+(/geändert/i.test(err.message)?" Die Seite zeigt jetzt den aktuellen Stand.":"")); if(/geändert/i.test(err.message)){ delete OFFEN.pp[s]; await neuLaden(); } return; }
+  delete OFFEN.pp[s];
+  melde(`Prüfpunkt ${fmtK(d)} gespeichert: Stufe ${stufeWort(stufe)}${extras.length?", "+extras.join(", "):""}`);
+  await neuLaden(); fokus(`#fest-${s} [data-act="pp"]`);
 }
 document.addEventListener("click", async e=>{
   const a=e.target.closest("[data-act]"); if(!a) return;
@@ -410,19 +421,41 @@ document.addEventListener("click", async e=>{
   if(a.dataset.act==="vorschau-zu"){ delete OFFEN.vorschau[s]; renderKopf(); const b=document.querySelector(`#fest-${s} [data-act="vorschau"]`); if(b) b.focus(); return; }
   if(a.dataset.act==="senden"){ senden(s); return; }
   if(a.dataset.act==="pp"){ if(OFFEN.pp[s]&&OFFEN.pp[s].datum===a.dataset.d){ delete OFFEN.pp[s]; } else OFFEN.pp[s]={ datum:a.dataset.d }; renderKopf();
-    const z=document.getElementById("fest-"+s); if(z){ z.scrollIntoView({block:"nearest"}); const c=z.querySelector(".pp-form input"); if(c) c.focus(); } return; }
-  if(a.dataset.act==="pp-zu"){ delete OFFEN.pp[s]; renderKopf(); return; }
+    const z=document.getElementById("fest-"+s); if(z){ z.scrollIntoView({block:"nearest"}); const c=z.querySelector(".pp-form .chip.on")||z.querySelector(".pp-form .chip"); if(c) c.focus(); else fokus(`#fest-${s} [data-act="pp"]`); } return; }
+  if(a.dataset.act==="pp-zu"){ delete OFFEN.pp[s]; renderKopf(); fokus(`#fest-${s} [data-act="pp"]`); return; }
+  if(a.dataset.act==="neu-laden"){ neuLaden(); return; }
   if(a.dataset.act==="extras-frei"){
     const f=fest(s); const pp=(f.pruefpunkte||[]).find(x=>x.datum===a.dataset.d); if(!pp) return;
     if(!confirm(`Extras ${pp.extras.join(", ")} für ${f.name} als ${wer()} freigeben?`)) return;
-    try{ await gfApi("komm_pruefpunkt_set",{ festival:s, datum:pp.datum, stufe:pp.stufe, extras:pp.extras, by:wer() }); gfToast("Freigegeben"); await load(true); }
-    catch(err){ gfToast("Fehler: "+err.message); }
+    try{ await gfApi("komm_pruefpunkt_set",{ festival:s, datum:pp.datum, stufe:pp.stufe, extras:pp.extras, by:wer(), expect_stufe:pp.stufe, expect_extras:pp.extras }); }
+    catch(err){ melde("Nicht freigegeben: "+err.message+(/geändert/i.test(err.message)?" Die Seite zeigt jetzt den aktuellen Stand.":"")); await neuLaden(); return; }
+    melde(`Extras ${pp.extras.join(", ")} für ${f.name} freigegeben als ${wer()}`); await neuLaden();
   }
 });
+function entwurf(form){ const s=form.dataset.f; if(!OFFEN.pp[s]) return;
+  OFFEN.pp[s]=Object.assign(OFFEN.pp[s],{ stufe:(form.querySelector('input[name="stufe"]')||{}).value||"offen", extras:[...form.querySelectorAll('input[name="extra"]:checked')].map(x=>x.value), notiz:form.querySelector('textarea[name="notiz"]').value }); }
+document.addEventListener("change", e=>{ const f=e.target.closest(".pp-form"); if(f) entwurf(f); });
+document.addEventListener("input", e=>{ const f=e.target.closest(".pp-form"); if(f) entwurf(f); });
 document.addEventListener("submit", e=>{ const f=e.target.closest(".pp-form"); if(!f) return; e.preventDefault(); ppSpeichern(f); });
 document.addEventListener("gf-who", ()=>{ if(D) renderAll(); });
 let kmBreite=0; window.addEventListener("resize",()=>{ const b=($("#kmLast")||{}).clientWidth||0; if(D&&Math.abs(b-kmBreite)>40){ kmBreite=b; renderLast(); } });
 
+function melde(text){ const st=$("#kmStatus"); if(st){ st.textContent=""; setTimeout(()=>{ st.textContent=text; }, 30); } gfToast(text); }
+function fokus(sel){ setTimeout(()=>{ const el=document.querySelector(sel); if(el) el.focus(); }, 0); }
+function zeigeLadefehler(err){
+  const satz=`Die Daten ließen sich nicht laden (${gfEsc(err&&err.message||"Verbindung")}). Was hier fehlt, ist nicht leer, sondern unbekannt.`;
+  const knopf=`<button class="btn btn-sm btn-brand" data-act="neu-laden">Noch einmal laden</button>`;
+  $("#kmFest").innerHTML=`<li class="km-fehler" role="alert"><span>${satz}</span>${knopf}</li>`;
+  $("#kmFestFuss").textContent="";
+  $("#kmLastSatz").textContent="Nicht geladen."; $("#kmLast").innerHTML=""; $("#kmLegende").innerHTML=""; $("#kmLastListe").innerHTML="";
+  $("#kmEntscheiden").innerHTML=`<li><span class="t">Nicht geladen; die offenen Entscheidungen sind unbekannt.</span></li>`;
+  $("#kmAnstehend").innerHTML=`<p class="km-muted">Nicht geladen.</p>`; $("#kmBand").innerHTML=`<p class="km-muted">Nicht geladen.</p>`; $("#kmVerlauf").innerHTML="";
+}
+/* Nach Schreibaktionen: deren Ergebnis steht schon fest; scheitert nur das Neuladen, sagt die Seite genau das. */
+async function neuLaden(){
+  try{ await load(true); }
+  catch(err){ if(D){ renderAll(); melde("Gespeichert, aber die Seite ließ sich nicht neu laden: "+(err.message||"Verbindung")+". Bitte neu laden, bevor du weiter entscheidest."); } else zeigeLadefehler(err); }
+}
 async function load(still){
   const d=await gfApi("komm_list",{});
   D=d; HEUTE=d.heute||new Date().toISOString().slice(0,10);
@@ -432,7 +465,7 @@ async function load(still){
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("kommunikation");
   gfMountHero("buehne","Kommunikation 2027","Wer zuständig ist, wo es eng wird, was die Geschäftsführung entscheiden muss.",{slim:true});
-  try{ await load(); }catch(e){ $("#kmFest").innerHTML=`<li><span class="km-muted">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</span></li>`; }
+  try{ await load(); }catch(e){ zeigeLadefehler(e); }
 });
 </script>
 </body>

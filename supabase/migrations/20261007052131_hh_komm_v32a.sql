@@ -102,6 +102,7 @@ grant usage, select on sequence public.komm_log_id_seq to service_role;
 
 create or replace function public.hh_komm_touch() returns trigger language plpgsql as $$
 begin new.updated_at := now(); return new; end $$;
+revoke all on function public.hh_komm_touch() from public, anon, authenticated;
 drop trigger if exists komm_veroeffentlichungen_touch on public.komm_veroeffentlichungen;
 create trigger komm_veroeffentlichungen_touch before update on public.komm_veroeffentlichungen for each row execute function public.hh_komm_touch();
 

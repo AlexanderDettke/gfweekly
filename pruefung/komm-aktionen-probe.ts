@@ -8,7 +8,7 @@ const PGLITE = Deno.env.get('PGLITE_MODUL');
 if (!PGLITE) { console.log('PGLITE_MODUL fehlt'); Deno.exit(2); }
 const { PGlite } = await import(PGLITE.startsWith('file:') ? PGLITE : 'file://' + PGLITE);
 const BASIS = new URL('../', import.meta.url);
-const MIGRATION = await Deno.readTextFile(new URL('supabase/migrations/20261007052131_hh_komm_v32a.sql', BASIS));
+const MIGRATION = await Deno.readTextFile(new URL('supabase/migrations/20261007052131_hh_komm_v32a.sql', BASIS)) + '\n' + await Deno.readTextFile(new URL('supabase/migrations/20261007070401_hh_komm_v32b.sql', BASIS));
 
 let ok = 0, fehler = 0;
 const gleich = (name: string, ist: unknown, soll: unknown) => { const a = JSON.stringify(ist), b = JSON.stringify(soll); if (a === b) { ok++; console.log('  ok     ' + name); } else { fehler++; console.log('  FEHLT  ' + name + '\n         ist  ' + a.slice(0, 500) + '\n         soll ' + b.slice(0, 500)); } };
@@ -222,6 +222,7 @@ const p1 = await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: ppDat,
 gleich('Gelb mit Extras ohne Budget von Christian: gespeichert mit Namen', [p1.status, p1.body.pruefpunkt.entschieden_von, p1.body.pruefpunkt.stufe], [200, 'Christian Linck', 'gelb']);
 gleich('Extra mit Budget von Christian: 403', (await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: ppDat, stufe: 'gelb', extras: ['E01'], by: 'Christian Linck' })).status, 403);
 gleich('veraltete gesehene Stufe: 409', (await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: ppDat, stufe: 'rot', extras: ['E04'], by: 'Alex', expect_stufe: 'offen' })).status, 409);
+gleich('Freigabe mit altem Stand der Extras: 409', (await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: ppDat, stufe: 'gelb', extras: ['E03'], by: 'Alex', expect_stufe: 'gelb', expect_extras: ['E03'] })).status, 409);
 gleich('Tag ohne Prüfpunkt: 404', (await ruf('komm_pruefpunkt_set', { festival: 'FAMRD27', datum: '2027-01-01', stufe: 'gelb', by: 'Alex' })).status, 404);
 const l2 = await ruf('komm_list');
 wahr('Entscheidungen zeigen den gelben Prüfpunkt', l2.body.entscheiden.some((e: any) => e.art === 'pruefpunkt' && e.datum === ppDat && e.stufe === 'gelb'));

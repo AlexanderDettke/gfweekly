@@ -478,7 +478,8 @@ export const KOMM_LIST = (() => {
     const ue = KL.ueberfaellig(pubs, heute);
     festivals.push({ short_name: f.short_name, kuerzel: f.kuerzel, name: f.name, event_id: f.event_id, V: f.V, F: f.F, Z: f.Z, pruefen: f.pruefen,
       person: f.short_name === 'LUSRD27' ? null : { name: 'Testperson Kommunikation', typ: 'extern', status: f.short_name === 'WMRD27' ? 'vorschlag' : 'bestaetigt', bestaetigt_von: 'Alex', hat_asana: true },
-      rahmen: f.short_name === 'FAMRD27' ? { gesendet_am: zeit(-1), url: 'https://app.asana.com/0/1200000000000002', von: 'Alex', neu: 70, aktualisiert: 0, weiter: false, fehler: 0 } : null,
+      rahmen: f.short_name === 'FAMRD27' ? { gesendet_am: zeit(-1), url: 'https://app.asana.com/0/1200000000000002', von: 'Alex', neu: 70, aktualisiert: 0, weiter: false, abgebrochen: null, fehler: 1, fehler_liste: ['Redaktion Juli 2027: Aufgabe 1200000000009 in Asana gelöscht, nicht neu angelegt'], aufgaben_gesendet: pubs.length }
+        : f.short_name === 'WMRD27' ? { gesendet_am: zeit(-2), url: 'https://app.asana.com/0/1200000000000004', von: 'Lea', neu: 30, aktualisiert: 0, weiter: true, abgebrochen: null, fehler: 0, fehler_liste: [], aufgaben_gesendet: 30 } : null,
       gesendet: f.short_name === 'FAMRD27' ? pubs.length : 0, zu_pruefen: f.short_name === 'FAMRD27' ? [kurzP(pubs[3])].map(x => Object.assign(x, { status: 'zu_pruefen', t_neu: tag(40) })) : [],
       anzahl: pubs.length, stunden: KL.runde(pubs.reduce((s, p) => s + p.stunden, 0), 1), pflicht: pubs.filter(p => p.pflicht).length, partnerfaehig: pubs.filter(p => p.partnerfaehig).length,
       ueberfaellig: ue, ueberfaellig_liste: [], naechster_pruefpunkt: pp.find(x => x.datum >= heute) || null, pruefpunkte: pp,
@@ -501,7 +502,16 @@ Object.assign(ANTWORT, {
   komm_list: () => KOMM_LIST,
   komm_send: (p) => p.vorschau ? ({ ok: true, vorschau: true, saetze: ['Projekt „Kommunikation Testfestival 2027“ in Asana, Eigentum und Zuständigkeit bei Testperson Kommunikation.', '60 Veröffentlichungen als eigene Aufgabe, 9 Prüfpunkte, 11 Monatsbündel für die übrigen Beiträge; Abschnitte je Monat (12).', 'Alle 80 Aufgaben werden neu angelegt.'] })
     : ({ ok: true, projekt: '1200000000000003', url: 'https://app.asana.com/0/1200000000000003', neu: 80, aktualisiert: 0, rest: 0, weiter: false, fehler: [] }),
-  komm_pruefpunkt_set: (p) => ({ ok: true, pruefpunkt: { festival_short: p.festival, datum: p.datum, stufe: p.stufe, extras: p.extras || [] }, protokoll: true }),
+  /* Schreibt in den Seitenstand, damit die Bedienprobe den neuen Stand nach dem Speichern sieht; gesehener Stand alt: 409. */
+  komm_pruefpunkt_set: (p) => {
+    const f = KOMM_LIST.festivals.find(x => x.short_name === p.festival); const pp = f && f.pruefpunkte.find(x => x.datum === p.datum);
+    if (!pp) return { __status: 404, error: 'Prüfpunkt unbekannt' };
+    const gleicheExtras = (a, b) => JSON.stringify([...(a || [])].sort()) === JSON.stringify([...(b || [])].sort());
+    if ((p.expect_stufe && p.expect_stufe !== pp.stufe) || (p.expect_extras && !gleicheExtras(p.expect_extras, pp.extras))) return { __status: 409, error: `Inzwischen geändert: Stufe steht auf ${pp.stufe}` };
+    Object.assign(pp, { stufe: p.stufe, extras: p.extras || [], entschieden_von: p.by, notiz: p.notiz ?? pp.notiz });
+    if (f.naechster_pruefpunkt && f.naechster_pruefpunkt.datum === pp.datum) Object.assign(f.naechster_pruefpunkt, { stufe: p.stufe, extras: p.extras || [] });
+    return { ok: true, pruefpunkt: { festival_short: p.festival, datum: p.datum, stufe: p.stufe, extras: p.extras || [] }, protokoll: true };
+  },
   komm_berechnen: () => ({ ok: true, ergebnis: [] }),
 });
 SCHREIBEND.add('komm_pruefpunkt_set'); SCHREIBEND.add('komm_berechnen');

@@ -9,7 +9,8 @@ const { PGlite } = await import(process.env.PGLITE_MODUL || '@electric-sql/pglit
 const require = createRequire(import.meta.url);
 const K = require('../site/assets/komm-logik.js');
 const rw = JSON.parse(fs.readFileSync(new URL('../docs/referenz/postingplan/habitat-postingplan-regelwerk.json', import.meta.url), 'utf8'));
-const MIGRATION = fs.readFileSync(new URL('../supabase/migrations/20261007052131_hh_komm_v32a.sql', import.meta.url), 'utf8');
+const MIGRATION = fs.readFileSync(new URL('../supabase/migrations/20261007052131_hh_komm_v32a.sql', import.meta.url), 'utf8')
+  + '\n' + fs.readFileSync(new URL('../supabase/migrations/20261007070401_hh_komm_v32b.sql', import.meta.url), 'utf8');
 
 let ok = 0, fehler = 0;
 const gleich = (name, ist, soll) => { const a = JSON.stringify(ist), b = JSON.stringify(soll); if (a === b) { ok++; console.log('  ok     ' + name); } else { fehler++; console.log('  FEHLT  ' + name + '\n         ist  ' + a + '\n         soll ' + b); } };
@@ -92,13 +93,15 @@ gleich('erste nimmt, zweite nicht, fremde Freigabe wirkt nicht, eigene schon, ab
 
 console.log('\n5. Prüfpunkte');
 const pp = erg.pubs.find(p => p.regel_id === 'PRUEF').t;
-await q(`select public.hh_komm_pruefpunkt_set('LUSRD27', $1::date, 'gelb', array['E01'], 'erste', true, 'Christian Linck', null)`, [pp]);
-await q(`select public.hh_komm_pruefpunkt_set('LUSRD27', $1::date, 'rot', array['E01','E04'], null, false, 'Alex', 'gelb')`, [pp]);
+await q(`select public.hh_komm_pruefpunkt_set('LUSRD27', $1::date, 'gelb', array['E01'], 'erste', true, 'Christian Linck', null, null)`, [pp]);
+await q(`select public.hh_komm_pruefpunkt_set('LUSRD27', $1::date, 'rot', array['E01','E04'], null, false, 'Alex', 'gelb', array['E01'])`, [pp]);
 const ppz = (await q(`select stufe, extras, notiz, entschieden_von from komm_pruefpunkte where festival_short = 'LUSRD27' and datum = $1::date`, [pp]))[0];
 gleich('zweite Entscheidung mit gesehener Stufe, Notiz bleibt', [ppz.stufe, ppz.extras, ppz.notiz, ppz.entschieden_von], ['rot', ['E01', 'E04'], 'erste', 'Alex']);
+gleich('veraltete gesehene Extras (Freigabe mit altem Stand): PT409', await fehlerCode(`select public.hh_komm_pruefpunkt_set('LUSRD27', $1::date, 'rot', array['E01'], null, false, 'Lea', 'rot', array['E01'])`, [pp]), 'PT409');
+gleich('gesehene Extras in anderer Reihenfolge gelten als gleich', (await q(`select public.hh_komm_pruefpunkt_set('LUSRD27', $1::date, 'rot', array['E04','E01'], null, false, 'Lea', 'rot', array['E04','E01']) r`, [pp]))[0].r.stufe, 'rot');
 gleich('veraltete gesehene Stufe: PT409', await fehlerCode(`select public.hh_komm_pruefpunkt_set('LUSRD27', $1::date, 'gruen', '{}', null, false, 'Lea', 'gelb')`, [pp]), 'PT409');
 const plog = await q(`select detail from komm_log where what = 'komm_pruefpunkt_set' order by id`);
-gleich('Protokoll mit Vorzustand', [plog.length, plog[0].detail.vorher, plog[1].detail.vorher.stufe], [2, null, 'gelb']);
+gleich('Protokoll mit Vorzustand', [plog.length, plog[0].detail.vorher, plog[1].detail.vorher.stufe, plog[2].detail.vorher.stufe], [3, null, 'gelb', 'rot']);
 gleich('Prüfpunkt an einem Tag ohne Prüfpunkt (etwa nach einer Verschiebung): PT409', await fehlerCode(`select public.hh_komm_pruefpunkt_set('LUSRD27', '2027-01-01'::date, 'gelb', '{}', null, false, 'Alex', null)`), 'PT409');
 wahr('unbekanntes Extra wird abgewiesen', !!(await fehlerCode(`select public.hh_komm_pruefpunkt_set('LUSRD27', $1::date, 'gelb', array['E99'], null, false, 'Alex', null)`, [pp])));
 

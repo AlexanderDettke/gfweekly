@@ -214,7 +214,7 @@ export function kommModul(ctx: KommKontext) {
         short_name: f.short_name, kuerzel: f.kuerzel, name: f.name, event_id: f.event_id, V: f.V, F: f.F, Z: f.Z, pruefen: f.pruefen,
         person: person ? { name: person.name, typ: person.typ, status: person.status, bestaetigt_von: person.bestaetigt_von, hat_asana: person.hat_asana } : null,
         rahmen: sendLog ? { gesendet_am: sendLog.at, url: sendLog.detail.url, von: sendLog.by, neu: sendLog.detail.neu, aktualisiert: sendLog.detail.aktualisiert,
-          weiter: !!sendLog.detail.weiter, abgebrochen: sendLog.detail.abgebrochen || null, fehler: (sendLog.detail.fehler || []).length,
+          weiter: !!sendLog.detail.weiter, abgebrochen: sendLog.detail.abgebrochen || null, fehler: (sendLog.detail.fehler || []).length, fehler_liste: (sendLog.detail.fehler || []).slice(0, 20),
           aufgaben_gesendet: eigene.filter((p: Any) => p.asana_task_gid).length } : null,
         gesendet: eigene.filter((p: Any) => p.gesendet_am).length,
         zu_pruefen: zuPruefen.map(kurzP),
@@ -297,7 +297,8 @@ export function kommModul(ctx: KommKontext) {
     if (!sperrVon) return { status: 409, body: { error: 'Für dieses Festival läuft gerade eine Berechnung oder ein Versand; bitte gleich noch einmal.' } };
     let data: Any = null, error: Any = null;
     try { ({ data, error } = await admin.rpc('hh_komm_pruefpunkt_set', { p_festival: f.short_name, p_datum: datum, p_stufe: stufe, p_extras: extras,
-      p_notiz: notiz, p_notiz_setzen: notizSetzen, p_von: by === 'Alex' || by === 'Lea' ? by : name, p_expect: t.expect_stufe ? String(t.expect_stufe) : null })); }
+      p_notiz: notiz, p_notiz_setzen: notizSetzen, p_von: by === 'Alex' || by === 'Lea' ? by : name, p_expect: t.expect_stufe ? String(t.expect_stufe) : null,
+      p_expect_extras: Array.isArray(t.expect_extras) ? t.expect_extras.map(String) : null })); }
     finally { await freigeben(`festival:${f.short_name}`, sperrVon); }
     if (error) return { status: error.code === 'PT409' ? 409 : 500, body: { error: error.message } };
     const protokoll = true;

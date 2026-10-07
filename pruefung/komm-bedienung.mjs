@@ -3,7 +3,8 @@
    Aufruf: PLAYWRIGHT_MODUL=<pfad>/node_modules/playwright/index.mjs node pruefung/komm-bedienung.mjs */
 const { chromium } = await import(process.env.PLAYWRIGHT_MODUL || 'playwright');
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
-import { ANTWORT, FALLBACK } from './testdaten.mjs';
+import { ANTWORT, FALLBACK, KOMM_LIST } from './testdaten.mjs';
+const KOMM_SAAT = JSON.stringify(KOMM_LIST);
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'site');
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.webp': 'image/webp', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon' };
 const server = http.createServer((req, res) => { const p = decodeURIComponent(req.url.split('?')[0]); const f = path.join(ROOT, p === '/' ? 'index.html' : p);
@@ -15,11 +16,16 @@ const wahr = (name, b, info = '') => { if (b) { ok++; console.log('  ok     ' + 
 const browser = await chromium.launch();
 for (const s of [{ w: 390, h: 844 }, { w: 1440, h: 900 }]) {
   console.log(`\n${s.w} px`);
+  Object.assign(KOMM_LIST, JSON.parse(KOMM_SAAT));   // jeder Durchgang beginnt mit demselben Stand
   const ctx = await browser.newContext({ viewport: { width: s.w, height: s.h }, locale: 'de-DE', timezoneId: 'Europe/Berlin' });
+  let ausfall = false, konflikt = false;
   await ctx.addInitScript(() => { sessionStorage.setItem('gf_pw', 'test'); sessionStorage.setItem('gf_who', 'Lea'); localStorage.setItem('gf_theme', 'dark'); });
   const aufrufe = [];
   await ctx.route('**/functions/v1/**', async route => { let b = {}; try { b = JSON.parse(route.request().postData() || '{}'); } catch (e) {}
-    aufrufe.push(b); const roh = ANTWORT[b.action] || FALLBACK; const body = typeof roh === 'function' ? roh(b.payload || {}) : roh;
+    aufrufe.push(b);
+    if (ausfall && b.action === 'komm_list') return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Probe: Dienst nicht erreichbar' }) });
+    if (konflikt && b.action === 'komm_pruefpunkt_set') return route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ error: 'Inzwischen geändert: Stufe steht auf rot' }) });
+    const roh = ANTWORT[b.action] || FALLBACK; const body = typeof roh === 'function' ? roh(b.payload || {}) : roh;
     await route.fulfill({ status: body && body.__status || 200, contentType: 'application/json', body: JSON.stringify(body) }); });
   const page = await ctx.newPage(); const meldungen = [];
   page.on('pageerror', e => meldungen.push(e.message)); page.on('console', m => { if (m.type() === 'error') meldungen.push(m.text()); });
@@ -33,20 +39,44 @@ for (const s of [{ w: 390, h: 844 }, { w: 1440, h: 900 }]) {
   wahr('Senden schickt bestaetigt und meldet das Ergebnis', aufrufe.some(a => a.action === 'komm_send' && a.payload.bestaetigt === true && a.payload.by === 'Lea'));
   await page.click('#fest-FAMRD27 [data-act="vorschau-zu"]');
   await page.click('#fest-FAMRD27 [data-act="pp"]'); await page.waitForSelector('#fest-FAMRD27 .pp-form');
+  wahr('Formular öffnet mit dem Fokus auf der gewählten Stufe', await page.evaluate(() => document.activeElement?.matches('.pp-form .chip.on') && document.activeElement.dataset.v === 'gelb'));
+  await page.fill('#fest-FAMRD27 .pp-form textarea', 'Entwurf bleibt');
+  await page.click('#fest-BYNRD27 [data-act="vorschau"]'); await page.waitForSelector('#fest-BYNRD27 .vorschau [data-act="senden"]');
+  wahr('Entwurf übersteht das Öffnen einer anderen Vorschau', (await page.inputValue('#fest-FAMRD27 .pp-form textarea')) === 'Entwurf bleibt');
+  await page.click('#fest-BYNRD27 [data-act="vorschau-zu"]');
   await page.click('#fest-FAMRD27 .pp-form .chip[data-v="rot"]');
   await page.click('#fest-FAMRD27 .pp-form label:has(input[value="E05"])');
   await page.click('#fest-FAMRD27 .pp-form button[type="submit"]');
   await page.waitForTimeout(400);
   const pp = aufrufe.filter(a => a.action === 'komm_pruefpunkt_set').pop();
-  wahr('Prüfpunkt speichert Stufe, Extras und by', !!pp && pp.payload.stufe === 'rot' && pp.payload.expect_stufe === 'gelb' && pp.payload.extras.includes('E05') && pp.payload.extras.includes('E01') && pp.payload.by === 'Lea', JSON.stringify(pp && pp.payload));
+  wahr('Prüfpunkt speichert Stufe, Extras, Notiz, by und den gesehenen Stand', !!pp && pp.payload.stufe === 'rot' && pp.payload.expect_stufe === 'gelb' && JSON.stringify(pp.payload.expect_extras) === '["E01","E03"]' && pp.payload.extras.includes('E05') && pp.payload.extras.includes('E01') && pp.payload.notiz === 'Entwurf bleibt' && pp.payload.by === 'Lea', JSON.stringify(pp && pp.payload));
+  wahr('nach dem Speichern zeigt die Seite den neuen Stand und der Fokus steht am Auslöser', (await page.innerText('#fest-FAMRD27')).includes('Stufe rot') && await page.evaluate(() => document.activeElement?.matches('#fest-FAMRD27 [data-act="pp"]')));
+  wahr('Meldung für Bildschirmleser', (await page.innerText('#kmStatus')).includes('gespeichert'));
+  konflikt = true;
+  await page.click('#fest-FAMRD27 [data-act="pp"]'); await page.waitForSelector('#fest-FAMRD27 .pp-form');
+  await page.click('#fest-FAMRD27 .pp-form .chip[data-v="gruen"]'); await page.click('#fest-FAMRD27 .pp-form button[type="submit"]'); await page.waitForTimeout(400);
+  wahr('Konflikt: Meldung „nicht gespeichert“, Formular zu, aktueller Stand geladen', (await page.innerText('#kmStatus')).includes('Nicht gespeichert') && !(await page.$('#fest-FAMRD27 .pp-form')));
+  konflikt = false;
+  wahr('Rahmenstatus: unvollständig mit Fehlerliste, begonnen mit Rest', (await page.innerText('#fest-FAMRD27')).includes('unvollständig') && (await page.innerText('#fest-WMRD27')).includes('begonnen'));
   wahr('Entscheidungen: Besetzung, Prüfpunkt, Extras, Überlast', (await page.innerText('#kmEntscheiden')).match(/Besetzung[\s\S]*Prüfpunkt[\s\S]*Extras mit Budget[\s\S]*Überlast/i) !== null);
-  const ziel = await page.$('#kmLast .ziel[tabindex="0"]'); await ziel.focus(); await page.keyboard.press('ArrowRight');
-  wahr('Diagramm mit Tastatur: Woche als Wort im Hinweis', (await page.innerText('#kmTip')).includes('Stunden'));
+  const ziel = await page.$('#kmLast .ziel[tabindex="0"]'); await ziel.focus();
+  const vorher = await page.evaluate(() => [document.activeElement.dataset.i, document.getElementById('kmTip').innerText]);
+  await page.keyboard.press('ArrowRight');
+  const nachher = await page.evaluate(() => [document.activeElement.dataset.i, document.getElementById('kmTip').innerText]);
+  wahr('Diagramm mit Tastatur: Pfeil rechts wechselt die Woche, Hinweis nennt die neue Woche in Worten', Number(nachher[0]) === Number(vorher[0]) + 1 && nachher[1] !== vorher[1] && nachher[1].includes('Stunden') && nachher[1].includes('Woche ab'), JSON.stringify([vorher, nachher]));
   await page.click('#kmBandAuf > summary');
   wahr('Jahresband zeigt fünf Spuren mit Beschreibung', (await page.$$('#kmBand .spur[aria-label]')).length === 5);
+  const zellen = await page.evaluate(() => [...document.querySelectorAll('#kmAnstehend td:nth-child(2)')].map(td => Math.round(td.getBoundingClientRect().width)));
+  wahr('Titelspalte in „Was steht an?“ breit genug zum Lesen (mindestens 150 px)', zellen.length > 0 && Math.min(...zellen) >= 150, 'Breiten ' + zellen.slice(0, 5).join(', '));
+  const hoehe = await page.evaluate(() => document.getElementById('kmAnstehend').getBoundingClientRect().height);
+  wahr('„Was steht an?“ ohne Riesenzeilen (unter 6000 px hoch)', hoehe < 6000, 'Höhe ' + Math.round(hoehe));
   const breite = await page.evaluate(() => document.documentElement.scrollWidth);
   wahr('keine waagrechte Scrollbreite nach dem Aufklappen', breite <= s.w, 'Breite ' + breite);
-  wahr('keine Konsolenfehler', !meldungen.length, meldungen.join(' | '));
+  wahr('keine Konsolenfehler', !meldungen.filter(m => !/503|409/.test(m)).length, meldungen.join(' | '));
+  ausfall = true; await page.reload(); await page.waitForTimeout(800);
+  wahr('Ladefehler: jeder Abschnitt sagt „nicht geladen“, Knopf „Noch einmal laden“', (await page.innerText('#km')).includes('Noch einmal laden') && !(await page.innerText('#km')).includes('lädt …') && (await page.innerText('#kmEntscheiden')).includes('unbekannt'));
+  ausfall = false; await page.click('[data-act="neu-laden"]'); await page.waitForSelector('#kmFest li[id^="fest-"]');
+  wahr('Noch einmal laden holt die Daten', (await page.$$('#kmFest li[id^="fest-"]')).length === 5);
   await ctx.close();
 }
 await browser.close(); server.close();
