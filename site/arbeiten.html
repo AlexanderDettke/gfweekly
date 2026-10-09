@@ -15,96 +15,113 @@
 <style>
 /* So arbeiten wir (V33, 09.10.2026). Ist-Aufnahme der Abläufe je Person, Systeme damals und heute, Umfrage für beide,
    Einordnung der Werkzeuge aus dem Hub-Register. Eigene Edge Function „arbeiten“. Präfix .sa- */
-#sa{max-width:1040px;display:grid;gap:18px;margin-top:6px}
+#sa{max-width:1040px;display:grid;gap:var(--s-16);margin-top:var(--s-8)}
 .sa-lead{color:var(--text-2);max-width:72ch;margin:0;line-height:var(--leading-text)}
 .sa-eb{font-size:var(--stufe-1);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
-.sa-sec{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);padding:16px 18px;display:grid;gap:12px}
+.sa-sec{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);padding:var(--s-16);display:grid;gap:var(--s-12)}
 .sa-sec h2{font-size:var(--stufe-4);margin:0}
 .sa-sec h3{font-size:var(--stufe-3);margin:0}
 .sa-muted{color:var(--text-2);font-size:var(--stufe-2);line-height:var(--leading-text);margin:0}
-.sa-note{background:var(--warn-bg);color:var(--text);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:var(--leading-text)}
-.sa-ok{background:var(--pos-bg);color:var(--text);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:var(--leading-text)}
-.sa-kopf{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
-.sa-kopf .rechts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.sa-tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:var(--rahmen) solid var(--border);padding-bottom:0}
-.sa-tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 12px;min-height:var(--ziel-min);color:var(--text-2);font-weight:500;font-size:var(--stufe-3);cursor:pointer}
+.sa-note{background:var(--warn-bg);color:var(--text);border-radius:var(--radius-m);padding:var(--s-12);font-size:var(--stufe-2);line-height:var(--leading-text)}
+.sa-ok{background:var(--pos-bg);color:var(--text);border-radius:var(--radius-m);padding:var(--s-12);font-size:var(--stufe-2);line-height:var(--leading-text)}
+.sa-kopf{display:flex;flex-wrap:wrap;gap:var(--s-8);align-items:center;justify-content:space-between}
+.sa-kopf .rechts{display:flex;flex-wrap:wrap;gap:var(--s-8);align-items:center}
+.sa-tabs{display:flex;gap:var(--s-4);flex-wrap:wrap;border-bottom:var(--rahmen) solid var(--border);padding-bottom:0}
+.sa-tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:var(--s-12);min-height:var(--ziel-min);color:var(--text-2);font-weight:500;font-size:var(--stufe-3);cursor:pointer}
 .sa-tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
 .sa-tabs button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
-.sa-panel[hidden]{display:none}
-.sa-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style:none;counter-reset:s}
-.sa-steps li{background:var(--surface-2);border-radius:var(--radius-m);padding:12px 14px;display:grid;gap:4px}
+#sa [hidden]{display:none}
+.sa-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-12);margin:0;padding:0;list-style:none;counter-reset:s}
+.sa-steps li{background:var(--surface-2);border-radius:var(--radius-m);padding:var(--s-12);display:grid;gap:var(--s-4)}
 .sa-steps li::before{counter-increment:s;content:counter(s);font-size:var(--stufe-5);font-weight:600;color:var(--accent);line-height:1}
 .sa-steps b{font-size:var(--stufe-3)}
 .sa-steps span{font-size:var(--stufe-2);color:var(--text-2);line-height:1.4}
-.sa-stand{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.sa-stand div{background:var(--surface-2);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:1.5}
+.sa-stand{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-12)}
+.sa-stand div{background:var(--surface-2);border-radius:var(--radius-m);padding:var(--s-12);font-size:var(--stufe-2);line-height:1.5}
 .sa-stand b{display:block;font-size:var(--stufe-3)}
 /* Steckbriefe */
-.sa-liste{display:grid;gap:8px}
-.sa-karte{border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);background:var(--surface);padding:10px 12px;display:grid;gap:8px}
+.sa-liste{display:grid;gap:var(--s-8)}
+.sa-karte{border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);background:var(--surface);padding:var(--s-12);display:grid;gap:var(--s-8)}
 .sa-karte.fremd{background:var(--surface-2)}
-.sa-karte .kopf{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;justify-content:space-between}
+.sa-karte .kopf{display:flex;flex-wrap:wrap;gap:var(--s-8) var(--s-12);align-items:center;justify-content:space-between}
 .sa-karte .kopf b{font-size:var(--stufe-3)}
-.sa-karte .kopf .meta{font-size:var(--stufe-1);color:var(--text-2);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.sa-form{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.sa-karte .kopf .meta{font-size:var(--stufe-1);color:var(--text-2);display:flex;gap:var(--s-8);flex-wrap:wrap;align-items:center}
+.sa-form{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-12) var(--s-16)}
 .sa-form .voll{grid-column:1/-1}
-.sa-f{display:grid;gap:3px}
+.sa-f{display:grid;gap:var(--s-4)}
 .sa-f label{font-size:var(--stufe-1);color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
-.sa-f input,.sa-f textarea{width:100%;border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);padding:8px 10px;background:var(--bg);color:var(--text);font:inherit;font-size:var(--stufe-2)}
-.sa-f textarea{resize:vertical;min-height:54px}
+.sa-f input,.sa-f textarea{width:100%;border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);padding:var(--s-8) var(--s-12);background:var(--bg);color:var(--text);font:inherit;font-size:var(--stufe-2)}
+.sa-f textarea{resize:vertical;min-height:var(--kachel)}
 .sa-f .hint{font-size:var(--stufe-1);color:var(--text-3)}
 .sa-ro{font-size:var(--stufe-2);line-height:1.45}
-.sa-ro .k{display:block;font-size:var(--stufe-1);color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-top:6px}
-.sa-aktionen{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
-.sa-link{background:none;border:0;padding:0;color:var(--link);font:inherit;font-size:var(--stufe-2);text-decoration:underline;cursor:pointer;min-height:24px}
-.sa-leer{padding:14px;border:var(--rahmen) dashed var(--border);border-radius:var(--radius-m);color:var(--text-2);font-size:var(--stufe-2)}
-.sa-erinner{columns:2;column-gap:24px;font-size:var(--stufe-2);color:var(--text-2);margin:0;padding-left:18px}
+.sa-ro .k{display:block;font-size:var(--stufe-1);color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-top:var(--s-8)}
+.sa-aktionen{display:flex;flex-wrap:wrap;gap:var(--s-8);align-items:center;justify-content:flex-end}
+.sa-link{background:none;border:0;padding:0;color:var(--link);font:inherit;font-size:var(--stufe-2);text-decoration:underline;cursor:pointer;min-height:var(--ziel-min)}
+.sa-leer{padding:var(--s-16);border:var(--rahmen) dashed var(--border);border-radius:var(--radius-m);color:var(--text-2);font-size:var(--stufe-2)}
+.sa-erinner{columns:2;column-gap:var(--s-24);font-size:var(--stufe-2);color:var(--text-2);margin:0;padding-left:var(--s-16)}
 /* Umfrage */
-.sa-thema{display:grid;gap:10px}
-.sa-thema h3{padding-top:6px;border-top:var(--rahmen) solid var(--border)}
-.sa-frage{display:grid;gap:6px;padding:8px 0}
+.sa-thema{display:grid;gap:var(--s-12)}
+.sa-thema h3{padding-top:var(--s-8);border-top:var(--rahmen) solid var(--border)}
+.sa-frage{display:grid;gap:var(--s-8);padding:var(--s-8) 0}
 .sa-frage .t{font-size:var(--stufe-3);line-height:1.4}
-.sa-frage .t small{color:var(--text-3);font-size:var(--stufe-1);margin-right:6px}
-.sa-skala{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.sa-skala .fchips .chip{min-width:44px;justify-content:center}
+.sa-frage .t small{color:var(--text-3);font-size:var(--stufe-1);margin-right:var(--s-8)}
+.sa-skala{display:flex;flex-wrap:wrap;gap:var(--s-8);align-items:center}
+.sa-skala .fchips .chip{min-width:var(--ziel-min);justify-content:center}
 .sa-skala .enden{font-size:var(--stufe-1);color:var(--text-3)}
 .sa-bsp summary{font-size:var(--stufe-1);color:var(--text-2);cursor:pointer;list-style:none;user-select:none}
 .sa-bsp summary::-webkit-details-marker{display:none}
-.sa-bsp textarea{margin-top:6px}
-.sa-fort{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:var(--stufe-2);color:var(--text-2)}
-.sa-fort .bar{flex:1 1 160px;height:6px;background:var(--fill);border-radius:3px;overflow:hidden;min-width:120px}
+.sa-bsp textarea{margin-top:var(--s-8)}
+.sa-fort{display:flex;gap:var(--s-12);align-items:center;flex-wrap:wrap;font-size:var(--stufe-2);color:var(--text-2)}
+.sa-fort .bar{flex:1 1 160px;height:var(--band);background:var(--fill);border-radius:var(--radius-s);overflow:hidden;min-width:120px}
 .sa-fort .bar i{display:block;height:100%;background:var(--accent)}
-.sa-ausw{display:grid;gap:4px}
-.sa-aw{display:grid;grid-template-columns:minmax(0,2.4fr) 70px 70px 90px;gap:8px;align-items:center;padding:7px 10px;background:var(--surface-2);border-radius:var(--radius-s);font-size:var(--stufe-2)}
+.sa-ausw{display:grid;gap:var(--s-4)}
+.sa-aw{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:var(--s-8);align-items:center;padding:var(--s-8) var(--s-12);background:var(--surface-2);border-radius:var(--radius-s);font-size:var(--stufe-2)}
 .sa-aw.kopfz{background:none;color:var(--text-3);font-size:var(--stufe-1);text-transform:uppercase;letter-spacing:.04em}
 .sa-aw .z{text-align:center;font-variant-numeric:tabular-nums;font-weight:600}
 .sa-aw .d{text-align:center}
-.sa-aw.last{border-left:3px solid var(--warn)}
-.sa-aw.diff{border-left:3px solid var(--accent)}
-.sa-txt{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.sa-txt div{background:var(--surface-2);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:1.5;white-space:pre-wrap}
-.sa-txt b{display:block;color:var(--text-3);font-size:var(--stufe-1);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.sa-aw.diff{border-left:var(--s-4) solid var(--accent)}
+.sa-txt{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-12)}
+.sa-txt div{background:var(--surface-2);border-radius:var(--radius-m);padding:var(--s-12);font-size:var(--stufe-2);line-height:1.5;white-space:pre-wrap}
+.sa-txt b{display:block;color:var(--text-3);font-size:var(--stufe-1);text-transform:uppercase;letter-spacing:.04em;margin-bottom:var(--s-4)}
 /* Systeme */
-.sa-sys{display:grid;gap:6px}
-.sa-sy{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1.6fr) minmax(0,1.6fr) auto;gap:8px 12px;align-items:start;padding:9px 11px;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);font-size:var(--stufe-2)}
+.sa-sys{display:grid;gap:var(--s-8)}
+.sa-sy{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1.6fr) minmax(0,1.6fr) auto;gap:var(--s-8) var(--s-12);align-items:start;padding:var(--s-12);background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);font-size:var(--stufe-2)}
 .sa-sy .n{font-weight:600;font-size:var(--stufe-3)}
-.sa-sy .q{color:var(--text-2);font-size:var(--stufe-1);display:block;margin-top:2px}
-.sa-sy .chips{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
-.sa-sy .chips .lbl{font-size:var(--stufe-1);color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-right:2px}
-.sa-sy .fchips .chip{min-height:28px;padding:3px 9px;font-size:var(--stufe-1)}
-.sa-sy input,.sa-sy textarea{width:100%;border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-s);padding:6px 8px;background:var(--bg);color:var(--text);font:inherit;font-size:var(--stufe-2)}
-.sa-sy textarea{resize:vertical;min-height:40px}
-.sa-filter{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.sa-filter input{max-width:260px;border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);padding:7px 10px;background:var(--bg);color:var(--text);font:inherit;font-size:var(--stufe-2)}
+.sa-sy .q{color:var(--text-2);font-size:var(--stufe-1);display:block;margin-top:var(--s-4)}
+.sa-sy .chips{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:var(--s-8) var(--s-16);align-items:center}
+.sa-sy .chips .lbl{font-size:var(--stufe-1);color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-right:var(--s-4)}
+.sa-sy .fchips .chip{min-height:var(--ziel-min);padding:var(--s-8) var(--s-12);font-size:var(--stufe-1)}
+.sa-sy input,.sa-sy textarea{width:100%;border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-s);padding:var(--s-8);background:var(--bg);color:var(--text);font:inherit;font-size:var(--stufe-2)}
+.sa-sy textarea{resize:vertical;min-height:var(--ziel-min)}
+.sa-filter{display:flex;flex-wrap:wrap;gap:var(--s-8);align-items:center}
+.sa-filter input{max-width:260px;border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);padding:var(--s-8) var(--s-12);background:var(--bg);color:var(--text);font:inherit;font-size:var(--stufe-2)}
 .sa-foot{color:var(--text-3);font-size:var(--stufe-2);max-width:72ch;line-height:var(--leading-text)}
 @media (max-width:900px){
   .sa-steps{grid-template-columns:1fr} .sa-stand{grid-template-columns:1fr}
   .sa-form{grid-template-columns:1fr} .sa-erinner{columns:1}
   .sa-sy{grid-template-columns:1fr 1fr} .sa-sy .n-wrap{grid-column:1/-1}
   .sa-txt{grid-template-columns:1fr}
-  .sa-aw{grid-template-columns:minmax(0,1fr) 54px 54px 70px}
 }
 @media (max-width:520px){ .sa-sy{grid-template-columns:1fr} }
+
+.sa-panel{display:grid;gap:var(--s-16);min-width:0}
+#sa :is(.sa-karte,.sa-sy,.sa-aw,.sa-txt)>*{min-width:0;overflow-wrap:anywhere}
+#sa :is(input:not([type="hidden"]),textarea,.chip,summary){min-height:var(--ziel-min)}
+#sa .chip{padding:var(--s-8) var(--s-12)}
+#sa .chip[aria-pressed="true"]::before{content:"✓ ";white-space:pre}
+#sa :is(input,textarea):disabled{background:var(--disabled);color:var(--disabled-fg);cursor:not-allowed}
+#sa [aria-invalid="true"]{border-color:var(--crit)}
+.sa-status{display:flex;flex-wrap:wrap;gap:var(--s-8);align-items:center;color:var(--text-2);font-size:var(--stufe-2)}
+.sa-f label,.sa-f .hint,.sa-sy .q,.sa-skala .enden,.sa-aw.kopfz{color:var(--text-2)}
+.sa-filter input{min-width:0;flex:1 1 100%}
+@media(max-width:520px){
+  .sa-tabs{width:100%;display:grid;grid-template-columns:1fr 1fr}
+  .sa-filter input{width:100%;max-width:none}
+  #sa :is(input:not([type="hidden"]),textarea){font-size:var(--stufe-3)}
+  .sa-sy .chips{display:grid;gap:var(--s-8)}
+  .sa-aw{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .sa-aw>span:first-child{grid-column:1/-1}
+}
 </style>
 </head>
 <body>
@@ -115,7 +132,7 @@
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
     <h1>Das Hohe Haus</h1>
     <div class="sub">So arbeiten wir · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
-    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <input aria-label="Passwort" id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
     <div class="err" id="gateErr"></div>
   </div>
@@ -125,21 +142,22 @@
   <header id="topbar"></header>
   <div id="hero"></div>
 
-  <main id="sa">
+  <main id="sa" aria-busy="true">
+    <div class="sa-status"><span id="saStatus" role="status" aria-live="polite">○ Wird geladen …</span><button class="btn btn-ghost btn-sm" data-act="speichern-retry" hidden>Speichern erneut versuchen</button></div>
     <p class="sa-lead">Wir wollen die Strukturen und Abläufe finden, die zu uns beiden passen. Dafür halten wir zuerst fest, wie jede Person heute arbeitet, beantworten getrennt dieselben Fragen und schauen dann gemeinsam, was bleibt, was angepasst, was umgebaut und was weggelassen wird. Gebaut wird erst danach.</p>
 
     <div class="sa-kopf">
       <div class="sa-tabs" role="tablist" aria-label="Bereiche">
-        <button role="tab" data-tab="start" aria-selected="true">Start</button>
-        <button role="tab" data-tab="ist" aria-selected="false">Ist-Aufnahme</button>
-        <button role="tab" data-tab="umfrage" aria-selected="false">Umfrage</button>
-        <button role="tab" data-tab="systeme" aria-selected="false">Systeme</button>
+        <button role="tab" id="sa-tab-start" aria-controls="tab-start" tabindex="0" data-tab="start" aria-selected="true">Start</button>
+        <button role="tab" id="sa-tab-ist" aria-controls="tab-ist" tabindex="-1" data-tab="ist" aria-selected="false">Ist-Aufnahme</button>
+        <button role="tab" id="sa-tab-umfrage" aria-controls="tab-umfrage" tabindex="-1" data-tab="umfrage" aria-selected="false">Umfrage</button>
+        <button role="tab" id="sa-tab-systeme" aria-controls="tab-systeme" tabindex="-1" data-tab="systeme" aria-selected="false">Systeme</button>
       </div>
       <div class="rechts"><span class="sa-muted" id="saWer"></span><button class="btn btn-ghost btn-sm" data-act="neu-laden">Neu laden</button></div>
     </div>
 
     <!-- Start -->
-    <section class="sa-panel" id="tab-start">
+    <section class="sa-panel" role="tabpanel" aria-labelledby="sa-tab-start" id="tab-start">
       <div class="sa-sec">
         <div class="sa-eb">So gehen wir vor</div>
         <ol class="sa-steps">
@@ -158,7 +176,7 @@
     </section>
 
     <!-- Ist-Aufnahme -->
-    <section class="sa-panel" id="tab-ist" hidden>
+    <section class="sa-panel" role="tabpanel" aria-labelledby="sa-tab-ist" id="tab-ist" hidden>
       <div class="sa-sec">
         <div class="sa-kopf"><h2 id="saIstH">Meine Abläufe</h2><div class="rechts"><button class="btn btn-primary btn-sm" data-act="ist-neu">+ Ablauf</button></div></div>
         <p class="sa-muted">Ein Steckbrief je wiederkehrendem Ablauf, so wie er heute läuft, nicht wie er sein sollte. Stichworte reichen. Gespeichert wird beim Verlassen eines Feldes. „Freigeben“ macht den Steckbrief für die andere Person sichtbar.</p>
@@ -175,7 +193,7 @@
     </section>
 
     <!-- Umfrage -->
-    <section class="sa-panel" id="tab-umfrage" hidden>
+    <section class="sa-panel" role="tabpanel" aria-labelledby="sa-tab-umfrage" id="tab-umfrage" hidden>
       <div class="sa-sec">
         <div class="sa-kopf"><h2 id="saUmH">Wie läuft es heute?</h2><div class="rechts" id="saUmKnopf"></div></div>
         <p class="sa-muted" id="saUmSatz"></p>
@@ -187,7 +205,7 @@
     </section>
 
     <!-- Systeme -->
-    <section class="sa-panel" id="tab-systeme" hidden>
+    <section class="sa-panel" role="tabpanel" aria-labelledby="sa-tab-systeme" id="tab-systeme" hidden>
       <div class="sa-sec">
         <div class="sa-kopf"><h2>Systeme und Formate damals und heute</h2><div class="rechts"><button class="btn btn-primary btn-sm" data-act="sys-neu">+ System</button></div></div>
         <p class="sa-muted">Gemeinsame Liste, vorbefüllt aus Projektwissen und Datenbank (Stand 09.10.2026). Bitte korrigieren und ergänzen: Was haben wir womit gemacht, was gilt heute? Reifegrad und Einordnung sind Vorschläge zum Prüfen.</p>
@@ -199,7 +217,7 @@
         <div class="sa-filter">
           <input type="search" id="saHubSuche" placeholder="Suchen …" aria-label="Werkzeuge durchsuchen">
           <span id="saHubFilter"></span>
-          <span class="sa-muted" id="saHubZahl"></span>
+          <span class="sa-muted" id="saHubZahl" role="status" aria-live="polite"></span>
         </div>
         <div class="sa-sys" id="saHub"></div>
       </div>
@@ -207,7 +225,7 @@
     </section>
   </main>
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="/assets/core.js?v=33"></script>
 <script src="/assets/game.js?v=33"></script>
@@ -215,8 +233,8 @@
 <script>
 const $=s=>document.querySelector(s);
 const SA_FN="https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/arbeiten";
-async function saApi(action,payload){
-  const res=await fetch(SA_FN,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,password:gfPW(),payload:Object.assign({who:gfWho()},payload||{})})});
+async function saApi(action,payload,who=gfWho()){
+  const res=await fetch(SA_FN,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,password:gfPW(),payload:Object.assign({who},payload||{})})});
   let d={}; try{ d=await res.json(); }catch(e){}
   if(res.status===401) throw {auth:true,message:"Passwort abgelaufen. Bitte neu entsperren."};
   if(!res.ok){ const e=new Error(d.error||("HTTP "+res.status)); e.status=res.status; throw e; }
@@ -227,13 +245,14 @@ const REIFE_SYS=[["frueher","früher"],["entwicklung","in Entwicklung"],["erprob
 const REIFE_HUB=[["","noch nicht eingeordnet"],["entwicklung","in Entwicklung"],["erprobung","in Erprobung"],["alltag","im Alltag"]];
 const HUB_STATUS={aktiv:"aktiv",aufbau:"im Aufbau",abgeloest:"abgelöst",archiv:"Archiv"};
 let D=null, TAB="start", HUBF="aktiv", HUBS="";
-const DIRTY=new Set();
+let BUSY=false, LOAD=0, SAVE=Promise.resolve(), PENDING=0;
+const FAILED=new Map();
 
 function esc(s){ return gfEsc(s); }
 function datumDE(s){ if(!s) return ""; const d=new Date(s); return d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric",timeZone:"Europe/Berlin"})+" "+d.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Berlin"}); }
-function fehler(e){ if(e&&e.auth){ sessionStorage.removeItem("gf_pw"); location.reload(); return; } gfToast(e.message||"Fehler"); }
+function fehler(e){ if(e&&e.auth){ sessionStorage.removeItem("gf_pw"); location.reload(); return; } saStatus("✕ "+(e.message||"Fehler")); gfToast("✕ "+(e.message||"Fehler")); }
 function zeigeTab(t){
-  TAB=t; document.querySelectorAll(".sa-tabs [role=tab]").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t?"true":"false"));
+  TAB=t; document.querySelectorAll(".sa-tabs [role=tab]").forEach(b=>{ const on=b.dataset.tab===t; b.setAttribute("aria-selected",on?"true":"false"); b.tabIndex=on?0:-1; });
   document.querySelectorAll(".sa-panel").forEach(p=>p.hidden=(p.id!=="tab-"+t));
   try{ history.replaceState(null,"","#"+t); }catch(e){}
 }
@@ -245,8 +264,8 @@ function renderStand(){
   const eig=D.ist.eigene.length, eigFrei=D.ist.eigene.filter(x=>x.freigegeben).length;
   const meineAntworten=u.eigene.filter(x=>x.wert!=null||x.kann_nicht||x.beispiel).length;
   $("#saStand").innerHTML=`
-    <div><b>${esc(w)} (du)</b>${eig} ${eig===1?"Steckbrief":"Steckbriefe"}, ${eigFrei} freigegeben<br>Umfrage Runde ${r?r.nr:"–"}: ${ab(w)?"abgegeben am "+datumDE(ab(w)):meineAntworten+" von "+u.fragen.length+" beantwortet"}</div>
-    <div><b>${esc(a)}</b>${D.ist.andere_gesamt} ${D.ist.andere_gesamt===1?"Steckbrief":"Steckbriefe"}, ${D.ist.andere.length} freigegeben<br>Umfrage Runde ${r?r.nr:"–"}: ${ab(a)?"abgegeben am "+datumDE(ab(a)):"noch nicht abgegeben"}</div>`;
+    <div><b>${esc(w)} (du)</b>${eig} ${eig===1?"Steckbrief":"Steckbriefe"}, ✓ ${eigFrei} freigegeben<br>Umfrage Runde ${r?r.nr:"keine"}: ${ab(w)?"✓ abgegeben am "+datumDE(ab(w)):meineAntworten+" von "+u.fragen.length+" beantwortet"}</div>
+    <div><b>${esc(a)}</b>${D.ist.andere_gesamt} ${D.ist.andere_gesamt===1?"Steckbrief":"Steckbriefe"}, ✓ ${D.ist.andere.length} freigegeben<br>Umfrage Runde ${r?r.nr:"keine"}: ${ab(a)?"✓ abgegeben am "+datumDE(ab(a)):"○ noch nicht abgegeben"}</div>`;
   $("#saWer").textContent="Du arbeitest als "+w;
 }
 
@@ -254,20 +273,20 @@ function renderStand(){
 const IST_FELDER=[["startet_wenn","Wann startet er?","z. B. Mail von Partner, Montagsabgleich, Frist in Asana"],["schritte","Was tue ich, in welcher Reihenfolge?",""],["werkzeuge","Welche Werkzeuge und Orte nutze ich?","Mail, WhatsApp, Hohes Haus, Asana, Sheet, Kopf …"],["beteiligte","Wer ist beteiligt, worauf warte ich?",""],["ergebnis_ort","Wo liegt am Ende das Ergebnis?",""],["laeuft_gut","Was funktioniert gut?",""],["hakt","Wo hakt es?",""]];
 function istKarte(x, eigene){
   if(!eigene){
-    return `<div class="sa-karte fremd" id="ist-${x.id}"><div class="kopf"><b>${esc(x.ablauf)}</b><div class="meta">${x.haeufigkeit?esc(x.haeufigkeit)+" · ":""}${x.beruehrt_andere?"berührt dich":"nur "+esc(D.andere)}${x.einordnung!=="offen"?" · "+esc(x.einordnung):""}</div></div>
+    return `<div class="sa-karte fremd" id="ist-${x.id}"><div class="kopf"><b>${esc(x.ablauf)}</b><div class="meta">${x.haeufigkeit?esc(x.haeufigkeit)+" · ":""}✓ freigegeben · ${x.beruehrt_andere?"berührt dich":"nur "+esc(D.andere)}${x.einordnung!=="offen"?" · "+esc(x.einordnung):""}</div></div>
       <div class="sa-ro">${IST_FELDER.map(([k,l])=>x[k]?`<span class="k">${esc(l)}</span>${esc(x[k])}`:"").join("")}</div></div>`;
   }
   const bruehrt=gfChips("beruehrt_andere",[["0","nur mich"],["1","berührt "+D.andere]],x.beruehrt_andere?"1":"0",{attr:`data-f="beruehrt_andere"`,label:"Berührt die andere Person"});
   return `<div class="sa-karte" id="ist-${x.id}" data-id="${x.id}">
     <div class="sa-form">
-      <div class="sa-f"><label>Ablauf</label><input data-f="ablauf" value="${esc(x.ablauf)}" placeholder="z. B. Freigabe eines Newsletters"></div>
-      <div class="sa-f"><label>Wie oft</label><input data-f="haeufigkeit" value="${esc(x.haeufigkeit)}" placeholder="täglich, wöchentlich, je Festival …"></div>
+      <div class="sa-f"><label for="ist-${x.id}-ablauf">Ablauf</label><input id="ist-${x.id}-ablauf" maxlength="200" data-f="ablauf" value="${esc(x.ablauf)}" placeholder="z. B. Freigabe eines Newsletters"></div>
+      <div class="sa-f"><label for="ist-${x.id}-haeufigkeit">Wie oft</label><input id="ist-${x.id}-haeufigkeit" maxlength="80" data-f="haeufigkeit" value="${esc(x.haeufigkeit)}" placeholder="täglich, wöchentlich, je Festival …"></div>
       <div class="sa-f voll"><label>Berührt</label>${bruehrt}</div>
-      ${IST_FELDER.map(([k,l,h])=>`<div class="sa-f${k==="schritte"?" voll":""}"><label>${esc(l)}</label><textarea data-f="${k}" placeholder="${esc(h)}">${esc(x[k])}</textarea></div>`).join("")}
+      ${IST_FELDER.map(([k,l,h])=>`<div class="sa-f${k==="schritte"?" voll":""}"><label for="ist-${x.id}-${k}">${esc(l)}</label><textarea id="ist-${x.id}-${k}" maxlength="${k==='schritte'?4000:2000}" data-f="${k}" placeholder="${esc(h)}">${esc(x[k])}</textarea></div>`).join("")}
       <div class="sa-f voll"><label>Mein erster Gedanke</label>${gfChips("einordnung",EINORDNUNG,x.einordnung,{attr:`data-f="einordnung"`,label:"Einordnung"})}</div>
     </div>
     <div class="sa-aktionen">
-      <span class="sa-muted" data-stat>${x.freigegeben?"freigegeben für "+esc(D.andere):"nur für dich sichtbar"}</span>
+      <span class="sa-muted" data-stat>${x.freigegeben?"✓ freigegeben für "+esc(D.andere):"○ nur für dich sichtbar"}</span>
       <button class="sa-link" data-act="ist-loeschen">Löschen</button>
       <button class="btn ${x.freigegeben?"btn-ghost":"btn-primary"} btn-sm" data-act="ist-frei">${x.freigegeben?"Freigabe zurücknehmen":"Freigeben"}</button>
     </div></div>`;
@@ -276,52 +295,43 @@ function renderIst(){
   $("#saIstH").textContent="Meine Abläufe ("+D.who+")";
   $("#saIstEigene").innerHTML=D.ist.eigene.length?D.ist.eigene.map(x=>istKarte(x,true)).join(""):`<div class="sa-leer">Noch kein Steckbrief. „+ Ablauf“ legt den ersten an.</div>`;
   $("#saIstFremdH").textContent="Freigegebene Abläufe von "+D.andere;
-  $("#saIstFremdSatz").textContent=D.ist.andere_gesamt?`${D.andere} hat ${D.ist.andere_gesamt} ${D.ist.andere_gesamt===1?"Steckbrief":"Steckbriefe"} angelegt, davon ${D.ist.andere.length} freigegeben.`:`${D.andere} hat noch keinen Steckbrief angelegt.`;
+  $("#saIstFremdSatz").textContent=D.ist.andere_gesamt?`${D.andere} hat ${D.ist.andere_gesamt} ${D.ist.andere_gesamt===1?"Steckbrief":"Steckbriefe"} angelegt, davon ✓ ${D.ist.andere.length} freigegeben.`:`${D.andere} hat noch keinen Steckbrief angelegt.`;
   $("#saIstFremd").innerHTML=D.ist.andere.length?D.ist.andere.map(x=>istKarte(x,false)).join(""):`<div class="sa-leer">Noch nichts freigegeben.</div>`;
 }
-async function istSpeichern(karte, feld){
-  const id=karte.dataset.id, inp=karte.querySelector(`[data-f="${feld}"]`); if(!inp) return;
-  let v=inp.value; if(feld==="beruehrt_andere") v=(v==="1");
-  const x=D.ist.eigene.find(i=>i.id===id); if(x&&x[feld]===v) return;
-  try{ const d=await saApi("ist_save",{id,[feld]:v}); Object.assign(x,d.ist); const st=karte.querySelector("[data-stat]"); if(st) st.textContent=(x.freigegeben?"freigegeben für "+D.andere:"nur für dich sichtbar")+" · gespeichert"; renderStand(); }
-  catch(e){ fehler(e); }
-}
-
 /* ---------- Umfrage ---------- */
 function antwort(nr, von){ return (von==="eigene"?D.umfrage.eigene:D.umfrage.andere).find(a=>a.nr===nr)||null; }
-function belastung(f,a){ if(!a||a.kann_nicht||a.wert==null||f.art!=="skala") return null; return f.umgekehrt?a.wert:6-a.wert; }
-function frageHtml(f, gesperrt){
+function frageHtml(f){
   const a=antwort(f.nr,"eigene")||{};
   let feld="";
   if(f.art==="skala"){
-    feld=`<div class="sa-skala"><span class="enden">trifft gar nicht zu</span>${gfChips("w"+f.nr,[["1","1"],["2","2"],["3","3"],["4","4"],["5","5"],["kn","kann ich nicht beurteilen"]],a.kann_nicht?"kn":(a.wert!=null?String(a.wert):""),{attr:`data-nr="${f.nr}" data-art="skala"`,label:"Antwort"})}<span class="enden">trifft voll zu</span></div>`;
+    feld=`<div class="sa-skala"><span class="enden">trifft gar nicht zu</span>${gfChips("w"+f.nr,[["1","1"],["2","2"],["3","3"],["4","4"],["5","5"],["kn","kann ich nicht beurteilen"]],a.kann_nicht?"kn":(a.wert!=null?String(a.wert):""),{attr:`data-nr="${f.nr}" data-art="skala"`,label:"Frage "+f.nr+": "+f.text})}<span class="enden">trifft voll zu</span></div>`;
   } else if(f.art==="zahl"){
-    feld=`<div class="sa-f" style="max-width:220px"><input inputmode="numeric" data-nr="${f.nr}" data-art="zahl" value="${a.wert!=null?a.wert:""}" placeholder="${esc(f.hinweis||"Zahl")}"></div>`;
+    feld=`<div class="sa-f" style="max-width:220px"><input type="text" inputmode="numeric" aria-labelledby="frage-${f.nr}" aria-describedby="hint-${f.nr}" maxlength="3" data-nr="${f.nr}" data-art="zahl" value="${a.wert!=null?a.wert:""}" placeholder="${esc(f.hinweis||"Zahl")}"><span class="hint" id="hint-${f.nr}">Ganze Stunden von 0 bis 999.</span></div>`;
   } else if(f.art==="wahl"){
     const opts=f.optionen.split("|").map((o,i)=>[String(i+1),o]);
-    feld=gfChips("w"+f.nr,opts,a.wert!=null?String(a.wert):"",{attr:`data-nr="${f.nr}" data-art="wahl"`,label:"Auswahl"});
+    feld=gfChips("w"+f.nr,opts,a.wert!=null?String(a.wert):"",{attr:`data-nr="${f.nr}" data-art="wahl"`,label:"Frage "+f.nr+": "+f.text});
   } else {
-    feld=`<div class="sa-f"><textarea data-nr="${f.nr}" data-art="text" placeholder="in Stichworten oder Sätzen">${esc(a.beispiel||"")}</textarea></div>`;
+    feld=`<div class="sa-f"><textarea maxlength="3000" aria-label="${esc(f.text)}${f.art!=='text'?' · Beispiel':''}" data-nr="${f.nr}" data-art="text" placeholder="in Stichworten oder Sätzen">${esc(a.beispiel||"")}</textarea></div>`;
   }
-  const bsp=f.art==="text"?"":`<details class="sa-bsp"${a.beispiel?" open":""}><summary>Beispiel dazu ${a.beispiel?"":"(optional) "}▾</summary><div class="sa-f"><textarea data-nr="${f.nr}" data-art="beispiel" placeholder="Ein konkreter Vorgang aus den letzten vier Wochen">${esc(a.beispiel||"")}</textarea></div></details>`;
-  return `<div class="sa-frage" data-frage="${f.nr}"><div class="t"><small>${f.nr}</small>${esc(f.text)}</div>${feld}${bsp}</div>`;
+  const bsp=f.art==="text"?"":`<details class="sa-bsp"${a.beispiel?" open":""}><summary>Beispiel dazu ${a.beispiel?"":"(optional) "}▾</summary><div class="sa-f"><textarea maxlength="3000" aria-label="${esc(f.text)}${f.art!=='text'?' · Beispiel':''}" data-nr="${f.nr}" data-art="beispiel" placeholder="Ein konkreter Vorgang aus den letzten vier Wochen">${esc(a.beispiel||"")}</textarea></div></details>`;
+  return `<div class="sa-frage" data-frage="${f.nr}"><div class="t" id="frage-${f.nr}"><small>${f.nr}</small>${esc(f.text)}</div>${feld}${bsp}</div>`;
 }
 function renderUmfrage(){
   const u=D.umfrage, r=u.runde, w=D.who, a=D.andere;
   const ab=p=>r?(p==="Alex"?r.abgegeben_alex:r.abgegeben_lea):null;
   const meine=ab(w), fremde=ab(a);
-  $("#saUmH").textContent=`Wie läuft es heute? · Runde ${r?r.nr:"–"}`;
-  $("#saUmSatz").textContent=r?`Bezug: ${r.bezug}. Skala 1 (trifft gar nicht zu) bis 5 (trifft voll zu) oder „kann ich nicht beurteilen“. Bei wichtigen Antworten hilft ein konkretes Beispiel. Gespeichert wird sofort. ${a} sieht deine Antworten erst, wenn ihr beide abgegeben habt.`:"Noch keine Runde angelegt.";
+  $("#saUmH").textContent=`Wie läuft es heute? · Runde ${r?r.nr:"keine"}`;
+  $("#saUmSatz").textContent=r?`Bezug: ${r.bezug}. Skala 1 (trifft gar nicht zu) bis 5 (trifft voll zu) oder „kann ich nicht beurteilen“. Bei wichtigen Antworten hilft ein konkretes Beispiel. Chips werden sofort gespeichert, Text und Zahlen beim Verlassen des Feldes. ${a} sieht deine Antworten erst, wenn ihr beide abgegeben habt.`:"Noch keine Runde angelegt.";
   const beantwortet=u.fragen.filter(f=>{ const x=antwort(f.nr,"eigene"); return x&&(x.wert!=null||x.kann_nicht||(f.art==="text"&&x.beispiel)); }).length;
-  $("#saUmFort").innerHTML=`<span>${beantwortet} von ${u.fragen.length} beantwortet</span><div class="bar"><i style="width:${u.fragen.length?Math.round(beantwortet/u.fragen.length*100):0}%"></i></div><span>${a}: ${fremde?"abgegeben":"noch offen"}</span>`;
+  $("#saUmFort").innerHTML=`<span>${beantwortet} von ${u.fragen.length} beantwortet</span><div class="bar"><i style="width:${u.fragen.length?Math.round(beantwortet/u.fragen.length*100):0}%"></i></div><span>${a}: ${fremde?"✓ abgegeben":"○ noch offen"}</span>`;
   let knopf="", hinweis="";
   if(r&&!meine){ knopf=`<button class="btn btn-primary btn-sm" data-act="um-abgeben"${beantwortet<u.fragen.length?` title="Du kannst auch abgeben, wenn nicht alles beantwortet ist"`:""}>Abgeben</button>`; }
-  else if(r&&meine&&!fremde){ knopf=`<button class="btn btn-ghost btn-sm" data-act="um-zurueck">Abgabe zurücknehmen</button>`; hinweis=`<div class="sa-ok">Abgegeben am ${datumDE(meine)}. Sobald ${a} abgibt, seht ihr beide Antworten nebeneinander.</div>`; }
-  else if(r&&u.beide){ knopf=`<button class="btn btn-ghost btn-sm" data-act="um-neu">Neue Runde starten</button>`; hinweis=`<div class="sa-ok">Beide haben abgegeben. Unten die Auswertung: zuerst die größten gemeinsamen Belastungen, dann die größten Unterschiede.</div>`; }
+  else if(r&&meine&&!fremde){ knopf=`<button class="btn btn-ghost btn-sm" data-act="um-zurueck">Abgabe zurücknehmen</button>`; hinweis=`<div class="sa-ok">✓ Abgegeben am ${datumDE(meine)}. Sobald ${a} abgibt, seht ihr beide Antworten nebeneinander.</div>`; }
+  else if(r&&u.beide){ knopf=`<button class="btn btn-ghost btn-sm" data-act="um-neu">Neue Runde starten</button>`; hinweis=`<div class="sa-ok">✓ Beide haben abgegeben. Unten stehen eure Antworten und die Unterschiede nebeneinander.</div>`; }
   $("#saUmKnopf").innerHTML=knopf; $("#saUmHinweis").innerHTML=hinweis;
-  const gesperrt=!!meine;
+  const gesperrt=!!meine||!r;
   const themen=[...new Set(u.fragen.map(f=>f.thema))];
-  $("#saUmFragen").innerHTML=themen.map(th=>`<div class="sa-sec sa-thema"><h3>${esc(th)}</h3>${u.fragen.filter(f=>f.thema===th).map(f=>frageHtml(f,gesperrt)).join("")}</div>`).join("");
+  $("#saUmFragen").innerHTML=(!r?`<div class="sa-leer">○ Keine laufende Runde. Bitte neu laden.</div>`:!u.fragen.length?`<div class="sa-leer">○ Noch keine Fragen vorhanden.</div>`:themen.map(th=>`<div class="sa-sec sa-thema"><h3>${esc(th)}</h3>${u.fragen.filter(f=>f.thema===th).map(f=>frageHtml(f)).join("")}</div>`).join(""));
   if(gesperrt) $("#saUmFragen").querySelectorAll("input,textarea,.chip").forEach(el=>{ el.disabled=true; });
   renderAuswertung();
 }
@@ -329,44 +339,30 @@ function renderAuswertung(){
   const u=D.umfrage; if(!u.beide){ $("#saUmAusw").innerHTML=""; return; }
   const w=D.who, a=D.andere;
   const zeilen=u.fragen.filter(f=>f.art==="skala").map(f=>{
-    const e=antwort(f.nr,"eigene"), x=antwort(f.nr,"andere"); const be=belastung(f,e), bx=belastung(f,x);
-    const mittel=(be!=null&&bx!=null)?(be+bx)/2:(be!=null?be:bx); const diff=(be!=null&&bx!=null)?Math.abs(be-bx):null;
-    return {f,e,x,be,bx,mittel,diff};
+    const e=antwort(f.nr,"eigene"), x=antwort(f.nr,"andere");
+    const diff=(e&&x&&!e.kann_nicht&&!x.kann_nicht&&e.wert!=null&&x.wert!=null)?Math.abs(e.wert-x.wert):null;
+    return {f,e,x,diff};
   });
-  const wert=(z)=>z?(z.kann_nicht?"k. A.":(z.wert!=null?z.wert:"–")):"–";
-  const last=[...zeilen].filter(z=>z.mittel!=null).sort((p,q)=>q.mittel-p.mittel).slice(0,6);
+  const wert=(z)=>z?(z.kann_nicht?"nicht beurteilbar":(z.wert!=null?z.wert:"keine Antwort")):"keine Antwort";
   const diff=[...zeilen].filter(z=>z.diff!=null&&z.diff>=2).sort((p,q)=>q.diff-p.diff);
-  const zeile=(z,cls)=>`<div class="sa-aw ${cls}"><span>${z.f.nr} · ${esc(z.f.text)}${z.f.umgekehrt?" <small class='sa-muted'>(umgekehrt)</small>":""}</span><span class="z">${wert(z.e)}</span><span class="z">${wert(z.x)}</span><span class="d">${z.diff!=null?"Δ "+z.diff:""}</span></div>`;
-  const kopf=`<div class="sa-aw kopfz"><span>Aussage</span><span class="z">${esc(w)}</span><span class="z">${esc(a)}</span><span class="d">Abstand</span></div>`;
-  const texte=u.fragen.filter(f=>f.art!=="skala").map(f=>{ const e=antwort(f.nr,"eigene"), x=antwort(f.nr,"andere"); const show=(z)=>{ if(!z) return "–"; if(f.art==="text") return z.beispiel||"–"; if(f.art==="wahl") return z.wert?(f.optionen.split("|")[z.wert-1]||z.wert):"–"; return z.wert!=null?z.wert+(f.art==="zahl"?" h":""):"–"; };
-    return `<div class="sa-frage"><div class="t"><small>${f.nr}</small>${esc(f.text)}</div><div class="sa-txt"><div><b>${esc(w)}</b>${esc(show(e))}</div><div><b>${esc(a)}</b>${esc(show(x))}</div></div></div>`; }).join("");
-  const beispiele=u.fragen.filter(f=>f.art==="skala").map(f=>{ const e=antwort(f.nr,"eigene"), x=antwort(f.nr,"andere"); if(!(e&&e.beispiel)&&!(x&&x.beispiel)) return ""; return `<div class="sa-frage"><div class="t"><small>${f.nr}</small>${esc(f.text)}</div><div class="sa-txt"><div><b>${esc(w)}</b>${esc(e&&e.beispiel||"–")}</div><div><b>${esc(a)}</b>${esc(x&&x.beispiel||"–")}</div></div></div>`; }).join("");
+  const zeile=(z,cls)=>`<div class="sa-aw ${cls}" role="row"><span role="cell">${z.f.nr} · ${esc(z.f.text)}</span><span class="z" role="cell">${wert(z.e)}</span><span class="z" role="cell">${wert(z.x)}</span><span class="d" role="cell">${z.diff!=null?"↔ "+z.diff:""}</span></div>`;
+  const kopf=`<div class="sa-aw kopfz" role="row"><span role="columnheader">Aussage</span><span class="z" role="columnheader">${esc(w)}</span><span class="z" role="columnheader">${esc(a)}</span><span class="d" role="columnheader">Abstand</span></div>`;
+  const texte=u.fragen.filter(f=>f.art!=="skala").map(f=>{ const e=antwort(f.nr,"eigene"), x=antwort(f.nr,"andere"); const show=(z)=>{ if(!z) return "keine Antwort"; if(f.art==="text") return z.beispiel||"keine Antwort"; if(f.art==="wahl") return z.wert!=null?(f.optionen.split("|")[z.wert-1]||z.wert):"keine Antwort"; return z.wert!=null?z.wert+(f.art==="zahl"?" h":""):"keine Antwort"; };
+    return `<div class="sa-frage"><div class="t"><small>${f.nr}</small>${esc(f.text)}</div><div class="sa-txt"><div><b>${esc(w)}</b>${esc(show(e))}${f.art!=="text"&&e&&e.beispiel?`<br>Beispiel: ${esc(e.beispiel)}`:""}</div><div><b>${esc(a)}</b>${esc(show(x))}${f.art!=="text"&&x&&x.beispiel?`<br>Beispiel: ${esc(x.beispiel)}`:""}</div></div></div>`; }).join("");
+  const beispiele=u.fragen.filter(f=>f.art==="skala").map(f=>{ const e=antwort(f.nr,"eigene"), x=antwort(f.nr,"andere"); if(!(e&&e.beispiel)&&!(x&&x.beispiel)) return ""; return `<div class="sa-frage"><div class="t"><small>${f.nr}</small>${esc(f.text)}</div><div class="sa-txt"><div><b>${esc(w)}</b>${esc(e&&e.beispiel||"keine Antwort")}</div><div><b>${esc(a)}</b>${esc(x&&x.beispiel||"keine Antwort")}</div></div></div>`; }).join("");
   $("#saUmAusw").innerHTML=`
-    <div class="sa-sec"><h2>Größte gemeinsame Belastung</h2><p class="sa-muted">Niedrige Werte bei beiden (bei umgekehrten Aussagen hohe Werte). Hier liegt vermutlich der größte gemeinsame Handlungsbedarf.</p><div class="sa-ausw">${kopf}${last.map(z=>zeile(z,"last")).join("")||'<div class="sa-leer">Keine Skalenantworten.</div>'}</div></div>
-    <div class="sa-sec"><h2>Größte Unterschiede</h2><p class="sa-muted">Abstand von mindestens 2 Punkten. Nicht automatisch das Wichtigste, aber ein Gesprächsanlass.</p><div class="sa-ausw">${kopf}${diff.map(z=>zeile(z,"diff")).join("")||'<div class="sa-leer">Keine Aussage mit großem Abstand.</div>'}</div></div>
-    <div class="sa-sec"><h2>Alle Skalenantworten</h2><div class="sa-ausw">${kopf}${zeilen.map(z=>zeile(z,"")).join("")}</div></div>
+    <div class="sa-sec"><h2>Größte Unterschiede</h2><p class="sa-muted">Abstand von mindestens 2 Punkten. Die Werte sind eure Selbstauskünfte zu Abläufen und werden nicht bewertet.</p><div class="sa-ausw" role="table" aria-label="Unterschiede">${kopf}${diff.map(z=>zeile(z,"diff")).join("")||'<div class="sa-leer">Keine Aussage mit großem Abstand.</div>'}</div></div>
+    <div class="sa-sec"><h2>Alle Skalenantworten</h2><div class="sa-ausw" role="table" aria-label="Skalenantworten">${kopf}${zeilen.map(z=>zeile(z,"")).join("")}</div></div>
     <div class="sa-sec"><h2>Offene Antworten</h2>${texte}</div>
     ${beispiele?`<div class="sa-sec"><h2>Beispiele zu den Aussagen</h2>${beispiele}</div>`:""}`;
 }
-async function antwortSpeichern(nr, art, el){
-  const r=D.umfrage.runde; if(!r) return;
-  const p={runde:r.nr,nr};
-  if(art==="skala"){ const v=el.value; if(v==="kn"){ p.kann_nicht=true; p.wert=null; } else { p.kann_nicht=false; p.wert=v?parseInt(v):null; } const b=antwort(nr,"eigene"); p.beispiel=b?b.beispiel:""; }
-  else if(art==="zahl"||art==="wahl"){ p.wert=el.value===""?null:parseInt(el.value); p.kann_nicht=false; const b=antwort(nr,"eigene"); p.beispiel=b?b.beispiel:""; }
-  else { const b=antwort(nr,"eigene")||{}; p.wert=b.wert??null; p.kann_nicht=!!b.kann_nicht; p.beispiel=el.value; }
-  try{ const d=await saApi("antwort_set",p); const i=D.umfrage.eigene.findIndex(x=>x.nr===nr); if(i>=0) D.umfrage.eigene[i]=d.antwort; else D.umfrage.eigene.push(d.antwort);
-    const u=D.umfrage, beantwortet=u.fragen.filter(f=>{ const x=antwort(f.nr,"eigene"); return x&&(x.wert!=null||x.kann_nicht||(f.art==="text"&&x.beispiel)); }).length;
-    const fort=$("#saUmFort span"); if(fort) fort.textContent=`${beantwortet} von ${u.fragen.length} beantwortet`; const bar=$("#saUmFort .bar i"); if(bar) bar.style.width=Math.round(beantwortet/u.fragen.length*100)+"%";
-  }catch(e){ fehler(e); }
-}
-
 /* ---------- Systeme ---------- */
 function sysZeile(s){
   return `<div class="sa-sy" data-sys="${s.id}">
-    <div class="n-wrap"><input data-f="name" value="${esc(s.name)}" placeholder="System oder Format" aria-label="Name"><span class="q"><input data-f="stand_quelle" value="${esc(s.stand_quelle)}" placeholder="Stand und Quelle" aria-label="Stand und Quelle" style="margin-top:4px"></span></div>
-    <textarea data-f="wofuer" placeholder="Wofür" aria-label="Wofür">${esc(s.wofuer)}</textarea>
-    <textarea data-f="beobachtung" placeholder="Beobachtung" aria-label="Beobachtung">${esc(s.beobachtung)}</textarea>
-    <button class="sa-link" data-act="sys-loeschen" title="Eintrag entfernen">×</button>
+    <div class="n-wrap"><input maxlength="160" data-f="name" value="${esc(s.name)}" placeholder="System oder Format" aria-label="Name"><span class="q"><input maxlength="300" data-f="stand_quelle" value="${esc(s.stand_quelle)}" placeholder="Stand und Quelle" aria-label="Stand und Quelle" style="margin-top:4px"></span></div>
+    <textarea maxlength="1000" data-f="wofuer" placeholder="Wofür" aria-label="Wofür">${esc(s.wofuer)}</textarea>
+    <textarea maxlength="2000" data-f="beobachtung" placeholder="Beobachtung" aria-label="Beobachtung">${esc(s.beobachtung)}</textarea>
+    <button class="sa-link" data-act="sys-loeschen" aria-label="System ${esc(s.name)} löschen">Löschen</button>
     <div class="chips"><span class="lbl">Reifegrad</span>${gfChips("r"+s.id,REIFE_SYS,s.reifegrad,{attr:`data-f="reifegrad"`,label:"Reifegrad"})}<span class="lbl">Einordnung</span>${gfChips("e"+s.id,EINORDNUNG,s.einordnung,{attr:`data-f="einordnung"`,label:"Einordnung"})}</div>
   </div>`;
 }
@@ -374,9 +370,9 @@ function renderSysteme(){ $("#saSys").innerHTML=D.systeme.length?D.systeme.map(s
 function hubZeile(w){
   const st=w.stand||{};
   return `<div class="sa-sy" data-hub="${w.id}">
-    <div class="n-wrap"><span class="n">${w.url?`<a href="${esc(w.url)}" target="_blank" rel="noopener">${esc(w.name)} ↗</a>`:esc(w.name)}</span><span class="q">${esc(HUB_STATUS[w.status]||w.status)}${w.kuemmerer?" · Kümmerer "+esc(w.kuemmerer):" · ohne Kümmerer"}${w.quelle_der_wahrheit?" · Quelle der Wahrheit":""}${w.sichtbarkeit==="gf"?" · nur GF":""}</span></div>
+    <div class="n-wrap"><span class="n">${w.url?`<a href="${esc(w.url)}" target="_blank" rel="noopener">${esc(w.name)} ↗</a>`:esc(w.name)}</span><span class="q">○ ${esc(HUB_STATUS[w.status]||w.status)}${w.kuemmerer?" · Kümmerer "+esc(w.kuemmerer):" · ohne Kümmerer"}${w.quelle_der_wahrheit?" · Quelle der Wahrheit":""}${w.sichtbarkeit==="gf"?" · nur GF":""}</span></div>
     <div class="sa-ro">${esc(w.zweck||"")}</div>
-    <div class="sa-f"><input data-f="notiz" value="${esc(st.notiz||"")}" placeholder="Notiz zur Einordnung" aria-label="Notiz"></div>
+    <div class="sa-f"><input maxlength="1000" data-f="notiz" value="${esc(st.notiz||"")}" placeholder="Notiz zur Einordnung" aria-label="Notiz zu ${esc(w.name)}"></div>
     <span></span>
     <div class="chips"><span class="lbl">Reifegrad</span>${gfChips("hr"+w.id,REIFE_HUB,st.reifegrad||"",{attr:`data-f="reifegrad"`,label:"Reifegrad"})}<span class="lbl">Einordnung</span>${gfChips("he"+w.id,EINORDNUNG,st.einordnung||"offen",{attr:`data-f="einordnung"`,label:"Einordnung"})}</div>
   </div>`;
@@ -385,50 +381,203 @@ function renderHub(){
   const alle=D.werkzeuge||[];
   const f=HUBF, s=HUBS.trim().toLowerCase();
   const liste=alle.filter(w=>(f==="alle"||(f==="gf"?w.sichtbarkeit==="gf":w.status===f))).filter(w=>!s||(w.name+" "+(w.zweck||"")+" "+(w.kuemmerer||"")).toLowerCase().includes(s));
-  $("#saHubFilter").innerHTML=gfChips("hubf",[["aktiv","aktiv"],["aufbau","im Aufbau"],["gf","nur GF"],["alle","alle"]],f,{attr:'id="saHubF"',label:"Filter"});
+  if(!$("#saHubF")) $("#saHubFilter").innerHTML=gfChips("hubf",[["aktiv","aktiv"],["aufbau","im Aufbau"],["gf","nur GF"],["alle","alle"]],f,{attr:'id="saHubF"',label:"Filter"});
   $("#saHubZahl").textContent=`${liste.length} von ${alle.length}`;
-  $("#saHub").innerHTML=liste.length?liste.map(hubZeile).join(""):`<div class="sa-leer">Nichts gefunden.</div>`;
+  $("#saHub").innerHTML=liste.length?liste.map(hubZeile).join(""):`<div class="sa-leer">○ ${alle.length?"Keine Werkzeuge passen zur Suche und zum Filter.":"Noch keine Werkzeuge im Register."}</div>`;
+}
+
+/* ---------- Speichern und Laden ---------- */
+function saStatus(text){ $("#saStatus").textContent=text; }
+function controls(){
+  $("#sa").setAttribute("aria-busy",BUSY?"true":"false");
+  document.querySelectorAll("#whoSw button").forEach(b=>b.disabled=BUSY);
+  $("#sa").querySelectorAll("[data-act]").forEach(b=>{
+    b.disabled=BUSY||(!D&&!['neu-laden','speichern-retry'].includes(b.dataset.act));
+  });
+  $("#sa").querySelectorAll("input,textarea,.chip").forEach(el=>{
+    const r=D&&D.umfrage.runde;
+    const locked=el.closest("#saUmFragen")&&(!r||!!r[D.who==='Alex'?'abgegeben_alex':'abgegeben_lea']);
+    el.disabled=BUSY||!D||!!locked;
+  });
+  $("[data-act=speichern-retry]").hidden=!FAILED.size;
+}
+function saveStatus(){
+  saStatus(FAILED.size?`✕ ${FAILED.size} Änderungen nicht gespeichert. ${[...FAILED.values()][0].error||""} Bitte erneut versuchen.`:PENDING?"○ Wird gespeichert …":"✓ Gespeichert");
+  controls();
+}
+function queueSave(key, el, run){
+  const state=D, who=state.who;
+  const job={key,el,run,state,who};
+  FAILED.delete(key);
+  PENDING++; saveStatus();
+  SAVE=SAVE.then(async()=>{
+    try{
+      await run(state,who);
+      if(D===state){
+        el.removeAttribute("aria-invalid");
+        FAILED.delete(key);
+        renderStand();
+        const n=state.umfrage.fragen.filter(f=>{const x=antwort(f.nr,"eigene");return x&&(x.wert!=null||x.kann_nicht||(f.art==="text"&&x.beispiel));}).length;
+        const fort=$("#saUmFort span"); if(fort) fort.textContent=`${n} von ${state.umfrage.fragen.length} beantwortet`;
+        const bar=$("#saUmFort .bar i"); if(bar) bar.style.width=(state.umfrage.fragen.length?Math.round(n/state.umfrage.fragen.length*100):0)+"%";
+      }
+    }catch(e){
+      job.error=e.message; FAILED.set(key,job); el.setAttribute("aria-invalid","true"); fehler(e);
+    }finally{ PENDING--; saveStatus(); }
+  });
+  return SAVE;
+}
+async function settled(){
+  await SAVE;
+  if(FAILED.size) throw new Error("Änderungen sind noch nicht gespeichert. Bitte zuerst das Speichern erneut versuchen.");
+}
+async function load(){
+  await settled();
+  const nr=++LOAD, who=gfWho();
+  D=null; BUSY=true; controls(); saStatus("○ Wird geladen …");
+  ['saStand','saIstEigene','saIstFremd','saUmFragen','saSys','saHub'].forEach(id=>$("#"+id).innerHTML='<div class="sa-leer">○ Wird geladen …</div>');
+  ['saWer','saIstFremdSatz','saUmSatz','saUmFort','saUmHinweis','saUmKnopf','saUmAusw','saHubZahl','saHubFilter'].forEach(id=>$("#"+id).textContent="");
+  try{
+    const data=await saApi("lage",{},who);
+    if(nr!==LOAD||who!==gfWho()) return;
+    D=data;
+    renderStand(); renderIst(); renderUmfrage(); renderSysteme(); renderHub();
+    saStatus("✓ Geladen");
+  }catch(e){
+    if(nr!==LOAD) return;
+    D=null;
+    ['saWer','saIstFremdSatz','saUmSatz','saUmFort','saUmHinweis','saUmKnopf','saUmAusw','saHubZahl','saHubFilter'].forEach(id=>$("#"+id).textContent="");
+    ['saStand','saIstEigene','saIstFremd','saUmFragen','saSys','saHub'].forEach(id=>$("#"+id).innerHTML='<div class="sa-note">✕ Laden fehlgeschlagen. Bitte „Neu laden“ versuchen.</div>');
+    fehler(e);
+  }finally{ if(nr===LOAD){BUSY=false;controls();} }
 }
 
 /* ---------- Ereignisse ---------- */
+document.querySelector('.sa-tabs').addEventListener('keydown',e=>{
+  const tabs=[...document.querySelectorAll('.sa-tabs [role=tab]')];
+  const i=tabs.indexOf(e.target); if(i<0) return;
+  let n=i;
+  if(e.key==='ArrowRight') n=(i+1)%tabs.length;
+  else if(e.key==='ArrowLeft') n=(i+tabs.length-1)%tabs.length;
+  else if(e.key==='Home') n=0;
+  else if(e.key==='End') n=tabs.length-1;
+  else return;
+  e.preventDefault(); zeigeTab(tabs[n].dataset.tab); tabs[n].focus();
+});
+function saConfirm(b,text,original,ms=5000){
+  if(b.dataset.sicher==='1') return true;
+  b.dataset.sicher='1'; b.textContent=text;
+  setTimeout(()=>{b.dataset.sicher='';b.textContent=original;},ms); return false;
+}
 document.addEventListener("click",async e=>{
   const tab=e.target.closest(".sa-tabs [role=tab]"); if(tab){ zeigeTab(tab.dataset.tab); return; }
-  const b=e.target.closest("[data-act]"); if(!b) return; const act=b.dataset.act;
+  const b=e.target.closest("#sa [data-act]"); if(!b||b.disabled) return;
+  const act=b.dataset.act;
+  if(act==='speichern-retry'){
+    const jobs=[...FAILED.values()];
+    for(const job of jobs){if(D!==job.state) continue;queueSave(job.key,job.el,job.run);}
+    return;
+  }
+  if(BUSY) return;
   try{
-    if(act==="neu-laden"){ await load(); gfToast("Neu geladen"); }
-    if(act==="ist-neu"){ const d=await saApi("ist_save",{ablauf:"Neuer Ablauf"}); D.ist.eigene.push(d.ist); renderIst(); renderStand(); const k=document.getElementById("ist-"+d.ist.id); if(k){ k.scrollIntoView({block:"center"}); const i=k.querySelector('[data-f="ablauf"]'); if(i){ i.focus(); i.select(); } } }
-    if(act==="ist-loeschen"){ const k=b.closest(".sa-karte"); const id=k.dataset.id; const x=D.ist.eigene.find(i=>i.id===id); if(b.dataset.sicher!=="1"){ b.dataset.sicher="1"; b.textContent="Wirklich löschen?"; setTimeout(()=>{ b.dataset.sicher=""; b.textContent="Löschen"; },4000); return; } await saApi("ist_delete",{id}); D.ist.eigene=D.ist.eigene.filter(i=>i.id!==id); renderIst(); renderStand(); gfToast(`„${x?x.ablauf:"Steckbrief"}“ gelöscht`); }
-    if(act==="ist-frei"){ const k=b.closest(".sa-karte"); const id=k.dataset.id; const x=D.ist.eigene.find(i=>i.id===id); const d=await saApi("ist_freigeben",{id,freigegeben:!x.freigegeben}); Object.assign(x,d.ist); renderIst(); renderStand(); gfToast(x.freigegeben?`Freigegeben für ${D.andere}`:"Freigabe zurückgenommen"); }
-    if(act==="um-abgeben"){ if(b.dataset.sicher!=="1"){ b.dataset.sicher="1"; b.textContent="Wirklich abgeben?"; setTimeout(()=>{ b.dataset.sicher=""; b.textContent="Abgeben"; },5000); return; } const d=await saApi("abgeben",{runde:D.umfrage.runde.nr}); await load(); gfToast(d.beide?"Beide haben abgegeben, die Auswertung steht unten":"Abgegeben"); }
-    if(act==="um-zurueck"){ await saApi("abgabe_zurueck",{runde:D.umfrage.runde.nr}); await load(); gfToast("Abgabe zurückgenommen, du kannst wieder ändern"); }
-    if(act==="um-neu"){ if(b.dataset.sicher!=="1"){ b.dataset.sicher="1"; b.textContent="Neue Runde wirklich starten?"; setTimeout(()=>{ b.dataset.sicher=""; b.textContent="Neue Runde starten"; },5000); return; } await saApi("runde_neu",{}); await load(); gfToast("Neue Runde gestartet; die alte bleibt im Verlauf"); }
-    if(act==="sys-neu"){ const d=await saApi("system_save",{name:"Neues System"}); D.systeme.push(d.system); renderSysteme(); const z=document.querySelector(`[data-sys="${d.system.id}"] [data-f="name"]`); if(z){ z.focus(); z.select(); } }
-    if(act==="sys-loeschen"){ const z=b.closest("[data-sys]"); const id=z.dataset.sys; if(b.dataset.sicher!=="1"){ b.dataset.sicher="1"; b.textContent="löschen?"; setTimeout(()=>{ b.dataset.sicher=""; b.textContent="×"; },4000); return; } await saApi("system_delete",{id}); D.systeme=D.systeme.filter(s=>s.id!==id); renderSysteme(); gfToast("Eintrag entfernt"); }
-  }catch(err){ fehler(err); }
+    // Wait for the last blurred field before release, submission, deletion or reload.
+    BUSY=true; controls(); await settled();
+    if(act==='neu-laden'){await load();return;}
+    if(!D) return;
+    const who=D.who;
+    if(who!==gfWho()) throw new Error("Bitte warten, bis die gewählte Person geladen ist.");
+    if(act==='ist-neu'){
+      const d=await saApi('ist_save',{ablauf:'Neuer Ablauf'},who); D.ist.eigene.push(d.ist); renderIst(); renderStand();
+      const i=document.querySelector(`#ist-${d.ist.id} [data-f=ablauf]`); BUSY=false; controls(); i.focus(); i.select();
+    }
+    if(act==='ist-loeschen'){
+      const k=b.closest('[data-id]'), id=k.dataset.id;
+      if(!saConfirm(b,'Wirklich löschen?','Löschen')) return;
+      await saApi('ist_delete',{id},who); D.ist.eigene=D.ist.eigene.filter(x=>x.id!==id);renderIst();renderStand();saStatus('✓ Steckbrief gelöscht');
+    }
+    if(act==='ist-frei'){
+      const id=b.closest('[data-id]').dataset.id, x=D.ist.eigene.find(x=>x.id===id);
+      const d=await saApi('ist_freigeben',{id,freigegeben:!x.freigegeben},who);
+      Object.assign(x,d.ist);renderIst();renderStand();saStatus(x.freigegeben?`✓ Freigegeben für ${D.andere}`:'○ Freigabe zurückgenommen');
+    }
+    if(act==='um-abgeben'){
+      if(!saConfirm(b,'Wirklich abgeben?','Abgeben')) return;
+      await saApi('abgeben',{runde:D.umfrage.runde.nr},who); await load();
+    }
+    if(act==='um-zurueck'){await saApi('abgabe_zurueck',{runde:D.umfrage.runde.nr},who);await load();}
+    if(act==='um-neu'){
+      if(!saConfirm(b,'Neue Runde wirklich starten?','Neue Runde starten')) return;
+      await saApi('runde_neu',{},who);await load();
+    }
+    if(act==='sys-neu'){
+      const d=await saApi('system_save',{name:'Neues System'},who);D.systeme.push(d.system);renderSysteme();
+      const i=document.querySelector(`[data-sys="${d.system.id}"] [data-f=name]`);BUSY=false;controls();i.focus();i.select();
+    }
+    if(act==='sys-loeschen'){
+      const id=b.closest('[data-sys]').dataset.sys;
+      if(!saConfirm(b,'Wirklich löschen?','Löschen')) return;
+      await saApi('system_delete',{id},who);D.systeme=D.systeme.filter(x=>x.id!==id);renderSysteme();saStatus('✓ System gelöscht');
+    }
+  }catch(err){fehler(err);}
+  finally{BUSY=false;controls();}
 });
-document.addEventListener("change",async e=>{
-  const el=e.target; if(!el.matches("input,textarea")) return;
-  try{
-    if(el.id==="saHubF"){ HUBF=el.value; renderHub(); return; }
-    const karte=el.closest(".sa-karte[data-id]"); if(karte&&el.dataset.f){ await istSpeichern(karte, el.dataset.f); return; }
-    if(el.dataset.nr){ const nr=parseInt(el.dataset.nr); const frage=D.umfrage.fragen.find(f=>f.nr===nr); const art=el.dataset.art; if(art==="beispiel"){ const b=antwort(nr,"eigene")||{}; const d=await saApi("antwort_set",{runde:D.umfrage.runde.nr,nr,wert:b.wert??null,kann_nicht:!!b.kann_nicht,beispiel:el.value}); const i=D.umfrage.eigene.findIndex(x=>x.nr===nr); if(i>=0) D.umfrage.eigene[i]=d.antwort; else D.umfrage.eigene.push(d.antwort); } else await antwortSpeichern(nr, art, el); return; }
-    const sys=el.closest("[data-sys]"); if(sys&&el.dataset.f){ const id=sys.dataset.sys; const s=D.systeme.find(x=>x.id===id); if(s&&s[el.dataset.f]===el.value) return; const d=await saApi("system_save",{id,[el.dataset.f]:el.value}); Object.assign(s,d.system); return; }
-    const hub=el.closest("[data-hub]"); if(hub&&el.dataset.f){ const id=hub.dataset.hub; const w=D.werkzeuge.find(x=>x.id===id); const d=await saApi("hub_stand_set",{werkzeug_id:id,[el.dataset.f]:el.value}); if(w) w.stand=d.stand; return; }
-  }catch(err){ fehler(err); }
+document.addEventListener("change",e=>{
+  const el=e.target; if(!el.matches('#sa input,#sa textarea')||!D||el.disabled) return;
+  if(el.id==='saHubF'){HUBF=el.value;renderHub();controls();return;}
+  const field=el.dataset.f, value=el.value;
+  const card=el.closest('[data-id]'), sys=el.closest('[data-sys]'), hub=el.closest('[data-hub]');
+  if(card&&field){
+    const id=card.dataset.id, v=field==='beruehrt_andere'?value==='1':value;
+    queueSave(`ist:${id}:${field}`,el,async(state,who)=>{
+      const d=await saApi('ist_save',{id,[field]:v},who);Object.assign(state.ist.eigene.find(x=>x.id===id),d.ist);
+      const st=card.querySelector('[data-stat]');if(st) st.textContent=(d.ist.freigegeben?`✓ freigegeben für ${state.andere}`:'○ nur für dich sichtbar')+' · ✓ gespeichert';
+    });return;
+  }
+  if(el.dataset.nr){
+    const nr=Number(el.dataset.nr), art=el.dataset.art, round=D.umfrage.runde;
+    if(!round||round[D.who==='Alex'?'abgegeben_alex':'abgegeben_lea']) return;
+    if(art==='zahl'&&value!==''&&!/^\d{1,3}$/.test(value)){
+      const run=async()=>{throw new Error('Bitte eine ganze Zahl von 0 bis 999 eingeben.');};
+      queueSave(`antwort:${nr}:${art}`,el,run);return;
+    }
+    queueSave(`antwort:${nr}:${art}`,el,async(state,who)=>{
+      // The preceding request may contain the other half of this answer.
+      const old=state.umfrage.eigene.find(x=>x.nr===nr)||{};
+      const p={runde:round.nr,nr,wert:old.wert??null,kann_nicht:!!old.kann_nicht,beispiel:old.beispiel||''};
+      if(art==='skala'){p.kann_nicht=value==='kn';p.wert=value==='kn'||value===''?null:Number(value);}
+      else if(art==='zahl'||art==='wahl'){p.wert=value===''?null:Number(value);p.kann_nicht=false;}
+      else p.beispiel=value;
+      const d=await saApi('antwort_set',p,who), i=state.umfrage.eigene.findIndex(x=>x.nr===nr);
+      if(i>=0) state.umfrage.eigene[i]=d.antwort;else state.umfrage.eigene.push(d.antwort);
+    });return;
+  }
+  if(sys&&field){
+    const id=sys.dataset.sys;
+    queueSave(`sys:${id}:${field}`,el,async(state,who)=>{const d=await saApi('system_save',{id,[field]:value},who);Object.assign(state.systeme.find(x=>x.id===id),d.system);});return;
+  }
+  if(hub&&field){
+    const id=hub.dataset.hub;
+    queueSave(`hub:${id}:${field}`,el,async(state,who)=>{const d=await saApi('hub_stand_set',{werkzeug_id:id,[field]:value},who);state.werkzeuge.find(x=>x.id===id).stand=d.stand;});
+  }
 });
-$("#saHubSuche").addEventListener("input",e=>{ HUBS=e.target.value; renderHub(); });
-document.addEventListener("gf-who",async()=>{ try{ await load(); gfToast("Du arbeitest jetzt als "+gfWho()); }catch(e){ fehler(e); } });
-
-async function load(){
-  D=await saApi("lage",{});
-  renderStand(); renderIst(); renderUmfrage(); renderSysteme(); renderHub();
-}
+$("#saHubSuche").addEventListener("input",e=>{if(!D)return;HUBS=e.target.value;renderHub();controls();});
+document.addEventListener("gf-who",async()=>{
+  const previous=D;
+  await settled().catch(()=>{});
+  if(FAILED.size){
+    gfSetWho(previous.who);
+    document.querySelectorAll('#whoSw button').forEach(b=>b.classList.toggle('on',b.dataset.w===previous.who));
+    fehler(new Error('Person bleibt unverändert, bis deine Änderungen gespeichert sind.'));return;
+  }
+  await load();
+});
 gfGate(async()=>{
-  $("#app").style.display="block"; gfMountTopbar("arbeiten");
-  gfMountHero("lagerfeuer","So arbeiten wir","Wie wir heute arbeiten, was wir davon behalten, und was wir gemeinsam neu bauen.",{slim:true});
-  const h=(location.hash||"").replace("#",""); if(["start","ist","umfrage","systeme"].includes(h)) zeigeTab(h);
-  try{ await load(); }catch(e){ $("#saStand").innerHTML=`<div class="sa-note">Fehler beim Laden: ${esc(e.message||"Verbindung")}</div>`; }
+  $("#app").style.display="block";gfMountTopbar("arbeiten");
+  gfMountHero("lagerfeuer","So arbeiten wir","Wie wir heute arbeiten und was wir gemeinsam einordnen.",{slim:true});
+  const h=(location.hash||"").replace("#","");zeigeTab(['start','ist','umfrage','systeme'].includes(h)?h:'start');
+  controls();await load();
 });
+
 </script>
 </body>
 </html>
