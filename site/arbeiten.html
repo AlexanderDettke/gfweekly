@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#171d18" />
+<title>Das Hohe Haus · So arbeiten wir</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=33" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=33" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=33" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=33" />
+<link rel="stylesheet" href="/assets/styles.css?v=33" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
+<style>
+/* So arbeiten wir (V33, 09.10.2026). Ist-Aufnahme der Abläufe je Person, Systeme damals und heute, Umfrage für beide,
+   Einordnung der Werkzeuge aus dem Hub-Register. Eigene Edge Function „arbeiten“. Präfix .sa- */
+#sa{max-width:1040px;display:grid;gap:18px;margin-top:6px}
+.sa-lead{color:var(--text-2);max-width:72ch;margin:0;line-height:var(--leading-text)}
+.sa-eb{font-size:var(--stufe-1);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
+.sa-sec{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);padding:16px 18px;display:grid;gap:12px}
+.sa-sec h2{font-size:var(--stufe-4);margin:0}
+.sa-sec h3{font-size:var(--stufe-3);margin:0}
+.sa-muted{color:var(--text-2);font-size:var(--stufe-2);line-height:var(--leading-text);margin:0}
+.sa-note{background:var(--warn-bg);color:var(--text);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:var(--leading-text)}
+.sa-ok{background:var(--pos-bg);color:var(--text);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:var(--leading-text)}
+.sa-kopf{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.sa-kopf .rechts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sa-tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:var(--rahmen) solid var(--border);padding-bottom:0}
+.sa-tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 12px;min-height:var(--ziel-min);color:var(--text-2);font-weight:500;font-size:var(--stufe-3);cursor:pointer}
+.sa-tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
+.sa-tabs button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.sa-panel[hidden]{display:none}
+.sa-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style:none;counter-reset:s}
+.sa-steps li{background:var(--surface-2);border-radius:var(--radius-m);padding:12px 14px;display:grid;gap:4px}
+.sa-steps li::before{counter-increment:s;content:counter(s);font-size:var(--stufe-5);font-weight:600;color:var(--accent);line-height:1}
+.sa-steps b{font-size:var(--stufe-3)}
+.sa-steps span{font-size:var(--stufe-2);color:var(--text-2);line-height:1.4}
+.sa-stand{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sa-stand div{background:var(--surface-2);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:1.5}
+.sa-stand b{display:block;font-size:var(--stufe-3)}
+/* Steckbriefe */
+.sa-liste{display:grid;gap:8px}
+.sa-karte{border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);background:var(--surface);padding:10px 12px;display:grid;gap:8px}
+.sa-karte.fremd{background:var(--surface-2)}
+.sa-karte .kopf{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;justify-content:space-between}
+.sa-karte .kopf b{font-size:var(--stufe-3)}
+.sa-karte .kopf .meta{font-size:var(--stufe-1);color:var(--text-2);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sa-form{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.sa-form .voll{grid-column:1/-1}
+.sa-f{display:grid;gap:3px}
+.sa-f label{font-size:var(--stufe-1);color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.sa-f input,.sa-f textarea{width:100%;border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);padding:8px 10px;background:var(--bg);color:var(--text);font:inherit;font-size:var(--stufe-2)}
+.sa-f textarea{resize:vertical;min-height:54px}
+.sa-f .hint{font-size:var(--stufe-1);color:var(--text-3)}
+.sa-ro{font-size:var(--stufe-2);line-height:1.45}
+.sa-ro .k{display:block;font-size:var(--stufe-1);color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-top:6px}
+.sa-aktionen{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
+.sa-link{background:none;border:0;padding:0;color:var(--link);font:inherit;font-size:var(--stufe-2);text-decoration:underline;cursor:pointer;min-height:24px}
+.sa-leer{padding:14px;border:var(--rahmen) dashed var(--border);border-radius:var(--radius-m);color:var(--text-2);font-size:var(--stufe-2)}
+.sa-erinner{columns:2;column-gap:24px;font-size:var(--stufe-2);color:var(--text-2);margin:0;padding-left:18px}
+/* Umfrage */
+.sa-thema{display:grid;gap:10px}
+.sa-thema h3{padding-top:6px;border-top:var(--rahmen) solid var(--border)}
+.sa-frage{display:grid;gap:6px;padding:8px 0}
+.sa-frage .t{font-size:var(--stufe-3);line-height:1.4}
+.sa-frage .t small{color:var(--text-3);font-size:var(--stufe-1);margin-right:6px}
+.sa-skala{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.sa-skala .fchips .chip{min-width:44px;justify-content:center}
+.sa-skala .enden{font-size:var(--stufe-1);color:var(--text-3)}
+.sa-bsp summary{font-size:var(--stufe-1);color:var(--text-2);cursor:pointer;list-style:none;user-select:none}
+.sa-bsp summary::-webkit-details-marker{display:none}
+.sa-bsp textarea{margin-top:6px}
+.sa-fort{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:var(--stufe-2);color:var(--text-2)}
+.sa-fort .bar{flex:1 1 160px;height:6px;background:var(--fill);border-radius:3px;overflow:hidden;min-width:120px}
+.sa-fort .bar i{display:block;height:100%;background:var(--accent)}
+.sa-ausw{display:grid;gap:4px}
+.sa-aw{display:grid;grid-template-columns:minmax(0,2.4fr) 70px 70px 90px;gap:8px;align-items:center;padding:7px 10px;background:var(--surface-2);border-radius:var(--radius-s);font-size:var(--stufe-2)}
+.sa-aw.kopfz{background:none;color:var(--text-3);font-size:var(--stufe-1);text-transform:uppercase;letter-spacing:.04em}
+.sa-aw .z{text-align:center;font-variant-numeric:tabular-nums;font-weight:600}
+.sa-aw .d{text-align:center}
+.sa-aw.last{border-left:3px solid var(--warn)}
+.sa-aw.diff{border-left:3px solid var(--accent)}
+.sa-txt{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sa-txt div{background:var(--surface-2);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:1.5;white-space:pre-wrap}
+.sa-txt b{display:block;color:var(--text-3);font-size:var(--stufe-1);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+/* Systeme */
+.sa-sys{display:grid;gap:6px}
+.sa-sy{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1.6fr) minmax(0,1.6fr) auto;gap:8px 12px;align-items:start;padding:9px 11px;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);font-size:var(--stufe-2)}
+.sa-sy .n{font-weight:600;font-size:var(--stufe-3)}
+.sa-sy .q{color:var(--text-2);font-size:var(--stufe-1);display:block;margin-top:2px}
+.sa-sy .chips{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.sa-sy .chips .lbl{font-size:var(--stufe-1);color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-right:2px}
+.sa-sy .fchips .chip{min-height:28px;padding:3px 9px;font-size:var(--stufe-1)}
+.sa-sy input,.sa-sy textarea{width:100%;border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-s);padding:6px 8px;background:var(--bg);color:var(--text);font:inherit;font-size:var(--stufe-2)}
+.sa-sy textarea{resize:vertical;min-height:40px}
+.sa-filter{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sa-filter input{max-width:260px;border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);padding:7px 10px;background:var(--bg);color:var(--text);font:inherit;font-size:var(--stufe-2)}
+.sa-foot{color:var(--text-3);font-size:var(--stufe-2);max-width:72ch;line-height:var(--leading-text)}
+@media (max-width:900px){
+  .sa-steps{grid-template-columns:1fr} .sa-stand{grid-template-columns:1fr}
+  .sa-form{grid-template-columns:1fr} .sa-erinner{columns:1}
+  .sa-sy{grid-template-columns:1fr 1fr} .sa-sy .n-wrap{grid-column:1/-1}
+  .sa-txt{grid-template-columns:1fr}
+  .sa-aw{grid-template-columns:minmax(0,1fr) 54px 54px 70px}
+}
+@media (max-width:520px){ .sa-sy{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Das Hohe Haus</h1>
+    <div class="sub">So arbeiten wir · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+  <div id="hero"></div>
+
+  <main id="sa">
+    <p class="sa-lead">Wir wollen die Strukturen und Abläufe finden, die zu uns beiden passen. Dafür halten wir zuerst fest, wie jede Person heute arbeitet, beantworten getrennt dieselben Fragen und schauen dann gemeinsam, was bleibt, was angepasst, was umgebaut und was weggelassen wird. Gebaut wird erst danach.</p>
+
+    <div class="sa-kopf">
+      <div class="sa-tabs" role="tablist" aria-label="Bereiche">
+        <button role="tab" data-tab="start" aria-selected="true">Start</button>
+        <button role="tab" data-tab="ist" aria-selected="false">Ist-Aufnahme</button>
+        <button role="tab" data-tab="umfrage" aria-selected="false">Umfrage</button>
+        <button role="tab" data-tab="systeme" aria-selected="false">Systeme</button>
+      </div>
+      <div class="rechts"><span class="sa-muted" id="saWer"></span><button class="btn btn-ghost btn-sm" data-act="neu-laden">Neu laden</button></div>
+    </div>
+
+    <!-- Start -->
+    <section class="sa-panel" id="tab-start">
+      <div class="sa-sec">
+        <div class="sa-eb">So gehen wir vor</div>
+        <ol class="sa-steps">
+          <li><b>Ist-Aufnahme</b><span>Jede Person beschreibt ihre wiederkehrenden Abläufe in kurzen Steckbriefen und ergänzt die Liste der Systeme damals und heute. Die andere Person sieht einen Steckbrief erst, wenn er freigegeben ist.</span></li>
+          <li><b>Umfrage</b><span>Beide beantworten getrennt dieselben Fragen zu Orientierung, Entscheidungen, Erreichbarkeit, Fokus, Verlässlichkeit, Systemen und Zusammenarbeit. Die Antworten der anderen Person erscheinen erst, wenn beide abgegeben haben.</span></li>
+          <li><b>Gemeinsam einordnen</b><span>Mit beiden Ergebnissen gehen wir Ablauf für Ablauf durch: behalten, anpassen, umbauen, weglassen. Erst daraus entstehen Vorschläge für Werkzeuge und Vereinbarungen.</span></li>
+        </ol>
+        <div class="sa-stand" id="saStand"></div>
+        <p class="sa-muted">Wer gerade arbeitet, steht in der Kopfzeile (Alex oder Lea). Steckbriefe und Antworten gehören der gewählten Person. Es gibt keine Konten, das Haus vertraut auf die Wahl.</p>
+      </div>
+      <div class="sa-sec">
+        <h2>Was hier bewusst noch fehlt</h2>
+        <p class="sa-muted">Lösungen. Die drei Entwürfe für das Modul (am Vorgang, gemeinsamer Eingang, Wochenblick) und die Hintergründe liegen im Konzeptdokument und kommen erst nach der gemeinsamen Einordnung wieder auf den Tisch.</p>
+        <div><a class="btn btn-ghost btn-sm" href="https://claude.ai/code/artifact/af317d40-4e47-4d58-a1e9-9424824421bb" target="_blank" rel="noopener">Konzeptdokument ↗</a></div>
+      </div>
+    </section>
+
+    <!-- Ist-Aufnahme -->
+    <section class="sa-panel" id="tab-ist" hidden>
+      <div class="sa-sec">
+        <div class="sa-kopf"><h2 id="saIstH">Meine Abläufe</h2><div class="rechts"><button class="btn btn-primary btn-sm" data-act="ist-neu">+ Ablauf</button></div></div>
+        <p class="sa-muted">Ein Steckbrief je wiederkehrendem Ablauf, so wie er heute läuft, nicht wie er sein sollte. Stichworte reichen. Gespeichert wird beim Verlassen eines Feldes. „Freigeben“ macht den Steckbrief für die andere Person sichtbar.</p>
+        <details class="sa-bsp"><summary>Zur Erinnerung: typische Abläufe ▾</summary>
+          <ul class="sa-erinner"><li>Mails und Posteingang</li><li>Termine und Besprechungen</li><li>Entscheidungen vorbereiten und treffen</li><li>Aufgaben ans Team geben</li><li>Freigaben (Texte, Zahlungen, Verträge)</li><li>Partner und Verträge</li><li>Finanzen und Zahlungen</li><li>Planung (Saison, Launch, Budget)</li><li>Notizen und Wissen ablegen</li><li>Übergaben und Abwesenheit</li><li>Rückfragen an die andere Person</li><li>Werkzeuge pflegen oder bauen</li></ul>
+        </details>
+        <div class="sa-liste" id="saIstEigene"></div>
+      </div>
+      <div class="sa-sec">
+        <h2 id="saIstFremdH">Freigegebene Abläufe der anderen Person</h2>
+        <p class="sa-muted" id="saIstFremdSatz"></p>
+        <div class="sa-liste" id="saIstFremd"></div>
+      </div>
+    </section>
+
+    <!-- Umfrage -->
+    <section class="sa-panel" id="tab-umfrage" hidden>
+      <div class="sa-sec">
+        <div class="sa-kopf"><h2 id="saUmH">Wie läuft es heute?</h2><div class="rechts" id="saUmKnopf"></div></div>
+        <p class="sa-muted" id="saUmSatz"></p>
+        <div class="sa-fort" id="saUmFort"></div>
+        <div id="saUmHinweis"></div>
+      </div>
+      <div id="saUmFragen"></div>
+      <div id="saUmAusw"></div>
+    </section>
+
+    <!-- Systeme -->
+    <section class="sa-panel" id="tab-systeme" hidden>
+      <div class="sa-sec">
+        <div class="sa-kopf"><h2>Systeme und Formate damals und heute</h2><div class="rechts"><button class="btn btn-primary btn-sm" data-act="sys-neu">+ System</button></div></div>
+        <p class="sa-muted">Gemeinsame Liste, vorbefüllt aus Projektwissen und Datenbank (Stand 09.10.2026). Bitte korrigieren und ergänzen: Was haben wir womit gemacht, was gilt heute? Reifegrad und Einordnung sind Vorschläge zum Prüfen.</p>
+        <div class="sa-sys" id="saSys"></div>
+      </div>
+      <div class="sa-sec">
+        <h2>Werkzeuge aus dem Hub-Register</h2>
+        <p class="sa-muted">Gelesen aus dem Werkzeug-Register des Habitat Hubs (Name, Zweck, Status, Kümmerer, Quelle der Wahrheit). Gepflegt wird dort. Hier ordnet ihr nur ein: Reifegrad aus eurer Sicht und was damit passieren soll.</p>
+        <div class="sa-filter">
+          <input type="search" id="saHubSuche" placeholder="Suchen …" aria-label="Werkzeuge durchsuchen">
+          <span id="saHubFilter"></span>
+          <span class="sa-muted" id="saHubZahl"></span>
+        </div>
+        <div class="sa-sys" id="saHub"></div>
+      </div>
+      <p class="sa-foot">Reifegrad: in Entwicklung (wird gebaut), in Erprobung (wird ausprobiert, Änderungen angekündigt), im Alltag (gilt verbindlich). Einordnung: behalten, anpassen, umbauen, weglassen; „offen“ heißt noch nicht besprochen.</p>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="/assets/core.js?v=33"></script>
+<script src="/assets/game.js?v=33"></script>
+<script src="/assets/eggs.js?v=33" defer></script>
+<script>
+const $=s=>document.querySelector(s);
+const SA_FN="https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/arbeiten";
+async function saApi(action,payload){
+  const res=await fetch(SA_FN,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,password:gfPW(),payload:Object.assign({who:gfWho()},payload||{})})});
+  let d={}; try{ d=await res.json(); }catch(e){}
+  if(res.status===401) throw {auth:true,message:"Passwort abgelaufen. Bitte neu entsperren."};
+  if(!res.ok){ const e=new Error(d.error||("HTTP "+res.status)); e.status=res.status; throw e; }
+  return d;
+}
+const EINORDNUNG=[["offen","offen"],["behalten","behalten"],["anpassen","anpassen"],["umbauen","umbauen"],["weglassen","weglassen"]];
+const REIFE_SYS=[["frueher","früher"],["entwicklung","in Entwicklung"],["erprobung","in Erprobung"],["alltag","im Alltag"],["ruht","ruht"],["abgeloest","abgelöst"]];
+const REIFE_HUB=[["","noch nicht eingeordnet"],["entwicklung","in Entwicklung"],["erprobung","in Erprobung"],["alltag","im Alltag"]];
+const HUB_STATUS={aktiv:"aktiv",aufbau:"im Aufbau",abgeloest:"abgelöst",archiv:"Archiv"};
+let D=null, TAB="start", HUBF="aktiv", HUBS="";
+const DIRTY=new Set();
+
+function esc(s){ return gfEsc(s); }
+function datumDE(s){ if(!s) return ""; const d=new Date(s); return d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric",timeZone:"Europe/Berlin"})+" "+d.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Berlin"}); }
+function fehler(e){ if(e&&e.auth){ sessionStorage.removeItem("gf_pw"); location.reload(); return; } gfToast(e.message||"Fehler"); }
+function zeigeTab(t){
+  TAB=t; document.querySelectorAll(".sa-tabs [role=tab]").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t?"true":"false"));
+  document.querySelectorAll(".sa-panel").forEach(p=>p.hidden=(p.id!=="tab-"+t));
+  try{ history.replaceState(null,"","#"+t); }catch(e){}
+}
+
+/* ---------- Start ---------- */
+function renderStand(){
+  const w=D.who, a=D.andere, u=D.umfrage, r=u.runde;
+  const ab=p=>r?(p==="Alex"?r.abgegeben_alex:r.abgegeben_lea):null;
+  const eig=D.ist.eigene.length, eigFrei=D.ist.eigene.filter(x=>x.freigegeben).length;
+  const meineAntworten=u.eigene.filter(x=>x.wert!=null||x.kann_nicht||x.beispiel).length;
+  $("#saStand").innerHTML=`
+    <div><b>${esc(w)} (du)</b>${eig} ${eig===1?"Steckbrief":"Steckbriefe"}, ${eigFrei} freigegeben<br>Umfrage Runde ${r?r.nr:"–"}: ${ab(w)?"abgegeben am "+datumDE(ab(w)):meineAntworten+" von "+u.fragen.length+" beantwortet"}</div>
+    <div><b>${esc(a)}</b>${D.ist.andere_gesamt} ${D.ist.andere_gesamt===1?"Steckbrief":"Steckbriefe"}, ${D.ist.andere.length} freigegeben<br>Umfrage Runde ${r?r.nr:"–"}: ${ab(a)?"abgegeben am "+datumDE(ab(a)):"noch nicht abgegeben"}</div>`;
+  $("#saWer").textContent="Du arbeitest als "+w;
+}
+
+/* ---------- Ist-Aufnahme ---------- */
+const IST_FELDER=[["startet_wenn","Wann startet er?","z. B. Mail von Partner, Montagsabgleich, Frist in Asana"],["schritte","Was tue ich, in welcher Reihenfolge?",""],["werkzeuge","Welche Werkzeuge und Orte nutze ich?","Mail, WhatsApp, Hohes Haus, Asana, Sheet, Kopf …"],["beteiligte","Wer ist beteiligt, worauf warte ich?",""],["ergebnis_ort","Wo liegt am Ende das Ergebnis?",""],["laeuft_gut","Was funktioniert gut?",""],["hakt","Wo hakt es?",""]];
+function istKarte(x, eigene){
+  if(!eigene){
+    return `<div class="sa-karte fremd" id="ist-${x.id}"><div class="kopf"><b>${esc(x.ablauf)}</b><div class="meta">${x.haeufigkeit?esc(x.haeufigkeit)+" · ":""}${x.beruehrt_andere?"berührt dich":"nur "+esc(D.andere)}${x.einordnung!=="offen"?" · "+esc(x.einordnung):""}</div></div>
+      <div class="sa-ro">${IST_FELDER.map(([k,l])=>x[k]?`<span class="k">${esc(l)}</span>${esc(x[k])}`:"").join("")}</div></div>`;
+  }
+  const bruehrt=gfChips("beruehrt_andere",[["0","nur mich"],["1","berührt "+D.andere]],x.beruehrt_andere?"1":"0",{attr:`data-f="beruehrt_andere"`,label:"Berührt die andere Person"});
+  return `<div class="sa-karte" id="ist-${x.id}" data-id="${x.id}">
+    <div class="sa-form">
+      <div class="sa-f"><label>Ablauf</label><input data-f="ablauf" value="${esc(x.ablauf)}" placeholder="z. B. Freigabe eines Newsletters"></div>
+      <div class="sa-f"><label>Wie oft</label><input data-f="haeufigkeit" value="${esc(x.haeufigkeit)}" placeholder="täglich, wöchentlich, je Festival …"></div>
+      <div class="sa-f voll"><label>Berührt</label>${bruehrt}</div>
+      ${IST_FELDER.map(([k,l,h])=>`<div class="sa-f${k==="schritte"?" voll":""}"><label>${esc(l)}</label><textarea data-f="${k}" placeholder="${esc(h)}">${esc(x[k])}</textarea></div>`).join("")}
+      <div class="sa-f voll"><label>Mein erster Gedanke</label>${gfChips("einordnung",EINORDNUNG,x.einordnung,{attr:`data-f="einordnung"`,label:"Einordnung"})}</div>
+    </div>
+    <div class="sa-aktionen">
+      <span class="sa-muted" data-stat>${x.freigegeben?"freigegeben für "+esc(D.andere):"nur für dich sichtbar"}</span>
+      <button class="sa-link" data-act="ist-loeschen">Löschen</button>
+      <button class="btn ${x.freigegeben?"btn-ghost":"btn-primary"} btn-sm" data-act="ist-frei">${x.freigegeben?"Freigabe zurücknehmen":"Freigeben"}</button>
+    </div></div>`;
+}
+function renderIst(){
+  $("#saIstH").textContent="Meine Abläufe ("+D.who+")";
+  $("#saIstEigene").innerHTML=D.ist.eigene.length?D.ist.eigene.map(x=>istKarte(x,true)).join(""):`<div class="sa-leer">Noch kein Steckbrief. „+ Ablauf“ legt den ersten an.</div>`;
+  $("#saIstFremdH").textContent="Freigegebene Abläufe von "+D.andere;
+  $("#saIstFremdSatz").textContent=D.ist.andere_gesamt?`${D.andere} hat ${D.ist.andere_gesamt} ${D.ist.andere_gesamt===1?"Steckbrief":"Steckbriefe"} angelegt, davon ${D.ist.andere.length} freigegeben.`:`${D.andere} hat noch keinen Steckbrief angelegt.`;
+  $("#saIstFremd").innerHTML=D.ist.andere.length?D.ist.andere.map(x=>istKarte(x,false)).join(""):`<div class="sa-leer">Noch nichts freigegeben.</div>`;
+}
+async function istSpeichern(karte, feld){
+  const id=karte.dataset.id, inp=karte.querySelector(`[data-f="${feld}"]`); if(!inp) return;
+  let v=inp.value; if(feld==="beruehrt_andere") v=(v==="1");
+  const x=D.ist.eigene.find(i=>i.id===id); if(x&&x[feld]===v) return;
+  try{ const d=await saApi("ist_save",{id,[feld]:v}); Object.assign(x,d.ist); const st=karte.querySelector("[data-stat]"); if(st) st.textContent=(x.freigegeben?"freigegeben für "+D.andere:"nur für dich sichtbar")+" · gespeichert"; renderStand(); }
+  catch(e){ fehler(e); }
+}
+
+/* ---------- Umfrage ---------- */
+function antwort(nr, von){ return (von==="eigene"?D.umfrage.eigene:D.umfrage.andere).find(a=>a.nr===nr)||null; }
+function belastung(f,a){ if(!a||a.kann_nicht||a.wert==null||f.art!=="skala") return null; return f.umgekehrt?a.wert:6-a.wert; }
+function frageHtml(f, gesperrt){
+  const a=antwort(f.nr,"eigene")||{};
+  let feld="";
+  if(f.art==="skala"){
+    feld=`<div class="sa-skala"><span class="enden">trifft gar nicht zu</span>${gfChips("w"+f.nr,[["1","1"],["2","2"],["3","3"],["4","4"],["5","5"],["kn","kann ich nicht beurteilen"]],a.kann_nicht?"kn":(a.wert!=null?String(a.wert):""),{attr:`data-nr="${f.nr}" data-art="skala"`,label:"Antwort"})}<span class="enden">trifft voll zu</span></div>`;
+  } else if(f.art==="zahl"){
+    feld=`<div class="sa-f" style="max-width:220px"><input inputmode="numeric" data-nr="${f.nr}" data-art="zahl" value="${a.wert!=null?a.wert:""}" placeholder="${esc(f.hinweis||"Zahl")}"></div>`;
+  } else if(f.art==="wahl"){
+    const opts=f.optionen.split("|").map((o,i)=>[String(i+1),o]);
+    feld=gfChips("w"+f.nr,opts,a.wert!=null?String(a.wert):"",{attr:`data-nr="${f.nr}" data-art="wahl"`,label:"Auswahl"});
+  } else {
+    feld=`<div class="sa-f"><textarea data-nr="${f.nr}" data-art="text" placeholder="in Stichworten oder Sätzen">${esc(a.beispiel||"")}</textarea></div>`;
+  }
+  const bsp=f.art==="text"?"":`<details class="sa-bsp"${a.beispiel?" open":""}><summary>Beispiel dazu ${a.beispiel?"":"(optional) "}▾</summary><div class="sa-f"><textarea data-nr="${f.nr}" data-art="beispiel" placeholder="Ein konkreter Vorgang aus den letzten vier Wochen">${esc(a.beispiel||"")}</textarea></div></details>`;
+  return `<div class="sa-frage" data-frage="${f.nr}"><div class="t"><small>${f.nr}</small>${esc(f.text)}</div>${feld}${bsp}</div>`;
+}
+function renderUmfrage(){
+  const u=D.umfrage, r=u.runde, w=D.who, a=D.andere;
+  const ab=p=>r?(p==="Alex"?r.abgegeben_alex:r.abgegeben_lea):null;
+  const meine=ab(w), fremde=ab(a);
+  $("#saUmH").textContent=`Wie läuft es heute? · Runde ${r?r.nr:"–"}`;
+  $("#saUmSatz").textContent=r?`Bezug: ${r.bezug}. Skala 1 (trifft gar nicht zu) bis 5 (trifft voll zu) oder „kann ich nicht beurteilen“. Bei wichtigen Antworten hilft ein konkretes Beispiel. Gespeichert wird sofort. ${a} sieht deine Antworten erst, wenn ihr beide abgegeben habt.`:"Noch keine Runde angelegt.";
+  const beantwortet=u.fragen.filter(f=>{ const x=antwort(f.nr,"eigene"); return x&&(x.wert!=null||x.kann_nicht||(f.art==="text"&&x.beispiel)); }).length;
+  $("#saUmFort").innerHTML=`<span>${beantwortet} von ${u.fragen.length} beantwortet</span><div class="bar"><i style="width:${u.fragen.length?Math.round(beantwortet/u.fragen.length*100):0}%"></i></div><span>${a}: ${fremde?"abgegeben":"noch offen"}</span>`;
+  let knopf="", hinweis="";
+  if(r&&!meine){ knopf=`<button class="btn btn-primary btn-sm" data-act="um-abgeben"${beantwortet<u.fragen.length?` title="Du kannst auch abgeben, wenn nicht alles beantwortet ist"`:""}>Abgeben</button>`; }
+  else if(r&&meine&&!fremde){ knopf=`<button class="btn btn-ghost btn-sm" data-act="um-zurueck">Abgabe zurücknehmen</button>`; hinweis=`<div class="sa-ok">Abgegeben am ${datumDE(meine)}. Sobald ${a} abgibt, seht ihr beide Antworten nebeneinander.</div>`; }
+  else if(r&&u.beide){ knopf=`<button class="btn btn-ghost btn-sm" data-act="um-neu">Neue Runde starten</button>`; hinweis=`<div class="sa-ok">Beide haben abgegeben. Unten die Auswertung: zuerst die größten gemeinsamen Belastungen, dann die größten Unterschiede.</div>`; }
+  $("#saUmKnopf").innerHTML=knopf; $("#saUmHinweis").innerHTML=hinweis;
+  const gesperrt=!!meine;
+  const themen=[...new Set(u.fragen.map(f=>f.thema))];
+  $("#saUmFragen").innerHTML=themen.map(th=>`<div class="sa-sec sa-thema"><h3>${esc(th)}</h3>${u.fragen.filter(f=>f.thema===th).map(f=>frageHtml(f,gesperrt)).join("")}</div>`).join("");
+  if(gesperrt) $("#saUmFragen").querySelectorAll("input,textarea,.chip").forEach(el=>{ el.disabled=true; });
+  renderAuswertung();
+}
+function renderAuswertung(){
+  const u=D.umfrage; if(!u.beide){ $("#saUmAusw").innerHTML=""; return; }
+  const w=D.who, a=D.andere;
+  const zeilen=u.fragen.filter(f=>f.art==="skala").map(f=>{
+    const e=antwort(f.nr,"eigene"), x=antwort(f.nr,"andere"); const be=belastung(f,e), bx=belastung(f,x);
+    const mittel=(be!=null&&bx!=null)?(be+bx)/2:(be!=null?be:bx); const diff=(be!=null&&bx!=null)?Math.abs(be-bx):null;
+    return {f,e,x,be,bx,mittel,diff};
+  });
+  const wert=(z)=>z?(z.kann_nicht?"k. A.":(z.wert!=null?z.wert:"–")):"–";
+  const last=[...zeilen].filter(z=>z.mittel!=null).sort((p,q)=>q.mittel-p.mittel).slice(0,6);
+  const diff=[...zeilen].filter(z=>z.diff!=null&&z.diff>=2).sort((p,q)=>q.diff-p.diff);
+  const zeile=(z,cls)=>`<div class="sa-aw ${cls}"><span>${z.f.nr} · ${esc(z.f.text)}${z.f.umgekehrt?" <small class='sa-muted'>(umgekehrt)</small>":""}</span><span class="z">${wert(z.e)}</span><span class="z">${wert(z.x)}</span><span class="d">${z.diff!=null?"Δ "+z.diff:""}</span></div>`;
+  const kopf=`<div class="sa-aw kopfz"><span>Aussage</span><span class="z">${esc(w)}</span><span class="z">${esc(a)}</span><span class="d">Abstand</span></div>`;
+  const texte=u.fragen.filter(f=>f.art!=="skala").map(f=>{ const e=antwort(f.nr,"eigene"), x=antwort(f.nr,"andere"); const show=(z)=>{ if(!z) return "–"; if(f.art==="text") return z.beispiel||"–"; if(f.art==="wahl") return z.wert?(f.optionen.split("|")[z.wert-1]||z.wert):"–"; return z.wert!=null?z.wert+(f.art==="zahl"?" h":""):"–"; };
+    return `<div class="sa-frage"><div class="t"><small>${f.nr}</small>${esc(f.text)}</div><div class="sa-txt"><div><b>${esc(w)}</b>${esc(show(e))}</div><div><b>${esc(a)}</b>${esc(show(x))}</div></div></div>`; }).join("");
+  const beispiele=u.fragen.filter(f=>f.art==="skala").map(f=>{ const e=antwort(f.nr,"eigene"), x=antwort(f.nr,"andere"); if(!(e&&e.beispiel)&&!(x&&x.beispiel)) return ""; return `<div class="sa-frage"><div class="t"><small>${f.nr}</small>${esc(f.text)}</div><div class="sa-txt"><div><b>${esc(w)}</b>${esc(e&&e.beispiel||"–")}</div><div><b>${esc(a)}</b>${esc(x&&x.beispiel||"–")}</div></div></div>`; }).join("");
+  $("#saUmAusw").innerHTML=`
+    <div class="sa-sec"><h2>Größte gemeinsame Belastung</h2><p class="sa-muted">Niedrige Werte bei beiden (bei umgekehrten Aussagen hohe Werte). Hier liegt vermutlich der größte gemeinsame Handlungsbedarf.</p><div class="sa-ausw">${kopf}${last.map(z=>zeile(z,"last")).join("")||'<div class="sa-leer">Keine Skalenantworten.</div>'}</div></div>
+    <div class="sa-sec"><h2>Größte Unterschiede</h2><p class="sa-muted">Abstand von mindestens 2 Punkten. Nicht automatisch das Wichtigste, aber ein Gesprächsanlass.</p><div class="sa-ausw">${kopf}${diff.map(z=>zeile(z,"diff")).join("")||'<div class="sa-leer">Keine Aussage mit großem Abstand.</div>'}</div></div>
+    <div class="sa-sec"><h2>Alle Skalenantworten</h2><div class="sa-ausw">${kopf}${zeilen.map(z=>zeile(z,"")).join("")}</div></div>
+    <div class="sa-sec"><h2>Offene Antworten</h2>${texte}</div>
+    ${beispiele?`<div class="sa-sec"><h2>Beispiele zu den Aussagen</h2>${beispiele}</div>`:""}`;
+}
+async function antwortSpeichern(nr, art, el){
+  const r=D.umfrage.runde; if(!r) return;
+  const p={runde:r.nr,nr};
+  if(art==="skala"){ const v=el.value; if(v==="kn"){ p.kann_nicht=true; p.wert=null; } else { p.kann_nicht=false; p.wert=v?parseInt(v):null; } const b=antwort(nr,"eigene"); p.beispiel=b?b.beispiel:""; }
+  else if(art==="zahl"||art==="wahl"){ p.wert=el.value===""?null:parseInt(el.value); p.kann_nicht=false; const b=antwort(nr,"eigene"); p.beispiel=b?b.beispiel:""; }
+  else { const b=antwort(nr,"eigene")||{}; p.wert=b.wert??null; p.kann_nicht=!!b.kann_nicht; p.beispiel=el.value; }
+  try{ const d=await saApi("antwort_set",p); const i=D.umfrage.eigene.findIndex(x=>x.nr===nr); if(i>=0) D.umfrage.eigene[i]=d.antwort; else D.umfrage.eigene.push(d.antwort);
+    const u=D.umfrage, beantwortet=u.fragen.filter(f=>{ const x=antwort(f.nr,"eigene"); return x&&(x.wert!=null||x.kann_nicht||(f.art==="text"&&x.beispiel)); }).length;
+    const fort=$("#saUmFort span"); if(fort) fort.textContent=`${beantwortet} von ${u.fragen.length} beantwortet`; const bar=$("#saUmFort .bar i"); if(bar) bar.style.width=Math.round(beantwortet/u.fragen.length*100)+"%";
+  }catch(e){ fehler(e); }
+}
+
+/* ---------- Systeme ---------- */
+function sysZeile(s){
+  return `<div class="sa-sy" data-sys="${s.id}">
+    <div class="n-wrap"><input data-f="name" value="${esc(s.name)}" placeholder="System oder Format" aria-label="Name"><span class="q"><input data-f="stand_quelle" value="${esc(s.stand_quelle)}" placeholder="Stand und Quelle" aria-label="Stand und Quelle" style="margin-top:4px"></span></div>
+    <textarea data-f="wofuer" placeholder="Wofür" aria-label="Wofür">${esc(s.wofuer)}</textarea>
+    <textarea data-f="beobachtung" placeholder="Beobachtung" aria-label="Beobachtung">${esc(s.beobachtung)}</textarea>
+    <button class="sa-link" data-act="sys-loeschen" title="Eintrag entfernen">×</button>
+    <div class="chips"><span class="lbl">Reifegrad</span>${gfChips("r"+s.id,REIFE_SYS,s.reifegrad,{attr:`data-f="reifegrad"`,label:"Reifegrad"})}<span class="lbl">Einordnung</span>${gfChips("e"+s.id,EINORDNUNG,s.einordnung,{attr:`data-f="einordnung"`,label:"Einordnung"})}</div>
+  </div>`;
+}
+function renderSysteme(){ $("#saSys").innerHTML=D.systeme.length?D.systeme.map(sysZeile).join(""):`<div class="sa-leer">Noch kein Eintrag.</div>`; }
+function hubZeile(w){
+  const st=w.stand||{};
+  return `<div class="sa-sy" data-hub="${w.id}">
+    <div class="n-wrap"><span class="n">${w.url?`<a href="${esc(w.url)}" target="_blank" rel="noopener">${esc(w.name)} ↗</a>`:esc(w.name)}</span><span class="q">${esc(HUB_STATUS[w.status]||w.status)}${w.kuemmerer?" · Kümmerer "+esc(w.kuemmerer):" · ohne Kümmerer"}${w.quelle_der_wahrheit?" · Quelle der Wahrheit":""}${w.sichtbarkeit==="gf"?" · nur GF":""}</span></div>
+    <div class="sa-ro">${esc(w.zweck||"")}</div>
+    <div class="sa-f"><input data-f="notiz" value="${esc(st.notiz||"")}" placeholder="Notiz zur Einordnung" aria-label="Notiz"></div>
+    <span></span>
+    <div class="chips"><span class="lbl">Reifegrad</span>${gfChips("hr"+w.id,REIFE_HUB,st.reifegrad||"",{attr:`data-f="reifegrad"`,label:"Reifegrad"})}<span class="lbl">Einordnung</span>${gfChips("he"+w.id,EINORDNUNG,st.einordnung||"offen",{attr:`data-f="einordnung"`,label:"Einordnung"})}</div>
+  </div>`;
+}
+function renderHub(){
+  const alle=D.werkzeuge||[];
+  const f=HUBF, s=HUBS.trim().toLowerCase();
+  const liste=alle.filter(w=>(f==="alle"||(f==="gf"?w.sichtbarkeit==="gf":w.status===f))).filter(w=>!s||(w.name+" "+(w.zweck||"")+" "+(w.kuemmerer||"")).toLowerCase().includes(s));
+  $("#saHubFilter").innerHTML=gfChips("hubf",[["aktiv","aktiv"],["aufbau","im Aufbau"],["gf","nur GF"],["alle","alle"]],f,{attr:'id="saHubF"',label:"Filter"});
+  $("#saHubZahl").textContent=`${liste.length} von ${alle.length}`;
+  $("#saHub").innerHTML=liste.length?liste.map(hubZeile).join(""):`<div class="sa-leer">Nichts gefunden.</div>`;
+}
+
+/* ---------- Ereignisse ---------- */
+document.addEventListener("click",async e=>{
+  const tab=e.target.closest(".sa-tabs [role=tab]"); if(tab){ zeigeTab(tab.dataset.tab); return; }
+  const b=e.target.closest("[data-act]"); if(!b) return; const act=b.dataset.act;
+  try{
+    if(act==="neu-laden"){ await load(); gfToast("Neu geladen"); }
+    if(act==="ist-neu"){ const d=await saApi("ist_save",{ablauf:"Neuer Ablauf"}); D.ist.eigene.push(d.ist); renderIst(); renderStand(); const k=document.getElementById("ist-"+d.ist.id); if(k){ k.scrollIntoView({block:"center"}); const i=k.querySelector('[data-f="ablauf"]'); if(i){ i.focus(); i.select(); } } }
+    if(act==="ist-loeschen"){ const k=b.closest(".sa-karte"); const id=k.dataset.id; const x=D.ist.eigene.find(i=>i.id===id); if(b.dataset.sicher!=="1"){ b.dataset.sicher="1"; b.textContent="Wirklich löschen?"; setTimeout(()=>{ b.dataset.sicher=""; b.textContent="Löschen"; },4000); return; } await saApi("ist_delete",{id}); D.ist.eigene=D.ist.eigene.filter(i=>i.id!==id); renderIst(); renderStand(); gfToast(`„${x?x.ablauf:"Steckbrief"}“ gelöscht`); }
+    if(act==="ist-frei"){ const k=b.closest(".sa-karte"); const id=k.dataset.id; const x=D.ist.eigene.find(i=>i.id===id); const d=await saApi("ist_freigeben",{id,freigegeben:!x.freigegeben}); Object.assign(x,d.ist); renderIst(); renderStand(); gfToast(x.freigegeben?`Freigegeben für ${D.andere}`:"Freigabe zurückgenommen"); }
+    if(act==="um-abgeben"){ if(b.dataset.sicher!=="1"){ b.dataset.sicher="1"; b.textContent="Wirklich abgeben?"; setTimeout(()=>{ b.dataset.sicher=""; b.textContent="Abgeben"; },5000); return; } const d=await saApi("abgeben",{runde:D.umfrage.runde.nr}); await load(); gfToast(d.beide?"Beide haben abgegeben, die Auswertung steht unten":"Abgegeben"); }
+    if(act==="um-zurueck"){ await saApi("abgabe_zurueck",{runde:D.umfrage.runde.nr}); await load(); gfToast("Abgabe zurückgenommen, du kannst wieder ändern"); }
+    if(act==="um-neu"){ if(b.dataset.sicher!=="1"){ b.dataset.sicher="1"; b.textContent="Neue Runde wirklich starten?"; setTimeout(()=>{ b.dataset.sicher=""; b.textContent="Neue Runde starten"; },5000); return; } await saApi("runde_neu",{}); await load(); gfToast("Neue Runde gestartet; die alte bleibt im Verlauf"); }
+    if(act==="sys-neu"){ const d=await saApi("system_save",{name:"Neues System"}); D.systeme.push(d.system); renderSysteme(); const z=document.querySelector(`[data-sys="${d.system.id}"] [data-f="name"]`); if(z){ z.focus(); z.select(); } }
+    if(act==="sys-loeschen"){ const z=b.closest("[data-sys]"); const id=z.dataset.sys; if(b.dataset.sicher!=="1"){ b.dataset.sicher="1"; b.textContent="löschen?"; setTimeout(()=>{ b.dataset.sicher=""; b.textContent="×"; },4000); return; } await saApi("system_delete",{id}); D.systeme=D.systeme.filter(s=>s.id!==id); renderSysteme(); gfToast("Eintrag entfernt"); }
+  }catch(err){ fehler(err); }
+});
+document.addEventListener("change",async e=>{
+  const el=e.target; if(!el.matches("input,textarea")) return;
+  try{
+    if(el.id==="saHubF"){ HUBF=el.value; renderHub(); return; }
+    const karte=el.closest(".sa-karte[data-id]"); if(karte&&el.dataset.f){ await istSpeichern(karte, el.dataset.f); return; }
+    if(el.dataset.nr){ const nr=parseInt(el.dataset.nr); const frage=D.umfrage.fragen.find(f=>f.nr===nr); const art=el.dataset.art; if(art==="beispiel"){ const b=antwort(nr,"eigene")||{}; const d=await saApi("antwort_set",{runde:D.umfrage.runde.nr,nr,wert:b.wert??null,kann_nicht:!!b.kann_nicht,beispiel:el.value}); const i=D.umfrage.eigene.findIndex(x=>x.nr===nr); if(i>=0) D.umfrage.eigene[i]=d.antwort; else D.umfrage.eigene.push(d.antwort); } else await antwortSpeichern(nr, art, el); return; }
+    const sys=el.closest("[data-sys]"); if(sys&&el.dataset.f){ const id=sys.dataset.sys; const s=D.systeme.find(x=>x.id===id); if(s&&s[el.dataset.f]===el.value) return; const d=await saApi("system_save",{id,[el.dataset.f]:el.value}); Object.assign(s,d.system); return; }
+    const hub=el.closest("[data-hub]"); if(hub&&el.dataset.f){ const id=hub.dataset.hub; const w=D.werkzeuge.find(x=>x.id===id); const d=await saApi("hub_stand_set",{werkzeug_id:id,[el.dataset.f]:el.value}); if(w) w.stand=d.stand; return; }
+  }catch(err){ fehler(err); }
+});
+$("#saHubSuche").addEventListener("input",e=>{ HUBS=e.target.value; renderHub(); });
+document.addEventListener("gf-who",async()=>{ try{ await load(); gfToast("Du arbeitest jetzt als "+gfWho()); }catch(e){ fehler(e); } });
+
+async function load(){
+  D=await saApi("lage",{});
+  renderStand(); renderIst(); renderUmfrage(); renderSysteme(); renderHub();
+}
+gfGate(async()=>{
+  $("#app").style.display="block"; gfMountTopbar("arbeiten");
+  gfMountHero("lagerfeuer","So arbeiten wir","Wie wir heute arbeiten, was wir davon behalten, und was wir gemeinsam neu bauen.",{slim:true});
+  const h=(location.hash||"").replace("#",""); if(["start","ist","umfrage","systeme"].includes(h)) zeigeTab(h);
+  try{ await load(); }catch(e){ $("#saStand").innerHTML=`<div class="sa-note">Fehler beim Laden: ${esc(e.message||"Verbindung")}</div>`; }
+});
+</script>
+</body>
+</html>
