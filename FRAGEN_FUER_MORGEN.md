@@ -1,4 +1,8 @@
-# Fragen für morgen · Stand 07.10.2026 (V32 Kommunikation)
+# Fragen für morgen · Stand 09.10.2026 (V33 So arbeiten wir)
+
+## V33 So arbeiten wir: was nur Alex tun kann
+
+1. **Schreibzugriffe für V33b freigeben (Alex, etwa 2 Minuten).** Der Sitzung die Schreibzugriffe auf `gfweekly_sa_*` in der Produktionsdatenbank freigeben. Sie sind in dieser Sitzung gesperrt. Der Prüfer führt danach die schreibende Wirkungsprobe und das Aufräumen aus, entfernt auch die leere Antwort von Alex zu Frage 1 in Runde 1 und die zwei Logeinträge zu „Probe aus dem Test“ und formuliert den Systemeintrag „Das Hohe Haus“ neutral ohne Nutzungszahlen je Person. Danach muss nur Runde 1 ohne Antworten und Abgaben bleiben und `gfweekly_sa_ist` leer sein. Prüfstand und Umfang stehen in `docs/TECHNIKSTAND.md`, Abschnitt V33 So arbeiten wir.
 
 ## V32 Kommunikation: was nur Alex tun kann
 

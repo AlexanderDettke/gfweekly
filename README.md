@@ -1,5 +1,12 @@
 # Das Hohe Haus (vormals GF Weekly)
 
+> **Stand 09.10.2026: V33 So arbeiten wir** auf `main`: neue Seite `site/arbeiten.html` mit Ist-Aufnahme,
+> getrennter Umfrage und gemeinsamer Einordnung von Systemen und Werkzeugen. Eigene Edge Function `arbeiten` v2
+> deployt, beide Migrationen angewendet. Vom Prüfer belegt: lesende Liveprobe bestanden und 211 lokale Prüfungen
+> mit Browser bestanden. V33c dokumentiert; V33b mit schreibender Wirkungsprobe, Testbereinigung und neutraler
+> Formulierung für „Das Hohe Haus“ wartet auf Alex' Freigabe der Schreibzugriffe (`FRAGEN_FUER_MORGEN.md`).
+> Push und Live-Prüfung: siehe V33d. Einzelheiten in `docs/TECHNIKSTAND.md`, Abschnitt V33 So arbeiten wir.
+
 > **Stand 07.10.2026: V32 Kommunikation** auf dem Branch `paket/v32-kommunikation`: Postingplan-Standard für alle fünf
 > Festivals, neue Seite `site/kommunikation.html` (Navigation „Arbeiten“, unter Saison), Tabellen `komm_*`, Edge Function
 > `gfweekly` v39 mit den Aktionen `komm_*` (Modul `supabase/functions/gfweekly/komm.ts`). Live seit 07.10.2026: Rahmen für alle

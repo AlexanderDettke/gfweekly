@@ -850,3 +850,60 @@ Zusammen 322 Aufgaben bei Christian (Veröffentlichungen der Klassen P, L, PR, T
 6. Tests: `komm-test.mjs` 70, `komm-vergleich.mjs` alle fünf ohne Abweichung, `komm-sql-probe.mjs` 31, `komm-aktionen-probe.ts` 113, `komm-bedienung.mjs` 56, `abnahme.sh` bestanden.
 7. Codex-Runden je Teilpaket beantwortet (32a bis 32e je drei Runden).
 8. Live: Edge Function `gfweekly` v39, Migrationen `20261007052131`, `20261007070401`, `20261007073224`, `20261007074130`, `20261007091500`, Seiten über Netlify aus `main`.
+
+## V33 So arbeiten wir (09.10.2026) · Ist-Aufnahme, Umfrage und gemeinsame Einordnung
+
+Auftrag: `docs/PAKET-V33-SO-ARBEITEN-WIR.md`, Entscheidungen von Alex am 09.10.2026, Startprompt `docs/STARTPROMPT-V33.md`. Stand auf `main`: V33a geprüft, V33c dokumentiert; V33b und V33d offen. Erst werden heutige Abläufe aufgenommen und dieselben Fragen getrennt beantwortet, danach ordnen Alex und Lea gemeinsam ein: behalten, anpassen, umbauen, weglassen. Lösungsfunktionen sind nicht Teil dieses Pakets; die Seite verlinkt nur das Konzeptdokument.
+
+**Führende Quelle je Datentyp.** Das Hohe Haus führt Steckbriefe, Systemliste, Umfrage und Einordnung der Werkzeuge. Das Register des Habitat Hubs führt Name, Zweck, Link, Status, Sichtbarkeit, Kümmerer und Quelle der Wahrheit. `hh_sa_werkzeuge()` liest `hub.werkzeuge` und `hub.profile`, nur für Sichtbarkeit `gf`, `team` oder `alle`. V33 schreibt nichts in `hub.*`; Reifegrad, Einordnung und Notiz je Werkzeug liegen gesondert im Haus.
+
+**Datenebene.** Migrationen `supabase/migrations/20261009031412_hh_so_arbeiten_wir.sql` und `supabase/migrations/20261009031450_hh_so_arbeiten_wir_wert.sql`, laut Paket am 09.10.2026 per Supabase-MCP live angewendet, mit Kennungen der Fernhistorie im Repo. Die zweite Migration erweitert den zulässigen Antwortwert von 1 bis 5 auf `null` oder 0 bis 999; die Funktion prüft den Wertebereich passend zur Frage.
+
+| Tabelle | Inhalt und Regeln |
+| --- | --- |
+| `gfweekly_sa_ist` | Steckbrief je Ablauf und Person, Häufigkeit, Berührung der anderen Person, Start, Schritte, Werkzeuge, Beteiligte, Ergebnisort, was gut läuft und hakt, erste Einordnung, Freigabe und Sortierung. Neuer Steckbrief zunächst nicht freigegeben. |
+| `gfweekly_sa_systeme` | Gemeinsame Liste mit Name, Zweck, Beobachtung, Stand und Quelle, Reifegrad, Einordnung und Änderungsherkunft. 12 Einträge vorbefüllt, Beobachtungen und vorgeschlagene Reifegrade von beiden zu prüfen. |
+| `gfweekly_sa_hub_stand` | Reifegrad, Einordnung, Notiz und Änderungsherkunft je `werkzeug_id`, getrennt vom führenden Register im Hub. |
+| `gfweekly_sa_fragen` | 24 vorbefüllte Fragen, Thema, Art `skala`, `zahl`, `wahl` oder `text`, Optionen, Skalenrichtung, Hinweis, Sortierung und Aktivstatus. |
+| `gfweekly_sa_runden` | Rundennummer, Bezug, Start und getrennte Abgabezeitpunkte für Alex und Lea. Runde 1 mit Bezug „die letzten vier Wochen“ vorbefüllt. |
+| `gfweekly_sa_antworten` | Eindeutige Antwort je `runde,person,nr`, Verweise auf Runde und Frage, Wert, Nichtbeurteilung, Beispiel beziehungsweise Text und Änderungszeit. |
+| `gfweekly_sa_log` | Protokoll mit Zeitpunkt, gewählter Person, Aktion und Detail. Die Funktion protokolliert unter anderem Anlegen, Löschen, Freigabe und Rundenschritte; kein vollständiges Änderungsprotokoll für alle Felder. |
+
+Die erste Migration richtet RLS für die sieben Tabellen ein, ohne Policies; `anon` und `authenticated` sind die Tabellenrechte entzogen. Die Lesefunktion `hh_sa_werkzeuge()` ist `security definer` mit festem `search_path`, ausführbar nur für `service_role`. Das ist hier anhand der Quellen geprüft, kein erneuter Livecheck der Rechte.
+
+**Edge Function `arbeiten` v2.** Eigene Funktion in `supabase/functions/arbeiten/index.ts`; Passwort im Body oder Header `x-gfweekly-key` gegen das Secret `GFWEEKLY_PASSWORD`, fehlendes oder falsches Passwort ergibt 401. `verify_jwt` ist aus. `who` beziehungsweise `by` im Payload wird auf Alex oder Lea abgebildet; außer bei `ping` ist die Person erforderlich. Das Haus hat keine Personenkonten: Zuordnung und Sichtbarkeit folgen der gewählten Person in der Kopfzeile, sie belegen keine Identität.
+
+| Aktion | Wirkung |
+| --- | --- |
+| `ping` | Meldet `ok` und `version: 2`, auch ohne Personenwahl, aber nur mit Passwort. |
+| `lage` | Lädt eigene und fremde freigegebene Steckbriefe, Anzahl der fremden Steckbriefe, Systeme, Werkzeuge mit Einordnung, aktive Fragen und Runden. Eigene Antworten der aktuellen Runde, fremde erst nach beiden Abgaben; abgeschlossene frühere Runden als Verlauf. |
+| `ist_save` | Legt den eigenen Steckbrief an oder ändert ihn, Ablaufname erforderlich; fremde oder fehlende Kennung ergibt 404. |
+| `ist_delete` | Löscht nur den eigenen Steckbrief; fremde oder fehlende Kennung ergibt 404. |
+| `ist_freigeben` | Gibt den eigenen Steckbrief für die andere Person frei oder nimmt die Freigabe zurück. |
+| `system_save`, `system_delete` | Pflegen die gemeinsame Systemliste, beide Personen können Einträge ändern oder löschen. |
+| `hub_stand_set` | Speichert Reifegrad, Einordnung und Notiz im Haus je Werkzeugkennung, ohne das Hubregister zu ändern. |
+| `antwort_set` | Speichert die eigene Antwort, nur für aktive Fragen und vor eigener Abgabe. Skala 1 bis 5, Zahl 0 bis 999, Wahl innerhalb der Optionen, Text im Feld `beispiel`; ungültige Werte ergeben 400, inaktive oder fehlende Frage 404, eigene Abgabe 409. |
+| `abgeben` | Setzt den eigenen Abgabezeitpunkt nur, wenn er noch leer ist. Wiederholung behält den ersten Zeitpunkt und liefert `schon: true`; vollständige Beantwortung ist keine Voraussetzung. |
+| `abgabe_zurueck` | Nimmt die eigene Abgabe nur zurück, solange die andere noch leer ist. Diese Bedingung steht auch im Update, bei fremder Abgabe ergibt sich 409. |
+| `runde_neu` | Startet eine leere Folgerunde nur nach beiden Abgaben der letzten Runde, sonst 409. |
+
+**Regeln.** Die andere Person sieht Steckbriefe erst nach Freigabe, ihre Gesamtzahl aber schon vorher. Umfrageantworten bleiben bis zu beiden Abgaben getrennt. Nach eigener Abgabe sind die Antworten gesperrt, Rücknahme ist nur vor Abgabe der anderen Person möglich. Danach bleiben Änderungen einer neuen Runde vorbehalten. Einordnung ist `offen`, `behalten`, `anpassen`, `umbauen` oder `weglassen`; Systeme kennen zusätzlich die Reifegrade früher, in Entwicklung, in Erprobung, im Alltag, ruht und abgelöst. Werkzeuge kennen noch nicht eingeordnet, in Entwicklung, in Erprobung und im Alltag.
+
+**Seite `site/arbeiten.html`.** Navigation „Arbeiten → So arbeiten wir“, Schlüssel `arbeiten`, Icon `zwei` in `site/assets/core.js`, Assets `?v=33`, Seitenstile mit Präfix `.sa-`. Vier Tabs: Start, Ist-Aufnahme, Umfrage, Systeme. Start erklärt die Reihenfolge und nennt „24 Fragen, etwa 15 Minuten“. Steckbriefe und Texte speichern beim Verlassen des Feldes, Chips sofort über `change` am versteckten Feld. Die Speicherwarteschlange behält die ursprüngliche Person und verhindert, dass schnelle Antwort und Beispiel einander überschreiben. Nicht gespeicherte Änderungen bleiben mit erneutem Speichern erreichbar; bei fehlgeschlagenem Laden werden alte Inhalte entfernt. Vor Freigabe, Abgabe, Löschen und Neuladen wartet die Seite auf ausstehendes Speichern. Abgabe, neue Runde und Löschen erfordern eine zweite Bestätigung.
+
+Nach beiden Abgaben zeigt die Auswertung zuerst „Wo es bei beiden hakt“, dann Unterschiede ab zwei Punkten, alle Skalenantworten, offene Antworten und Beispiele. Die gemeinsame Auswahl berücksichtigt nur zwei beurteilbare Werte, bei umgekehrter Skala den Wert, sonst `6 minus Wert`, mit Mittelwert mindestens 3,5 und höchstens sechs Aussagen. Es gibt keine Summen oder Rangfolge je Person. Werkzeuge erscheinen kompakt und aufklappbar, nur eine Bearbeitung ist gleichzeitig offen; Filter aktiv, im Aufbau, noch offen, nur GF, alle, dazu Suche und „x von y“.
+
+**Review V33a.** `docs/reviews/V33a-runde-1.md`, Antwort `docs/reviews/V33a-antwort-1.md`, Nachprüfung `docs/reviews/V33a-runde-2.md` am Commit `7c288d7`: Befunde 1 bis 5 behoben, keine neuen schweren oder mittleren Befunde. Abgabe und Rücknahme mit bedingtem Update, gemeinsame Auswertung, kompakte Werkzeugliste, Skalenenden und Ausschluss inaktiver Fragen sind nachgezogen. Offen bleibt Befund 6 zum Systemdatensatz „Das Hohe Haus“ für V33b; zusätzlich ein leichter kosmetischer Befund zum Leerraum unter dem zugeklappten optionalen Beispiel. Eine echte Bildschirmleserprüfung ist nicht belegt.
+
+**Prüfnachweise, Stand 09.10.2026.** Für V33c wurden Seite, Funktionscode, beide Migrationen und die Probe mit den Reviewberichten abgeglichen. `node pruefung/arbeiten-probe-ui.mjs --logic-only` wurde lokal erneut ausgeführt: 76 statische und Logikprüfungen bestanden, davon 19 am tatsächlichen Funktionscode mit Datenbankdouble. Keine Browserabnahme und keine echten Backendaufrufe in diesem Lauf. Folgende Browserprüfungen und Liveergebnisse stammen vom Prüfer, sie wurden in dieser Sitzung ohne Netz nicht erneut ausgeführt:
+
+1. `pruefung/arbeiten-probe-ui.mjs` mit Browser: 211 Prüfungen bestanden, Bildschirmproben bei 390 und 1440 px, hell und dunkel, angesehen (`docs/reviews/V33a-runde-2.md`). Davon 19 Prüfungen am tatsächlichen Funktionscode mit Datenbankdouble, einschließlich konkurrierender Abgabe, Rücknahme und inaktiver Fragen. Die Browserprobe fängt Backendaufrufe mit Testdaten ab; sie belegt Bedienung und Layout, keine Wirkung gegen Supabase.
+2. Edge Function `arbeiten` v2 per Supabase-MCP deployt, `verify_jwt` aus, Datei im Repo gleich deploytem Inhalt; `ping` liefert Version 2, falsches Passwort 401. Quelle: vom Prüfer belegte Angaben im Auftrag zu V33c vom 09.10.2026. Damit ist der im zweiten Review noch offene Deploy erledigt.
+3. Lesende Liveprobe per `pg_net` mit dem Vault-Secret: `lage` als Alex und Lea jeweils 200, 12 Systeme, 93 Werkzeuge, 24 Fragen, Runde 1 ohne Abgaben; ohne `who` 400, unbekannte Aktion 400. Quelle: dieselben Prüferangaben. „Ohne Abgaben“ bedeutet hier nicht „ohne Antworten“, die leere Testantwort ist noch zu entfernen.
+4. Die Paketdatei hält frühere einzelne Schreibproben aus Cowork fest. Sie ersetzen die vollständige schreibende Wirkungsprobe V33b am aktuellen Stand nicht.
+
+**Offen V33b.** Produktionsschreibzugriffe sind in dieser Sitzung gesperrt. Alex muss Schreibzugriffe auf `gfweekly_sa_*` freigeben, Aufgabe in `FRAGEN_FUER_MORGEN.md` (etwa 2 Minuten). Danach führt der Prüfer den vollständigen Ablauf als Alex und Lea aus: Steckbrief anlegen, ändern, freigeben, gegenseitig sehen und löschen; alle Antwortarten samt Nichtbeurteilung und Beispiel, Abgabe, Rücknahme, beide Abgaben, Auswertung und neue Runde; Werkzeugeinordnung setzen. Anschließend sämtliche Testdaten restlos entfernen und den Ausgangsstand prüfen: nur Runde 1, keine Antworten, keine Abgaben, `gfweekly_sa_ist` leer; Änderungen an getesteten Werkzeugeinordnungen zurücksetzen.
+
+Auch noch offen: leere Antwort Runde 1, Alex, Frage 1 in `gfweekly_sa_antworten` sowie zwei Logeinträge zu „Probe aus dem Test“ in `gfweekly_sa_log` aus Cowork entfernen. Der Teststeckbrief wurde laut Paket gelöscht, der leere Bestand ist erneut zu prüfen. Im Systemeintrag „Das Hohe Haus“ die Nutzungszahlen je Person entfernen und neutral formulieren, etwa „gebaut von Alex; welche Teile im Alltag tragen, klären wir in der Ist-Aufnahme“. Seed und Produktionsdatensatz sind in V33c nicht geändert.
+
+**Stand der Seite.** Zieladresse: `https://hohes-haus.netlify.app/arbeiten.html`. Die Seite ist im Repo vorbereitet; Veröffentlichung und Prüfung der Seite gegen das echte Backend sind für V33d offen. Push und Live-Prüfung: siehe V33d. Dort gehören Laden, Menüpunkt, `lage` für beide Personen und das Anlegen und Löschen eines Steckbriefs am Handy zur Prüfung. Die Information an Alex und Lea übernimmt laut Paket der geplante Cowork-Auftrag nach Veröffentlichung; eine erfolgte Benachrichtigung ist hier nicht belegt.

@@ -136,3 +136,12 @@ am genauen Commit prüfen. Zusammenarbeit, die es nicht gibt, wird nicht behaupt
 - **Prüfer:** Codex CLI, read-only, je Teilpaket am genauen Commit nach `docs/reviews/V32-pruefauftrag.md`, höchstens drei Runden.
 - **Stand:** live seit 07.10.2026 (Abnahme im Technikstand). Offen: Dienstkonto und Entscheidung zum Restfenster für Christians Tabelle (`FRAGEN_FUER_MORGEN.md`).
 
+### WP-V33 · So arbeiten wir
+
+1. **Auftrag:** `docs/PAKET-V33-SO-ARBEITEN-WIR.md`, Teilpakete V33a bis V33d, Entscheidungen von Alex am 09.10.2026. Startprompt `docs/STARTPROMPT-V33.md`. Ist-Aufnahme, getrennte Umfrage und gemeinsame Einordnung, noch keine Lösungsfunktionen.
+2. **Zuständig:** Codex CLI für V33c auf `main`; Datenmodell und Erstbefüllung aus Cowork. Der Prüfer übernimmt Commit, V33b nach Freigabe und V33d.
+3. **Prüfer:** Claude Code nach `docs/reviews/V33-pruefauftrag.md`. V33a in zwei Runden geprüft, zuletzt am Commit `7c288d7`; keine neuen schweren oder mittleren Befunde.
+4. **Stand 09.10.2026:** V33a geprüft, V33c dokumentiert. Vom Prüfer belegt: `arbeiten` v2 deployt, beide Migrationen angewendet, lesende Liveprobe bestanden; 211 lokale Prüfungen mit Browser bei 390 und 1440 px, hell und dunkel, bestanden. Das ist keine vollständige Wirkungsprobe gegen die Produktionsdatenbank.
+5. **Offen V33b:** schreibende Wirkungsprobe als Alex und Lea, vollständige Testbereinigung einschließlich der Reste aus Cowork und neutrale Formulierung des Systemeintrags „Das Hohe Haus“ ohne Nutzungszahlen je Person. Produktionsschreibzugriffe auf `gfweekly_sa_*` sind in dieser Sitzung gesperrt; Alex' Freigabe steht in `FRAGEN_FUER_MORGEN.md`.
+6. **V33d:** Push und Live-Prüfung: siehe V33d. Einzelheiten und Prüfgrenzen in `docs/TECHNIKSTAND.md`, Abschnitt V33 So arbeiten wir.
+
