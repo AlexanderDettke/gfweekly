@@ -2,12 +2,12 @@
    node pruefung/arbeiten-probe-ui.mjs
    Optional: PLAYWRIGHT_MODUL=/pfad/playwright/index.mjs, PROBE_OUT=/tmp/arbeiten-probe-ui.
    Ohne Browser: node pruefung/arbeiten-probe-ui.mjs --logic-only
-   Prüft UI-Verhalten und Nutzlasten, nicht Supabase, RLS oder den Live-Stand. */
+   Node >= 22.13 für die lokale Ausführung des TypeScript Funktionscodes.
+   Prüft UI und Funktionscode mit Datenbankdouble, nicht Supabase, RLS oder den Live-Stand. */
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
-const { chromium } = await import(process.env.PLAYWRIGHT_MODUL || '/Users/alexanderdettke/spiel-test/node_modules/playwright/index.mjs');
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../site');
 const out=process.env.PROBE_OUT || '/tmp/arbeiten-probe-ui'; fs.mkdirSync(out,{recursive:true});
 const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.webp':'image/webp','.svg':'image/svg+xml'};
@@ -59,6 +59,67 @@ function backend(state,action,p){
   if(action==='runde_neu'){if(!r.abgegeben_alex||!r.abgegeben_lea)return failure('Runde noch offen.');state.runden.push({nr:r.nr+1,bezug:r.bezug,abgegeben_alex:null,abgegeben_lea:null});return {};}
   throw new Error('Nicht nachgebaut: '+action);
 }
+// Execute the actual Edge Function locally. The fluent database double evaluates
+// conditional updates after an injected competing write, without Supabase or network.
+async function functionProbe(){
+  const { stripTypeScriptTypes }=await import('node:module');
+  const { default:vm }=await import('node:vm');
+  const source=fs.readFileSync(new URL('../supabase/functions/arbeiten/index.ts',import.meta.url),'utf8');
+  const code=stripTypeScriptTypes(source.replace(/^import .*createClient.*;$/m,''),{mode:'transform'});
+  let handler, beforeUpdate=null;
+  const tables={gfweekly_sa_runden:[],gfweekly_sa_fragen:[],gfweekly_sa_antworten:[],gfweekly_sa_log:[]};
+  class Query{
+    constructor(table){this.table=table;this.filters=[];this.write=null;}
+    select(){return this;}eq(k,v){this.filters.push(x=>x[k]===v);return this;}
+    is(k,v){this.filters.push(x=>x[k]===v);return this;}
+    update(row){this.write=['update',row];return this;}
+    insert(row){this.write=['insert',row];return this;}
+    upsert(row){this.write=['upsert',row];return this;}
+    execute(){
+      if(this.write?.[0]==='update'&&beforeUpdate){const hook=beforeUpdate;beforeUpdate=null;hook();}
+      const rows=tables[this.table], selected=rows.filter(x=>this.filters.every(f=>f(x)));
+      if(this.write){
+        const [kind,row]=this.write;
+        if(kind==='update')selected.forEach(x=>Object.assign(x,row));
+        else {const x=structuredClone(row);rows.push(x);return {data:x,error:null};}
+      }
+      return {data:structuredClone(selected[0]||null),error:null};
+    }
+    maybeSingle(){return Promise.resolve(this.execute());}single(){return this.maybeSingle();}
+    then(resolve,reject){return Promise.resolve(this.execute()).then(resolve,reject);}
+  }
+  const db={from:table=>new Query(table)};
+  vm.runInNewContext(code,{
+    createClient:()=>db,Deno:{env:{get:()=> 'lokale-probe'},serve:fn=>handler=fn},
+    Response,Date,Intl,console
+  });
+  const call=async(action,who,payload={})=>{
+    const res=await handler(new Request('http://local.invalid',{method:'POST',body:JSON.stringify({action,password:'lokale-probe',payload:{who,runde:1,...payload}})}));
+    return {status:res.status,...await res.json()};
+  };
+  check('Echte Funktion meldet Version 2',(await call('ping','Alex')).version===2);
+  for(const who of ['Alex','Lea']){
+    const own='abgegeben_'+who.toLowerCase(), other=who==='Alex'?'abgegeben_lea':'abgegeben_alex';
+    const reset=()=>{tables.gfweekly_sa_runden=[{nr:1,abgegeben_alex:null,abgegeben_lea:null}];tables.gfweekly_sa_log=[];return tables.gfweekly_sa_runden[0];};
+    let r=reset();r[own]=stamp;
+    check(who+': Rücknahme ohne fremde Abgabe erlaubt',(await call('abgabe_zurueck',who)).status===200&&r[own]===null);
+    r=reset();r[own]=stamp;r[other]=stamp;
+    check(who+': Rücknahme nach fremder Abgabe ergibt 409',(await call('abgabe_zurueck',who)).status===409&&r[own]===stamp);
+    r=reset();r[own]=stamp;beforeUpdate=()=>{r[other]=stamp;};
+    check(who+': Fremde Abgabe zwischen Lesen und Update verhindert Rücknahme',(await call('abgabe_zurueck',who)).status===409&&r[own]===stamp&&tables.gfweekly_sa_log.length===0);
+    r=reset();let d=await call('abgeben',who);const first=r[own];
+    check(who+': Erste Abgabe gespeichert',d.status===200&&!!first&&tables.gfweekly_sa_log.length===1);
+    d=await call('abgeben',who);
+    check(who+': Doppelaufruf behält Zeitpunkt',d.schon===true&&r[own]===first&&tables.gfweekly_sa_log.length===1);
+    r=reset();beforeUpdate=()=>{r[own]=stamp;};d=await call('abgeben',who);
+    check(who+': Konkurrierende eigene Abgabe bleibt unverändert',d.schon===true&&d.runde[own]===stamp&&r[own]===stamp&&tables.gfweekly_sa_log.length===0);
+    reset();tables.gfweekly_sa_fragen=[{nr:1,aktiv:false,art:'skala'}];tables.gfweekly_sa_antworten=[];
+    check(who+': Inaktive Frage ergibt 404 ohne Antwort',(await call('antwort_set',who,{nr:1,wert:3})).status===404&&tables.gfweekly_sa_antworten.length===0);
+    tables.gfweekly_sa_fragen[0].aktiv=true;
+    check(who+': Aktive Frage weiterhin beantwortbar',(await call('antwort_set',who,{nr:1,wert:3})).status===200&&tables.gfweekly_sa_antworten[0].wert===3);
+    check(who+': Fehlende Frage ergibt 404',(await call('antwort_set',who,{nr:99,wert:3})).status===404&&tables.gfweekly_sa_antworten.length===1);
+  }
+}
 async function logicProbe(){
   const { default:vm }=await import('node:vm');
   const html=fs.readFileSync(path.join(root,'arbeiten.html'),'utf8');
@@ -70,13 +131,13 @@ async function logicProbe(){
   check('Alle verwendeten CSS Tokens definiert',[...style.matchAll(/var\((--[\w-]+)/g)].every(m=>tokens.has(m[1])));
   check('Komponentenfarben ausschließlich Tokens',!/(?:#[0-9a-f]{3,8}\b|rgba?\(|hsla?\()/i.test(style));
   check('Keine Gedankenstriche in statischen Seitentexten',!/[–—]/.test(html));
-  const nodes=new Map(), handlers=new Map(), inputs=[];
+  const nodes=new Map(), handlers=new Map(), inputs=[], hubDetails=[];
   class Node{
     constructor(){this.textContent='';this.innerHTML='';this.style={};this.attrs={};this.dataset={};this.value='';this.disabled=false;this.hidden=false;this.tabIndex=0;this.parents={};this.classList={toggle(){}};}
     setAttribute(k,v){this.attrs[k]=v;}removeAttribute(k){delete this.attrs[k];}getAttribute(k){return this.attrs[k]??null;}
     querySelectorAll(selector){return selector==='input,textarea,.chip'?inputs:[];}
     querySelector(){return null;}closest(selector){return this.parents[selector]||null;}
-    matches(selector){return selector==='#sa input,#sa textarea';}
+    matches(selector){return selector==='#sa input,#sa textarea'||(selector==='details.sa-hub'&&this.dataset.hub);}
     addEventListener(){}focus(){}select(){}
   }
   const node=key=>{if(!nodes.has(key))nodes.set(key,new Node());return nodes.get(key);};
@@ -85,7 +146,7 @@ async function logicProbe(){
     console, setTimeout, clearTimeout, Date, Map, Set, Promise, Number, Math, Error,
     location:{reload(){},hash:''},history:{replaceState(){}},
     sessionStorage:{removeItem(){},setItem(k,v){if(k==='gf_who')selected=v;}},
-    document:{querySelector:node,querySelectorAll:()=>[],addEventListener:(key,handler)=>handlers.set(key,handler)},
+    document:{querySelector:node,querySelectorAll:selector=>selector==='details.sa-hub[open]'?hubDetails.filter(x=>x.open):[],addEventListener:(key,handler)=>handlers.set(key,handler)},
     gfPW:()=> 'lokale-probe',gfWho:()=>selected,gfSetWho:w=>selected=w,
     gfEsc:s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),
     gfToast:m=>node('#toast').textContent=m,gfGate(){},gfMountTopbar(){},gfMountHero(){},
@@ -115,6 +176,9 @@ async function logicProbe(){
   check('Keine Auswertung vor beiden Abgaben',node('#saUmAusw').innerHTML==='');
   check('24 Fragen in Renderausgabe',(node('#saUmFragen').innerHTML.match(/data-frage=/g)||[]).length===24);
   check('Fragen haben zugängliche Beschriftungen',node('#saUmFragen').innerHTML.includes('aria-labelledby="frage-12"')&&node('#saUmFragen').innerHTML.includes('aria-label="Frage 1:'));
+  const scaleMarkup=run('frageHtml(D.umfrage.fragen.find(f=>f.art==="skala"))');
+  check('Skalenenden umschließen 1 bis 5 vor Nichtbeurteilung',scaleMarkup.indexOf('trifft gar nicht zu')<scaleMarkup.indexOf('data-v="1"')&&scaleMarkup.indexOf('data-v="5"')<scaleMarkup.indexOf('trifft voll zu')&&scaleMarkup.indexOf('trifft voll zu')<scaleMarkup.indexOf('data-v="kn"'));
+  check('Skala nutzt ein gemeinsames verstecktes Feld',(scaleMarkup.match(/data-art="skala"/g)||[]).length===1&&scaleMarkup.includes('sa-scale-options'));
   const newIst=backend(state,'ist_save',{who:'Alex',ablauf:'Ablauf Probe'}).ist;await reload();
   const card=new Node();card.dataset.id=newIst.id;const stat=new Node();card.querySelector=()=>stat;
   await change(input({'[data-id]':card},'beruehrt_andere','1'));
@@ -152,6 +216,12 @@ async function logicProbe(){
   check('Hubchips ändern nur die lokale Einordnung',state.werkzeuge[0].stand.einordnung==='umbauen'&&state.werkzeuge[0].status==='aktiv');
   run('HUBF="alle";renderHub();');
   check('93 Werkzeuge gerendert',(node('#saHub').innerHTML.match(/data-hub=/g)||[]).length===93);
+  check('Hubwerkzeuge zunächst kompakt geschlossen',!node('#saHub').innerHTML.includes('<details open')&&(node('#saHub').innerHTML.match(/<summary /g)||[]).length===93);
+  run('HUBF="offen";renderHub();');check('Noch offen lässt eingeordnetes Werkzeug aus',node('#saHubZahl').textContent==='92 von 93');
+  run('HUBF="alle";renderHub();');
+  const one=new Node(), two=new Node();one.dataset.hub=id(1);two.dataset.hub=id(2);one.open=two.open=true;hubDetails.push(one,two);
+  handlers.get('toggle')({target:two});check('Öffnen schließt andere Hubbearbeitung',two.open&&!one.open);
+  two.open=false;handlers.get('toggle')({target:two});check('Schließen lässt alle Hubzeilen geschlossen',hubDetails.every(x=>!x.open));
   run('HUBS="Werkzeug 09";renderHub();');check('Hub Suche grenzt ein',(node('#saHub').innerHTML.match(/data-hub=/g)||[]).length===1);
   run('HUBS="kein Treffer";renderHub();');check('Leere Suche erklärt',node('#saHub').innerHTML.includes('Keine Werkzeuge passen'));
   run('HUBS="";HUBF="gf";renderHub();');check('GF Filter',node('#saHubZahl').textContent==='31 von 93');
@@ -169,6 +239,24 @@ async function logicProbe(){
   check('Auswertung erst nach beiden Abgaben',node('#saUmAusw').innerHTML.includes('Konkreter Vorgang')&&node('#saUmAusw').innerHTML.includes('Leas Beispiel'));
   check('Auswertung enthält Wahlbeispiele und Zahl',node('#saUmAusw').innerHTML.includes('Beispiel zur Wahl')&&node('#saUmAusw').innerHTML.includes('3 h'));
   check('Auswertung ohne abgeleitete Personenbewertung',!node('#saUmAusw').innerHTML.includes('Handlungsbedarf')&&!node('#saUmAusw').innerHTML.includes('Belastung'));
+  const original=structuredClone(state.antworten);
+  const scales=questions.filter(f=>f.art==='skala');
+  state.antworten=scales.map((f,i)=>({person:'Alex',runde:1,nr:f.nr,wert:f.umgekehrt?4:2,kann_nicht:false})).concat(scales.map(f=>({person:'Lea',runde:1,nr:f.nr,wert:f.umgekehrt?3:3,kann_nicht:false})));
+  await reload();
+  const common=()=>node('#saUmAusw').innerHTML.split('<h2>Größte Unterschiede</h2>')[0];
+  check('Gemeinsame Sicht vor Unterschieden und höchstens sechs Aussagen',(common().match(/role="cell"/g)||[]).length===24&&common().includes('Wo es bei beiden hakt'));
+  check('Gemeinsame Sicht beachtet beide Skalenrichtungen',run('D.umfrage.fragen.filter(f=>f.art==="skala").slice(0,6).every(f=>document.querySelector("#saUmAusw").innerHTML.split("<h2>Größte Unterschiede</h2>")[0].includes(f.text))'));
+  const normal=scales.find(f=>!f.umgekehrt), inverse=scales.find(f=>f.umgekehrt);
+  state.antworten=[normal,inverse].flatMap(f=>['Alex','Lea'].map(person=>({person,runde:1,nr:f.nr,wert:f.umgekehrt?4:2,kann_nicht:false})));
+  await reload();check('Normale und umgekehrte Aussage bei gleichem kritischem Wert enthalten',common().includes(normal.text)&&common().includes(inverse.text));
+  for(const x of state.antworten)x.wert=questions.find(f=>f.nr===x.nr).umgekehrt?2:4;
+  await reload();check('Beide Richtungen bei unkritischen Werten ausgeschlossen',common().includes('Keine Aussage erreicht'));
+  for(const x of state.antworten)x.wert=questions.find(f=>f.nr===x.nr).umgekehrt?3:3;
+  await reload();check('Gemeinsamer Mittelwert unter 3,5 ausgeblendet',common().includes('Keine Aussage erreicht'));
+  for(const x of state.antworten){const f=questions.find(f=>f.nr===x.nr);x.wert=f.umgekehrt?5:1;if(x.person==='Lea')x.kann_nicht=true;}
+  await reload();check('Nicht beurteilbare Antworten ausgeschlossen',common().includes('Keine Aussage erreicht'));
+  state.antworten=state.antworten.filter(x=>x.person==='Alex');await reload();check('Fehlende zweite Antwort ausgeschlossen',common().includes('Keine Aussage erreicht'));
+  state.antworten=original;await reload();
   check('Beide Abgaben erlauben neue Runde und keine Rücknahme',node('#saUmKnopf').innerHTML.includes('um-neu')&&!node('#saUmKnopf').innerHTML.includes('um-zurueck'));
   backend(state,'runde_neu',{who:'Alex'});await reload();check('Neue Runde leer und entsperrt',run('D.umfrage.runde.nr')===2&&node('#saUmAusw').innerHTML===''&&!locked.disabled);
   fail='lage';await reload();
@@ -183,7 +271,9 @@ async function logicProbe(){
   console.log(`\n${count} statische und Logikprüfungen bestanden. Keine Layout- oder Browserabnahme.`);
 }
 
+await functionProbe();
 if(process.argv.includes("--logic-only")){await logicProbe();}else{
+const { chromium } = await import(process.env.PLAYWRIGHT_MODUL || '/Users/alexanderdettke/spiel-test/node_modules/playwright/index.mjs');
 const browser=await chromium.launch();
 try{
   for(const width of [390,1440])for(const theme of ['dark','light']){
@@ -237,10 +327,17 @@ try{
     await who('Alex');await tab('umfrage');
     const q=nr=>page.locator(`[data-frage="${nr}"]`);
     check(tag+': 24 Fragen und keine vorzeitige Auswertung',await page.locator('[data-frage]').count()===24&&await page.innerText('#saUmAusw')==='');
+    const scaleEnds=await q(1).locator('.enden').allTextContents();
+    check(tag+': Skalenenden korrekt',scaleEnds.join('|')==='trifft gar nicht zu|trifft voll zu');
+    check(tag+': Nichtbeurteilung unter Skalenende',await q(1).evaluate(el=>el.querySelector('[data-v="kn"]').getBoundingClientRect().top>=el.querySelectorAll('.enden')[1].getBoundingClientRect().bottom));
     // Answer + example before the first request has completed.
     delay=150;await q(1).locator('[data-v="2"]').click();await q(1).locator('summary').click();await q(1).locator('textarea').fill('Ein konkreter Vorgang');await q(2).locator('[data-v=kn]').click();await saved();delay=0;
     check(tag+': Schnelle Antwort und Beispiel bleiben erhalten',state.antworten.find(x=>x.person==='Alex'&&x.nr===1).wert===2&&state.antworten.find(x=>x.person==='Alex'&&x.nr===1).beispiel==='Ein konkreter Vorgang');
     check(tag+': Kann nicht beurteilen gespeichert',state.antworten.find(x=>x.nr===2).kann_nicht===true);
+    await q(2).locator('[data-v="4"]').click();await saved();
+    check(tag+': Zahl ersetzt Nichtbeurteilung',state.antworten.find(x=>x.nr===2).wert===4&&!state.antworten.find(x=>x.nr===2).kann_nicht&&await q(2).locator('[aria-pressed=true]').count()===1);
+    await q(2).locator('[data-v=kn]').click();await saved();
+    check(tag+': Nichtbeurteilung ersetzt Zahl',state.antworten.find(x=>x.nr===2).wert===null&&state.antworten.find(x=>x.nr===2).kann_nicht&&await q(2).locator('[aria-pressed=true]').count()===1);
     await q(12).locator('input').fill('0');await q(15).locator('textarea').fill('Übergabe dokumentieren');await q(21).locator('[data-v="3"]').click();await saved();
     await q(21).locator('summary').click();await q(21).locator('textarea').fill('Tagesliste und Übersicht');await q(24).locator('textarea').click();await saved();
     check(tag+': Zahl null, Text und Wahl gespeichert',state.antworten.find(x=>x.nr===12).wert===0&&state.antworten.find(x=>x.nr===15).beispiel==='Übergabe dokumentieren'&&state.antworten.find(x=>x.nr===21).wert===3);
@@ -259,8 +356,9 @@ try{
     await page.locator('[data-act=um-abgeben]').click();await page.locator('[data-act=um-abgeben]').click();await ready();
     await who('Lea');await tab('umfrage');
     check(tag+': Andere Antworten bleiben vor zweiter Abgabe verborgen',await page.innerText('#saUmAusw')===''&&await q(1).locator('textarea').inputValue()==='');
-    await q(1).locator('[data-v="5"]').click();await saved();await page.locator('[data-act=um-abgeben]').click();await page.locator('[data-act=um-abgeben]').click();await ready();
+    await q(1).locator('[data-v="1"]').click();await saved();await page.locator('[data-act=um-abgeben]').click();await page.locator('[data-act=um-abgeben]').click();await ready();
     check(tag+': Gemeinsame Auswertung ohne Wertung',(await page.innerText('#saUmAusw')).includes('Ein konkreter Vorgang')&&!(await page.innerText('#saUmAusw')).includes('Handlungsbedarf')&&await page.locator('[data-act=um-zurueck]').count()===0);
+    check(tag+': Gemeinsame Auswertung wieder vorhanden',await page.locator('[aria-label="Wo es bei beiden hakt"] [role=row]').count()===2);
     check(tag+': Beispiele für Wahl erscheinen',(await page.innerText('#saUmAusw')).includes('Tagesliste und Übersicht'));
     await screen('auswertung');
     await page.locator('[data-act=um-neu]').click();await page.locator('[data-act=um-neu]').click();await ready();check(tag+': Neue Runde leer und bearbeitbar',state.runden.length===2&&await q(1).locator('[data-v="1"]').isEnabled()&&await page.innerText('#saUmAusw')==='');
@@ -269,8 +367,22 @@ try{
     check(tag+': Systemchips gespeichert',state.systeme[0].reifegrad==='alltag'&&state.systeme[0].einordnung==='behalten');
     await page.locator('#saHubFilter .chip[data-v=alle]').click();check(tag+': 93 Werkzeuge ohne Fokusverlust',await page.locator('[data-hub]').count()===93&&await page.locator('#saHubFilter .chip[data-v=alle]').evaluate(el=>el===document.activeElement));
     await page.locator('#saHubSuche').fill('Werkzeug 09');check(tag+': Suche am Handy',await page.locator('[data-hub]').count()===1);
+    if(width===390)check(tag+': Geschlossene Hubzeile höchstens 90 px',await page.locator('[data-hub]').evaluateAll(els=>els.every(el=>el.getBoundingClientRect().height<=90)));
+    await page.locator('[data-hub] summary').click();
     await page.locator('[data-hub] .chip[data-v=erprobung]').click();await saved();await page.locator('[data-hub] .chip[data-v=umbauen]').click();await saved();
     check(tag+': Hubchips gespeichert',state.werkzeuge[8].stand.reifegrad==='erprobung'&&state.werkzeuge[8].stand.einordnung==='umbauen');
+    check(tag+': Hubzusammenfassung aktualisiert',(await page.innerText('[data-hub] summary')).includes('✓ umbauen · in Erprobung'));
+    await page.locator('#saHubSuche').fill('');
+    if(width===390)check(tag+': Auch lange Namen kompakt',await page.locator('[data-hub]').evaluateAll(els=>els.every(el=>el.getBoundingClientRect().height<=90)));
+    const rows=page.locator('[data-hub]');
+    await rows.nth(0).locator('summary').focus();await page.keyboard.press('Enter');
+    check(tag+': Hubbearbeitung per Tastatur',await rows.nth(0).getAttribute('open')!==null);
+    await rows.nth(1).locator('summary').click();
+    await page.waitForFunction(()=>document.querySelectorAll('[data-hub][open]').length===1&&!document.querySelector('[data-hub]').open);
+    check(tag+': Nur eine Hubbearbeitung offen',await page.locator('[data-hub][open]').count()===1&&await rows.nth(0).getAttribute('open')===null);
+    await page.locator('#saHubFilter .chip[data-v=offen]').click();
+    check(tag+': Noch offen grenzt Hub ein',await page.locator('[data-hub]').count()===92&&(await page.innerText('#saHubZahl'))==='92 von 93'&&await page.locator(`[data-hub="${state.werkzeuge[8].id}"]`).count()===0);
+    await page.locator('#saHubFilter .chip[data-v=alle]').click();
     await page.locator('#saHubSuche').fill('kein Treffer');check(tag+': Leere Suche benannt',(await page.innerText('#saHub')).includes('Keine Werkzeuge passen'));
     await page.locator('#saHubSuche').fill('');await screen('systeme');
     check(tag+': Bedienelemente mindestens 44 px',await page.locator('#sa button:visible,#sa input:not([type=hidden]):visible,#sa textarea:visible').evaluateAll(els=>els.every(e=>e.getBoundingClientRect().height>=44)));

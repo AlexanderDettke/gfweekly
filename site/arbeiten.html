@@ -67,6 +67,9 @@
 .sa-frage .t small{color:var(--text-3);font-size:var(--stufe-1);margin-right:var(--s-8)}
 .sa-skala{display:flex;flex-wrap:wrap;gap:var(--s-8);align-items:center}
 .sa-skala .fchips .chip{min-width:var(--ziel-min);justify-content:center}
+.sa-skala .sa-scale-options{display:grid;grid-template-columns:repeat(5,var(--ziel-min));gap:var(--s-8)}
+.sa-scale-options .enden,.sa-scale-options [data-v="kn"]{grid-column:1/-1}
+.sa-scale-options [data-v="kn"]{justify-self:start}
 .sa-skala .enden{font-size:var(--stufe-1);color:var(--text-3)}
 .sa-bsp summary{font-size:var(--stufe-1);color:var(--text-2);cursor:pointer;list-style:none;user-select:none}
 .sa-bsp summary::-webkit-details-marker{display:none}
@@ -95,6 +98,12 @@
 .sa-sy textarea{resize:vertical;min-height:var(--ziel-min)}
 .sa-filter{display:flex;flex-wrap:wrap;gap:var(--s-8);align-items:center}
 .sa-filter input{max-width:260px;border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);padding:var(--s-8) var(--s-12);background:var(--bg);color:var(--text);font:inherit;font-size:var(--stufe-2)}
+.sa-hub{border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);min-width:0}
+.sa-hub summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--s-4) var(--s-8);padding:var(--s-8) var(--s-12);cursor:pointer;list-style:none;font-size:var(--stufe-2)}
+.sa-hub summary::-webkit-details-marker{display:none}
+.sa-hub-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.sa-hub-meta{grid-column:1/-1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-2);font-size:var(--stufe-1)}
+.sa-hub .sa-sy{border:0}
 .sa-foot{color:var(--text-3);font-size:var(--stufe-2);max-width:72ch;line-height:var(--leading-text)}
 @media (max-width:900px){
   .sa-steps{grid-template-columns:1fr} .sa-stand{grid-template-columns:1fr}
@@ -162,7 +171,7 @@
         <div class="sa-eb">So gehen wir vor</div>
         <ol class="sa-steps">
           <li><b>Ist-Aufnahme</b><span>Jede Person beschreibt ihre wiederkehrenden Abläufe in kurzen Steckbriefen und ergänzt die Liste der Systeme damals und heute. Die andere Person sieht einen Steckbrief erst, wenn er freigegeben ist.</span></li>
-          <li><b>Umfrage</b><span>Beide beantworten getrennt dieselben Fragen zu Orientierung, Entscheidungen, Erreichbarkeit, Fokus, Verlässlichkeit, Systemen und Zusammenarbeit. Die Antworten der anderen Person erscheinen erst, wenn beide abgegeben haben.</span></li>
+          <li><b>Umfrage</b><span>24 Fragen, etwa 15 Minuten. Beide beantworten getrennt dieselben Fragen zu Orientierung, Entscheidungen, Erreichbarkeit, Fokus, Verlässlichkeit, Systemen und Zusammenarbeit. Die Antworten der anderen Person erscheinen erst, wenn beide abgegeben haben.</span></li>
           <li><b>Gemeinsam einordnen</b><span>Mit beiden Ergebnissen gehen wir Ablauf für Ablauf durch: behalten, anpassen, umbauen, weglassen. Erst daraus entstehen Vorschläge für Werkzeuge und Vereinbarungen.</span></li>
         </ol>
         <div class="sa-stand" id="saStand"></div>
@@ -304,7 +313,8 @@ function frageHtml(f){
   const a=antwort(f.nr,"eigene")||{};
   let feld="";
   if(f.art==="skala"){
-    feld=`<div class="sa-skala"><span class="enden">trifft gar nicht zu</span>${gfChips("w"+f.nr,[["1","1"],["2","2"],["3","3"],["4","4"],["5","5"],["kn","kann ich nicht beurteilen"]],a.kann_nicht?"kn":(a.wert!=null?String(a.wert):""),{attr:`data-nr="${f.nr}" data-art="skala"`,label:"Frage "+f.nr+": "+f.text})}<span class="enden">trifft voll zu</span></div>`;
+    const chips=gfChips("w"+f.nr,[["1","1"],["2","2"],["3","3"],["4","4"],["5","5"],["kn","kann ich nicht beurteilen"]],a.kann_nicht?"kn":(a.wert!=null?String(a.wert):""),{attr:`data-nr="${f.nr}" data-art="skala"`,label:"Frage "+f.nr+": "+f.text,cls:"sa-scale-options"});
+    feld=`<div class="sa-skala">${chips.replace('<button','<span class="enden">trifft gar nicht zu</span><button').replace(/(<button[^>]*data-v="kn")/,'<span class="enden">trifft voll zu</span>$1')}</div>`;
   } else if(f.art==="zahl"){
     feld=`<div class="sa-f" style="max-width:220px"><input type="text" inputmode="numeric" aria-labelledby="frage-${f.nr}" aria-describedby="hint-${f.nr}" maxlength="3" data-nr="${f.nr}" data-art="zahl" value="${a.wert!=null?a.wert:""}" placeholder="${esc(f.hinweis||"Zahl")}"><span class="hint" id="hint-${f.nr}">Ganze Stunden von 0 bis 999.</span></div>`;
   } else if(f.art==="wahl"){
@@ -327,7 +337,7 @@ function renderUmfrage(){
   let knopf="", hinweis="";
   if(r&&!meine){ knopf=`<button class="btn btn-primary btn-sm" data-act="um-abgeben"${beantwortet<u.fragen.length?` title="Du kannst auch abgeben, wenn nicht alles beantwortet ist"`:""}>Abgeben</button>`; }
   else if(r&&meine&&!fremde){ knopf=`<button class="btn btn-ghost btn-sm" data-act="um-zurueck">Abgabe zurücknehmen</button>`; hinweis=`<div class="sa-ok">✓ Abgegeben am ${datumDE(meine)}. Sobald ${a} abgibt, seht ihr beide Antworten nebeneinander.</div>`; }
-  else if(r&&u.beide){ knopf=`<button class="btn btn-ghost btn-sm" data-act="um-neu">Neue Runde starten</button>`; hinweis=`<div class="sa-ok">✓ Beide haben abgegeben. Unten stehen eure Antworten und die Unterschiede nebeneinander.</div>`; }
+  else if(r&&u.beide){ knopf=`<button class="btn btn-ghost btn-sm" data-act="um-neu">Neue Runde starten</button>`; hinweis=`<div class="sa-ok">✓ Beide haben abgegeben. Unten seht ihr, wo es bei beiden hakt, eure Unterschiede und alle Antworten nebeneinander.</div>`; }
   $("#saUmKnopf").innerHTML=knopf; $("#saUmHinweis").innerHTML=hinweis;
   const gesperrt=!!meine||!r;
   const themen=[...new Set(u.fragen.map(f=>f.thema))];
@@ -341,9 +351,11 @@ function renderAuswertung(){
   const zeilen=u.fragen.filter(f=>f.art==="skala").map(f=>{
     const e=antwort(f.nr,"eigene"), x=antwort(f.nr,"andere");
     const diff=(e&&x&&!e.kann_nicht&&!x.kann_nicht&&e.wert!=null&&x.wert!=null)?Math.abs(e.wert-x.wert):null;
-    return {f,e,x,diff};
+    const hakt=diff==null?null:((f.umgekehrt?e.wert:6-e.wert)+(f.umgekehrt?x.wert:6-x.wert))/2;
+    return {f,e,x,diff,hakt};
   });
   const wert=(z)=>z?(z.kann_nicht?"nicht beurteilbar":(z.wert!=null?z.wert:"keine Antwort")):"keine Antwort";
+  const gemeinsam=zeilen.filter(z=>z.hakt!=null&&z.hakt>=3.5).sort((p,q)=>q.hakt-p.hakt||p.f.nr-q.f.nr).slice(0,6);
   const diff=[...zeilen].filter(z=>z.diff!=null&&z.diff>=2).sort((p,q)=>q.diff-p.diff);
   const zeile=(z,cls)=>`<div class="sa-aw ${cls}" role="row"><span role="cell">${z.f.nr} · ${esc(z.f.text)}</span><span class="z" role="cell">${wert(z.e)}</span><span class="z" role="cell">${wert(z.x)}</span><span class="d" role="cell">${z.diff!=null?"↔ "+z.diff:""}</span></div>`;
   const kopf=`<div class="sa-aw kopfz" role="row"><span role="columnheader">Aussage</span><span class="z" role="columnheader">${esc(w)}</span><span class="z" role="columnheader">${esc(a)}</span><span class="d" role="columnheader">Abstand</span></div>`;
@@ -351,6 +363,7 @@ function renderAuswertung(){
     return `<div class="sa-frage"><div class="t"><small>${f.nr}</small>${esc(f.text)}</div><div class="sa-txt"><div><b>${esc(w)}</b>${esc(show(e))}${f.art!=="text"&&e&&e.beispiel?`<br>Beispiel: ${esc(e.beispiel)}`:""}</div><div><b>${esc(a)}</b>${esc(show(x))}${f.art!=="text"&&x&&x.beispiel?`<br>Beispiel: ${esc(x.beispiel)}`:""}</div></div></div>`; }).join("");
   const beispiele=u.fragen.filter(f=>f.art==="skala").map(f=>{ const e=antwort(f.nr,"eigene"), x=antwort(f.nr,"andere"); if(!(e&&e.beispiel)&&!(x&&x.beispiel)) return ""; return `<div class="sa-frage"><div class="t"><small>${f.nr}</small>${esc(f.text)}</div><div class="sa-txt"><div><b>${esc(w)}</b>${esc(e&&e.beispiel||"keine Antwort")}</div><div><b>${esc(a)}</b>${esc(x&&x.beispiel||"keine Antwort")}</div></div></div>`; }).join("");
   $("#saUmAusw").innerHTML=`
+    <div class="sa-sec"><h2>Wo es bei beiden hakt</h2><p class="sa-muted">Aussagen, die ihr beide eher kritisch seht. Ein Gesprächsanlass, keine Bewertung.</p><div class="sa-ausw" role="table" aria-label="Wo es bei beiden hakt">${kopf}${gemeinsam.map(z=>zeile(z,"")).join("")||'<div class="sa-leer">Keine Aussage erreicht den gemeinsamen Schwellenwert.</div>'}</div></div>
     <div class="sa-sec"><h2>Größte Unterschiede</h2><p class="sa-muted">Abstand von mindestens 2 Punkten. Die Werte sind eure Selbstauskünfte zu Abläufen und werden nicht bewertet.</p><div class="sa-ausw" role="table" aria-label="Unterschiede">${kopf}${diff.map(z=>zeile(z,"diff")).join("")||'<div class="sa-leer">Keine Aussage mit großem Abstand.</div>'}</div></div>
     <div class="sa-sec"><h2>Alle Skalenantworten</h2><div class="sa-ausw" role="table" aria-label="Skalenantworten">${kopf}${zeilen.map(z=>zeile(z,"")).join("")}</div></div>
     <div class="sa-sec"><h2>Offene Antworten</h2>${texte}</div>
@@ -367,21 +380,28 @@ function sysZeile(s){
   </div>`;
 }
 function renderSysteme(){ $("#saSys").innerHTML=D.systeme.length?D.systeme.map(sysZeile).join(""):`<div class="sa-leer">Noch kein Eintrag.</div>`; }
+function hubStandText(w){
+  const st=w.stand||{}, e=st.einordnung||"offen";
+  const reife=REIFE_HUB.find(([v])=>v===(st.reifegrad||""));
+  return `○ ${HUB_STATUS[w.status]||w.status} · ${e==="offen"?"○":"✓"} ${e}${st.reifegrad?" · "+(reife?.[1]||st.reifegrad):""}`;
+}
 function hubZeile(w){
   const st=w.stand||{};
-  return `<div class="sa-sy" data-hub="${w.id}">
-    <div class="n-wrap"><span class="n">${w.url?`<a href="${esc(w.url)}" target="_blank" rel="noopener">${esc(w.name)} ↗</a>`:esc(w.name)}</span><span class="q">○ ${esc(HUB_STATUS[w.status]||w.status)}${w.kuemmerer?" · Kümmerer "+esc(w.kuemmerer):" · ohne Kümmerer"}${w.quelle_der_wahrheit?" · Quelle der Wahrheit":""}${w.sichtbarkeit==="gf"?" · nur GF":""}</span></div>
-    <div class="sa-ro">${esc(w.zweck||"")}</div>
-    <div class="sa-f"><input maxlength="1000" data-f="notiz" value="${esc(st.notiz||"")}" placeholder="Notiz zur Einordnung" aria-label="Notiz zu ${esc(w.name)}"></div>
-    <span></span>
-    <div class="chips"><span class="lbl">Reifegrad</span>${gfChips("hr"+w.id,REIFE_HUB,st.reifegrad||"",{attr:`data-f="reifegrad"`,label:"Reifegrad"})}<span class="lbl">Einordnung</span>${gfChips("he"+w.id,EINORDNUNG,st.einordnung||"offen",{attr:`data-f="einordnung"`,label:"Einordnung"})}</div>
-  </div>`;
+  return `<details class="sa-hub" data-hub="${w.id}">
+    <summary aria-label="Werkzeug ${esc(w.name)} bearbeiten"><span class="sa-hub-name">${esc(w.name)}</span><span>Bearbeiten</span><span class="sa-hub-meta" data-hub-stand>${esc(hubStandText(w))}</span></summary>
+    <div class="sa-sy">
+      <div class="n-wrap"><span class="n">${w.url?`<a href="${esc(w.url)}" target="_blank" rel="noopener">${esc(w.name)} ↗</a>`:esc(w.name)}</span><span class="q">${w.kuemmerer?"Kümmerer "+esc(w.kuemmerer):"ohne Kümmerer"}${w.quelle_der_wahrheit?" · Quelle der Wahrheit":""}${w.sichtbarkeit==="gf"?" · nur GF":""}</span></div>
+      <div class="sa-ro">${esc(w.zweck||"")}</div>
+      <div class="sa-f"><input maxlength="1000" data-f="notiz" value="${esc(st.notiz||"")}" placeholder="Notiz zur Einordnung" aria-label="Notiz zu ${esc(w.name)}"></div>
+      <div class="chips"><span class="lbl">Reifegrad</span>${gfChips("hr"+w.id,REIFE_HUB,st.reifegrad||"",{attr:`data-f="reifegrad"`,label:"Reifegrad"})}<span class="lbl">Einordnung</span>${gfChips("he"+w.id,EINORDNUNG,st.einordnung||"offen",{attr:`data-f="einordnung"`,label:"Einordnung"})}</div>
+    </div>
+  </details>`;
 }
 function renderHub(){
   const alle=D.werkzeuge||[];
   const f=HUBF, s=HUBS.trim().toLowerCase();
-  const liste=alle.filter(w=>(f==="alle"||(f==="gf"?w.sichtbarkeit==="gf":w.status===f))).filter(w=>!s||(w.name+" "+(w.zweck||"")+" "+(w.kuemmerer||"")).toLowerCase().includes(s));
-  if(!$("#saHubF")) $("#saHubFilter").innerHTML=gfChips("hubf",[["aktiv","aktiv"],["aufbau","im Aufbau"],["gf","nur GF"],["alle","alle"]],f,{attr:'id="saHubF"',label:"Filter"});
+  const liste=alle.filter(w=>(f==="alle"||(f==="offen"?(!w.stand||!w.stand.einordnung||w.stand.einordnung==="offen"):f==="gf"?w.sichtbarkeit==="gf":w.status===f))).filter(w=>!s||(w.name+" "+(w.zweck||"")+" "+(w.kuemmerer||"")).toLowerCase().includes(s));
+  if(!$("#saHubF")) $("#saHubFilter").innerHTML=gfChips("hubf",[["aktiv","aktiv"],["aufbau","im Aufbau"],["offen","noch offen"],["gf","nur GF"],["alle","alle"]],f,{attr:'id="saHubF"',label:"Filter"});
   $("#saHubZahl").textContent=`${liste.length} von ${alle.length}`;
   $("#saHub").innerHTML=liste.length?liste.map(hubZeile).join(""):`<div class="sa-leer">○ ${alle.length?"Keine Werkzeuge passen zur Suche und zum Filter.":"Noch keine Werkzeuge im Register."}</div>`;
 }
@@ -453,6 +473,11 @@ async function load(){
 }
 
 /* ---------- Ereignisse ---------- */
+document.addEventListener("toggle",e=>{
+  const el=e.target;
+  if(!el.matches("details.sa-hub")) return;
+  if(el.open) document.querySelectorAll("details.sa-hub[open]").forEach(other=>{if(other!==el)other.open=false;});
+},true);
 document.querySelector('.sa-tabs').addEventListener('keydown',e=>{
   const tabs=[...document.querySelectorAll('.sa-tabs [role=tab]')];
   const i=tabs.indexOf(e.target); if(i<0) return;
@@ -557,7 +582,8 @@ document.addEventListener("change",e=>{
   }
   if(hub&&field){
     const id=hub.dataset.hub;
-    queueSave(`hub:${id}:${field}`,el,async(state,who)=>{const d=await saApi('hub_stand_set',{werkzeug_id:id,[field]:value},who);state.werkzeuge.find(x=>x.id===id).stand=d.stand;});
+    queueSave(`hub:${id}:${field}`,el,async(state,who)=>{const d=await saApi('hub_stand_set',{werkzeug_id:id,[field]:value},who);const w=state.werkzeuge.find(x=>x.id===id);w.stand=d.stand;
+      const text=hub.querySelector('[data-hub-stand]');if(text)text.textContent=hubStandText(w);});
   }
 });
 $("#saHubSuche").addEventListener("input",e=>{if(!D)return;HUBS=e.target.value;renderHub();controls();});

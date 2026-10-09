@@ -12,7 +12,7 @@
      Eigene Funktion, damit die große Funktion gfweekly unberührt bleibt. */
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const VERSION = 1;
+const VERSION = 2;
 const PASSWORD = Deno.env.get('GFWEEKLY_PASSWORD') ?? '';
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
@@ -199,7 +199,7 @@ Deno.serve(async (req) => {
       if (!nr || !fnr) throw new Fehler(400, 'Runde oder Frage fehlt.');
       const r = await runde(nr);
       if (abgegeben(r, W)) throw new Fehler(409, 'Du hast diese Runde schon abgegeben. Zum Ändern erst die Abgabe zurücknehmen.');
-      const { data: frage, error: ef } = await db.from('gfweekly_sa_fragen').select('*').eq('nr', fnr).maybeSingle();
+      const { data: frage, error: ef } = await db.from('gfweekly_sa_fragen').select('*').eq('nr', fnr).eq('aktiv', true).maybeSingle();
       if (ef) throw new Error(ef.message);
       if (!frage) throw new Fehler(404, 'Diese Frage gibt es nicht.');
       const kann_nicht = !!t.kann_nicht;
@@ -221,8 +221,9 @@ Deno.serve(async (req) => {
       const nr = parseInt(t.runde); if (!nr) throw new Fehler(400, 'Runde fehlt.');
       const r = await runde(nr);
       if (abgegeben(r, W)) return json({ ok: true, runde: r, schon: true });
-      const { data, error } = await db.from('gfweekly_sa_runden').update({ [feldAbgabe(W)]: new Date().toISOString() }).eq('nr', nr).select('*').single();
+      const { data, error } = await db.from('gfweekly_sa_runden').update({ [feldAbgabe(W)]: new Date().toISOString() }).eq('nr', nr).is(feldAbgabe(W), null).select('*').maybeSingle();
       if (error) throw new Error(error.message);
+      if (!data) return json({ ok: true, runde: await runde(nr), schon: true });
       await log(W, 'umfrage_abgegeben', { runde: nr });
       return json({ ok: true, runde: data, beide: !!(data.abgegeben_alex && data.abgegeben_lea) });
     }
@@ -230,8 +231,9 @@ Deno.serve(async (req) => {
       const nr = parseInt(t.runde); if (!nr) throw new Fehler(400, 'Runde fehlt.');
       const r = await runde(nr);
       if (abgegeben(r, A)) throw new Fehler(409, `${A} hat schon abgegeben, die Antworten sind beiden sichtbar. Für Änderungen eine neue Runde starten.`);
-      const { data, error } = await db.from('gfweekly_sa_runden').update({ [feldAbgabe(W)]: null }).eq('nr', nr).select('*').single();
+      const { data, error } = await db.from('gfweekly_sa_runden').update({ [feldAbgabe(W)]: null }).eq('nr', nr).is(feldAbgabe(A), null).select('*').maybeSingle();
       if (error) throw new Error(error.message);
+      if (!data) throw new Fehler(409, `${A} hat schon abgegeben, die Antworten sind beiden sichtbar. Für Änderungen eine neue Runde starten.`);
       await log(W, 'umfrage_zurueck', { runde: nr });
       return json({ ok: true, runde: data });
     }
