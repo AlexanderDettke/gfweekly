@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-11T03:40:43.816Z",
+  "base": "https://6acb0018f6bb2a0008a56243--hohes-haus.netlify.app",
+  "functionVersion": 3,
+  "checks": 60,
+  "htmlPages": 25,
+  "netlifyLinkTransformations": [
+    "besprechung.html",
+    "board.html",
+    "capture.html",
+    "checkin.html",
+    "inbox.html",
+    "index.html",
+    "jahr.html",
+    "saison-steckbriefe.html"
+  ],
+  "assets": 9,
+  "browser": [
+    {
+      "who": "Alex",
+      "width": 390,
+      "theme": "dark",
+      "errors": [],
+      "mutations": []
+    },
+    {
+      "who": "Lea",
+      "width": 390,
+      "theme": "dark",
+      "errors": [],
+      "mutations": []
+    },
+    {
+      "who": "Alex",
+      "width": 390,
+      "theme": "light",
+      "errors": [],
+      "mutations": []
+    },
+    {
+      "who": "Lea",
+      "width": 390,
+      "theme": "light",
+      "errors": [],
+      "mutations": []
+    },
+    {
+      "who": "Alex",
+      "width": 1440,
+      "theme": "dark",
+      "errors": [],
+      "mutations": []
+    },
+    {
+      "who": "Lea",
+      "width": 1440,
+      "theme": "dark",
+      "errors": [],
+      "mutations": []
+    },
+    {
+      "who": "Alex",
+      "width": 1440,
+      "theme": "light",
+      "errors": [],
+      "mutations": []
+    },
+    {
+      "who": "Lea",
+      "width": 1440,
+      "theme": "light",
+      "errors": [],
+      "mutations": []
+    }
+  ],
+  "productionWrites": 0,
+  "limitations": "Lesende Releaseprüfung. Der vollständige schreibende Pfad wurde in dieser Prüfung nicht erneut ausgeführt."
+}

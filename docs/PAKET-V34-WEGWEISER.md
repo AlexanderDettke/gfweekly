@@ -2,7 +2,7 @@
 
 **Reihenfolge geändert (Alex, 11.10.): V34 kommt vor V35.** Die Google-Anmeldung (V35) funktioniert noch nicht; V34 wird deshalb unabhängig davon auf main gebaut und deployt. V35 bleibt auf dem Branch `paket/v35-anmeldung` liegen und wird danach auf V34 aufgesetzt (Assets dann ?v=35 → ?v=36 prüfen, ?person= wird bei Google-Anmeldung wirkungslos).
 
-**Entschieden (Alex, 10.10.): Variante B „Wegweiser“** im Design des Hohen Hauses. Klickbarer Entwurf: Canvas „So arbeiten wir · drei Einstiege“, Artboard „B · Wegweiser“ (https://claude.ai/artifact/BBXXqVsYjFP254xYjs2cRR). Live ist noch V33 (Tabs Start / Ist-Aufnahme / Umfrage / Systeme); dieser Auftrag ersetzt deren Einstieg.
+**Entschieden (Alex, 10.10.): Variante B „Wegweiser“** im Design des Hohen Hauses. Klickbarer Entwurf: Canvas „So arbeiten wir · drei Einstiege“, Artboard „B · Wegweiser“ (https://claude.ai/artifact/BBXXqVsYjFP254xYjs2cRR). V34 ersetzt den bisherigen Einstieg mit Tabs Start / Ist-Aufnahme / Umfrage / Systeme. Seit 11.10.2026 veröffentlicht, Beleg in `docs/reviews/V34-release-20261011.md`.
 
 Vorgaben Alex:
 - Ein naheliegender nächster Klick zu jeder Zeit, keine Tab-Suche, executive ready, nicht langweilig.
@@ -72,7 +72,9 @@ Ein Bildschirm, eine Handlung; kein Erklärtext über zwei Zeilen; keine Zeitang
 - Schritt 3 wird nach drei Abläufen aktiv: eine Etappe „Unsere Systeme“ (alle Einträge), danach die Hub-Werkzeuge mit Status aktiv oder im Aufbau (nicht abgelöst oder archiviert) in Etappen zu höchstens 10 („Werkzeuge 1 bis 10“ …). „Stimmt“ und „Kenne ich nicht“ schreiben nichts; sie merkt sich das Gerät (localStorage je Person), weil es keine Tabelle je Person dafür gibt. Die Seite sagt das dazu. Ein dauerhafter Stand je Person wäre eine neue Tabelle (Folgepaket). „Korrigieren“ speichert über `system_save`, die Einordnung eines Werkzeugs über `hub_stand_set` (gemeinsam für beide).
 - Wo man aufgehört hat (Etappe, Ablauf, Bildschirm), merkt sich das Gerät ebenfalls im localStorage; auf einem anderen Gerät öffnet der Pfad an der nächsten offenen Etappe.
 
-**Offen für Alex:** Funktion `arbeiten` deployen (`npx --yes supabase@latest functions deploy arbeiten --project-ref bnfmupnmqyrcltrphfak --no-verify-jwt`), Push auf main, Deploy-Permalink ansehen.
+**Veröffentlichung abgeschlossen am 11.10.2026:** Funktion `arbeiten` v3 deployt, Quelltext mit lokalem Stand identisch; `main` bis `763a2dc` gepusht. Netlify Deploy `6acb0018f6bb2a0008a56243` veröffentlicht diesen Commit. Die 415 lokalen Oberflächenprüfungen wurden erneut ausgeführt. Danach 60 lesende Prüfungen über den Deploylink gegen das echte Backend bestanden: beide Personen, 390/1440 px, hell/dunkel, persönliche Einstiege, Fortsetzen nach Neuladen, Antwortschutz und neue Statusanzeige. Keine Schreibaufrufe; Produktionsbestand vor und nach der Browserprüfung identisch. Die Bildschirmproben für Handy hell und Desktop dunkel wurden zusätzlich angesehen. Details und Grenzen in `docs/reviews/V34-release-20261011.md`.
+
+**Nächster Auftrag V35:** `paket/v35-anmeldung` auf den veröffentlichten V34 Stand aufsetzen, Assetversion und Personenübernahme aus der Anmeldung prüfen. Der Branch wurde in dieser Veröffentlichung nicht verändert. Die oben gekennzeichneten Arbeitsannahmen und die vollständige schreibende Abnahme beider Personen sind durch die lesende Releaseprüfung nicht zusätzlich bestätigt.
 
 ## Terminal-Start
 

@@ -1,5 +1,12 @@
 # Das Hohe Haus (vormals GF Weekly)
 
+> **Stand 11.10.2026: V34 Wegweiser veröffentlicht.** „So arbeiten wir“ führt Alex und Lea durch kleine Etappen.
+> Persönlicher Einstieg: `arbeiten.html?person=alex&start=1` beziehungsweise `?person=lea&start=1`.
+> Funktion `arbeiten` v3 ist deployt, Commit `763a2dc` auf `main` veröffentlicht. 415 lokale Oberflächenprüfungen
+> und 60 lesende Prüfungen des veröffentlichten Stands bestanden, jeweils Handy und Desktop, hell und dunkel.
+> Vorhandene Produktionsdaten blieben unverändert. Vollständige schreibende Abnahme beider Personen bleibt gesondert offen.
+> Beleg: `docs/reviews/V34-release-20261011.md`. V35 Google Anmeldung bleibt auf `paket/v35-anmeldung` und folgt danach.
+
 > **Stand 09.10.2026: V33 So arbeiten wir** auf `main`: neue Seite `site/arbeiten.html` mit Ist-Aufnahme,
 > getrennter Umfrage und gemeinsamer Einordnung von Systemen und Werkzeugen. Eigene Edge Function `arbeiten` v2
 > deployt, beide Migrationen angewendet. Vom Prüfer belegt: lesende Liveprobe bestanden und 211 lokale Prüfungen
