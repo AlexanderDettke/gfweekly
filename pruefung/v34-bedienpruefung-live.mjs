@@ -3,7 +3,8 @@
    Als Lea: der ganze Pfad (Link, Etappe 1, nach drei Fragen neu laden, Später, Link erneut, bis Abgabe, Zurücknehmen,
    erneut abgeben, ein Ablauf in Schritt 2). Als Alex: nur ansehen (seine echten Antworten bleiben unberührt, kein Schreibaufruf).
    Vorher muss Lea in Runde 1 leer sein (keine Antworten, keine Steckbriefe, keine Abgabe), sonst bricht das Skript ab.
-   Danach räumt pruefung/v34-testdaten-entfernen.sql die Testdaten von Lea wieder ab.
+   Danach räumt pruefung/v34-testdaten-entfernen.sql die Testdaten von Lea wieder ab (Zeitpunkt „seit“ = Beginn der Prüfung,
+   den das Skript zu Beginn ausgibt). Nur ausführen, wenn Lea währenddessen nicht selbst arbeitet.
    Aufruf (Passwort nie ausgeben):
      GF_PW=… BREITE=390 PLAYWRIGHT_MODUL=~/spiel-test/node_modules/playwright/index.mjs node pruefung/v34-bedienpruefung-live.mjs */
 import fs from 'node:fs';
@@ -36,6 +37,7 @@ const server = http.createServer((req, res) => {
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${server.address().port}`;
 
+console.log('Beginn der Prüfung (für „seit“ im SQL): ' + new Date().toISOString());
 /* Ausgangslage: Lea leer, Alex unverändert festhalten. */
 const vorherLea = await lage('Lea'), vorherAlex = await lage('Alex');
 const runde = vorherLea.umfrage.runde;
@@ -43,6 +45,9 @@ assert.ok(runde && runde.nr === 1, 'Runde 1 läuft');
 assert.ok(!runde.abgegeben_lea && vorherLea.umfrage.eigene.length === 0 && vorherLea.ist.eigene.length === 0, 'Lea muss vor der Prüfung leer sein. Erst pruefung/v34-testdaten-entfernen.sql ausführen.');
 assert.ok(!runde.abgegeben_alex, 'Alex hat inzwischen abgegeben. Dann sähe Alex Leas Testantworten nach ihrer Abgabe: Prüfung abgebrochen.');
 const alexFingerabdruck = JSON.stringify([vorherAlex.umfrage.eigene, vorherAlex.ist.eigene, runde.abgegeben_alex]);
+/* Vor jeder Abgabe von Lea erneut: hat Alex inzwischen abgegeben, sähe er Leas Testantworten. Dann sofort abbrechen
+   (Testdaten trotzdem mit dem SQL entfernen). */
+async function alexNichtAbgegeben() { const a = await lage('Alex'); assert.ok(!a.umfrage.runde.abgegeben_alex, 'Alex hat während der Prüfung abgegeben: Abbruch vor Leas Abgabe.'); }
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODUL || '/Users/alexanderdettke/spiel-test/node_modules/playwright/index.mjs');
 const browser = await chromium.launch();
@@ -105,7 +110,7 @@ try {
   await page.locator('#saWeg .stepper [data-d="1"]').click(); await page.locator('#saWeg .stepper [data-d="1"]').click();
   await wechsel(() => knopf('w-weiter-zahl').click());
   await antworte(4); await antworte(3);
-  await wechsel(() => knopf('w-ueberspringen').click());
+  await page.locator('#swText').fill('Testantwort der Bedienprüfung V34'); await wechsel(() => knopf('w-weiter-text').click());
   for (let i = 16; i <= 19; i++) await antworte(3);
   await wechsel(() => knopf('w-etappe').click());
   await antworte(4); await antworte(3);
@@ -114,13 +119,15 @@ try {
   await wechsel(() => knopf('w-weiter-text').click());
   check(tag + ': Etappe 3 geschafft, Abgabe angeboten', (await page.innerText('#saWeg')).includes('✓ Etappe 3 geschafft') && await knopf('w-abgeben').count() === 1);
   let l = await lage('Lea');
-  check(tag + ': 24 Antworten in der Datenbank', l.umfrage.eigene.length === 24 && l.umfrage.eigene.find(a => a.nr === 12).wert === 1 && l.umfrage.eigene.find(a => a.nr === 15).kann_nicht && l.umfrage.eigene.find(a => a.nr === 3).kann_nicht && l.umfrage.eigene.find(a => a.nr === 22).beispiel === 'Testantwort der Bedienprüfung V34');
+  check(tag + ': 24 Antworten in der Datenbank', l.umfrage.eigene.length === 24 && l.umfrage.eigene.find(a => a.nr === 12).wert === 1 && l.umfrage.eigene.find(a => a.nr === 15).beispiel === 'Testantwort der Bedienprüfung V34' && l.umfrage.eigene.find(a => a.nr === 3).kann_nicht && l.umfrage.eigene.find(a => a.nr === 23).kann_nicht && l.umfrage.eigene.find(a => a.nr === 22).beispiel === 'Testantwort der Bedienprüfung V34');
+  await alexNichtAbgegeben();
   await knopf('w-abgeben').click(); await knopf('w-abgeben').click();
   await page.waitForFunction(() => !BUSY && document.querySelector('[data-act=w-ablauf-neu]'), null, { timeout: 30000 });
   check(tag + ': Abgabe gespeichert, Schritt 2 aktiv', !!(await lage('Lea')).umfrage.runde.abgegeben_lea && (await page.innerText('.sw-stand')).includes('✓ abgegeben'));
   await knopf('w-zurueknehmen').click();
   await page.waitForFunction(() => !BUSY && document.querySelector('[data-act=w-abgeben]'), null, { timeout: 30000 });
   check(tag + ': Zurücknehmen wirkt', !(await lage('Lea')).umfrage.runde.abgegeben_lea);
+  await alexNichtAbgegeben();
   await knopf('w-abgeben').click(); await knopf('w-abgeben').click();
   await page.waitForFunction(() => !BUSY && document.querySelector('[data-act=w-ablauf-neu]'), null, { timeout: 30000 });
   await schirm('lea-schritt2');

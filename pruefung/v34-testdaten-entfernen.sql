@@ -1,14 +1,24 @@
 -- V34 · Testdaten der Bedienprüfung entfernen (pruefung/v34-bedienpruefung-live.mjs).
 -- Vor der Prüfung hatte Lea in Runde 1 keine Antworten, keine Steckbriefe und keine Abgabe; das Skript bricht sonst ab.
--- Entfernt deshalb alles von Lea in Runde 1, ihre Steckbriefe und ihre Protokollzeilen seit Beginn der Prüfung.
--- Alex wird nicht berührt. Aufruf:
+-- Gelöscht wird nur, was seit Beginn der Prüfung entstanden ist (Zeitpunkt „seit“, gibt das Skript zu Beginn aus).
+-- Hat Lea Antworten oder Steckbriefe von davor, bricht das SQL ab und löscht nichts. Steckbriefe nur mit dem Testmerkmal.
+-- Alex wird nicht berührt. Nur ausführen, wenn Lea während der Prüfung nicht selbst gearbeitet hat. Aufruf:
 --   npx --yes supabase db query --linked --project-ref bnfmupnmqyrcltrphfak -f pruefung/v34-testdaten-entfernen.sql < /dev/null
--- Den Zeitpunkt in der Zeile mit „seit“ vor dem Aufruf auf den Beginn der Prüfung setzen.
 begin;
-delete from gfweekly_sa_antworten where runde = 1 and person = 'Lea';
-delete from gfweekly_sa_ist where person = 'Lea';
-update gfweekly_sa_runden set abgegeben_lea = null where nr = 1;
-delete from gfweekly_sa_log where who = 'Lea' and at >= timestamptz '2026-10-11 00:00:00+00';   -- seit
+select set_config('v34.seit', '2026-10-11 02:40:21+00', true);   -- seit: Beginn der Prüfung
+do $$
+declare seit timestamptz := current_setting('v34.seit')::timestamptz;
+begin
+  if exists (select 1 from gfweekly_sa_antworten where runde = 1 and person = 'Lea' and updated_at < seit)
+     or exists (select 1 from gfweekly_sa_ist where person = 'Lea' and created_at < seit)
+     or exists (select 1 from gfweekly_sa_runden where nr = 1 and abgegeben_lea < seit) then
+    raise exception 'Lea hat Daten von vor der Prüfung. Nichts gelöscht.';
+  end if;
+end $$;
+delete from gfweekly_sa_antworten where runde = 1 and person = 'Lea' and updated_at >= current_setting('v34.seit')::timestamptz;
+delete from gfweekly_sa_ist where person = 'Lea' and created_at >= current_setting('v34.seit')::timestamptz and startet_wenn = 'Test V34';
+update gfweekly_sa_runden set abgegeben_lea = null where nr = 1 and abgegeben_lea >= current_setting('v34.seit')::timestamptz;
+delete from gfweekly_sa_log where who = 'Lea' and at >= current_setting('v34.seit')::timestamptz;
 commit;
 select
   (select count(*) from gfweekly_sa_antworten where runde = 1 and person = 'Lea') as lea_antworten,

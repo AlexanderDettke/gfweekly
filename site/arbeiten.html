@@ -497,12 +497,14 @@ const ETAPPEN=[{von:1,bis:9,titel:"Orientierung, Entscheidungen, Anfragen"},{von
 const SKALA=[["1","trifft gar nicht zu"],["2","eher nicht"],["3","teils"],["4","eher"],["5","trifft voll zu"],["kn","passt nicht zu mir"]];
 const ABLAUF_VORSCHLAG=["Mails und Posteingang","Termine und Besprechungen","Entscheidungen vorbereiten","Aufgaben ans Team geben","Freigaben","Partner und Verträge","Finanzen und Zahlungen","Planung","Notizen und Wissen ablegen","Übergaben und Abwesenheit"];
 const HAEUFIGKEIT=["täglich","wöchentlich","monatlich","unregelmäßig"];
-const ABLAEUFE_SOLL=3, HUB_JE_ETAPPE=10;
+const ABLAEUFE_SOLL=3, HUB_JE_ETAPPE=10, FREIWILLIG=[22,23,24], HUB_STATUS_EINORDNEN=["aktiv","aufbau"];
 let VIEW="start", WEG={mode:"pfad"}, TAP=false;
 const lsGet=k=>{ try{ return JSON.parse(localStorage.getItem(k)||"null"); }catch(e){ return null; } };
 const lsSet=(k,v)=>{ try{ if(v==null) localStorage.removeItem(k); else localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
 const wegKey=()=>"sa_weg_"+(D?D.who:gfWho()), sysKey=()=>"sa_sys_"+D.who, hubKey=()=>"sa_hub_"+D.who;
 function wegMerken(){ lsSet(wegKey(), WEG.mode==="pfad"?null:WEG); }
+/* Merkmal der Stelle, an der getippt wurde: der verzögerte Übergang läuft nur, wenn man noch dort steht. */
+const wegStelle=()=>[D?D.who:"",WEG.mode,WEG.et,WEG.i,WEG.teil].join("|");
 
 /* Umfrage */
 function etFragen(i){ const e=ETAPPEN[i]; return D.umfrage.fragen.filter(f=>f.nr>=e.von&&f.nr<=e.bis); }
@@ -525,7 +527,7 @@ function standText(p){
 /* Abläufe */
 const eigeneAblaeufe=()=>D.ist.eigene;
 /* Systeme und Werkzeuge */
-function hubListe(){ return (D.werkzeuge||[]).filter(w=>w.status==="aktiv"); }
+function hubListe(){ return (D.werkzeuge||[]).filter(w=>HUB_STATUS_EINORDNEN.includes(w.status)); }   // abgelöste und archivierte Werkzeuge nicht
 function hubTeile(){ const l=hubListe(), t=[]; for(let i=0;i<l.length;i+=HUB_JE_ETAPPE) t.push(l.slice(i,i+HUB_JE_ETAPPE)); return t; }
 function sysErledigt(){ const s=new Set(lsGet(sysKey())||[]); return D.systeme.every(x=>s.has(x.id)); }
 function hubErledigt(teil){ const s=new Set(lsGet(hubKey())||[]); return teil.every(w=>s.has(w.id)||(w.stand&&w.stand.einordnung&&w.stand.einordnung!=="offen")); }
@@ -586,7 +588,7 @@ function renderWeg(){
     else {
       z3="aktiv"; sub3="jetzt · "+teile3.length+" kleine Etappen";
       const t=teile3[k];
-      i3=kach+`<p class="sw-text">${t.art==="sys"?"Je System ein Bildschirm: stimmt das so, oder fehlt etwas?":"Je Werkzeug aus dem Hub ein Bildschirm: behalten, anpassen, umbauen oder weglassen?"}</p><button class="btn btn-primary sw-voll" data-act="w-teil" data-teil="${t.art==="sys"?-1:t.i}">${t.art==="sys"?"Systeme durchgehen":esc(t.titel)+" einordnen"}</button>`;
+      i3=kach+`<p class="sw-text">${t.art==="sys"?"Je System ein Bildschirm: stimmt das so, oder fehlt etwas? Was du bestätigst, merkt sich dieses Gerät.":"Je Werkzeug aus dem Hub ein Bildschirm: behalten, anpassen, umbauen oder weglassen?"}</p><button class="btn btn-primary sw-voll" data-act="w-teil" data-teil="${t.art==="sys"?-1:t.i}">${t.art==="sys"?"Systeme durchgehen":esc(t.titel)+" einordnen"}</button>`;
     }
   }
   const fertigText=s3fertig&&m==="pfad"?`<div class="sa-ok">✓ Alles erledigt. Jetzt ordnen wir gemeinsam ein: behalten, anpassen, umbauen, weglassen.</div>`:"";
@@ -626,7 +628,7 @@ function frageSchirm(){
       <div class="sw-knoepfe"><button class="btn btn-primary" data-act="w-weiter-zahl" data-fokus>Weiter</button><button class="btn btn-brand" data-act="w-antwort" data-v="kn">Passt nicht zu mir</button></div>`;
   } else {
     feld=`<div class="sw-feld"><textarea id="swText" maxlength="3000" aria-labelledby="swAussage" placeholder="in Stichworten oder Sätzen" data-fokus>${esc(a.beispiel||"")}</textarea></div>
-      <div class="sw-knoepfe"><button class="btn btn-primary" data-act="w-weiter-text">Weiter</button><button class="btn btn-brand" data-act="w-ueberspringen">Überspringen</button></div>`;
+      <div class="sw-knoepfe"><button class="btn btn-primary" data-act="w-weiter-text">Weiter</button>${FREIWILLIG.includes(f.nr)?`<button class="btn btn-brand" data-act="w-ueberspringen">Überspringen</button>`:""}</div>`;
   }
   return `<div class="sw-schirm" >${kopf}${feld}</div>`;
 }
@@ -668,13 +670,13 @@ function ablaufSchirm(){
   const chips=(gruppe,liste,cur,multi)=>`<div class="sw-chips" role="group" aria-label="${esc(gruppe)}" data-gruppe="${gruppe}"${multi?' data-multi="1"':""}>${liste.map(v=>`<button class="sw-opt" data-act="w-chip" data-v="${esc(v)}" aria-pressed="${multi?cur.includes(v):cur===v}">${esc(v)}</button>`).join("")}</div>`;
   let body="";
   if(s===0) body=`<p class="sw-aussage" id="swAussage">Welcher Ablauf?</p>${chips("vorschlag",ABLAUF_VORSCHLAG,x.ablauf||"",false)}
-    <div class="sw-feld"><label for="swAblauf">Name des Ablaufs</label><input id="swAblauf" maxlength="200" value="${esc(x.ablauf||"")}" placeholder="z. B. Freigabe eines Newsletters" data-fokus></div>`;
+    <div class="sw-feld"><label for="swAblauf">Name des Ablaufs</label><input id="swAblauf" maxlength="200" value="${esc(x.ablauf||"")}" placeholder="z. B. Freigabe eines Newsletters" data-fokus data-wf="ablauf"></div>`;
   if(s===1) body=`<p class="sw-aussage" id="swAussage">Wann startet er?</p>
     <div class="sw-feld"><label for="swStartet">Was setzt ihn in Gang?</label><input id="swStartet" maxlength="2000" value="${esc(x.startet_wenn||"")}" placeholder="z. B. Mail von Partner, Frist in Asana" data-fokus data-wf="startet_wenn"></div>
     <div class="sw-feld"><label>Wie oft?</label>${chips("haeufigkeit",HAEUFIGKEIT,x.haeufigkeit||"",false)}</div>`;
   if(s===2){ const cur=(x.werkzeuge||"").split(",").map(t=>t.trim()).filter(Boolean), namen=D.systeme.map(y=>y.name), rest=cur.filter(t=>!namen.includes(t));
     body=`<p class="sw-aussage" id="swAussage">Womit läuft er?</p>${chips("werkzeuge",namen,cur,true)}
-    <div class="sw-feld"><label for="swWerkzeugeMehr">Noch etwas anderes</label><input id="swWerkzeugeMehr" maxlength="400" value="${esc(rest.join(", "))}" placeholder="z. B. WhatsApp, Kopf"></div>`; }
+    <div class="sw-feld"><label for="swWerkzeugeMehr">Noch etwas anderes</label><input id="swWerkzeugeMehr" maxlength="400" value="${esc(rest.join(", "))}" placeholder="z. B. WhatsApp, Kopf" data-wf="werkzeuge"></div>`; }
   if(s===3) body=`<p class="sw-aussage" id="swAussage">Wer ist beteiligt?</p>
     <div class="sw-feld"><label for="swBeteiligte">Wer macht mit, auf wen wartest du?</label><input id="swBeteiligte" maxlength="2000" value="${esc(x.beteiligte||"")}" data-fokus data-wf="beteiligte"></div>
     <div class="sw-feld"><label>Betrifft es ${esc(a)}?</label>${chips("beruehrt",["Ja","Nein"],x.beruehrt_andere?"Ja":(x.id?"Nein":""),false)}</div>`;
@@ -690,7 +692,7 @@ async function ablaufWeiter(){
   const s=WEG.s||0, who=D.who; let p={};
   if(s===0){ const name=($("#swAblauf").value||"").trim(); if(!name){ $("#swAblauf").setAttribute("aria-invalid","true"); throw new Error("Der Ablauf braucht einen Namen."); } p.ablauf=name; }
   if(s===1){ p.startet_wenn=$("#swStartet").value; const h=chipWert("haeufigkeit"); if(h!=null) p.haeufigkeit=h; }
-  if(s===2){ const mehr=($("#swWerkzeugeMehr").value||"").split(",").map(t=>t.trim()).filter(Boolean); p.werkzeuge=[...chipWert("werkzeuge"),...mehr].join(", "); }
+  if(s===2) p.werkzeuge=werkzeugeWert();
   if(s===3){ p.beteiligte=$("#swBeteiligte").value; const b=chipWert("beruehrt"); if(b) p.beruehrt_andere=b==="Ja"; }
   if(s===4){ p.hakt=$("#swHakt").value; p.laeuft_gut=$("#swGut").value; }
   if(WEG.id) p.id=WEG.id;
@@ -707,8 +709,8 @@ function systemSchirm(){
     <div class="sw-bar" aria-hidden="true"><i style="width:${Math.round(i/l.length*100)}%"></i></div>`;
   const info=`<p class="sw-aussage" id="swAussage">${esc(x.name)}</p><div class="sw-info">${x.wofuer?`<div><span class="k">Wofür</span>${esc(x.wofuer)}</div>`:""}${x.beobachtung?`<div><span class="k">Beobachtung</span>${esc(x.beobachtung)}</div>`:""}</div>`;
   if(WEG.korr) return `<div class="sw-schirm" >${kopf}<p class="sw-aussage" id="swAussage">${esc(x.name)}</p>
-    <div class="sw-feld"><label for="swWofuer">Wofür</label><textarea id="swWofuer" maxlength="1000" data-fokus>${esc(x.wofuer||"")}</textarea></div>
-    <div class="sw-feld"><label for="swBeob">Beobachtung</label><textarea id="swBeob" maxlength="2000">${esc(x.beobachtung||"")}</textarea></div>
+    <div class="sw-feld"><label for="swWofuer">Wofür</label><textarea id="swWofuer" maxlength="1000" data-fokus data-wsys="wofuer">${esc(x.wofuer||"")}</textarea></div>
+    <div class="sw-feld"><label for="swBeob">Beobachtung</label><textarea id="swBeob" maxlength="2000" data-wsys="beobachtung">${esc(x.beobachtung||"")}</textarea></div>
     <button class="btn btn-primary sw-voll" data-act="w-sys-korr-weiter">Weiter</button></div>`;
   return `<div class="sw-schirm" >${kopf}${info}<div class="sw-optionen" role="group" aria-labelledby="swAussage">
     <button class="sw-opt" data-act="w-sys" data-v="stimmt" data-fokus>Stimmt</button><button class="sw-opt" data-act="w-sys" data-v="korr">Korrigieren</button><button class="sw-opt leise" data-act="w-sys" data-v="kenne">Kenne ich nicht</button></div></div>`;
@@ -834,7 +836,7 @@ function wegSofort(act,b){
     const f=etFragen(WEG.et)[WEG.i], v=b.dataset.v;
     b.closest(".sw-schirm").querySelectorAll('[data-act="w-antwort"]').forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false"));
     antwortSpeichern(f.nr, v==="kn"?{kann_nicht:true,wert:null}:{kann_nicht:false,wert:Number(v)}, b.parentElement);
-    setTimeout(()=>{ TAP=false; naechsteFrage(); },200); return true;
+    const stelle=wegStelle(); setTimeout(()=>{ TAP=false; if(wegStelle()===stelle) naechsteFrage(); },200); return true;
   }
   if(act==="w-weiter-zahl"){
     const f=etFragen(WEG.et)[WEG.i], v=($("#swZahl").value||"").trim();
@@ -843,9 +845,12 @@ function wegSofort(act,b){
   }
   if(act==="w-weiter-text"||act==="w-ueberspringen"){
     const f=etFragen(WEG.et)[WEG.i], t=($("#swText").value||"").trim(), alt=antwort(f.nr,"eigene");
-    /* Text speichern, wenn er sich geändert hat; leer weiter oder Überspringen merkt sich „übersprungen“ (kann_nicht ohne Text). */
-    if(t){ if(t!==((alt&&alt.beispiel)||"").trim()||alt.kann_nicht) antwortSpeichern(f.nr,{kann_nicht:false,wert:null,beispiel:t},$("#swText")); }
-    else if(!(alt&&alt.kann_nicht&&!(alt.beispiel||"").trim())) antwortSpeichern(f.nr,{kann_nicht:true,wert:null,beispiel:""},$("#swText"));
+    /* Weiter speichert den Text. Überspringen (nur 22 bis 24) verwirft ihn und merkt sich „übersprungen“ (kann_nicht ohne Text),
+       ebenso Weiter mit leerem Feld bei einer freiwilligen Frage. Pflichtfragen brauchen Text. */
+    const frei=FREIWILLIG.includes(f.nr), skip=act==="w-ueberspringen"||!t;
+    if(skip&&!frei){ $("#swText").setAttribute("aria-invalid","true"); gfToast("Bitte kurz in Stichworten beantworten."); return true; }
+    if(skip){ if(!(alt&&alt.kann_nicht&&!(alt.beispiel||"").trim())) antwortSpeichern(f.nr,{kann_nicht:true,wert:null,beispiel:""},$("#swText")); }
+    else if(t!==((alt&&alt.beispiel)||"").trim()||(alt&&alt.kann_nicht)) antwortSpeichern(f.nr,{kann_nicht:false,wert:null,beispiel:t},$("#swText"));
     naechsteFrage(); return true;
   }
   if(act==="w-ablauf-neu"){ WEG={mode:"ablauf",s:0,nr:eigeneAblaeufe().length+1,fokus:true}; wegMerken(); renderWeg(); return true; }
@@ -854,7 +859,11 @@ function wegSofort(act,b){
     const g=b.closest("[data-gruppe]");
     if(g.dataset.multi) b.setAttribute("aria-pressed",b.getAttribute("aria-pressed")==="true"?"false":"true");
     else g.querySelectorAll(".sw-opt").forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false"));
-    if(g.dataset.gruppe==="vorschlag"){ const i=$("#swAblauf"); i.value=b.dataset.v; i.removeAttribute("aria-invalid"); }
+    const gr=g.dataset.gruppe;
+    if(gr==="vorschlag"){ const i=$("#swAblauf"); i.value=b.dataset.v; i.removeAttribute("aria-invalid"); ablaufSpeichern("ablauf",i.value,i); }
+    if(gr==="haeufigkeit") ablaufSpeichern("haeufigkeit",chipWert(gr),g);
+    if(gr==="werkzeuge") ablaufSpeichern("werkzeuge",werkzeugeWert(),g);
+    if(gr==="beruehrt") ablaufSpeichern("beruehrt_andere",chipWert(gr)==="Ja",g);
     return true;
   }
   if(act==="w-teil"){ const t=Number(b.dataset.teil); WEG=t<0?{mode:"system",i:0,fokus:true}:{mode:"hub",teil:t,i:0,fokus:true};
@@ -875,7 +884,7 @@ function wegSofort(act,b){
     if(v==="kenne"){ const s=new Set(lsGet(hubKey())||[]); s.add(w.id); lsSet(hubKey(),[...s]); }
     else { w.stand=Object.assign({},w.stand||{},{einordnung:v});
       queueSave(`hub:${w.id}:einordnung`,b.parentElement,async(state,who)=>{ const d=await saApi('hub_stand_set',{werkzeug_id:w.id,einordnung:v},who); const x=state.werkzeuge.find(y=>y.id===w.id); if(x) x.stand=d.stand; }); }
-    setTimeout(()=>{ TAP=false; weiterIn(teil,()=>gfToast("✓ Etappe eingeordnet")); renderHub(); },200); return true;
+    const stelle=wegStelle(); setTimeout(()=>{ TAP=false; if(wegStelle()===stelle) weiterIn(teil,()=>gfToast("✓ Etappe eingeordnet")); renderHub(); },200); return true;
   }
   return false;
 }
@@ -902,11 +911,25 @@ async function wegServer(act,b,who){
   }
   return false;
 }
-/* Felder im Ablauf speichern beim Verlassen, sobald es den Steckbrief gibt. */
+/* Ablauf und Systemkorrektur speichern sofort: Felder beim Verlassen, Chips beim Tippen. Der Steckbrief entsteht mit dem
+   ersten Namen; „Weiter“ wartet auf die Warteschlange und schreibt den Bildschirm noch einmal vollständig. */
+function werkzeugeWert(){ const mehr=(($("#swWerkzeugeMehr")||{}).value||"").split(",").map(t=>t.trim()).filter(Boolean); return [...(chipWert("werkzeuge")||[]),...mehr].join(", "); }
+function ablaufSpeichern(f,v,el){
+  if(WEG.mode!=="ablauf") return;
+  const nr=WEG.nr;
+  if(!WEG.id&&!(f==="ablauf"&&String(v).trim())) return;   // ohne Namen gibt es noch keinen Steckbrief
+  queueSave(`ist:${WEG.id||"neu"+nr}:${f}`,el,async(state,who)=>{
+    const id=WEG.mode==="ablauf"&&WEG.nr===nr?WEG.id:null;
+    const d=await saApi('ist_save',id?{id,[f]:v}:{ablauf:String(v).trim()},who);
+    const i=state.ist.eigene.findIndex(y=>y.id===d.ist.id); if(i>=0) state.ist.eigene[i]=d.ist; else state.ist.eigene.push(d.ist);
+    if(!id&&WEG.mode==="ablauf"&&WEG.nr===nr){ WEG.id=d.ist.id; wegMerken(); }
+  });
+}
 function wegFeld(el){
-  const f=el.dataset.wf; if(!f||WEG.mode!=="ablauf"||!WEG.id) return;
-  const id=WEG.id, value=el.value;
-  queueSave(`ist:${id}:${f}`,el,async(state,who)=>{ const d=await saApi('ist_save',{id,[f]:value},who); const x=state.ist.eigene.find(y=>y.id===id); if(x) Object.assign(x,d.ist); });
+  if(el.dataset.wf){ const f=el.dataset.wf; ablaufSpeichern(f,f==="werkzeuge"?werkzeugeWert():el.value,el); return; }
+  const sf=el.dataset.wsys; if(!sf||WEG.mode!=="system") return;
+  const x=D.systeme[WEG.i], v=el.value.trim(); if(!x||v===(x[sf]||"")) return;
+  queueSave(`sys:${x.id}:${sf}`,el,async(state,who)=>{ const d=await saApi('system_save',{id:x.id,[sf]:v},who); const y=state.systeme.find(z=>z.id===x.id); if(y) Object.assign(y,d.system); });
 }
 
 /* ---------- Ereignisse ---------- */

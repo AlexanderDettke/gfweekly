@@ -223,7 +223,7 @@ for (const thema of THEMES) {
       }, kern);
       if (befund.tor) meldungen.push('Tor blieb zu');
       if (!befund.app) meldungen.push('Seiteninhalt blieb verborgen');
-      if (befund.nav !== 18) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 18 Haupteinträgen)');   // 18 seit V32 Kommunikation (07.10.2026)
+      if (befund.nav !== 19) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 19 Haupteinträgen)');   // 19 seit V33 So arbeiten wir (09.10.2026)
       if (befund.unternav !== 4) meldungen.push('Unternavigation unvollständig (' + befund.unternav + ' von 4 Einträgen)');
       if (befund.fehltext.length) meldungen.push('Fehlermeldung auf der Seite: ' + befund.fehltext.join(', '));
       if (befund.kern < 0) meldungen.push('Kerninhalt ' + kern + ' fehlt im Aufbau');
