@@ -6,13 +6,14 @@
    - Steckbriefe gehören der Person, die sie schreibt. Die andere Person sieht einen Steckbrief erst nach Freigabe.
    - Umfrage: jede Person antwortet für sich. Die Antworten der anderen Person liefert diese Funktion erst, wenn beide
      die Runde abgegeben haben. Nach der Abgabe sind die eigenen Antworten der Runde fest; zurücknehmen geht nur,
-     solange die andere Person noch nicht abgegeben hat.
+     solange die andere Person noch nicht abgegeben hat. V34: vorher liefert lage von der anderen Person nur die Nummern
+     beantworteter Fragen (Stand für den Wegweiser), nie Werte oder Texte.
    - Hub-Register (hub.werkzeuge) nur lesen über hh_sa_werkzeuge; die Einordnung je Werkzeug liegt im Haus.
    - Auth wie gfweekly, saison, besetzung: Passwort im Body oder Header x-gfweekly-key gegen GFWEEKLY_PASSWORD.
      Eigene Funktion, damit die große Funktion gfweekly unberührt bleibt. */
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const VERSION = 2;
+const VERSION = 3;   // V34: lage liefert umfrage.andere_beantwortet (nur Nummern)
 const PASSWORD = Deno.env.get('GFWEEKLY_PASSWORD') ?? '';
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
@@ -82,14 +83,19 @@ Deno.serve(async (req) => {
       const werkzeuge = (hub.data || []).map((w: any) => ({ ...w, stand: stand.get(w.id) || { reifegrad: '', einordnung: 'offen', notiz: '' } }));
       const alleRunden = (runden.data || []) as any[];
       const aktuelle = alleRunden[alleRunden.length - 1] || null;
-      let eigene: any[] = [], fremde: any[] = [], beide = false;
+      let eigene: any[] = [], fremde: any[] = [], beide = false, andereBeantwortet: number[] = [];
       if (aktuelle) {
         beide = !!(aktuelle.abgegeben_alex && aktuelle.abgegeben_lea);
         const { data: e, error: ee } = await db.from('gfweekly_sa_antworten').select('*').eq('runde', aktuelle.nr).eq('person', W);
         if (ee) throw new Error(ee.message); eigene = e || [];
+        /* V34: Stand der anderen Person für den Wegweiser, nur die Nummern beantworteter Fragen, keine Inhalte. */
+        const { data: f, error: ef } = await db.from('gfweekly_sa_antworten').select('nr,wert,kann_nicht,beispiel').eq('runde', aktuelle.nr).eq('person', A);
+        if (ef) throw new Error(ef.message);
+        const art = new Map<number, string>((fragen.data || []).map((q: any) => [q.nr, q.art]));
+        andereBeantwortet = (f || []).filter((x: any) => x.kann_nicht || (art.get(x.nr) === 'text' ? !!(x.beispiel || '').trim() : x.wert != null)).map((x: any) => x.nr).sort((p: number, q: number) => p - q);
         if (beide) {
-          const { data: f, error: ef } = await db.from('gfweekly_sa_antworten').select('*').eq('runde', aktuelle.nr).eq('person', A);
-          if (ef) throw new Error(ef.message); fremde = f || [];
+          const { data: g, error: eg } = await db.from('gfweekly_sa_antworten').select('*').eq('runde', aktuelle.nr).eq('person', A);
+          if (eg) throw new Error(eg.message); fremde = g || [];
         }
       }
       /* Frühere Runden, die beide abgegeben haben: komplett, für den Verlauf. */
@@ -103,7 +109,7 @@ Deno.serve(async (req) => {
         ok: true, heute: heuteBerlin(), who: W, andere: A,
         ist: { eigene: ist.data || [], andere: fremd.data || [], andere_gesamt: (fremdZahl as any).count ?? 0 },
         systeme: systeme.data || [], werkzeuge,
-        umfrage: { fragen: fragen.data || [], runden: alleRunden, runde: aktuelle, beide, eigene, andere: fremde, verlauf },
+        umfrage: { fragen: fragen.data || [], runden: alleRunden, runde: aktuelle, beide, eigene, andere: fremde, andere_beantwortet: andereBeantwortet, verlauf },
       });
     }
 

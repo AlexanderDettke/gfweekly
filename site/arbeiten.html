@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Das Hohe Haus · So arbeiten wir</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=33" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=33" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=33" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=33" />
-<link rel="stylesheet" href="/assets/styles.css?v=33" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=34" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=34" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=34" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=34" />
+<link rel="stylesheet" href="/assets/styles.css?v=34" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 <style>
 /* So arbeiten wir (V33, 09.10.2026). Ist-Aufnahme der Abläufe je Person, Systeme damals und heute, Umfrage für beide,
@@ -131,6 +131,71 @@
   .sa-aw{grid-template-columns:repeat(3,minmax(0,1fr))}
   .sa-aw>span:first-child{grid-column:1/-1}
 }
+
+/* V34 · Wegweiser in Etappen (11.10.2026). Ein Pfad, drei Schritte, je Schritt kleine Etappen. Präfix .sw- */
+.sw{max-width:640px;width:100%;display:grid;gap:var(--s-16);min-width:0}
+.sw-gruss h2{font-size:var(--stufe-5);margin:0;line-height:1.2}
+.sw-gruss p{margin:var(--s-4) 0 0;color:var(--text-2);font-size:var(--stufe-3);line-height:1.4}
+.sw-stand{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s-8)}
+.sw-stand div{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:var(--s-8) var(--s-12);display:grid;gap:2px;min-width:0}
+.sw-stand span{font-size:var(--stufe-1);color:var(--text-2)}
+.sw-stand b{font-size:var(--stufe-2);font-weight:600}
+.sw-pfad{display:grid;gap:var(--s-12)}
+.sw-karte{background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);padding:var(--s-12) var(--s-16);display:grid;gap:var(--s-12);min-width:0}
+.sw-karte.aktiv{border-color:var(--accent);box-shadow:var(--shadow-pop);padding:var(--s-16)}
+.sw-karte{scroll-margin-top:calc(var(--s-48) + var(--s-16))}
+.sw-karte.spaeter{background:transparent;border-style:dashed}
+.sw-kk{display:flex;align-items:center;gap:var(--s-12);min-width:0}
+.sw-kk>div{display:grid;gap:2px;min-width:0}
+.sw-kk h3{margin:0;font-size:var(--stufe-4);font-weight:700}
+.sw-kk small{font-size:var(--stufe-2);color:var(--text-2)}
+.sw-punkt{width:32px;height:32px;flex:0 0 32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;background:var(--disabled);color:var(--disabled-fg)}
+.sw-karte.aktiv .sw-punkt{background:var(--accent);color:var(--bg)}
+.sw-karte.fertig .sw-punkt{background:var(--pos);color:var(--bg)}
+.sw-karte.spaeter h3{color:var(--text-2)}
+.sw-kacheln{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-8)}
+.sw-kachel{border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:var(--s-8);display:grid;gap:2px;font-size:var(--stufe-1);line-height:1.3;color:var(--text-2);min-width:0;overflow-wrap:anywhere}
+.sw-kachel b{font-weight:700;color:var(--text)}
+.sw-kachel.jetzt{border-color:var(--accent);background:var(--bg);color:var(--text)}
+.sw-kachel.fertig{border-color:var(--pos);background:var(--pos-bg);color:var(--text)}
+.sw-text{margin:0;color:var(--text-2);font-size:var(--stufe-3);line-height:1.45}
+.sw-knoepfe{display:flex;flex-wrap:wrap;gap:var(--s-8)}
+.sw-knoepfe .btn{flex:1 1 160px;min-height:48px}
+.sw-voll{width:100%;min-height:48px}
+.sw-fkopf{display:flex;align-items:center;gap:var(--s-8);min-width:0}
+.sw-zurueck{background:none;border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);color:var(--text);width:var(--ziel-min);height:var(--ziel-min);flex:0 0 var(--ziel-min);font-size:var(--stufe-4);cursor:pointer}
+.sw-pos{font-size:var(--stufe-2);font-weight:600;color:var(--accent)}
+.sw-bar{height:4px;border-radius:var(--radius-s);background:var(--fill);overflow:hidden}
+.sw-bar i{display:block;height:100%;background:var(--accent)}
+.sw-aussage{margin:0;font-size:var(--stufe-4);font-weight:700;line-height:1.35;overflow-wrap:anywhere}
+.sw-optionen{display:grid;gap:var(--s-8)}
+.sw-opt{min-height:calc(var(--ziel-min) + var(--s-4));padding:var(--s-8) var(--s-16);border-radius:var(--radius-m);border:var(--rahmen) solid var(--border);background:var(--bg);color:var(--text);font:inherit;font-size:var(--stufe-3);font-weight:500;text-align:left;cursor:pointer}
+.sw-opt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+.sw-opt[aria-pressed="true"]::before{content:"✓ ";white-space:pre}
+.sw-opt.leise{color:var(--text-2)}
+.sw-feld{display:grid;gap:var(--s-4)}
+.sw-feld label{font-size:var(--stufe-2);color:var(--text-2);font-weight:600}
+.sw-feld input,.sw-feld textarea{width:100%;border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);padding:var(--s-8) var(--s-12);background:var(--bg);color:var(--text);font:inherit;font-size:var(--stufe-3);min-height:var(--ziel-min)}
+.sw-feld textarea{resize:vertical;min-height:96px}
+.sw-chips{display:flex;flex-wrap:wrap;gap:var(--s-8)}
+.sw-chips .sw-opt{padding:var(--s-8) var(--s-12);font-size:var(--stufe-2)}
+.sw-info{display:grid;gap:var(--s-8);font-size:var(--stufe-3);line-height:1.45}
+.sw-info .k{display:block;font-size:var(--stufe-1);color:var(--text-2);text-transform:uppercase;letter-spacing:.04em}
+.sw-geschafft{margin:0;font-size:var(--stufe-4);font-weight:700;color:var(--accent)}
+.sw-fehler:empty{display:none}
+.sw-unten{display:flex;justify-content:center}
+.sw-start{display:grid;gap:var(--s-12);max-width:640px}
+.sw-start .sw-knoepfe .btn{min-height:56px;font-size:var(--stufe-4)}
+.sw-zurweg{justify-self:start}
+.sw-schirm{display:grid;gap:var(--s-12);min-width:0}
+.sa-alles{display:grid;gap:var(--s-16);min-width:0}
+@media (prefers-reduced-motion:no-preference){
+  .sw-karte{transition:border-color var(--motion-base) var(--motion-ease),box-shadow var(--motion-base) var(--motion-ease)}
+  .sw-opt{transition:border-color var(--motion-fast) var(--motion-ease),background var(--motion-fast) var(--motion-ease)}
+  .sw-bar i{transition:width var(--motion-base) var(--motion-ease)}
+  .sw-schirm{animation:ht-rise var(--motion-base) var(--motion-ease) both}
+}
+@media (max-width:520px){ .sw-kacheln{grid-template-columns:repeat(2,minmax(0,1fr))} }
 </style>
 </head>
 <body>
@@ -153,6 +218,18 @@
 
   <main id="sa" aria-busy="true">
     <div class="sa-status"><span id="saStatus" role="status" aria-live="polite">○ Wird geladen …</span><button class="btn btn-ghost btn-sm" data-act="speichern-retry" hidden>Speichern erneut versuchen</button></div>
+
+    <!-- V34: Startkarte ohne Personenlink -->
+    <section class="sw-start" id="saStartkarte" hidden aria-labelledby="swStartH">
+      <div class="sw-gruss"><h2 id="swStartH">Wer arbeitet gerade?</h2><p>Danach geht es Etappe für Etappe weiter.</p></div>
+      <div class="sw-knoepfe"><button class="btn" data-act="w-ich" data-w="Alex">Ich bin Alex</button><button class="btn" data-act="w-ich" data-w="Lea">Ich bin Lea</button></div>
+    </section>
+
+    <!-- V34: Wegweiser -->
+    <section class="sw" id="saWeg" hidden aria-label="Wegweiser"></section>
+
+    <div id="saAlles" class="sa-alles" hidden>
+    <button class="btn btn-brand btn-sm sw-zurweg" data-act="w-zum-weg">← Zum Wegweiser</button>
     <p class="sa-lead">Wir wollen die Strukturen und Abläufe finden, die zu uns beiden passen. Dafür halten wir zuerst fest, wie jede Person heute arbeitet, beantworten getrennt dieselben Fragen und schauen dann gemeinsam, was bleibt, was angepasst, was umgebaut und was weggelassen wird. Gebaut wird erst danach.</p>
 
     <div class="sa-kopf">
@@ -171,7 +248,7 @@
         <div class="sa-eb">So gehen wir vor</div>
         <ol class="sa-steps">
           <li><b>Ist-Aufnahme</b><span>Jede Person beschreibt ihre wiederkehrenden Abläufe in kurzen Steckbriefen und ergänzt die Liste der Systeme damals und heute. Die andere Person sieht einen Steckbrief erst, wenn er freigegeben ist.</span></li>
-          <li><b>Umfrage</b><span>24 Fragen, etwa 15 Minuten. Beide beantworten getrennt dieselben Fragen zu Orientierung, Entscheidungen, Erreichbarkeit, Fokus, Verlässlichkeit, Systemen und Zusammenarbeit. Die Antworten der anderen Person erscheinen erst, wenn beide abgegeben haben.</span></li>
+          <li><b>Umfrage</b><span>24 Fragen in drei kleinen Etappen. Beide beantworten getrennt dieselben Fragen zu Orientierung, Entscheidungen, Erreichbarkeit, Fokus, Verlässlichkeit, Systemen und Zusammenarbeit. Die Antworten der anderen Person erscheinen erst, wenn beide abgegeben haben.</span></li>
           <li><b>Gemeinsam einordnen</b><span>Mit beiden Ergebnissen gehen wir Ablauf für Ablauf durch: behalten, anpassen, umbauen, weglassen. Erst daraus entstehen Vorschläge für Werkzeuge und Vereinbarungen.</span></li>
         </ol>
         <div class="sa-stand" id="saStand"></div>
@@ -232,13 +309,14 @@
       </div>
       <p class="sa-foot">Reifegrad: in Entwicklung (wird gebaut), in Erprobung (wird ausprobiert, Änderungen angekündigt), im Alltag (gilt verbindlich). Einordnung: behalten, anpassen, umbauen, weglassen; „offen“ heißt noch nicht besprochen.</p>
     </section>
+    </div>
   </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="/assets/core.js?v=33"></script>
-<script src="/assets/game.js?v=33"></script>
-<script src="/assets/eggs.js?v=33" defer></script>
+<script src="/assets/core.js?v=34"></script>
+<script src="/assets/game.js?v=34"></script>
+<script src="/assets/eggs.js?v=34" defer></script>
 <script>
 const $=s=>document.querySelector(s);
 const SA_FN="https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/arbeiten";
@@ -313,7 +391,7 @@ function frageHtml(f){
   const a=antwort(f.nr,"eigene")||{};
   let feld="";
   if(f.art==="skala"){
-    const chips=gfChips("w"+f.nr,[["1","1"],["2","2"],["3","3"],["4","4"],["5","5"],["kn","kann ich nicht beurteilen"]],a.kann_nicht?"kn":(a.wert!=null?String(a.wert):""),{attr:`data-nr="${f.nr}" data-art="skala"`,label:"Frage "+f.nr+": "+f.text,cls:"sa-scale-options"});
+    const chips=gfChips("w"+f.nr,[["1","1"],["2","2"],["3","3"],["4","4"],["5","5"],["kn","passt nicht zu mir"]],a.kann_nicht?"kn":(a.wert!=null?String(a.wert):""),{attr:`data-nr="${f.nr}" data-art="skala"`,label:"Frage "+f.nr+": "+f.text,cls:"sa-scale-options"});
     feld=`<div class="sa-skala">${chips.replace('<button','<span class="enden">trifft gar nicht zu</span><button').replace(/(<button[^>]*data-v="kn")/,'<span class="enden">trifft voll zu</span>$1')}</div>`;
   } else if(f.art==="zahl"){
     feld=`<div class="sa-f" style="max-width:220px"><input type="text" inputmode="numeric" aria-labelledby="frage-${f.nr}" aria-describedby="hint-${f.nr}" maxlength="3" data-nr="${f.nr}" data-art="zahl" value="${a.wert!=null?a.wert:""}" placeholder="${esc(f.hinweis||"Zahl")}"><span class="hint" id="hint-${f.nr}">Ganze Stunden von 0 bis 999.</span></div>`;
@@ -331,7 +409,7 @@ function renderUmfrage(){
   const ab=p=>r?(p==="Alex"?r.abgegeben_alex:r.abgegeben_lea):null;
   const meine=ab(w), fremde=ab(a);
   $("#saUmH").textContent=`Wie läuft es heute? · Runde ${r?r.nr:"keine"}`;
-  $("#saUmSatz").textContent=r?`Bezug: ${r.bezug}. Skala 1 (trifft gar nicht zu) bis 5 (trifft voll zu) oder „kann ich nicht beurteilen“. Bei wichtigen Antworten hilft ein konkretes Beispiel. Chips werden sofort gespeichert, Text und Zahlen beim Verlassen des Feldes. ${a} sieht deine Antworten erst, wenn ihr beide abgegeben habt.`:"Noch keine Runde angelegt.";
+  $("#saUmSatz").textContent=r?`Bezug: ${r.bezug}. Skala 1 (trifft gar nicht zu) bis 5 (trifft voll zu) oder „passt nicht zu mir“. Bei wichtigen Antworten hilft ein konkretes Beispiel. Chips werden sofort gespeichert, Text und Zahlen beim Verlassen des Feldes. ${a} sieht deine Antworten erst, wenn ihr beide abgegeben habt.`:"Noch keine Runde angelegt.";
   const beantwortet=u.fragen.filter(f=>{ const x=antwort(f.nr,"eigene"); return x&&(x.wert!=null||x.kann_nicht||(f.art==="text"&&x.beispiel)); }).length;
   $("#saUmFort").innerHTML=`<span>${beantwortet} von ${u.fragen.length} beantwortet</span><div class="bar"><i style="width:${u.fragen.length?Math.round(beantwortet/u.fragen.length*100):0}%"></i></div><span>${a}: ${fremde?"✓ abgegeben":"○ noch offen"}</span>`;
   let knopf="", hinweis="";
@@ -354,7 +432,7 @@ function renderAuswertung(){
     const hakt=diff==null?null:((f.umgekehrt?e.wert:6-e.wert)+(f.umgekehrt?x.wert:6-x.wert))/2;
     return {f,e,x,diff,hakt};
   });
-  const wert=(z)=>z?(z.kann_nicht?"nicht beurteilbar":(z.wert!=null?z.wert:"keine Antwort")):"keine Antwort";
+  const wert=(z)=>z?(z.kann_nicht?"passt nicht zu mir":(z.wert!=null?z.wert:"keine Antwort")):"keine Antwort";
   const gemeinsam=zeilen.filter(z=>z.hakt!=null&&z.hakt>=3.5).sort((p,q)=>q.hakt-p.hakt||p.f.nr-q.f.nr).slice(0,6);
   const diff=[...zeilen].filter(z=>z.diff!=null&&z.diff>=2).sort((p,q)=>q.diff-p.diff);
   const zeile=(z,cls)=>`<div class="sa-aw ${cls}" role="row"><span role="cell">${z.f.nr} · ${esc(z.f.text)}</span><span class="z" role="cell">${wert(z.e)}</span><span class="z" role="cell">${wert(z.x)}</span><span class="d" role="cell">${z.diff!=null?"↔ "+z.diff:""}</span></div>`;
@@ -362,7 +440,11 @@ function renderAuswertung(){
   const texte=u.fragen.filter(f=>f.art!=="skala").map(f=>{ const e=antwort(f.nr,"eigene"), x=antwort(f.nr,"andere"); const show=(z)=>{ if(!z) return "keine Antwort"; if(f.art==="text") return z.beispiel||"keine Antwort"; if(f.art==="wahl") return z.wert!=null?(f.optionen.split("|")[z.wert-1]||z.wert):"keine Antwort"; return z.wert!=null?z.wert+(f.art==="zahl"?" h":""):"keine Antwort"; };
     return `<div class="sa-frage"><div class="t"><small>${f.nr}</small>${esc(f.text)}</div><div class="sa-txt"><div><b>${esc(w)}</b>${esc(show(e))}${f.art!=="text"&&e&&e.beispiel?`<br>Beispiel: ${esc(e.beispiel)}`:""}</div><div><b>${esc(a)}</b>${esc(show(x))}${f.art!=="text"&&x&&x.beispiel?`<br>Beispiel: ${esc(x.beispiel)}`:""}</div></div></div>`; }).join("");
   const beispiele=u.fragen.filter(f=>f.art==="skala").map(f=>{ const e=antwort(f.nr,"eigene"), x=antwort(f.nr,"andere"); if(!(e&&e.beispiel)&&!(x&&x.beispiel)) return ""; return `<div class="sa-frage"><div class="t"><small>${f.nr}</small>${esc(f.text)}</div><div class="sa-txt"><div><b>${esc(w)}</b>${esc(e&&e.beispiel||"keine Antwort")}</div><div><b>${esc(a)}</b>${esc(x&&x.beispiel||"keine Antwort")}</div></div></div>`; }).join("");
+  /* V34: oben die drei wichtigsten Punkte. Zuerst, was beide kritisch sehen, dann die größten Unterschiede. */
+  const top=[]; [...gemeinsam,...diff].forEach(z=>{ if(top.length<3&&!top.some(t=>t.f.nr===z.f.nr)) top.push(z); });
+  const topText=z=>z.hakt!=null&&z.hakt>=3.5?"Hakt bei beiden":"Ihr seht es unterschiedlich (↔ "+z.diff+")";
   $("#saUmAusw").innerHTML=`
+    <div class="sa-sec" id="saTop3"><h2>Die drei wichtigsten Punkte</h2>${top.length?`<ol class="sa-steps">${top.map(z=>`<li><b>${esc(z.f.text)}</b><span>${topText(z)} · ${esc(w)} ${wert(z.e)}, ${esc(a)} ${wert(z.x)}</span></li>`).join("")}</ol>`:'<div class="sa-leer">Keine Aussage sticht heraus. Ihr seht die Abläufe ähnlich.</div>'}</div>
     <div class="sa-sec"><h2>Wo es bei beiden hakt</h2><p class="sa-muted">Aussagen, die ihr beide eher kritisch seht. Ein Gesprächsanlass, keine Bewertung.</p><div class="sa-ausw" role="table" aria-label="Wo es bei beiden hakt">${kopf}${gemeinsam.map(z=>zeile(z,"")).join("")||'<div class="sa-leer">Keine Aussage erreicht den gemeinsamen Schwellenwert.</div>'}</div></div>
     <div class="sa-sec"><h2>Größte Unterschiede</h2><p class="sa-muted">Abstand von mindestens 2 Punkten. Die Werte sind eure Selbstauskünfte zu Abläufen und werden nicht bewertet.</p><div class="sa-ausw" role="table" aria-label="Unterschiede">${kopf}${diff.map(z=>zeile(z,"diff")).join("")||'<div class="sa-leer">Keine Aussage mit großem Abstand.</div>'}</div></div>
     <div class="sa-sec"><h2>Alle Skalenantworten</h2><div class="sa-ausw" role="table" aria-label="Skalenantworten">${kopf}${zeilen.map(z=>zeile(z,"")).join("")}</div></div>
@@ -406,13 +488,269 @@ function renderHub(){
   $("#saHub").innerHTML=liste.length?liste.map(hubZeile).join(""):`<div class="sa-leer">○ ${alle.length?"Keine Werkzeuge passen zur Suche und zum Filter.":"Noch keine Werkzeuge im Register."}</div>`;
 }
 
+/* ---------- V34 · Wegweiser in Etappen ----------
+   Ein Pfad mit drei Schritten (Umfrage, eigene Abläufe, Systeme), jeder Schritt in kleinen Etappen. Der Stand jeder
+   Etappe ergibt sich aus den gespeicherten Daten (beantwortete Fragen, angelegte Steckbriefe, eingeordnete Werkzeuge).
+   Nur wo es keine Tabelle je Person gibt (Systeme bestätigt, Werkzeug übersprungen), merkt sich das Gerät den Stand.
+   Wo man zuletzt war (Etappe, Ablauf, Bildschirm), liegt je Person im localStorage, damit der Link dort wieder öffnet. */
+const ETAPPEN=[{von:1,bis:9,titel:"Orientierung, Entscheidungen, Anfragen"},{von:10,bis:19,titel:"Fokus, Verlässlichkeit, Systeme"},{von:20,bis:24,titel:"Zusammenarbeit und offene Fragen"}];
+const SKALA=[["1","trifft gar nicht zu"],["2","eher nicht"],["3","teils"],["4","eher"],["5","trifft voll zu"],["kn","passt nicht zu mir"]];
+const ABLAUF_VORSCHLAG=["Mails und Posteingang","Termine und Besprechungen","Entscheidungen vorbereiten","Aufgaben ans Team geben","Freigaben","Partner und Verträge","Finanzen und Zahlungen","Planung","Notizen und Wissen ablegen","Übergaben und Abwesenheit"];
+const HAEUFIGKEIT=["täglich","wöchentlich","monatlich","unregelmäßig"];
+const ABLAEUFE_SOLL=3, HUB_JE_ETAPPE=10;
+let VIEW="start", WEG={mode:"pfad"}, TAP=false;
+const lsGet=k=>{ try{ return JSON.parse(localStorage.getItem(k)||"null"); }catch(e){ return null; } };
+const lsSet=(k,v)=>{ try{ if(v==null) localStorage.removeItem(k); else localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
+const wegKey=()=>"sa_weg_"+(D?D.who:gfWho()), sysKey=()=>"sa_sys_"+D.who, hubKey=()=>"sa_hub_"+D.who;
+function wegMerken(){ lsSet(wegKey(), WEG.mode==="pfad"?null:WEG); }
+
+/* Umfrage */
+function etFragen(i){ const e=ETAPPEN[i]; return D.umfrage.fragen.filter(f=>f.nr>=e.von&&f.nr<=e.bis); }
+function beantwortet(f,a){ if(!a) return false; if(a.kann_nicht) return true; return f.art==="text"?!!(a.beispiel||"").trim():a.wert!=null; }
+function etFertig(i){ return etFragen(i).every(f=>beantwortet(f,antwort(f.nr,"eigene"))); }
+function etAktiv(){ for(let i=0;i<ETAPPEN.length;i++) if(!etFertig(i)) return i; return ETAPPEN.length; }
+function abgabe(p){ const r=D.umfrage.runde; return r?(p==="Alex"?r.abgegeben_alex:r.abgegeben_lea):null; }
+function standText(p){
+  if(abgabe(p)) return "✓ abgegeben";
+  let nrs;
+  if(p===D.who) nrs=D.umfrage.fragen.filter(f=>beantwortet(f,antwort(f.nr,"eigene"))).map(f=>f.nr);
+  else if(Array.isArray(D.umfrage.andere_beantwortet)) nrs=D.umfrage.andere_beantwortet;
+  else return "○ noch offen";   // ältere Funktion ohne Stand der anderen Person
+  const set=new Set(nrs);
+  const k=ETAPPEN.findIndex((e,i)=>etFragen(i).some(f=>!set.has(f.nr)));
+  if(k<0) return "● bereit zur Abgabe";
+  if(!nrs.length) return "○ Etappe 1 offen";
+  return "● Etappe "+(k+1)+" von "+ETAPPEN.length;
+}
+/* Abläufe */
+const eigeneAblaeufe=()=>D.ist.eigene;
+/* Systeme und Werkzeuge */
+function hubListe(){ return (D.werkzeuge||[]).filter(w=>w.status==="aktiv"); }
+function hubTeile(){ const l=hubListe(), t=[]; for(let i=0;i<l.length;i+=HUB_JE_ETAPPE) t.push(l.slice(i,i+HUB_JE_ETAPPE)); return t; }
+function sysErledigt(){ const s=new Set(lsGet(sysKey())||[]); return D.systeme.every(x=>s.has(x.id)); }
+function hubErledigt(teil){ const s=new Set(lsGet(hubKey())||[]); return teil.every(w=>s.has(w.id)||(w.stand&&w.stand.einordnung&&w.stand.einordnung!=="offen")); }
+function schritt3Teile(){ return [{art:"sys",titel:"Unsere Systeme",fertig:sysErledigt()}].concat(hubTeile().map((t,i)=>({art:"hub",i,titel:`Werkzeuge ${i*HUB_JE_ETAPPE+1} bis ${i*HUB_JE_ETAPPE+t.length}`,fertig:hubErledigt(t)}))); }
+
+function kachel(mark,titel,text,cls){ return `<div class="sw-kachel ${cls}"><b>${mark} ${esc(titel)}</b>${text?`<span>${esc(text)}</span>`:""}</div>`; }
+function karte(nr,titel,sub,zustand,inhalt){
+  const punkt=zustand==="fertig"?"✓":nr;
+  return `<section class="sw-karte ${zustand}" aria-labelledby="swK${nr}"><div class="sw-kk"><span class="sw-punkt" aria-hidden="true">${punkt}</span><div><h3 id="swK${nr}">${esc(titel)}</h3><small>${esc(sub)}</small></div></div>${inhalt||""}</section>`;
+}
+
+function renderWeg(){
+  if(!D){ $("#saWeg").innerHTML='<div class="sa-leer">○ Wird geladen …</div>'; return; }
+  const w=D.who, a=D.andere, meine=abgabe(w), beide=D.umfrage.beide, n=eigeneAblaeufe().length;
+  const s1fertig=!!meine, s2fertig=s1fertig&&n>=ABLAEUFE_SOLL, teile3=schritt3Teile(), s3fertig=s2fertig&&teile3.every(t=>t.fertig);
+  const m=WEG.mode;
+  /* Schritt 1 */
+  let i1="";
+  if(m==="frage") i1=frageSchirm();
+  else if(m==="zwischen") i1=zwischenSchirm();
+  else if(!s1fertig){
+    const k=etAktiv();
+    const kach=`<div class="sw-kacheln">${ETAPPEN.map((e,i)=>kachel(etFertig(i)?"✓":(i===k?"●":"○"),"Etappe "+(i+1),e.titel,etFertig(i)?"fertig":(i===k?"jetzt":""))).join("")}</div>`;
+    if(!D.umfrage.runde) i1=`<p class="sw-text">○ Gerade läuft keine Umfrage.</p>`;
+    else if(k>=ETAPPEN.length) i1=kach+`<p class="sw-text">Alle drei Etappen beantwortet. ${esc(a)} sieht deine Antworten, sobald ihr beide abgegeben habt.</p><button class="btn btn-primary sw-voll" data-act="w-abgeben">Antworten abgeben</button>`;
+    else {
+      const angefangen=etFragen(k).some(f=>beantwortet(f,antwort(f.nr,"eigene")));
+      const text=k===0&&!angefangen?`Drei Etappen mit kurzen Fragen. Jede für sich machbar, dazwischen wird gespeichert. ${esc(a)} sieht deine Antworten erst, wenn ihr beide abgegeben habt.`:"Gespeichert bis hier. Weiter geht es mit der nächsten kleinen Etappe.";
+      i1=kach+`<p class="sw-text">${text}</p><button class="btn btn-primary sw-voll" data-act="w-etappe" data-et="${k}">Etappe ${k+1} ${angefangen?"fortsetzen":"starten"}</button>`;
+    }
+  } else if(beide){
+    i1=`<button class="btn btn-brand sw-voll" data-act="w-vergleich">Vergleich ansehen</button>`;
+  } else {
+    i1=`<p class="sw-text">${esc(a)} sieht deine Antworten, sobald auch ${esc(a)} abgegeben hat.</p><div><button class="sa-link" data-act="w-zurueknehmen">Abgabe zurücknehmen</button></div>`;
+  }
+  const z1=(m==="frage"||m==="zwischen"||!s1fertig)?"aktiv":"fertig";
+  const sub1=s1fertig?(beide?"✓ beide abgegeben":"✓ abgegeben"):(etAktiv()>=ETAPPEN.length?"✓ alle Etappen beantwortet":"Etappe "+(etAktiv()+1)+" von "+ETAPPEN.length);
+  /* Schritt 2 */
+  let i2="", z2="spaeter", sub2="ein Ablauf pro Etappe · danach";
+  if(m==="ablauf"){ z2="aktiv"; i2=ablaufSchirm(); sub2="Ablauf "+(WEG.nr||n+1); }
+  else if(s1fertig&&m!=="frage"&&m!=="zwischen"){
+    const tiles=Array.from({length:Math.max(ABLAEUFE_SOLL,n)},(_,i)=>kachel(i<n?"✓":(i===n?"●":"○"),"Ablauf "+(i+1),i<n?eigeneAblaeufe()[i].ablauf:"",i<n?"fertig":(i===n?"jetzt":""))).join("");
+    if(!s2fertig){
+      z2="aktiv"; sub2="jetzt · ein Ablauf pro Etappe";
+      i2=`<div class="sw-kacheln">${tiles}</div><p class="sw-text">Pro Etappe ein Ablauf, so wie er heute läuft. Fünf kurze Fragen. ${esc(a)} sieht ihn erst nach deiner Freigabe.</p><button class="btn btn-primary sw-voll" data-act="w-ablauf-neu">${n?"Ablauf "+(n+1)+" beschreiben":"Ersten Ablauf beschreiben"}</button>`;
+    } else {
+      z2="fertig"; sub2="✓ "+n+" Abläufe beschrieben";
+      i2=`<div class="sw-kacheln">${tiles}</div><div><button class="sa-link" data-act="w-ablauf-neu">Noch einen Ablauf</button></div>`;
+    }
+  }
+  /* Schritt 3 */
+  let i3="", z3="spaeter", sub3="eine Etappe, bei Bedarf mehrere · danach";
+  if(m==="system"||m==="hub"){ z3="aktiv"; i3=m==="system"?systemSchirm():hubSchirm(); sub3=m==="system"?"Unsere Systeme":teile3[WEG.teil+1].titel; }
+  else if(s2fertig&&m==="pfad"){
+    const k=teile3.findIndex(t=>!t.fertig);
+    const kach=`<div class="sw-kacheln">${teile3.map((t,i)=>kachel(t.fertig?"✓":(i===k?"●":"○"),t.titel,"",t.fertig?"fertig":(i===k?"jetzt":""))).join("")}</div>`;
+    if(k<0){ z3="fertig"; sub3="✓ alles eingeordnet"; i3=kach; }
+    else {
+      z3="aktiv"; sub3="jetzt · "+teile3.length+" kleine Etappen";
+      const t=teile3[k];
+      i3=kach+`<p class="sw-text">${t.art==="sys"?"Je System ein Bildschirm: stimmt das so, oder fehlt etwas?":"Je Werkzeug aus dem Hub ein Bildschirm: behalten, anpassen, umbauen oder weglassen?"}</p><button class="btn btn-primary sw-voll" data-act="w-teil" data-teil="${t.art==="sys"?-1:t.i}">${t.art==="sys"?"Systeme durchgehen":esc(t.titel)+" einordnen"}</button>`;
+    }
+  }
+  const fertigText=s3fertig&&m==="pfad"?`<div class="sa-ok">✓ Alles erledigt. Jetzt ordnen wir gemeinsam ein: behalten, anpassen, umbauen, weglassen.</div>`:"";
+  $("#saWeg").innerHTML=`
+    <div class="sw-gruss"><h2>Guten Tag, ${esc(w)}.</h2><p>Wie arbeiten wir zwei heute? Immer nur eine kleine Etappe.</p></div>
+    <div class="sw-stand" aria-label="Stand"><div><span>${esc(w)} (du)</span><b id="swStand-${esc(w)}">${standText(w)}</b></div><div><span>${esc(a)}</span><b>${standText(a)}</b></div></div>
+    <div class="sa-note sw-fehler" id="swFehler" role="alert"></div>
+    <div class="sw-pfad">
+      ${karte(1,"Wie läuft es heute?",sub1,z1,i1)}
+      ${karte(2,"Deine Abläufe",sub2,z2,i2)}
+      ${karte(3,"Unsere Systeme",sub3,z3,i3)}
+    </div>
+    ${fertigText}
+    <div class="sw-unten"><button class="btn btn-ghost btn-sm" data-act="w-alles">Alles ansehen</button></div>`;
+  wegFehler(); controls();
+  /* Neuer Bildschirm: aktive Karte nach oben holen (am Handy liegt Schritt 3 sonst außer Sicht), dann Fokus auf das erste Bedienelement. */
+  if(WEG.fokus){ WEG.fokus=false; const k=$("#saWeg .sw-karte.aktiv"), f=$("#saWeg .sw-schirm [data-fokus]");
+    if(k&&k.getBoundingClientRect().top<0||k&&k.getBoundingClientRect().top>innerHeight*0.5) k.scrollIntoView({block:"start"});
+    if(f) f.focus({preventScroll:true}); }
+}
+function wegFehler(){ const el=$("#swFehler"); if(el) el.textContent=FAILED.size?`✕ Nicht gespeichert: ${[...FAILED.values()][0].error||"Verbindung"}. Oben „Speichern erneut versuchen“.`:""; }
+
+/* Bildschirm: eine Frage */
+function frageSchirm(){
+  const liste=etFragen(WEG.et), i=Math.max(0,Math.min(WEG.i||0,liste.length-1)), f=liste[i], a=antwort(f.nr,"eigene")||{};
+  const kopf=`<div class="sw-fkopf"><button class="sw-zurueck" data-act="w-zurueck" aria-label="${i?"Vorige Frage":"Zurück zum Pfad"}">←</button><span class="sw-pos">Etappe ${WEG.et+1} · Frage ${i+1} von ${liste.length}</span></div>
+    <div class="sw-bar" role="progressbar" aria-label="Fortschritt der Etappe" aria-valuemin="0" aria-valuemax="${liste.length}" aria-valuenow="${i}"><i style="width:${Math.round(i/liste.length*100)}%"></i></div>
+    <p class="sw-aussage" id="swAussage">${esc(f.text)}</p>`;
+  let feld="";
+  if(f.art==="skala"){
+    const cur=a.kann_nicht?"kn":(a.wert!=null?String(a.wert):"");
+    feld=`<div class="sw-optionen" role="group" aria-labelledby="swAussage">${SKALA.map(([v,l],k)=>`<button class="sw-opt${v==="kn"?" leise":""}" data-act="w-antwort" data-v="${v}" aria-pressed="${cur===v}"${k===0?" data-fokus":""}>${l}</button>`).join("")}</div>`;
+  } else if(f.art==="wahl"){
+    feld=`<div class="sw-optionen" role="group" aria-labelledby="swAussage">${f.optionen.split("|").map((o,k)=>`<button class="sw-opt" data-act="w-antwort" data-v="${k+1}" aria-pressed="${a.wert===k+1}"${k===0?" data-fokus":""}>${esc(o)}</button>`).join("")}</div>`;
+  } else if(f.art==="zahl"){
+    feld=`<div class="sw-feld"><label id="swZahlL">Stunden pro Woche</label>${gfStepper("swZahl",a.wert!=null?a.wert:"",{attr:'id="swZahl" aria-labelledby="swZahlL"',min:0,max:999,label:"Stunden"})}</div>
+      <div class="sw-knoepfe"><button class="btn btn-primary" data-act="w-weiter-zahl" data-fokus>Weiter</button><button class="btn btn-brand" data-act="w-antwort" data-v="kn">Passt nicht zu mir</button></div>`;
+  } else {
+    feld=`<div class="sw-feld"><textarea id="swText" maxlength="3000" aria-labelledby="swAussage" placeholder="in Stichworten oder Sätzen" data-fokus>${esc(a.beispiel||"")}</textarea></div>
+      <div class="sw-knoepfe"><button class="btn btn-primary" data-act="w-weiter-text">Weiter</button><button class="btn btn-brand" data-act="w-ueberspringen">Überspringen</button></div>`;
+  }
+  return `<div class="sw-schirm" >${kopf}${feld}</div>`;
+}
+function zwischenSchirm(){
+  const fertig=WEG.et, letzte=fertig>=ETAPPEN.length-1;
+  return `<div class="sw-schirm" ><p class="sw-geschafft" tabindex="-1" data-fokus>✓ Etappe ${fertig+1} geschafft</p>
+    <p class="sw-text">${letzte?`Alle drei Etappen beantwortet. ${esc(D.andere)} sieht deine Antworten, sobald ihr beide abgegeben habt.`:"Gespeichert. Direkt weiter oder später hier einsteigen."}</p>
+    <div class="sw-knoepfe">${letzte?`<button class="btn btn-primary" data-act="w-abgeben">Antworten abgeben</button>`:`<button class="btn btn-primary" data-act="w-etappe" data-et="${fertig+1}">Etappe ${fertig+2} starten</button>`}<button class="btn btn-brand" data-act="w-spaeter">Später</button></div></div>`;
+}
+function oeffneEtappe(et){
+  const liste=etFragen(et); let i=liste.findIndex(f=>!beantwortet(f,antwort(f.nr,"eigene"))); if(i<0) i=0;
+  WEG={mode:"frage",et,i,fokus:true}; wegMerken(); renderWeg();
+}
+function naechsteFrage(){
+  const liste=etFragen(WEG.et);
+  if(WEG.i+1<liste.length){ WEG.i++; WEG.fokus=true; wegMerken(); renderWeg(); return; }
+  if(etFertig(WEG.et)){ WEG={mode:"zwischen",et:WEG.et,fokus:true}; wegMerken(); renderWeg(); return; }
+  WEG.i=liste.findIndex(f=>!beantwortet(f,antwort(f.nr,"eigene"))); WEG.fokus=true; wegMerken(); renderWeg();
+  gfToast("○ Eine Frage ist noch offen.");
+}
+/* Antwort optimistisch übernehmen, speichern über die gemeinsame Warteschlange, nach 200 ms weiter. */
+function antwortSpeichern(nr, teil, el){
+  const r=D.umfrage.runde; if(!r||abgabe(D.who)) return;
+  const alt=antwort(nr,"eigene")||{}, neu=Object.assign({nr,wert:null,kann_nicht:false,beispiel:""},alt,teil);
+  const i=D.umfrage.eigene.findIndex(x=>x.nr===nr); if(i>=0) D.umfrage.eigene[i]=neu; else D.umfrage.eigene.push(neu);
+  queueSave(`antwort:${nr}:weg`,el,async(state,who)=>{
+    const p={runde:r.nr,nr,wert:neu.wert??null,kann_nicht:!!neu.kann_nicht,beispiel:neu.beispiel||""};
+    const d=await saApi('antwort_set',p,who), k=state.umfrage.eigene.findIndex(x=>x.nr===nr);
+    if(k>=0) state.umfrage.eigene[k]=d.antwort; else state.umfrage.eigene.push(d.antwort);
+  });
+  const st=document.getElementById("swStand-"+D.who); if(st) st.textContent=standText(D.who);
+}
+
+/* Bildschirm: ein Ablauf in fünf Schritten */
+function ablaufSchirm(){
+  const x=WEG.id?eigeneAblaeufe().find(y=>y.id===WEG.id)||{}:{}, s=WEG.s||0, a=D.andere;
+  const kopf=`<div class="sw-fkopf"><button class="sw-zurueck" data-act="w-ablauf-zurueck" aria-label="${s?"Voriger Bildschirm":"Zurück zum Pfad"}">←</button><span class="sw-pos">Ablauf ${WEG.nr} · ${s<5?(s+1)+" von 5":"fertig"}</span></div>
+    <div class="sw-bar" aria-hidden="true"><i style="width:${Math.round(Math.min(s,5)/5*100)}%"></i></div>`;
+  const chips=(gruppe,liste,cur,multi)=>`<div class="sw-chips" role="group" aria-label="${esc(gruppe)}" data-gruppe="${gruppe}"${multi?' data-multi="1"':""}>${liste.map(v=>`<button class="sw-opt" data-act="w-chip" data-v="${esc(v)}" aria-pressed="${multi?cur.includes(v):cur===v}">${esc(v)}</button>`).join("")}</div>`;
+  let body="";
+  if(s===0) body=`<p class="sw-aussage" id="swAussage">Welcher Ablauf?</p>${chips("vorschlag",ABLAUF_VORSCHLAG,x.ablauf||"",false)}
+    <div class="sw-feld"><label for="swAblauf">Name des Ablaufs</label><input id="swAblauf" maxlength="200" value="${esc(x.ablauf||"")}" placeholder="z. B. Freigabe eines Newsletters" data-fokus></div>`;
+  if(s===1) body=`<p class="sw-aussage" id="swAussage">Wann startet er?</p>
+    <div class="sw-feld"><label for="swStartet">Was setzt ihn in Gang?</label><input id="swStartet" maxlength="2000" value="${esc(x.startet_wenn||"")}" placeholder="z. B. Mail von Partner, Frist in Asana" data-fokus data-wf="startet_wenn"></div>
+    <div class="sw-feld"><label>Wie oft?</label>${chips("haeufigkeit",HAEUFIGKEIT,x.haeufigkeit||"",false)}</div>`;
+  if(s===2){ const cur=(x.werkzeuge||"").split(",").map(t=>t.trim()).filter(Boolean), namen=D.systeme.map(y=>y.name), rest=cur.filter(t=>!namen.includes(t));
+    body=`<p class="sw-aussage" id="swAussage">Womit läuft er?</p>${chips("werkzeuge",namen,cur,true)}
+    <div class="sw-feld"><label for="swWerkzeugeMehr">Noch etwas anderes</label><input id="swWerkzeugeMehr" maxlength="400" value="${esc(rest.join(", "))}" placeholder="z. B. WhatsApp, Kopf"></div>`; }
+  if(s===3) body=`<p class="sw-aussage" id="swAussage">Wer ist beteiligt?</p>
+    <div class="sw-feld"><label for="swBeteiligte">Wer macht mit, auf wen wartest du?</label><input id="swBeteiligte" maxlength="2000" value="${esc(x.beteiligte||"")}" data-fokus data-wf="beteiligte"></div>
+    <div class="sw-feld"><label>Betrifft es ${esc(a)}?</label>${chips("beruehrt",["Ja","Nein"],x.beruehrt_andere?"Ja":(x.id?"Nein":""),false)}</div>`;
+  if(s===4) body=`<p class="sw-aussage" id="swAussage">Was hakt, was läuft gut?</p>
+    <div class="sw-feld"><label for="swHakt">Wo hakt es? (freiwillig)</label><textarea id="swHakt" maxlength="2000" data-fokus data-wf="hakt">${esc(x.hakt||"")}</textarea></div>
+    <div class="sw-feld"><label for="swGut">Was läuft gut? (freiwillig)</label><textarea id="swGut" maxlength="2000" data-wf="laeuft_gut">${esc(x.laeuft_gut||"")}</textarea></div>`;
+  if(s>=5) return `<div class="sw-schirm" >${kopf}<p class="sw-geschafft" tabindex="-1" data-fokus>✓ Ablauf ${WEG.nr} beschrieben</p><p class="sw-text">${x.freigegeben?`✓ ${esc(a)} sieht ihn schon.`:`○ Noch siehst nur du ihn.`}</p>
+    <div class="sw-knoepfe"><button class="btn btn-primary" data-act="w-ablauf-frei">${x.freigegeben?"Fertig":"Freigeben"}</button>${x.freigegeben?"":`<button class="btn btn-brand" data-act="w-ablauf-behalten">Erst mal für mich behalten</button>`}</div></div>`;
+  return `<div class="sw-schirm" >${kopf}${body}<button class="btn btn-primary sw-voll" data-act="w-ablauf-weiter">Weiter</button></div>`;
+}
+function chipWert(gruppe){ const g=$(`#saWeg [data-gruppe="${gruppe}"]`); if(!g) return null; const on=[...g.querySelectorAll('[aria-pressed="true"]')].map(b=>b.dataset.v); return g.dataset.multi?on:(on[0]||""); }
+async function ablaufWeiter(){
+  const s=WEG.s||0, who=D.who; let p={};
+  if(s===0){ const name=($("#swAblauf").value||"").trim(); if(!name){ $("#swAblauf").setAttribute("aria-invalid","true"); throw new Error("Der Ablauf braucht einen Namen."); } p.ablauf=name; }
+  if(s===1){ p.startet_wenn=$("#swStartet").value; const h=chipWert("haeufigkeit"); if(h!=null) p.haeufigkeit=h; }
+  if(s===2){ const mehr=($("#swWerkzeugeMehr").value||"").split(",").map(t=>t.trim()).filter(Boolean); p.werkzeuge=[...chipWert("werkzeuge"),...mehr].join(", "); }
+  if(s===3){ p.beteiligte=$("#swBeteiligte").value; const b=chipWert("beruehrt"); if(b) p.beruehrt_andere=b==="Ja"; }
+  if(s===4){ p.hakt=$("#swHakt").value; p.laeuft_gut=$("#swGut").value; }
+  if(WEG.id) p.id=WEG.id;
+  const d=await saApi('ist_save',p,who);
+  const i=D.ist.eigene.findIndex(x=>x.id===d.ist.id); if(i>=0) D.ist.eigene[i]=d.ist; else D.ist.eigene.push(d.ist);
+  WEG.id=d.ist.id; WEG.s=s+1; WEG.fokus=true; wegMerken(); renderWeg(); renderIst(); renderStand();
+}
+
+/* Bildschirm: ein System oder ein Werkzeug */
+function systemSchirm(){
+  const l=D.systeme, i=Math.max(0,Math.min(WEG.i||0,l.length-1)), x=l[i];
+  if(!x) return `<p class="sw-text">○ Noch keine Systeme eingetragen.</p><button class="btn btn-primary sw-voll" data-act="w-spaeter">Zurück zum Pfad</button>`;
+  const kopf=`<div class="sw-fkopf"><button class="sw-zurueck" data-act="w-sys-zurueck" aria-label="${i?"Voriges System":"Zurück zum Pfad"}">←</button><span class="sw-pos">Systeme · ${i+1} von ${l.length}</span></div>
+    <div class="sw-bar" aria-hidden="true"><i style="width:${Math.round(i/l.length*100)}%"></i></div>`;
+  const info=`<p class="sw-aussage" id="swAussage">${esc(x.name)}</p><div class="sw-info">${x.wofuer?`<div><span class="k">Wofür</span>${esc(x.wofuer)}</div>`:""}${x.beobachtung?`<div><span class="k">Beobachtung</span>${esc(x.beobachtung)}</div>`:""}</div>`;
+  if(WEG.korr) return `<div class="sw-schirm" >${kopf}<p class="sw-aussage" id="swAussage">${esc(x.name)}</p>
+    <div class="sw-feld"><label for="swWofuer">Wofür</label><textarea id="swWofuer" maxlength="1000" data-fokus>${esc(x.wofuer||"")}</textarea></div>
+    <div class="sw-feld"><label for="swBeob">Beobachtung</label><textarea id="swBeob" maxlength="2000">${esc(x.beobachtung||"")}</textarea></div>
+    <button class="btn btn-primary sw-voll" data-act="w-sys-korr-weiter">Weiter</button></div>`;
+  return `<div class="sw-schirm" >${kopf}${info}<div class="sw-optionen" role="group" aria-labelledby="swAussage">
+    <button class="sw-opt" data-act="w-sys" data-v="stimmt" data-fokus>Stimmt</button><button class="sw-opt" data-act="w-sys" data-v="korr">Korrigieren</button><button class="sw-opt leise" data-act="w-sys" data-v="kenne">Kenne ich nicht</button></div></div>`;
+}
+function hubSchirm(){
+  const teil=hubTeile()[WEG.teil]||[], i=Math.max(0,Math.min(WEG.i||0,teil.length-1)), w=teil[i];
+  if(!w) return `<button class="btn btn-primary sw-voll" data-act="w-spaeter">Zurück zum Pfad</button>`;
+  const st=w.stand||{}, cur=st.einordnung||"offen";
+  return `<div class="sw-schirm" ><div class="sw-fkopf"><button class="sw-zurueck" data-act="w-hub-zurueck" aria-label="${i?"Voriges Werkzeug":"Zurück zum Pfad"}">←</button><span class="sw-pos">Werkzeug ${WEG.teil*HUB_JE_ETAPPE+i+1} von ${hubListe().length}</span></div>
+    <div class="sw-bar" aria-hidden="true"><i style="width:${Math.round(i/teil.length*100)}%"></i></div>
+    <p class="sw-aussage" id="swAussage">${esc(w.name)}</p><div class="sw-info">${w.zweck?`<div>${esc(w.zweck)}</div>`:""}<div><span class="k">Kümmerer</span>${esc(w.kuemmerer||"keiner")}</div></div>
+    <div class="sw-optionen" role="group" aria-labelledby="swAussage">${EINORDNUNG.filter(([v])=>v!=="offen").map(([v,l],k)=>`<button class="sw-opt" data-act="w-hub" data-v="${v}" aria-pressed="${cur===v}"${k===0?" data-fokus":""}>${l}</button>`).join("")}<button class="sw-opt leise" data-act="w-hub" data-v="kenne">Kenne ich nicht</button></div></div>`;
+}
+function weiterIn(liste, fertigFn){
+  if((WEG.i||0)+1<liste.length){ WEG.i=(WEG.i||0)+1; WEG.fokus=true; wegMerken(); renderWeg(); }
+  else { WEG={mode:"pfad"}; wegMerken(); renderWeg(); if(fertigFn) fertigFn(); }
+}
+
+/* Ansichten: Startkarte, Wegweiser, alles */
+function zeigeAnsicht(v){
+  VIEW=v;
+  $("#saStartkarte").hidden=v!=="start"; $("#saWeg").hidden=v!=="weg"; $("#saAlles").hidden=v!=="alles";
+  if(v==="start") document.querySelectorAll("#saStartkarte [data-w]").forEach(b=>{ const on=b.dataset.w===gfWho(); b.classList.toggle("btn-primary",on); b.classList.toggle("btn-brand",!on); });
+  if(v==="weg") renderWeg();
+}
+function urlPerson(w){ try{ const u=new URL(location.href); u.searchParams.set("person",w.toLowerCase()); u.searchParams.set("start","1"); u.hash=""; history.replaceState(null,"",u.pathname+u.search); }catch(e){} }
+function wegLaden(){ const g=lsGet(wegKey()); WEG=(g&&g.mode)?g:{mode:"pfad"};
+  /* Gespeicherte Stelle nur übernehmen, wenn sie noch passt. */
+  if(WEG.mode==="frage"&&(abgabe(D.who)||!D.umfrage.runde||WEG.et>=ETAPPEN.length)) WEG={mode:"pfad"};
+  if(WEG.mode==="frage"){ const liste=etFragen(WEG.et), k=liste.findIndex(f=>!beantwortet(f,antwort(f.nr,"eigene"))); if(k<0) WEG={mode:"zwischen",et:WEG.et}; else WEG.i=k; }
+  if(WEG.mode==="zwischen"&&abgabe(D.who)) WEG={mode:"pfad"};
+  if(WEG.mode==="ablauf"&&WEG.id&&!eigeneAblaeufe().some(x=>x.id===WEG.id)) WEG={mode:"pfad"};
+  if(WEG.mode==="hub"&&!hubTeile()[WEG.teil]) WEG={mode:"pfad"};
+}
+
 /* ---------- Speichern und Laden ---------- */
 function saStatus(text){ $("#saStatus").textContent=text; }
 function controls(){
   $("#sa").setAttribute("aria-busy",BUSY?"true":"false");
   document.querySelectorAll("#whoSw button").forEach(b=>b.disabled=BUSY);
   $("#sa").querySelectorAll("[data-act]").forEach(b=>{
-    b.disabled=BUSY||(!D&&!['neu-laden','speichern-retry'].includes(b.dataset.act));
+    b.disabled=BUSY||(!D&&!['neu-laden','speichern-retry','w-ich','w-alles','w-zum-weg'].includes(b.dataset.act));
   });
   $("#sa").querySelectorAll("input,textarea,.chip").forEach(el=>{
     const r=D&&D.umfrage.runde;
@@ -423,7 +761,7 @@ function controls(){
 }
 function saveStatus(){
   saStatus(FAILED.size?`✕ ${FAILED.size} Änderungen nicht gespeichert. ${[...FAILED.values()][0].error||""} Bitte erneut versuchen.`:PENDING?"○ Wird gespeichert …":"✓ Gespeichert");
-  controls();
+  controls(); wegFehler();
 }
 function queueSave(key, el, run){
   const state=D, who=state.who;
@@ -457,19 +795,118 @@ async function load(){
   D=null; BUSY=true; controls(); saStatus("○ Wird geladen …");
   ['saStand','saIstEigene','saIstFremd','saUmFragen','saSys','saHub'].forEach(id=>$("#"+id).innerHTML='<div class="sa-leer">○ Wird geladen …</div>');
   ['saWer','saIstFremdSatz','saUmSatz','saUmFort','saUmHinweis','saUmKnopf','saUmAusw','saHubZahl','saHubFilter'].forEach(id=>$("#"+id).textContent="");
+  if(VIEW==="weg") renderWeg();
   try{
     const data=await saApi("lage",{},who);
     if(nr!==LOAD||who!==gfWho()) return;
     D=data;
     renderStand(); renderIst(); renderUmfrage(); renderSysteme(); renderHub();
+    wegLaden(); if(VIEW==="weg") renderWeg();
     saStatus("✓ Geladen");
   }catch(e){
     if(nr!==LOAD) return;
     D=null;
     ['saWer','saIstFremdSatz','saUmSatz','saUmFort','saUmHinweis','saUmKnopf','saUmAusw','saHubZahl','saHubFilter'].forEach(id=>$("#"+id).textContent="");
     ['saStand','saIstEigene','saIstFremd','saUmFragen','saSys','saHub'].forEach(id=>$("#"+id).innerHTML='<div class="sa-note">✕ Laden fehlgeschlagen. Bitte „Neu laden“ versuchen.</div>');
+    $("#saWeg").innerHTML='<div class="sa-note">✕ Laden fehlgeschlagen.</div><div><button class="btn btn-primary" data-act="neu-laden">Neu laden</button></div>';
     fehler(e);
   }finally{ if(nr===LOAD){BUSY=false;controls();} }
+}
+
+/* ---------- V34 · Ereignisse des Wegweisers ---------- */
+/* Ohne Server: Ansichten, Navigation, Antworten (die speichert die Warteschlange). true = erledigt. */
+function wegSofort(act,b){
+  if(!act.startsWith("w-")) return false;
+  if(act==="w-ich"){
+    const w=b.dataset.w, neu=w!==gfWho()||!D; gfSetWho(w);
+    document.querySelectorAll("#whoSw button").forEach(x=>x.classList.toggle("on",x.dataset.w===w));
+    urlPerson(w); zeigeAnsicht("weg"); if(neu) load().catch(fehler); return true;
+  }
+  if(act==="w-alles"){ zeigeAnsicht("alles"); zeigeTab(TAB); window.scrollTo(0,0); return true; }
+  if(act==="w-zum-weg"){ urlPerson(gfWho()); zeigeAnsicht("weg"); window.scrollTo(0,0); return true; }
+  if(!D) return true;
+  if(act==="w-vergleich"){ zeigeAnsicht("alles"); zeigeTab("umfrage"); const t=$("#saTop3"); if(t) t.scrollIntoView({block:"start"}); return true; }
+  if(act==="w-etappe"){ oeffneEtappe(Number(b.dataset.et)); return true; }
+  if(act==="w-spaeter"){ WEG={mode:"pfad"}; wegMerken(); renderWeg(); return true; }
+  if(act==="w-zurueck"){ if(WEG.i>0){ WEG.i--; WEG.fokus=true; wegMerken(); renderWeg(); } else { WEG={mode:"pfad"}; wegMerken(); renderWeg(); } return true; }
+  if(act==="w-antwort"){
+    if(TAP) return true; TAP=true;
+    const f=etFragen(WEG.et)[WEG.i], v=b.dataset.v;
+    b.closest(".sw-schirm").querySelectorAll('[data-act="w-antwort"]').forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false"));
+    antwortSpeichern(f.nr, v==="kn"?{kann_nicht:true,wert:null}:{kann_nicht:false,wert:Number(v)}, b.parentElement);
+    setTimeout(()=>{ TAP=false; naechsteFrage(); },200); return true;
+  }
+  if(act==="w-weiter-zahl"){
+    const f=etFragen(WEG.et)[WEG.i], v=($("#swZahl").value||"").trim();
+    if(!/^\d{1,3}$/.test(v)){ $("#swZahl").setAttribute("aria-invalid","true"); gfToast("Bitte eine Zahl von 0 bis 999 wählen."); return true; }
+    antwortSpeichern(f.nr,{kann_nicht:false,wert:Number(v)},$("#swZahl")); naechsteFrage(); return true;
+  }
+  if(act==="w-weiter-text"||act==="w-ueberspringen"){
+    const f=etFragen(WEG.et)[WEG.i], t=($("#swText").value||"").trim(), alt=antwort(f.nr,"eigene");
+    /* Text speichern, wenn er sich geändert hat; leer weiter oder Überspringen merkt sich „übersprungen“ (kann_nicht ohne Text). */
+    if(t){ if(t!==((alt&&alt.beispiel)||"").trim()||alt.kann_nicht) antwortSpeichern(f.nr,{kann_nicht:false,wert:null,beispiel:t},$("#swText")); }
+    else if(!(alt&&alt.kann_nicht&&!(alt.beispiel||"").trim())) antwortSpeichern(f.nr,{kann_nicht:true,wert:null,beispiel:""},$("#swText"));
+    naechsteFrage(); return true;
+  }
+  if(act==="w-ablauf-neu"){ WEG={mode:"ablauf",s:0,nr:eigeneAblaeufe().length+1,fokus:true}; wegMerken(); renderWeg(); return true; }
+  if(act==="w-ablauf-zurueck"){ if((WEG.s||0)>0){ WEG.s--; WEG.fokus=true; wegMerken(); renderWeg(); } else { WEG={mode:"pfad"}; wegMerken(); renderWeg(); } return true; }
+  if(act==="w-chip"){
+    const g=b.closest("[data-gruppe]");
+    if(g.dataset.multi) b.setAttribute("aria-pressed",b.getAttribute("aria-pressed")==="true"?"false":"true");
+    else g.querySelectorAll(".sw-opt").forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false"));
+    if(g.dataset.gruppe==="vorschlag"){ const i=$("#swAblauf"); i.value=b.dataset.v; i.removeAttribute("aria-invalid"); }
+    return true;
+  }
+  if(act==="w-teil"){ const t=Number(b.dataset.teil); WEG=t<0?{mode:"system",i:0,fokus:true}:{mode:"hub",teil:t,i:0,fokus:true};
+    if(t<0){ const s=new Set(lsGet(sysKey())||[]); const k=D.systeme.findIndex(x=>!s.has(x.id)); WEG.i=k<0?0:k; }
+    else { const s=new Set(lsGet(hubKey())||[]), teil=hubTeile()[t]; const k=teil.findIndex(w=>!s.has(w.id)&&!(w.stand&&w.stand.einordnung&&w.stand.einordnung!=="offen")); WEG.i=k<0?0:k; }
+    wegMerken(); renderWeg(); return true; }
+  if(act==="w-sys-zurueck"||act==="w-hub-zurueck"){ if(WEG.korr){ WEG.korr=false; } else if(WEG.i>0) WEG.i--; else WEG={mode:"pfad"}; WEG.fokus=true; wegMerken(); renderWeg(); return true; }
+  if(act==="w-sys"){
+    const x=D.systeme[WEG.i], v=b.dataset.v;
+    if(v==="korr"){ WEG.korr=true; WEG.fokus=true; wegMerken(); renderWeg(); return true; }
+    const s=new Set(lsGet(sysKey())||[]); s.add(x.id); lsSet(sysKey(),[...s]);
+    weiterIn(D.systeme,()=>gfToast("✓ Systeme durchgegangen")); return true;
+  }
+  if(act==="w-hub"){
+    if(TAP) return true; TAP=true;
+    const teil=hubTeile()[WEG.teil], w=teil[WEG.i], v=b.dataset.v;
+    b.closest(".sw-schirm").querySelectorAll('[data-act="w-hub"]').forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false"));
+    if(v==="kenne"){ const s=new Set(lsGet(hubKey())||[]); s.add(w.id); lsSet(hubKey(),[...s]); }
+    else { w.stand=Object.assign({},w.stand||{},{einordnung:v});
+      queueSave(`hub:${w.id}:einordnung`,b.parentElement,async(state,who)=>{ const d=await saApi('hub_stand_set',{werkzeug_id:w.id,einordnung:v},who); const x=state.werkzeuge.find(y=>y.id===w.id); if(x) x.stand=d.stand; }); }
+    setTimeout(()=>{ TAP=false; weiterIn(teil,()=>gfToast("✓ Etappe eingeordnet")); renderHub(); },200); return true;
+  }
+  return false;
+}
+/* Mit Server und gesperrter Bedienung (nach settled()). true = erledigt. */
+async function wegServer(act,b,who){
+  if(act==="w-abgeben"){
+    if(!saConfirm(b,'Wirklich abgeben?','Antworten abgeben')) return true;
+    await saApi('abgeben',{runde:D.umfrage.runde.nr},who); WEG={mode:"pfad"}; wegMerken(); await load(); saStatus("✓ Abgegeben"); return true;
+  }
+  if(act==="w-zurueknehmen"){ await saApi('abgabe_zurueck',{runde:D.umfrage.runde.nr},who); await load(); saStatus("○ Abgabe zurückgenommen"); return true; }
+  if(act==="w-ablauf-weiter"){ await ablaufWeiter(); return true; }
+  if(act==="w-ablauf-frei"){
+    const x=eigeneAblaeufe().find(y=>y.id===WEG.id);
+    if(x&&!x.freigegeben){ const d=await saApi('ist_freigeben',{id:x.id,freigegeben:true},who); Object.assign(x,d.ist); saStatus(`✓ Freigegeben für ${D.andere}`); }
+    WEG={mode:"pfad"}; wegMerken(); renderWeg(); renderIst(); renderStand(); return true;
+  }
+  if(act==="w-ablauf-behalten"){ WEG={mode:"pfad"}; wegMerken(); renderWeg(); saStatus("○ Nur für dich sichtbar"); return true; }
+  if(act==="w-sys-korr-weiter"){
+    const x=D.systeme[WEG.i], p={id:x.id}, wf=$("#swWofuer").value.trim(), bo=$("#swBeob").value.trim();
+    if(wf!==(x.wofuer||"")) p.wofuer=wf; if(bo!==(x.beobachtung||"")) p.beobachtung=bo;
+    if(Object.keys(p).length>1){ const d=await saApi('system_save',p,who); Object.assign(x,d.system); renderSysteme(); }
+    const s=new Set(lsGet(sysKey())||[]); s.add(x.id); lsSet(sysKey(),[...s]); WEG.korr=false;
+    weiterIn(D.systeme,()=>gfToast("✓ Systeme durchgegangen")); return true;
+  }
+  return false;
+}
+/* Felder im Ablauf speichern beim Verlassen, sobald es den Steckbrief gibt. */
+function wegFeld(el){
+  const f=el.dataset.wf; if(!f||WEG.mode!=="ablauf"||!WEG.id) return;
+  const id=WEG.id, value=el.value;
+  queueSave(`ist:${id}:${f}`,el,async(state,who)=>{ const d=await saApi('ist_save',{id,[f]:value},who); const x=state.ist.eigene.find(y=>y.id===id); if(x) Object.assign(x,d.ist); });
 }
 
 /* ---------- Ereignisse ---------- */
@@ -503,6 +940,7 @@ document.addEventListener("click",async e=>{
     for(const job of jobs){if(D!==job.state) continue;queueSave(job.key,job.el,job.run);}
     return;
   }
+  if(wegSofort(act,b)) return;
   if(BUSY) return;
   try{
     // Wait for the last blurred field before release, submission, deletion or reload.
@@ -534,6 +972,7 @@ document.addEventListener("click",async e=>{
       if(!saConfirm(b,'Neue Runde wirklich starten?','Neue Runde starten')) return;
       await saApi('runde_neu',{},who);await load();
     }
+    if(await wegServer(act,b,who)) return;
     if(act==='sys-neu'){
       const d=await saApi('system_save',{name:'Neues System'},who);D.systeme.push(d.system);renderSysteme();
       const i=document.querySelector(`[data-sys="${d.system.id}"] [data-f=name]`);BUSY=false;controls();i.focus();i.select();
@@ -548,6 +987,7 @@ document.addEventListener("click",async e=>{
 });
 document.addEventListener("change",e=>{
   const el=e.target; if(!el.matches('#sa input,#sa textarea')||!D||el.disabled) return;
+  if(el.closest('#saWeg')){ wegFeld(el); return; }
   if(el.id==='saHubF'){HUBF=el.value;renderHub();controls();return;}
   const field=el.dataset.f, value=el.value;
   const card=el.closest('[data-id]'), sys=el.closest('[data-sys]'), hub=el.closest('[data-hub]');
@@ -595,12 +1035,19 @@ document.addEventListener("gf-who",async()=>{
     document.querySelectorAll('#whoSw button').forEach(b=>b.classList.toggle('on',b.dataset.w===previous.who));
     fehler(new Error('Person bleibt unverändert, bis deine Änderungen gespeichert sind.'));return;
   }
+  if(new URLSearchParams(location.search).has("person")) urlPerson(gfWho());
   await load();
 });
 gfGate(async()=>{
+  /* V34: ?person=alex|lea setzt die Person wie die Kopfzeilenauswahl (bleibt umschaltbar, keine Sicherheitsfunktion).
+     Mit Person oder ?start=1 öffnet der Wegweiser, mit einem Tab-Anker die bisherige Ansicht, sonst die Startkarte. */
+  const q=new URLSearchParams(location.search), p=(q.get("person")||"").toLowerCase(), pw=p.includes("lea")?"Lea":p.includes("alex")?"Alex":"";
+  if(pw) gfSetWho(pw);
   $("#app").style.display="block";gfMountTopbar("arbeiten");
   gfMountHero("lagerfeuer","So arbeiten wir","Wie wir heute arbeiten und was wir gemeinsam einordnen.",{slim:true});
-  const h=(location.hash||"").replace("#","");zeigeTab(['start','ist','umfrage','systeme'].includes(h)?h:'start');
+  const h=(location.hash||"").replace("#",""), tab=['start','ist','umfrage','systeme'].includes(h);
+  zeigeTab(tab?h:'start');
+  zeigeAnsicht(pw||q.get("start")==="1"?"weg":(tab?"alles":"start"));
   controls();await load();
 });
 

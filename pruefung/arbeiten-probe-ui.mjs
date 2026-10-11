@@ -1,4 +1,6 @@
-/* V33a: ausschließlich lokale UI-Probe mit nachgebautem Backend, keine echten Backendaufrufe.
+/* Oberflächentest (V33a, erweitert in V34 um den Wegweiser): ausschließlich lokale UI-Probe mit nachgebautem Backend,
+   keine echten Backendaufrufe. Belegt Oberfläche und Funktionscode gegen ein Double, nicht die Wirkung in Supabase;
+   die Wirkung prüft die Bedienprüfung gegen den Live-Stand (docs/PAKET-V34-WEGWEISER.md).
    node pruefung/arbeiten-probe-ui.mjs
    Optional: PLAYWRIGHT_MODUL=/pfad/playwright/index.mjs, PROBE_OUT=/tmp/arbeiten-probe-ui.
    Ohne Browser: node pruefung/arbeiten-probe-ui.mjs --logic-only
@@ -32,7 +34,8 @@ function backend(state,action,p){
   const failure=(error,code=409)=>({code,data:{error}});
   if(action==='lage'){
     const beide=!!(r&&r.abgegeben_alex&&r.abgegeben_lea);
-    return {who,andere:other,ist:{eigene:state.ist.filter(x=>x.person===who),andere:state.ist.filter(x=>x.person===other&&x.freigegeben),andere_gesamt:state.ist.filter(x=>x.person===other).length},systeme:state.systeme,werkzeuge:state.werkzeuge,umfrage:{fragen:questions,runde:r||null,runden:state.runden,beide,eigene:r?own():[],andere:beide?state.antworten.filter(x=>x.person===other&&x.runde===r.nr):[],verlauf:[]}};
+    return {who,andere:other,ist:{eigene:state.ist.filter(x=>x.person===who),andere:state.ist.filter(x=>x.person===other&&x.freigegeben),andere_gesamt:state.ist.filter(x=>x.person===other).length},systeme:state.systeme,werkzeuge:state.werkzeuge,umfrage:{fragen:questions,runde:r||null,runden:state.runden,beide,eigene:r?own():[],andere:beide?state.antworten.filter(x=>x.person===other&&x.runde===r.nr):[],
+      andere_beantwortet:state.ohneStand?undefined:(r?state.antworten.filter(x=>x.runde===r.nr&&x.person===other&&(x.kann_nicht||(questions.find(f=>f.nr===x.nr).art==='text'?!!(x.beispiel||'').trim():x.wert!=null))).map(x=>x.nr):[]),verlauf:[]}};
   }
   if(action==='ist_save'){
     let x=state.ist.find(x=>x.id===p.id&&x.person===who);
@@ -97,7 +100,7 @@ async function functionProbe(){
     const res=await handler(new Request('http://local.invalid',{method:'POST',body:JSON.stringify({action,password:'lokale-probe',payload:{who,runde:1,...payload}})}));
     return {status:res.status,...await res.json()};
   };
-  check('Echte Funktion meldet Version 2',(await call('ping','Alex')).version===2);
+  check('Echte Funktion meldet Version 3',(await call('ping','Alex')).version===3);
   for(const who of ['Alex','Lea']){
     const own='abgegeben_'+who.toLowerCase(), other=who==='Alex'?'abgegeben_lea':'abgegeben_alex';
     const reset=()=>{tables.gfweekly_sa_runden=[{nr:1,abgegeben_alex:null,abgegeben_lea:null}];tables.gfweekly_sa_log=[];return tables.gfweekly_sa_runden[0];};
@@ -271,6 +274,151 @@ async function logicProbe(){
   console.log(`\n${count} statische und Logikprüfungen bestanden. Keine Layout- oder Browserabnahme.`);
 }
 
+/* V34 · Wegweiser im Browser: Link, Etappen, Neuladen, Später, Abgabe, Zurücknehmen, Ablauf, Systeme, Startkarte. */
+async function wegProbe(browser,width,theme){
+  const tag=`weg-${width}-${theme}`, state=fixture(), calls=[], errors=[];
+  const ctx=await browser.newContext({viewport:{width,height:width===390?844:1000},locale:'de-DE',timezoneId:'Europe/Berlin'});
+  await ctx.addInitScript(({theme})=>{
+    localStorage.setItem('gf_theme',theme);sessionStorage.setItem('gf_pw','lokale-probe');
+    const day=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Berlin'}).format(new Date());
+    for(const who of ['Alex','Lea'])localStorage.setItem(`gf_ci_${who}_${day}`,'1');
+  },{theme});
+  await ctx.route('**/*',async route=>{
+    const req=route.request(), url=req.url();
+    if(url.startsWith(base+'/')){
+      const file=path.resolve(root,'.'+new URL(url).pathname);
+      if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile())return route.fulfill({status:404,body:''});
+      return route.fulfill({status:200,contentType:mime[path.extname(file)]||'application/octet-stream',body:fs.readFileSync(file)});
+    }
+    if(!url.includes('/functions/v1/'))return route.fulfill({status:200,body:''});
+    const body=req.postDataJSON()||{};
+    if(!url.endsWith('/arbeiten'))return route.fulfill({json:{people:[],items:[],topics:[]}});
+    calls.push(body);const d=backend(state,body.action,body.payload);
+    return route.fulfill({status:d.code||200,json:d.data||structuredClone(d)});
+  });
+  const page=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));
+  page.on('console',m=>{if(m.type()==='error'&&!/status of (500|400|409)/.test(m.text()))errors.push(m.text());});
+  const bereit=()=>page.waitForFunction(()=>typeof D!=='undefined'&&D&&!BUSY&&PENDING===0&&document.querySelector('#saWeg .sw-karte'));
+  const pos=()=>page.locator('#saWeg .sw-pos').innerText();
+  const gespeichert=()=>page.waitForFunction(()=>PENDING===0);
+  const wechsel=async(klick)=>{const vor=await page.locator('#saWeg').innerHTML();await klick();await page.waitForFunction(v=>!TAP&&!BUSY&&document.querySelector('#saWeg').innerHTML!==v,vor);await gespeichert();};
+  const antworte=v=>wechsel(()=>page.locator(`#saWeg [data-act=w-antwort][data-v="${v}"]`).click());
+  const knopf=act=>page.locator(`#saWeg [data-act=${act}]`);
+  const alex=()=>state.antworten.filter(x=>x.person==='Alex'&&x.runde===1);
+  const schirm=async n=>page.screenshot({path:path.join(out,`${n}-${tag}.png`),fullPage:true,animations:'disabled'});
+  const gross=async()=>{const klein=await page.locator('#saWeg button:visible,#saWeg input:not([type=hidden]):visible,#saWeg textarea:visible').evaluateAll(els=>els.filter(e=>e.getBoundingClientRect().height<44).map(e=>(e.dataset.act||e.id||e.tagName)+' '+e.getBoundingClientRect().height.toFixed(1)));if(klein.length)console.log('  zu klein: '+klein.join(', '));return klein.length===0;};
+  const breite=()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth);
+
+  await page.goto(base+'/arbeiten.html?person=alex&start=1');await bereit();
+  check(tag+': Link öffnet den Wegweiser ohne Tabs',await page.locator('#saWeg').isVisible()&&!await page.locator('.sa-tabs').isVisible()&&!await page.locator('#saStartkarte').isVisible());
+  check(tag+': Gruß und Stand beider',(await page.innerText('#saWeg h2'))==='Guten Tag, Alex.'&&(await page.innerText('.sw-stand')).includes('○ Etappe 1 offen'));
+  check(tag+': Genau ein Hauptknopf',await page.locator('#saWeg .btn-primary:visible').count()===1&&(await knopf('w-etappe').innerText())==='Etappe 1 starten');
+  check(tag+': Spätere Schritte sagen danach',(await page.innerText('#saWeg')).includes('danach'));
+  check(tag+': Keine Zeitangaben',!/Minute/i.test(await page.innerText('#sa')));
+  await schirm('weg-start');
+  await wechsel(()=>knopf('w-etappe').click());
+  check(tag+': Etappe 1 Frage 1 von 9',(await pos())==='Etappe 1 · Frage 1 von 9'&&await page.locator('#saWeg [data-act=w-antwort]').count()===6);
+  check(tag+': Sechs Antworten mit passt nicht zu mir',(await page.locator('#saWeg [data-act=w-antwort]').allInnerTexts()).join('|')==='trifft gar nicht zu|eher nicht|teils|eher|trifft voll zu|passt nicht zu mir');
+  await schirm('weg-frage');
+  await antworte(4);await antworte(2);await antworte('kn');
+  check(tag+': Drei Antworten gespeichert',alex().length===3&&alex().find(x=>x.nr===3).kann_nicht===true&&alex().find(x=>x.nr===1).wert===4);
+  await page.reload();await bereit();
+  check(tag+': Neu laden setzt bei Frage 4 fort',(await pos())==='Etappe 1 · Frage 4 von 9');
+  for(let i=4;i<=9;i++) await antworte(3);
+  check(tag+': Etappe 1 geschafft',(await page.innerText('#saWeg')).includes('✓ Etappe 1 geschafft')&&(await knopf('w-etappe').innerText())==='Etappe 2 starten');
+  await schirm('weg-zwischen');
+  await wechsel(()=>knopf('w-spaeter').click());
+  await page.goto(base+'/arbeiten.html?person=alex&start=1');await bereit();
+  check(tag+': Link erneut zeigt Etappe 2 starten',(await knopf('w-etappe').innerText())==='Etappe 2 starten'&&(await page.innerText('.sw-stand')).includes('● Etappe 2 von 3'));
+  await wechsel(()=>knopf('w-etappe').click());
+  check(tag+': Etappe 2 beginnt bei Frage 10',(await pos())==='Etappe 2 · Frage 1 von 10');
+  await antworte(5);await antworte(1);
+  check(tag+': Frage 12 als Stepper',await page.locator('#saWeg .stepper').count()===1);
+  await page.locator('#saWeg .stepper [data-d="1"]').click();await page.locator('#saWeg .stepper [data-d="1"]').click();
+  await wechsel(()=>knopf('w-weiter-zahl').click());
+  check(tag+': Stunden gespeichert',alex().find(x=>x.nr===12).wert===1);
+  await antworte(4);await antworte(4);
+  check(tag+': Frage 15 ist Text mit Überspringen',await page.locator('#swText').count()===1&&await knopf('w-ueberspringen').count()===1);
+  await wechsel(()=>knopf('w-ueberspringen').click());
+  check(tag+': Überspringen bleibt gespeichert',alex().find(x=>x.nr===15).kann_nicht===true);
+  for(let i=16;i<=19;i++) await antworte(2);
+  await wechsel(()=>knopf('w-etappe').click());
+  await antworte(4);
+  check(tag+': Frage 21 als vier Karten',await page.locator('#saWeg [data-act=w-antwort]').count()===4);
+  await antworte(2);
+  await page.locator('#swText').fill('Zu viele Kanäle gleichzeitig');await wechsel(()=>knopf('w-weiter-text').click());
+  await wechsel(()=>knopf('w-ueberspringen').click());
+  await wechsel(()=>knopf('w-weiter-text').click());
+  check(tag+': Etappe 3 geschafft mit Abgabe',(await page.innerText('#saWeg')).includes('✓ Etappe 3 geschafft')&&await knopf('w-abgeben').count()===1);
+  check(tag+': 24 Antworten, Text und Überspringen',alex().length===24&&alex().find(x=>x.nr===22).beispiel==='Zu viele Kanäle gleichzeitig'&&alex().find(x=>x.nr===23).kann_nicht&&alex().find(x=>x.nr===24).kann_nicht&&alex().find(x=>x.nr===21).wert===2);
+  await knopf('w-abgeben').click();check(tag+': Erste Bestätigung sendet nichts',!state.runden[0].abgegeben_alex);
+  await knopf('w-abgeben').click();await page.waitForFunction(()=>!BUSY&&document.querySelector('[data-act=w-ablauf-neu]'));
+  check(tag+': Abgabe gespeichert, Schritt 2 aktiv',!!state.runden[0].abgegeben_alex&&(await page.innerText('.sw-stand')).includes('✓ abgegeben')&&(await knopf('w-ablauf-neu').innerText())==='Ersten Ablauf beschreiben');
+  await schirm('weg-schritt2');
+  await knopf('w-zurueknehmen').click();await page.waitForFunction(()=>!BUSY&&document.querySelector('[data-act=w-abgeben]'));
+  check(tag+': Zurücknehmen öffnet die Abgabe wieder',!state.runden[0].abgegeben_alex&&await knopf('w-ablauf-neu').count()===0);
+  await knopf('w-abgeben').click();await knopf('w-abgeben').click();await page.waitForFunction(()=>!BUSY&&document.querySelector('[data-act=w-ablauf-neu]'));
+  await wechsel(()=>knopf('w-ablauf-neu').click());
+  check(tag+': Ablauf 1 von 5',(await pos())==='Ablauf 1 · 1 von 5');
+  await page.locator('#saWeg [data-act=w-chip][data-v="Freigaben"]').click();
+  check(tag+': Vorschlag füllt den Namen',await page.locator('#swAblauf').inputValue()==='Freigaben');
+  await wechsel(()=>knopf('w-ablauf-weiter').click());
+  await page.locator('#swStartet').fill('Text kommt vom Team');await page.locator('#saWeg [data-act=w-chip][data-v="wöchentlich"]').click();
+  await wechsel(()=>knopf('w-ablauf-weiter').click());
+  await page.locator('#saWeg [data-act=w-chip][data-v="Notizen"]').click();await page.locator('#swWerkzeugeMehr').fill('WhatsApp');
+  await wechsel(()=>knopf('w-ablauf-weiter').click());
+  await page.locator('#swBeteiligte').fill('Team Kommunikation');await page.locator('#saWeg [data-act=w-chip][data-v="Ja"]').click();
+  await wechsel(()=>knopf('w-ablauf-weiter').click());
+  await page.locator('#swHakt').fill('Rückfragen per Mail');
+  await wechsel(()=>knopf('w-ablauf-weiter').click());
+  check(tag+': Ablauf beschrieben mit Freigeben',(await page.innerText('#saWeg')).includes('✓ Ablauf 1 beschrieben')&&await knopf('w-ablauf-frei').count()===1&&await knopf('w-ablauf-behalten').count()===1);
+  await wechsel(()=>knopf('w-ablauf-frei').click());
+  const ab=state.ist.find(x=>x.person==='Alex');
+  check(tag+': Steckbrief vollständig gespeichert',ab&&ab.ablauf==='Freigaben'&&ab.startet_wenn==='Text kommt vom Team'&&ab.haeufigkeit==='wöchentlich'&&ab.werkzeuge==='Notizen, WhatsApp'&&ab.beteiligte==='Team Kommunikation'&&ab.beruehrt_andere===true&&ab.hakt==='Rückfragen per Mail'&&ab.freigegeben===true);
+  check(tag+': Pfad zeigt Ablauf 2',(await knopf('w-ablauf-neu').innerText())==='Ablauf 2 beschreiben');
+  check(tag+': Bedienelemente mindestens 44 px',await gross());
+  check(tag+': Kein horizontales Scrollen',await breite());
+  /* Schritt 3: mit drei Abläufen wird er aktiv. */
+  for(const n of ['Zwei','Drei'])backend(state,'ist_save',{who:'Alex',ablauf:'Ablauf '+n});
+  await page.reload();await bereit();
+  check(tag+': Schritt 3 aktiv nach drei Abläufen',(await knopf('w-teil').innerText())==='Systeme durchgehen');
+  await wechsel(()=>knopf('w-teil').click());
+  check(tag+': System mit drei Wegen',(await pos())==='Systeme · 1 von 1'&&await page.locator('#saWeg [data-act=w-sys]').count()===3);
+  await wechsel(()=>page.locator('#saWeg [data-act=w-sys][data-v=korr]').click());
+  await page.locator('#swBeob').fill('Stand wird festgehalten, aber spät');
+  await wechsel(()=>knopf('w-sys-korr-weiter').click());
+  check(tag+': Korrektur gespeichert',state.systeme[0].beobachtung==='Stand wird festgehalten, aber spät');
+  check(tag+': Werkzeuge als nächste Etappe',(await knopf('w-teil').innerText())==='Werkzeuge 1 bis 10 einordnen');
+  await wechsel(()=>knopf('w-teil').click());
+  check(tag+': Werkzeug 1 von 70',(await pos())==='Werkzeug 1 von 70');
+  await wechsel(()=>page.locator('#saWeg [data-act=w-hub][data-v=behalten]').click());
+  await wechsel(()=>page.locator('#saWeg [data-act=w-hub][data-v=kenne]').click());
+  check(tag+': Einordnung gespeichert, Kenne ich nicht ohne Schreiben',state.werkzeuge[0].stand.einordnung==='behalten'&&state.werkzeuge[1].stand.einordnung==='offen'&&(await pos())==='Werkzeug 3 von 70');
+  await schirm('weg-werkzeug');
+  check(tag+': Bedienelemente Schritt 3 mindestens 44 px',await gross());
+  /* Lea: Startkarte ohne Parameter, Stand von Alex ohne Inhalte. */
+  await page.goto(base+'/arbeiten.html');
+  await page.waitForFunction(()=>document.querySelector('#saStartkarte')&&!document.querySelector('#saStartkarte').hidden);
+  check(tag+': Ohne Parameter erscheint die Startkarte',await page.locator('#saStartkarte').isVisible()&&!await page.locator('#saWeg').isVisible());
+  await schirm('weg-startkarte');
+  await page.locator('#saStartkarte [data-w=Lea]').click();await bereit();
+  check(tag+': Startkarte führt Lea in den Wegweiser',(await page.innerText('#saWeg h2'))==='Guten Tag, Lea.'&&page.url().includes('person=lea'));
+  const stand=await page.innerText('.sw-stand');
+  check(tag+': Lea sieht nur den Stand von Alex',stand.includes('✓ abgegeben')&&stand.includes('○ Etappe 1 offen')&&!(await page.innerText('#sa')).includes('Zu viele Kanäle'));
+  state.ohneStand=true;await page.reload();await bereit();
+  check(tag+': Ältere Funktion ohne Stand zeigt Abgabe',(await page.innerText('.sw-stand')).includes('✓ abgegeben'));
+  state.ohneStand=false;backend(state,'abgeben',{who:'Lea'});await page.reload();await bereit();
+  check(tag+': Nach beiden Abgaben Vergleich ansehen',await knopf('w-vergleich').count()===1);
+  await knopf('w-vergleich').click();
+  check(tag+': Vergleich zeigt oben die drei wichtigsten Punkte',await page.locator('#saTop3').isVisible()&&await page.locator('#saAlles').isVisible());
+  await page.locator('[data-act=w-zum-weg]').click();
+  check(tag+': Zurück zum Wegweiser',await page.locator('#saWeg').isVisible());
+  check(tag+': Keine Gedankenstriche',!/[–—]/.test(await page.innerText('#sa')));
+  check(tag+': Keine Skriptfehler',errors.length===0);
+  check(tag+': Schreibaufrufe tragen Person',calls.filter(x=>x.action!=='lage').every(x=>['Alex','Lea'].includes(x.payload.who)));
+  await ctx.close();
+}
+
 await functionProbe();
 if(process.argv.includes("--logic-only")){await logicProbe();}else{
 const { chromium } = await import(process.env.PLAYWRIGHT_MODUL || '/Users/alexanderdettke/spiel-test/node_modules/playwright/index.mjs');
@@ -309,7 +457,7 @@ try{
     const tab=async name=>{await page.locator(`[data-tab=${name}]`).click();};
     const who=async name=>{await page.evaluate(name=>{gfSetWho(name);document.dispatchEvent(new CustomEvent('gf-who'));},name);await ready();};
     const screen=async name=>{await page.screenshot({path:path.join(out,`${name}-${tag}.png`),fullPage:true});};
-    await page.goto(base+'/arbeiten.html');await ready();
+    await page.goto(base+'/arbeiten.html#start');await ready();
     check(tag+': Theme und Navigation',await page.getAttribute('html','data-theme')===theme&&await page.locator('.sb-nav a[data-k=arbeiten].active').count()===1);
     await screen('start');
     await page.locator('[data-tab=start]').focus();await page.keyboard.press('ArrowRight');
@@ -391,12 +539,13 @@ try{
     // A failed identity change must never leave the old person's answers on screen.
     fail='lage';await page.evaluate(()=>{gfSetWho('Alex');document.dispatchEvent(new CustomEvent('gf-who'));});await page.waitForFunction(()=>!BUSY&&document.querySelector('#saStatus').textContent.includes('Testfehler'));
     check(tag+': Fehler beim Personenwechsel entfernt alte Inhalte',await page.locator('[data-frage]').count()===0&&(await page.innerText('#saStatus')).includes('Testfehler'));
-    await screen('ladefehler');await page.locator('[data-act=neu-laden]').click();await ready();check(tag+': Neu laden erholt sich',await page.locator('[data-frage]').count()===24);
-    state.runden=[];await page.locator('[data-act=neu-laden]').click();await ready();await tab('umfrage');check(tag+': Keine Runde als Leerzustand',await page.locator('[data-act=um-abgeben]').count()===0&&(await page.innerText('#saUmFragen')).includes('Keine laufende Runde'));
+    await screen('ladefehler');await page.locator('#saAlles [data-act=neu-laden]').click();await ready();check(tag+': Neu laden erholt sich',await page.locator('[data-frage]').count()===24);
+    state.runden=[];await page.locator('#saAlles [data-act=neu-laden]').click();await ready();await tab('umfrage');check(tag+': Keine Runde als Leerzustand',await page.locator('[data-act=um-abgeben]').count()===0&&(await page.innerText('#saUmFragen')).includes('Keine laufende Runde'));
     check(tag+': Keine Gedankenstriche in der Seite',!/[–—]/.test(await page.innerText('#sa')));
     check(tag+': Keine Skriptfehler',errors.length===0);
     check(tag+': Schreibaufrufe tragen Person',calls.filter(x=>x.action!=='lage').every(x=>['Alex','Lea'].includes(x.payload.who)));
     await ctx.close();
+    await wegProbe(browser,width,theme);
   }
   console.log(`\n${count} Prüfungen bestanden. Bildschirmproben: ${out}`);
 }finally{await browser.close();}
