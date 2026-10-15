@@ -23,18 +23,23 @@ try {
   await ctx.addInitScript(({theme})=>{sessionStorage.setItem('gf_pw','test');sessionStorage.setItem('gf_who','Lea');localStorage.setItem('gf_theme',theme);},{theme});
   const p=await ctx.newPage(), calls=[], errors=[];
   p.on('pageerror',e=>errors.push(e.message));
-  let d={id:1,wahl:0,alex_frei:false,lea_frei:false,freigegeben_am:null,rev:1};
+  let d={id:1,wahl:null,alex_frei:false,lea_frei:false,freigegeben_am:null,log_decision_id:null,rev:0};
   await p.route('**/functions/v1/**',async route=>{
    const b=route.request().postDataJSON();calls.push(b);
    let result;
    if(route.request().url().endsWith('/organisation')) {
     if(b.action==='get') result={entscheidungen:[d],rollen:[],tore:[],log:[]};
-    else if(b.action==='freigabe') {
-     const {who,on}=b.payload; const newly=who==='Alex'&&on&&!d.freigegeben_am;
-     d={...d,[who==='Alex'?'alex_frei':'lea_frei']:on,rev:d.rev+1};
-     if(who==='Alex') d.freigegeben_am=on?'2026-10-15T10:00:00Z':null;
-     result={entscheidung:d,neu_freigegeben:newly};
-    } else if(b.action==='log_verknuepfen') result={verknuepft:true};
+    else if(b.action==='wahl') {
+     if(b.payload.who!=='Alex') throw Error('Lea darf nicht wählen');
+     const anders=d.wahl!==b.payload.wahl;
+     d={...d,wahl:b.payload.wahl,alex_frei:true,freigegeben_am:anders||!d.freigegeben_am?'2026-10-15T1'+(d.rev%10)+':00:00Z':d.freigegeben_am,rev:d.rev+1};
+     if(anders) d={...d,lea_frei:false,log_decision_id:null};
+     result={entscheidung:d};
+    } else if(b.action==='freigabe') {
+     if(b.payload.who!=='Lea') throw Error('Alex braucht keine Freigabe');
+     d={...d,lea_frei:b.payload.on,rev:d.rev+1};
+     result={entscheidung:d,neu_freigegeben:false};
+    } else if(b.action==='log_verknuepfen') { d={...d,log_decision_id:b.payload.decision_id}; result={verknuepft:true}; }
     else if(b.action==='rolle') result={rolle:{id:b.payload.id,...b.payload.patch,rev:1}};
     else throw Error('Unerwartete Organisationsaktion '+b.action);
    } else if(b.action==='decision_add') result={decision:{id:'11111111-1111-4111-8111-111111111111'}};
@@ -45,32 +50,41 @@ try {
   await p.locator('#ogDecSum').filter({hasText:'Alex entscheidet'}).waitFor();
   check(!/Deine Freigabe fehlt|Freigaben, die auf dich warten/.test(await p.locator('#ogZug').innerText()),'Keine pauschale Freigabeaufgabe für Lea');
   check((await p.locator('[data-frei="Lea:1"]').innerText()).includes('Optional'), 'Rückmeldung ausdrücklich optional');
+  await p.locator('[data-wahl="1:0"]').click();
+  check(!calls.some(x=>x.action==='wahl'),'Lea wählt nicht');
+  await p.evaluate(()=>oeffne('rolle','daten'));
+  let before=calls.filter(x=>x.action==='rolle').length;
+  await p.locator('[data-schritt="daten:1"]').click();
+  check(calls.filter(x=>x.action==='rolle').length===before,'Offene Entscheidung bleibt echte Abhängigkeit');
   const switchTo=async who=>p.evaluate(w=>{gfSetWho(w);document.dispatchEvent(new Event('gf-who'));},who);
-  await switchTo('Alex');
-  await p.locator('[data-frei="Alex:1"]').click();
+  await switchTo('Alex'); await p.evaluate(()=>oeffne('dec',1));
+  check(await p.locator('[data-frei="Alex:1"]').count()===0,'Kein Freigabeknopf für Alex');
+  await p.locator('[data-wahl="1:0"]').click();
   await p.waitForFunction(()=>!!dec(1).log_decision_id);
-  check(d.alex_frei&&!d.lea_frei&&!!d.freigegeben_am,'Alex allein wird freigegeben angezeigt');
+  check(d.wahl===0&&d.alex_frei&&!d.lea_frei&&!!d.freigegeben_am,'Alex’ Wahl gilt mit einem Klick');
+  check(!calls.some(x=>x.action==='freigabe'),'Kein zweiter Schritt nötig');
   const log=calls.find(x=>x.action==='decision_add').payload;
   check(log.decided_by==='Alex'&&log.owner==='Alex','Entscheidungslog schreibt Alex, keine behauptete Mitentscheidung');
   check((await p.locator('#ogDecSum').innerText()).startsWith('1 von 8'),'Fortschritt zählt Alex allein');
+  check(!/Deine Freigabe fehlt|Freigeben/.test(await p.locator('#ogZug').innerText()),'Dein Zug verlangt keine Freigabe');
+  check((await p.locator('#ogAkte').innerText()).includes('Alex hat entschieden'),'Akte zeigt die Entscheidung');
   await switchTo('Lea');
   await p.locator('[data-frei="Lea:1"]').click();
   await p.waitForFunction(()=>dec(1).lea_frei);
   await p.locator('[data-frei="Lea:1"]').click();
   await p.waitForFunction(()=>!dec(1).lea_frei);
-  check(await p.evaluate(()=>decOk(1)),'Leas Rücknahme lässt Freigabe stehen');
+  check(await p.evaluate(()=>decOk(1)),'Leas Rücknahme lässt die Entscheidung stehen');
   await p.evaluate(()=>oeffne('rolle','daten'));
   await p.locator('[data-schritt="daten:1"]').click();
   await p.waitForFunction(()=>rol('daten').rev===1);
   check(calls.some(x=>x.action==='rolle'&&x.payload.id==='daten'&&x.payload.patch.schritt===1),'Rollenaufbau ohne Lea Freigabe bedienbar');
   await switchTo('Alex'); await p.evaluate(()=>oeffne('dec',1));
-  await p.locator('[data-frei="Alex:1"]').click();
-  await p.waitForFunction(()=>!decOk(1));
-  check((await p.locator('#ogDecSum').innerText()).startsWith('0 von 8'),'Alex kann zurücknehmen');
-  await p.evaluate(()=>oeffne('rolle','daten'));
-  const before=calls.filter(x=>x.action==='rolle').length;
-  await p.locator('[data-schritt="daten:2"]').click();
-  check(calls.filter(x=>x.action==='rolle').length===before,'Offene Entscheidung bleibt echte Abhängigkeit');
+  const logs=calls.filter(x=>x.action==='decision_add').length;
+  await p.locator('[data-wahl="1:2"]').click();
+  await p.waitForFunction(()=>dec(1).wahl===2&&!!dec(1).log_decision_id);
+  check(d.wahl===2&&!!d.freigegeben_am,'Andere Wahl ersetzt die Entscheidung sofort');
+  check(calls.filter(x=>x.action==='decision_add').length===logs+1,'Geänderte Entscheidung kommt neu ins Entscheidungslog');
+  check((await p.locator('#ogDecSum').innerText()).startsWith('1 von 8'),'Ersetzen zählt weiter als entschieden');
   check(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Kein horizontaler Seitenüberlauf');
   check(errors.length===0,'Keine Skriptfehler: '+errors.join(';'));
   const out=process.env.PROBE_OUT||'/tmp/organisation-entscheidungsfuehrung';fs.mkdirSync(out,{recursive:true});

@@ -153,6 +153,7 @@
 .og-app small{font-size:11.5px}
 .og-app.mein{background:var(--action);color:var(--on-action);border:1px solid var(--action)}
 .og-app.frei{background:var(--accent-soft);color:var(--text);border:1px solid var(--accent)}
+.og-app.fest{cursor:default}
 .og-app.mein.gesperrt{background:transparent;color:var(--text-2);border:1px dashed var(--border-strong)}
 .og-sub{font-size:var(--stufe-1);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
 .og-chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -242,10 +243,11 @@
 <script src="/assets/game.js?v=34"></script>
 <script src="/assets/eggs.js?v=34" defer></script>
 <script>
-/* V32 · Organisation: acht Entscheidungen (Wahl, Freigabe Alex, optionale Rückmeldung Lea, Begründung), daraus Teamaufbau je Rolle
+/* V32 · Organisation: acht Entscheidungen (Wahl von Alex, optionale Rückmeldung Lea, Begründung), daraus Teamaufbau je Rolle
    (sechs Schritte, Leitung, Stellvertretung) und die Tore der vier Aufbaustufen. Grundlage: Claude-Dokument
    „Wilde Habitate · Organisationsarchitektur“ (05.10.2026). Termine „besetzt bis“ sind Vorschläge.
-   Stand über die Edge Function „organisation“; wird eine Entscheidung von Alex freigegeben, schreibt die Seite
+   Seit 15.10.2026 gilt Alex’ Wahl sofort, einen eigenen Freigabeschritt gibt es nicht mehr.
+   Stand über die Edge Function „organisation“; gilt eine Entscheidung neu, schreibt die Seite
    einen Eintrag ins Entscheidungslog (gfweekly/decision_add, mit Habitat-Talern) und vermerkt ihn (log_verknuepfen).
    Ansicht und Filter in localStorage gf_og_view und gf_og_filter, die Akte im Link (?d=4 oder ?r=prod). */
 const $=s=>document.querySelector(s);
@@ -339,7 +341,7 @@ function torVoll(s){ return s.tor.every((x,j)=>ST.tor[s.n+"-"+j]); }
 function stufe(){ let l=0; for(const s of S){ if(torVoll(s)) l=s.n; else break; } return l; }
 function decZst(id){
   const d=dec(id);
-  if(d.freigegeben_am) return {k:"ok",l:"freigegeben"};
+  if(d.freigegeben_am) return {k:"ok",l:"entschieden"};
   if(d.wahl===null||d.wahl===undefined) return {k:"offen",l:"offen"};
   return {k:"halb",l:"Alex entscheidet"};
 }
@@ -350,8 +352,7 @@ function zugListe(){
   const w=ich(), out=[];
   D.filter(d=>w==="Alex"&&!decOk(d.id)).sort((a,b)=>(a.due||"9")<(b.due||"9")?-1:1).forEach(d=>{
     const x=dec(d.id), eilt=d.due&&tage(d.due)<45;
-    if(x.wahl===null||x.wahl===undefined) out.push({k:"dec",id:d.id,head:d.id+" · "+d.t,body:"Möglichkeit wählen · "+frist(d),btn:"Öffnen",eilt,act:"open"});
-    else if(!x.alex_frei) out.push({k:"dec",id:d.id,head:d.id+" · "+d.t,body:"Deine Freigabe fehlt: "+d.opts[x.wahl],btn:"Freigeben",eilt:true,act:"frei"});
+    out.push({k:"dec",id:d.id,head:d.id+" · "+d.t,body:"Möglichkeit wählen · "+frist(d),btn:"Öffnen",eilt,act:"open"});
   });
   if(w==="Lea") R.filter(r=>!fehlt(r).length&&(rol(r.id).schritt||0)<r.steps.length).sort((a,b)=>a.q1-b.q1||a.q0-b.q0).forEach(r=>{
     const s=rol(r.id).schritt||0;
@@ -371,7 +372,7 @@ function render(){
   const offen=D.filter(d=>!decOk(d.id)&&d.due).sort((a,b)=>a.due<b.due?-1:1)[0];
   $("#ogLage").textContent = nOk===8
     ? "Stufe "+Math.min(4,lvl+1)+" · "+S[Math.min(3,lvl)].t+" · "+pflOk+" von "+pfl.length+" Pflichtrollen mit Stellvertretung"
-    : nOk+" von 8 Entscheidungen freigegeben"+(offen?" · nächste Frist "+offen.bis.split(" ")[0]:"")+" · "+pflOk+" von "+pfl.length+" Pflichtrollen mit Stellvertretung";
+    : nOk+" von 8 Entscheidungen getroffen"+(offen?" · nächste Frist "+offen.bis.split(" ")[0]:"")+" · "+pflOk+" von "+pfl.length+" Pflichtrollen mit Stellvertretung";
 
   const zeig=UI.peek!==null?UI.peek:lvl;
   const img=$("#ogHeroImg"); if(img.getAttribute("src")!==IMG[zeig].src){ img.src=IMG[zeig].src; } img.alt=IMG[zeig].alt;
@@ -389,10 +390,10 @@ function render(){
     (z.length?`<div class="og-zug-l">${z.slice(0,3).map(x=>`<div class="og-zi"><span class="dot${x.eilt?" eilt":""}"></span><button type="button" class="txt" data-open="${x.k}:${x.id}"><b>${gfEsc(x.head)}</b><span>${gfEsc(x.body)}</span></button><button type="button" class="btn btn-ghost" data-zug="${x.act}:${x.k}:${x.id}">${x.btn}</button></div>`).join("")}</div>${z.length>3?`<button type="button" class="og-zug-rest" data-rest="${z[3].k}">noch ${z.length-3} weitere, ${z.slice(3).every(x=>x.k==="dec")?"alle unten bei den Entscheidungen":"unten bei Entscheidungen und Rollen"}</button>`:""}`:"");
   const b=document.getElementById("orgBadge"); if(b){ b.textContent=z.length; b.style.display=z.length?"inline-flex":"none"; }
 
-  $("#ogDecSum").textContent=nOk+" von 8 freigegeben · Alex entscheidet, Lea wird gezielt einbezogen";
+  $("#ogDecSum").textContent=nOk+" von 8 entschieden · Alex entscheidet, Lea wird gezielt einbezogen";
   $("#ogDecs").innerHTML=D.map(d=>{
     const x=dec(d.id), s=decZst(d.id), sel=UI.sel.k==="dec"&&UI.sel.id===d.id;
-    return `<button type="button" class="og-dec${s.k==="ok"?" ok":""}${sel?" sel":""}" data-open="dec:${d.id}"><span class="r1"><span class="nr">${d.id}</span><span class="og-st ${s.k}">${s.l}</span><span class="og-avs"><img class="${x.alex_frei?"":"aus"}" src="${AV.Alex}" alt="${x.alex_frei?"Alex hat freigegeben":"Alex offen"}" width="22" height="22"><img class="${x.lea_frei?"":"aus"}" src="${AV.Lea}" alt="${x.lea_frei?"Lea hat zugestimmt (optionale Rückmeldung)":"Leas Rückmeldung ist optional"}" width="22" height="22"></span></span><span class="t">${gfEsc(d.t)}</span><small>${d.due?"bis "+d.bis.split(" ")[0]+" · "+frist(d):"bis Generalversammlung"}</small></button>`;
+    return `<button type="button" class="og-dec${s.k==="ok"?" ok":""}${sel?" sel":""}" data-open="dec:${d.id}"><span class="r1"><span class="nr">${d.id}</span><span class="og-st ${s.k}">${s.l}</span><span class="og-avs"><img class="${x.alex_frei?"":"aus"}" src="${AV.Alex}" alt="${x.freigegeben_am?"Alex hat entschieden":"Alex offen"}" width="22" height="22"><img class="${x.lea_frei?"":"aus"}" src="${AV.Lea}" alt="${x.lea_frei?"Lea hat zugestimmt (optionale Rückmeldung)":"Leas Rückmeldung ist optional"}" width="22" height="22"></span></span><span class="t">${gfEsc(d.t)}</span><small>${d.due?"bis "+d.bis.split(" ")[0]+" · "+frist(d):"bis Generalversammlung"}</small></button>`;
   }).join("");
 
   $("#ogViews").innerHTML=[["stufen","Stufen und Tore"],["zeit","Zeitachse"]].map(([k,l])=>`<button type="button" class="seg${UI.view===k?" on":""}" data-view="${k}" aria-pressed="${UI.view===k}">${l}</button>`).join("");
@@ -426,10 +427,10 @@ function satz(l){
   const ref=l.ref||"", det=l.detail||{};
   const dN=id=>{ const d=D.find(x=>x.id===+id); return d?"Entscheidung "+d.id+" („"+d.t+"“)":"Entscheidung "+id; };
   const rN=id=>{ const r=R.find(x=>x.id===id); return r?r.t:id; };
-  if(l.what==="wahl"){ const d=D.find(x=>x.id===+ref); return "hat bei "+dN(ref)+" gewählt: "+(d&&d.opts[det.wahl]!==undefined?d.opts[det.wahl]:"Möglichkeit "+det.wahl); }
+  if(l.what==="wahl"){ const d=D.find(x=>x.id===+ref); if(det.wahl===null) return "hat die Wahl bei "+dN(ref)+" zurückgenommen"; return (det.gilt?"hat bei "+dN(ref)+" entschieden: ":"hat bei "+dN(ref)+" gewählt: ")+(d&&d.opts[det.wahl]!==undefined?d.opts[det.wahl]:"Möglichkeit "+det.wahl); }
   if(l.what==="rueckmeldung") return "hat zu "+dN(ref)+" Zustimmung als optionale Rückmeldung festgehalten";
   if(l.what==="rueckmeldung_zurueck") return "hat die optionale Rückmeldung zu "+dN(ref)+" zurückgenommen";
-  if(l.what==="entscheidungsregel") return "hat Alex’ vorhandene Freigabe für "+dN(ref)+" nach der korrigierten Entscheidungsregel wirksam gesetzt";
+  if(l.what==="entscheidungsregel") return det.regel==="Wahl gilt sofort"?"hat Alex’ Wahl bei "+dN(ref)+" nach der Regel „Wahl gilt sofort“ wirksam gesetzt":"hat Alex’ vorhandene Freigabe für "+dN(ref)+" nach der korrigierten Entscheidungsregel wirksam gesetzt";
   if(l.what==="freigabe") return "hat "+dN(ref)+" freigegeben"+(det.beide?" · damit von beiden freigegeben":"");
   if(l.what==="freigabe_zurueck") return "hat die Freigabe für "+dN(ref)+" zurückgenommen";
   if(l.what==="rolle"){ const t=[]; if(det.schritt!==undefined) t.push("Schritt "+det.schritt); if(det.leitung!==undefined) t.push("Leitung: "+(det.leitung||"gelöscht")); if(det.stellvertretung!==undefined) t.push("Stellvertretung: "+(det.stellvertretung||"gelöscht")); return "hat bei "+rN(ref)+" gesetzt: "+(t.join(", ")||"geändert"); }
@@ -461,17 +462,22 @@ function zeitHtml(){
 }
 function decAkte(id){
   const d=D.find(x=>x.id===id), x=dec(id), w=ich(), ok=decOk(id), gew=x.wahl!==null&&x.wahl!==undefined;
-  const app=(p)=>{ const mein=p===w, an=p==="Alex"?x.alex_frei:x.lea_frei, am=p==="Alex"?x.alex_am:x.lea_am;
+  const app=(p)=>{
+    if(p==="Alex"){ // Kein Knopf: Alex’ Wahl ist die Entscheidung.
+      const seit=ok&&x.freigegeben_am?new Date(x.freigegeben_am).toLocaleDateString("de-DE"):"";
+      return `<div class="og-app fest${ok?" frei":""}"><img src="${AV.Alex}" alt="" width="24" height="24"><span><b>${ok?"Alex hat entschieden":"Alex entscheidet"}</b><small>${ok?"gilt seit "+seit:(w==="Alex"?"Deine Wahl oben gilt sofort":"mit seiner Wahl oben")}</small></span></div>`;
+    }
+    const mein=p===w, an=x.lea_frei;
     const cls=an?"frei":(mein?(gew?"mein":"mein gesperrt"):"");
-    const lab=p==="Lea"?(an?"Lea stimmt zu":(mein?"Optional: Ich stimme zu":"Leas Rückmeldung ist optional")):(an?"Alex hat freigegeben":(mein?"Ich gebe frei":"Alex entscheidet"));
-    const sub=p==="Lea"?"Keine Freigabepflicht und keine Sperrwirkung"+(an&&mein?" · Klick nimmt Rückmeldung zurück":""):(an?(am?new Date(am).toLocaleDateString("de-DE"):"")+(mein?" · Klick nimmt zurück":""):(mein?(gew?"mit Begründung ins Log":"erst Möglichkeit wählen"):"Freigabe durch Alexander"));
+    const lab=an?"Lea stimmt zu":(mein?"Optional: Ich stimme zu":"Leas Rückmeldung ist optional");
+    const sub="Keine Freigabepflicht und keine Sperrwirkung"+(an&&mein?" · Klick nimmt Rückmeldung zurück":"");
     return `<button type="button" class="og-app ${cls}" data-frei="${p}:${id}"><img src="${AV[p]}" alt="" width="24" height="24"><span><b>${lab}</b><small>${sub}</small></span></button>`; };
   const frei=R.filter(r=>r.dep.includes(id));
   return `<div class="og-sub">Entscheidung ${id} · bis ${gfEsc(d.bis)}${d.due?" · "+frist(d):""}</div><h3>${gfEsc(d.t)}</h3><div class="why">${gfEsc(d.why)}</div>
   <div class="og-opts" role="radiogroup" aria-label="Möglichkeiten">${d.opts.map((o,i)=>`<button type="button" class="og-opt" role="radio" aria-checked="${x.wahl===i}" data-wahl="${id}:${i}"><i></i><span>${gfEsc(o)}</span></button>`).join("")}</div>
   <label>Begründung fürs Entscheidungslog<textarea rows="2" id="ogWhy" data-id="${id}" placeholder="Warum diese Möglichkeit, was ihr bewusst in Kauf nehmt">${gfEsc(x.begruendung||"")}</textarea></label>
   <div class="og-apps">${app("Alex")}${app("Lea")}</div>
-  <div class="why">${ok?"Freigegeben"+(x.log_decision_id?" und im Entscheidungslog.":"."):(gew?"Gewählt; Alex entscheidet. Eine andere Wahl setzt seine Freigabe und die optionale Rückmeldung zurück.":"Noch keine Möglichkeit gewählt.")}</div>
+  <div class="why">${ok?"Entschieden"+(x.log_decision_id?" und im Entscheidungslog.":".")+" Eine andere Wahl von Alex ersetzt die Entscheidung sofort.":(gew?"Gewählt, gilt noch nicht. Alex wählt die Möglichkeit oben, dann gilt sie.":"Noch keine Möglichkeit gewählt. Alex’ Wahl gilt sofort.")}</div>
   <div class="og-sub">Schaltet frei</div><div class="og-chips">${frei.map(r=>`<button type="button" class="${fehlt(r).length?"":"ok"}" data-open="rolle:${r.id}">${gfEsc(r.t)}</button>`).join("")}</div>${miniVerlauf(l=>["wahl","freigabe","freigabe_zurueck","rueckmeldung","rueckmeldung_zurueck","entscheidungsregel"].includes(l.what)&&l.ref==String(id))}`;
 }
 function rolleAkte(id){
@@ -481,7 +487,7 @@ function rolleAkte(id){
   <div class="og-2"><label>Leitung<input type="text" id="ogLead" data-id="${id}" maxlength="120" value="${gfEsc(x.leitung||(id==="gf"?"Alexander und Lea":""))}" placeholder="Name eintragen"></label><label>Stellvertretung<input type="text" id="ogStv" data-id="${id}" maxlength="120" value="${gfEsc(x.stellvertretung||"")}" placeholder="Name eintragen"></label></div>
   <div class="og-sub">Schritte im Teamaufbau</div><div class="og-steps">${r.steps.map((t,i)=>`<button type="button" class="og-step${i<s?" done":""}${i===s&&!lock?" naechst":""}${lock?" lock":""}${i>s?" spaeter":""}" data-schritt="${id}:${i+1}" aria-pressed="${i<s}"><b>${i+1}</b><span>${gfEsc(t)}</span></button>`).join("")}</div>
   <dl class="og-dl"><dt>Stand</dt><dd>${gfEsc(r.heute)}</dd><dt>Anforderungen</dt><dd>${gfEsc(r.anf)}</dd><dt>Vertretung</dt><dd>${gfEsc(r.stv)}</dd><dt>Instrument</dt><dd>${gfEsc(r.partner)}</dd><dt>Umfang</dt><dd>${gfEsc(r.umfang)}</dd><dt>Besetzt bis</dt><dd>${Q[r.q1]} (Vorschlag)${r.note?" · "+gfEsc(r.note):""}</dd></dl>
-  <div class="og-chips">${r.dep.map(d=>`<button type="button" class="${decOk(d)?"ok":""}" data-open="dec:${d}">${decOk(d)?"freigegeben":"wartet"} · ${d} ${gfEsc(D.find(y=>y.id===d).t)}</button>`).join("")}</div>${miniVerlauf(l=>l.what==="rolle"&&l.ref===id)}`;
+  <div class="og-chips">${r.dep.map(d=>`<button type="button" class="${decOk(d)?"ok":""}" data-open="dec:${d}">${decOk(d)?"entschieden":"wartet"} · ${d} ${gfEsc(D.find(y=>y.id===d).t)}</button>`).join("")}</div>${miniVerlauf(l=>l.what==="rolle"&&l.ref===id)}`;
 }
 
 /* ---------- Meldung mit Bild ---------- */
@@ -503,30 +509,37 @@ async function konflikt(e){
   try{ await laden(); }catch(x){}
 }
 function merk(what,ref,detail){ ST.log=[{at:new Date().toISOString(),who:ich(),what,ref:String(ref),detail:detail||{}}].concat(ST.log||[]).slice(0,40); }
+/* Alex’ Wahl ist die Entscheidung: sie gilt sofort, eine andere Wahl ersetzt sie. Lea wählt nicht. */
 async function wahl(id,i){
   const x=dec(id);
-  if(x.freigegeben_am){ gfToast("Schon freigegeben. Alex muss zuerst seine Freigabe zurücknehmen."); return; }
-  if(x.wahl===i) return;
-  const alt=Object.assign({},x); ST.dec[id]=Object.assign({},x,{wahl:i,alex_frei:false,lea_frei:false}); render();
-  try{ const r=await ogApi("wahl",{id,wahl:i,expect_rev:alt.rev}); ST.dec[id]=r.entscheidung; merk("wahl",id,{wahl:i}); render(); }
-  catch(e){ ST.dec[id]=alt; await konflikt(e); }
-}
-async function freigabe(p,id){
-  const w=ich(), x=dec(id);
-  if(p!==w){ gfToast(p==="Lea"?"Die optionale Rückmeldung kann Lea selbst geben.":"Die Entscheidung gibt Alexander frei."); return; }
-  if(x.wahl===null||x.wahl===undefined){ gfToast("Erst eine Möglichkeit wählen, dann freigeben."); return; }
-  const mk=w==="Alex"?"alex_frei":"lea_frei", on=!x[mk];
+  if(ich()!=="Alex"){ gfToast("Alexander entscheidet. Deine Rückmeldung kannst du unten optional geben."); return; }
+  if(x.wahl===i&&x.freigegeben_am) return;
   const why=$("#ogWhy"); if(why&&why.dataset.id==id&&(why.value||"")!==(x.begruendung||"")) await begruendung(id,why.value);
+  const alt=Object.assign({},dec(id)), jetzt=new Date().toISOString();
+  ST.dec[id]=Object.assign({},alt,{wahl:i,alex_frei:true,freigegeben_am:alt.wahl===i?(alt.freigegeben_am||jetzt):jetzt},alt.wahl===i?{}:{lea_frei:false,log_decision_id:null}); render();
   try{
-    const r=await ogApi("freigabe",{id,on,expect_wahl:x.wahl});
-    ST.dec[id]=r.entscheidung; merk(w==="Lea"?(on?"rueckmeldung":"rueckmeldung_zurueck"):(on?"freigabe":"freigabe_zurueck"),id,{wahl:x.wahl,neu_freigegeben:!!r.neu_freigegeben}); render();
-    if(r.neu_freigegeben){
+    const r=await ogApi("wahl",{id,wahl:i,expect_rev:alt.rev});
+    ST.dec[id]=r.entscheidung; const gilt=!!r.entscheidung.freigegeben_am;
+    merk("wahl",id,{wahl:i,vorher:alt.wahl,gilt}); render();
+    if(gilt&&!r.entscheidung.log_decision_id){
       const d=D.find(y=>y.id===id);
       const n=R.filter(q=>q.dep.includes(id)&&!fehlt(q).length).length;
       const alle=D.every(y=>decOk(y.id));
-      melde(alle?"Alle acht Entscheidungen stehen. Stufe 1 beginnt.":"Entscheidung "+id+" freigegeben · "+n+(n===1?" Rolle":" Rollen")+" startklar", alle?IMG[1].src:IMG[0].src);
-      if(!ST.dec[id].log_decision_id) ins_log(d, ST.dec[id]);
+      melde(alle?"Alle acht Entscheidungen stehen. Stufe 1 beginnt.":"Entscheidung "+id+" gilt · "+n+(n===1?" Rolle":" Rollen")+" startklar", alle?IMG[1].src:IMG[0].src);
+      ins_log(d, ST.dec[id]);
     }
+  }catch(e){ ST.dec[id]=alt; await konflikt(e); }
+}
+/* Nur noch Leas optionale Rückmeldung. */
+async function freigabe(p,id){
+  const w=ich(), x=dec(id);
+  if(p!=="Lea") return;
+  if(w!=="Lea"){ gfToast("Die optionale Rückmeldung kann Lea selbst geben."); return; }
+  if(x.wahl===null||x.wahl===undefined){ gfToast("Erst wählt Alexander eine Möglichkeit."); return; }
+  const on=!x.lea_frei;
+  try{
+    const r=await ogApi("freigabe",{id,on,expect_wahl:x.wahl});
+    ST.dec[id]=r.entscheidung; merk(on?"rueckmeldung":"rueckmeldung_zurueck",id,{wahl:x.wahl}); render();
   }catch(e){ await konflikt(e); }
 }
 async function ins_log(d,x){
@@ -536,7 +549,7 @@ async function ins_log(d,x){
       topic_title:"Organisation · Entscheidung "+d.id, strand:"habitate", decided_by:"Alex", owner:"Alex",
       next_action:frei?"Teamaufbau: "+frei:"", decided_at:heuteIso()});
     if(res&&res.decision&&res.decision.id){ await ogApi("log_verknuepfen",{id:d.id,decision_id:res.decision.id}); ST.dec[d.id].log_decision_id=res.decision.id; render(); }
-  }catch(e){ gfToast("Freigegeben, aber nicht ins Entscheidungslog geschrieben: "+(e.message||"Verbindung")); }
+  }catch(e){ gfToast("Entschieden, aber nicht ins Entscheidungslog geschrieben: "+(e.message||"Verbindung")); }
 }
 async function begruendung(id,text){
   try{ const r=await ogApi("begruendung",{id,text}); ST.dec[id]=Object.assign({},dec(id),{begruendung:r.entscheidung.begruendung}); }
@@ -582,7 +595,6 @@ document.addEventListener("click",e=>{
   if(t.dataset.tor){ tor(t.dataset.tor); return; }
   if(t.dataset.zug){ const [a,k,id]=t.dataset.zug.split(":");
     if(a==="open") oeffne(k,k==="dec"?+id:id);
-    else if(a==="frei") freigabe(ich(),+id);
     else if(a==="schritt") schritt(id,(rol(id).schritt||0)+1);
   }
 });
