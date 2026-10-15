@@ -31,11 +31,14 @@ node pruefung/schirme.mjs "$ZIEL"
 echo "\n== Bedienung (Vertretung, Vorhaben) =="
 node pruefung/bedienung.mjs | tail -1
 
+echo "\n== Organisationsentscheidungen =="
+node pruefung/organisation-entscheidungsfuehrung.mjs
+
 echo "\n== Kommunikation (V32): Rechenlogik, Vergleich mit dem Python-Rechner, Bedienung =="
 node pruefung/komm-test.mjs | tail -1
 node pruefung/komm-vergleich.mjs
 node pruefung/komm-bedienung.mjs | tail -1
-if [ -n "$PGLITE_MODUL" ]; then node pruefung/komm-sql-probe.mjs | tail -1; npx -y deno run -A pruefung/komm-aktionen-probe.ts | tail -1; else echo "SQL- und Aktionsprobe übersprungen (PGLITE_MODUL nicht gesetzt)"; fi
+if [ -n "$PGLITE_MODUL" ]; then node pruefung/organisation-db-probe.mjs; node pruefung/komm-sql-probe.mjs | tail -1; ${DENO_BIN:-deno} run -A pruefung/komm-aktionen-probe.ts | tail -1; else echo "SQL- und Aktionsprobe übersprungen (PGLITE_MODUL nicht gesetzt)"; fi
 
 echo "\n== Wächter (statische Prüfungen) =="
 WAECHTER_OHNE_FRISCHE=1 node pruefung/waechter.mjs
@@ -52,7 +55,7 @@ cat > pruefung/letzte-abnahme.json <<JSON
   "stand": "$STAND",
   "commit": "$(git rev-parse HEAD)",
   "datum": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "laeufe": ["tokens", "farbscan", "kontrast", "matrix", "schirme (Oberfläche)", "bedienung (Oberfläche)", "kommunikation", "waechter"],
+  "laeufe": ["tokens", "farbscan", "kontrast", "matrix", "schirme (Oberfläche)", "bedienung (Oberfläche)", "kommunikation", "organisationsentscheidungen", "waechter"],
   "ungeprueft": "Wirkung in der Datenbank, Asana-Lebenszyklus, Nebenläufigkeit, verborgene Oberflächenteile"
 }
 JSON

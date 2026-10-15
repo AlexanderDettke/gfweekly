@@ -1,0 +1,419 @@
+✓ Echte Funktion meldet Version 3
+✓ Alex: Rücknahme ohne fremde Abgabe erlaubt
+✓ Alex: Rücknahme nach fremder Abgabe ergibt 409
+✓ Alex: Fremde Abgabe zwischen Lesen und Update verhindert Rücknahme
+✓ Alex: Erste Abgabe gespeichert
+✓ Alex: Doppelaufruf behält Zeitpunkt
+✓ Alex: Konkurrierende eigene Abgabe bleibt unverändert
+✓ Alex: Inaktive Frage ergibt 404 ohne Antwort
+✓ Alex: Aktive Frage weiterhin beantwortbar
+✓ Alex: Fehlende Frage ergibt 404
+✓ Lea: Rücknahme ohne fremde Abgabe erlaubt
+✓ Lea: Rücknahme nach fremder Abgabe ergibt 409
+✓ Lea: Fremde Abgabe zwischen Lesen und Update verhindert Rücknahme
+✓ Lea: Erste Abgabe gespeichert
+✓ Lea: Doppelaufruf behält Zeitpunkt
+✓ Lea: Konkurrierende eigene Abgabe bleibt unverändert
+✓ Lea: Inaktive Frage ergibt 404 ohne Antwort
+✓ Lea: Aktive Frage weiterhin beantwortbar
+✓ Lea: Fehlende Frage ergibt 404
+(node:85121) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✓ 390-dark: Theme und Navigation
+✓ 390-dark: Tabs per Tastatur
+✓ 390-dark: Fokus sichtbar
+✓ 390-dark: Leere Steckbriefe und privater Entwurf verborgen
+✓ 390-dark: Steckbrief Chips gespeichert
+✓ 390-dark: Beschriftung greift
+✓ 390-dark: Freigegebener Ablauf sichtbar
+✓ 390-dark: 24 Fragen und keine vorzeitige Auswertung
+✓ 390-dark: Skalenenden korrekt
+✓ 390-dark: Nichtbeurteilung unter Skalenende
+✓ 390-dark: Schnelle Antwort und Beispiel bleiben erhalten
+✓ 390-dark: Kann nicht beurteilen gespeichert
+✓ 390-dark: Zahl ersetzt Nichtbeurteilung
+✓ 390-dark: Nichtbeurteilung ersetzt Zahl
+✓ 390-dark: Zahl null, Text und Wahl gespeichert
+✓ 390-dark: Speicherfehler bleibt sichtbar
+✓ 390-dark: Speicherfehler erneut gespeichert
+✓ 390-dark: Keine stillschweigende Rundung
+✓ 390-dark: Korrigierte Zahl gespeichert
+✓ 390-dark: Erste Bestätigung sendet nichts
+✓ 390-dark: Abgabe sperrt alle Felder und Chips
+✓ 390-dark: Zurücknehmen entsperrt
+✓ 390-dark: Andere Antworten bleiben vor zweiter Abgabe verborgen
+✓ 390-dark: Gemeinsame Auswertung ohne Wertung
+✓ 390-dark: Gemeinsame Auswertung wieder vorhanden
+✓ 390-dark: Beispiele für Wahl erscheinen
+✓ 390-dark: Neue Runde leer und bearbeitbar
+✓ 390-dark: Systemchips gespeichert
+✓ 390-dark: 93 Werkzeuge ohne Fokusverlust
+✓ 390-dark: Suche am Handy
+✓ 390-dark: Geschlossene Hubzeile höchstens 90 px
+✓ 390-dark: Hubchips gespeichert
+✓ 390-dark: Hubzusammenfassung aktualisiert
+✓ 390-dark: Auch lange Namen kompakt
+✓ 390-dark: Hubbearbeitung per Tastatur
+✓ 390-dark: Nur eine Hubbearbeitung offen
+✓ 390-dark: Noch offen grenzt Hub ein
+✓ 390-dark: Leere Suche benannt
+✓ 390-dark: Bedienelemente mindestens 44 px
+✓ 390-dark: Kein horizontales Scrollen bei 93 Werkzeugen
+✓ 390-dark: start ohne Überbreite
+✓ 390-dark: ist ohne Überbreite
+✓ 390-dark: umfrage ohne Überbreite
+✓ 390-dark: Fehler beim Personenwechsel entfernt alte Inhalte
+✓ 390-dark: Neu laden erholt sich
+✓ 390-dark: Keine Runde als Leerzustand
+✓ 390-dark: Keine Gedankenstriche in der Seite
+✓ 390-dark: Keine Skriptfehler
+✓ 390-dark: Schreibaufrufe tragen Person
+✓ weg-390-dark: Link öffnet den Wegweiser ohne Tabs
+✓ weg-390-dark: Gruß und Stand beider
+✓ weg-390-dark: Genau ein Hauptknopf
+✓ weg-390-dark: Spätere Schritte sagen danach
+✓ weg-390-dark: Keine Zeitangaben
+✓ weg-390-dark: Etappe 1 Frage 1 von 9
+✓ weg-390-dark: Sechs Antworten mit passt nicht zu mir
+✓ weg-390-dark: Drei Antworten gespeichert
+✓ weg-390-dark: Neu laden setzt bei Frage 4 fort
+✓ weg-390-dark: Etappe 1 geschafft
+✓ weg-390-dark: Link erneut zeigt Etappe 2 starten
+✓ weg-390-dark: Etappe 2 beginnt bei Frage 10
+✓ weg-390-dark: Frage 12 als Stepper
+✓ weg-390-dark: Stunden gespeichert
+✓ weg-390-dark: Frage 15 ist Pflichttext ohne Überspringen
+✓ weg-390-dark: Leere Pflichtantwort bleibt stehen
+✓ weg-390-dark: Pflichttext gespeichert
+✓ weg-390-dark: Frage 21 als vier Karten
+✓ weg-390-dark: Überspringen verwirft eingegebenen Text
+✓ weg-390-dark: Etappe 3 geschafft mit Abgabe
+✓ weg-390-dark: 24 Antworten, Text und Überspringen
+✓ weg-390-dark: Erste Bestätigung sendet nichts
+✓ weg-390-dark: Abgabe gespeichert, Schritt 2 aktiv
+✓ weg-390-dark: Zurücknehmen öffnet die Abgabe wieder
+✓ weg-390-dark: Ablauf 1 von 5
+✓ weg-390-dark: Vorschlag füllt den Namen und legt den Steckbrief sofort an
+✓ weg-390-dark: Chip sofort gespeichert
+✓ weg-390-dark: Neu laden öffnet den Ablauf an derselben Stelle
+✓ weg-390-dark: Ablauf beschrieben mit Freigeben
+✓ weg-390-dark: Steckbrief vollständig gespeichert
+✓ weg-390-dark: Pfad zeigt Ablauf 2
+✓ weg-390-dark: Bedienelemente mindestens 44 px
+✓ weg-390-dark: Kein horizontales Scrollen
+✓ weg-390-dark: Schritt 3 aktiv nach drei Abläufen
+✓ weg-390-dark: System mit drei Wegen
+✓ weg-390-dark: Korrektur beim Verlassen gespeichert
+✓ weg-390-dark: Korrektur gespeichert
+✓ weg-390-dark: Werkzeuge als nächste Etappe
+✓ weg-390-dark: Werkzeug 1 von 93 (aktiv und im Aufbau)
+✓ weg-390-dark: Einordnung gespeichert, Kenne ich nicht ohne Schreiben
+✓ weg-390-dark: Bedienelemente Schritt 3 mindestens 44 px
+✓ weg-390-dark: Ohne Parameter erscheint die Startkarte
+✓ weg-390-dark: Startkarte führt Lea in den Wegweiser
+✓ weg-390-dark: Lea sieht nur den Stand von Alex
+✓ weg-390-dark: Ältere Funktion ohne Stand zeigt Abgabe
+✓ weg-390-dark: Nach beiden Abgaben Vergleich ansehen
+✓ weg-390-dark: Vergleich zeigt oben die drei wichtigsten Punkte
+✓ weg-390-dark: Zurück zum Wegweiser
+✓ weg-390-dark: Keine Gedankenstriche
+✓ weg-390-dark: Keine Skriptfehler
+✓ weg-390-dark: Schreibaufrufe tragen Person
+✓ 390-light: Theme und Navigation
+✓ 390-light: Tabs per Tastatur
+✓ 390-light: Fokus sichtbar
+✓ 390-light: Leere Steckbriefe und privater Entwurf verborgen
+✓ 390-light: Steckbrief Chips gespeichert
+✓ 390-light: Beschriftung greift
+✓ 390-light: Freigegebener Ablauf sichtbar
+✓ 390-light: 24 Fragen und keine vorzeitige Auswertung
+✓ 390-light: Skalenenden korrekt
+✓ 390-light: Nichtbeurteilung unter Skalenende
+✓ 390-light: Schnelle Antwort und Beispiel bleiben erhalten
+✓ 390-light: Kann nicht beurteilen gespeichert
+✓ 390-light: Zahl ersetzt Nichtbeurteilung
+✓ 390-light: Nichtbeurteilung ersetzt Zahl
+✓ 390-light: Zahl null, Text und Wahl gespeichert
+✓ 390-light: Speicherfehler bleibt sichtbar
+✓ 390-light: Speicherfehler erneut gespeichert
+✓ 390-light: Keine stillschweigende Rundung
+✓ 390-light: Korrigierte Zahl gespeichert
+✓ 390-light: Erste Bestätigung sendet nichts
+✓ 390-light: Abgabe sperrt alle Felder und Chips
+✓ 390-light: Zurücknehmen entsperrt
+✓ 390-light: Andere Antworten bleiben vor zweiter Abgabe verborgen
+✓ 390-light: Gemeinsame Auswertung ohne Wertung
+✓ 390-light: Gemeinsame Auswertung wieder vorhanden
+✓ 390-light: Beispiele für Wahl erscheinen
+✓ 390-light: Neue Runde leer und bearbeitbar
+✓ 390-light: Systemchips gespeichert
+✓ 390-light: 93 Werkzeuge ohne Fokusverlust
+✓ 390-light: Suche am Handy
+✓ 390-light: Geschlossene Hubzeile höchstens 90 px
+✓ 390-light: Hubchips gespeichert
+✓ 390-light: Hubzusammenfassung aktualisiert
+✓ 390-light: Auch lange Namen kompakt
+✓ 390-light: Hubbearbeitung per Tastatur
+✓ 390-light: Nur eine Hubbearbeitung offen
+✓ 390-light: Noch offen grenzt Hub ein
+✓ 390-light: Leere Suche benannt
+✓ 390-light: Bedienelemente mindestens 44 px
+✓ 390-light: Kein horizontales Scrollen bei 93 Werkzeugen
+✓ 390-light: start ohne Überbreite
+✓ 390-light: ist ohne Überbreite
+✓ 390-light: umfrage ohne Überbreite
+✓ 390-light: Fehler beim Personenwechsel entfernt alte Inhalte
+✓ 390-light: Neu laden erholt sich
+✓ 390-light: Keine Runde als Leerzustand
+✓ 390-light: Keine Gedankenstriche in der Seite
+✓ 390-light: Keine Skriptfehler
+✓ 390-light: Schreibaufrufe tragen Person
+✓ weg-390-light: Link öffnet den Wegweiser ohne Tabs
+✓ weg-390-light: Gruß und Stand beider
+✓ weg-390-light: Genau ein Hauptknopf
+✓ weg-390-light: Spätere Schritte sagen danach
+✓ weg-390-light: Keine Zeitangaben
+✓ weg-390-light: Etappe 1 Frage 1 von 9
+✓ weg-390-light: Sechs Antworten mit passt nicht zu mir
+✓ weg-390-light: Drei Antworten gespeichert
+✓ weg-390-light: Neu laden setzt bei Frage 4 fort
+✓ weg-390-light: Etappe 1 geschafft
+✓ weg-390-light: Link erneut zeigt Etappe 2 starten
+✓ weg-390-light: Etappe 2 beginnt bei Frage 10
+✓ weg-390-light: Frage 12 als Stepper
+✓ weg-390-light: Stunden gespeichert
+✓ weg-390-light: Frage 15 ist Pflichttext ohne Überspringen
+✓ weg-390-light: Leere Pflichtantwort bleibt stehen
+✓ weg-390-light: Pflichttext gespeichert
+✓ weg-390-light: Frage 21 als vier Karten
+✓ weg-390-light: Überspringen verwirft eingegebenen Text
+✓ weg-390-light: Etappe 3 geschafft mit Abgabe
+✓ weg-390-light: 24 Antworten, Text und Überspringen
+✓ weg-390-light: Erste Bestätigung sendet nichts
+✓ weg-390-light: Abgabe gespeichert, Schritt 2 aktiv
+✓ weg-390-light: Zurücknehmen öffnet die Abgabe wieder
+✓ weg-390-light: Ablauf 1 von 5
+✓ weg-390-light: Vorschlag füllt den Namen und legt den Steckbrief sofort an
+✓ weg-390-light: Chip sofort gespeichert
+✓ weg-390-light: Neu laden öffnet den Ablauf an derselben Stelle
+✓ weg-390-light: Ablauf beschrieben mit Freigeben
+✓ weg-390-light: Steckbrief vollständig gespeichert
+✓ weg-390-light: Pfad zeigt Ablauf 2
+✓ weg-390-light: Bedienelemente mindestens 44 px
+✓ weg-390-light: Kein horizontales Scrollen
+✓ weg-390-light: Schritt 3 aktiv nach drei Abläufen
+✓ weg-390-light: System mit drei Wegen
+✓ weg-390-light: Korrektur beim Verlassen gespeichert
+✓ weg-390-light: Korrektur gespeichert
+✓ weg-390-light: Werkzeuge als nächste Etappe
+✓ weg-390-light: Werkzeug 1 von 93 (aktiv und im Aufbau)
+✓ weg-390-light: Einordnung gespeichert, Kenne ich nicht ohne Schreiben
+✓ weg-390-light: Bedienelemente Schritt 3 mindestens 44 px
+✓ weg-390-light: Ohne Parameter erscheint die Startkarte
+✓ weg-390-light: Startkarte führt Lea in den Wegweiser
+✓ weg-390-light: Lea sieht nur den Stand von Alex
+✓ weg-390-light: Ältere Funktion ohne Stand zeigt Abgabe
+✓ weg-390-light: Nach beiden Abgaben Vergleich ansehen
+✓ weg-390-light: Vergleich zeigt oben die drei wichtigsten Punkte
+✓ weg-390-light: Zurück zum Wegweiser
+✓ weg-390-light: Keine Gedankenstriche
+✓ weg-390-light: Keine Skriptfehler
+✓ weg-390-light: Schreibaufrufe tragen Person
+✓ 1440-dark: Theme und Navigation
+✓ 1440-dark: Tabs per Tastatur
+✓ 1440-dark: Fokus sichtbar
+✓ 1440-dark: Leere Steckbriefe und privater Entwurf verborgen
+✓ 1440-dark: Steckbrief Chips gespeichert
+✓ 1440-dark: Beschriftung greift
+✓ 1440-dark: Freigegebener Ablauf sichtbar
+✓ 1440-dark: 24 Fragen und keine vorzeitige Auswertung
+✓ 1440-dark: Skalenenden korrekt
+✓ 1440-dark: Nichtbeurteilung unter Skalenende
+✓ 1440-dark: Schnelle Antwort und Beispiel bleiben erhalten
+✓ 1440-dark: Kann nicht beurteilen gespeichert
+✓ 1440-dark: Zahl ersetzt Nichtbeurteilung
+✓ 1440-dark: Nichtbeurteilung ersetzt Zahl
+✓ 1440-dark: Zahl null, Text und Wahl gespeichert
+✓ 1440-dark: Speicherfehler bleibt sichtbar
+✓ 1440-dark: Speicherfehler erneut gespeichert
+✓ 1440-dark: Keine stillschweigende Rundung
+✓ 1440-dark: Korrigierte Zahl gespeichert
+✓ 1440-dark: Erste Bestätigung sendet nichts
+✓ 1440-dark: Abgabe sperrt alle Felder und Chips
+✓ 1440-dark: Zurücknehmen entsperrt
+✓ 1440-dark: Andere Antworten bleiben vor zweiter Abgabe verborgen
+✓ 1440-dark: Gemeinsame Auswertung ohne Wertung
+✓ 1440-dark: Gemeinsame Auswertung wieder vorhanden
+✓ 1440-dark: Beispiele für Wahl erscheinen
+✓ 1440-dark: Neue Runde leer und bearbeitbar
+✓ 1440-dark: Systemchips gespeichert
+✓ 1440-dark: 93 Werkzeuge ohne Fokusverlust
+✓ 1440-dark: Suche am Handy
+✓ 1440-dark: Hubchips gespeichert
+✓ 1440-dark: Hubzusammenfassung aktualisiert
+✓ 1440-dark: Hubbearbeitung per Tastatur
+✓ 1440-dark: Nur eine Hubbearbeitung offen
+✓ 1440-dark: Noch offen grenzt Hub ein
+✓ 1440-dark: Leere Suche benannt
+✓ 1440-dark: Bedienelemente mindestens 44 px
+✓ 1440-dark: Kein horizontales Scrollen bei 93 Werkzeugen
+✓ 1440-dark: start ohne Überbreite
+✓ 1440-dark: ist ohne Überbreite
+✓ 1440-dark: umfrage ohne Überbreite
+✓ 1440-dark: Fehler beim Personenwechsel entfernt alte Inhalte
+✓ 1440-dark: Neu laden erholt sich
+✓ 1440-dark: Keine Runde als Leerzustand
+✓ 1440-dark: Keine Gedankenstriche in der Seite
+✓ 1440-dark: Keine Skriptfehler
+✓ 1440-dark: Schreibaufrufe tragen Person
+✓ weg-1440-dark: Link öffnet den Wegweiser ohne Tabs
+✓ weg-1440-dark: Gruß und Stand beider
+✓ weg-1440-dark: Genau ein Hauptknopf
+✓ weg-1440-dark: Spätere Schritte sagen danach
+✓ weg-1440-dark: Keine Zeitangaben
+✓ weg-1440-dark: Etappe 1 Frage 1 von 9
+✓ weg-1440-dark: Sechs Antworten mit passt nicht zu mir
+✓ weg-1440-dark: Drei Antworten gespeichert
+✓ weg-1440-dark: Neu laden setzt bei Frage 4 fort
+✓ weg-1440-dark: Etappe 1 geschafft
+✓ weg-1440-dark: Link erneut zeigt Etappe 2 starten
+✓ weg-1440-dark: Etappe 2 beginnt bei Frage 10
+✓ weg-1440-dark: Frage 12 als Stepper
+✓ weg-1440-dark: Stunden gespeichert
+✓ weg-1440-dark: Frage 15 ist Pflichttext ohne Überspringen
+✓ weg-1440-dark: Leere Pflichtantwort bleibt stehen
+✓ weg-1440-dark: Pflichttext gespeichert
+✓ weg-1440-dark: Frage 21 als vier Karten
+✓ weg-1440-dark: Überspringen verwirft eingegebenen Text
+✓ weg-1440-dark: Etappe 3 geschafft mit Abgabe
+✓ weg-1440-dark: 24 Antworten, Text und Überspringen
+✓ weg-1440-dark: Erste Bestätigung sendet nichts
+✓ weg-1440-dark: Abgabe gespeichert, Schritt 2 aktiv
+✓ weg-1440-dark: Zurücknehmen öffnet die Abgabe wieder
+✓ weg-1440-dark: Ablauf 1 von 5
+✓ weg-1440-dark: Vorschlag füllt den Namen und legt den Steckbrief sofort an
+✓ weg-1440-dark: Chip sofort gespeichert
+✓ weg-1440-dark: Neu laden öffnet den Ablauf an derselben Stelle
+✓ weg-1440-dark: Ablauf beschrieben mit Freigeben
+✓ weg-1440-dark: Steckbrief vollständig gespeichert
+✓ weg-1440-dark: Pfad zeigt Ablauf 2
+✓ weg-1440-dark: Bedienelemente mindestens 44 px
+✓ weg-1440-dark: Kein horizontales Scrollen
+✓ weg-1440-dark: Schritt 3 aktiv nach drei Abläufen
+✓ weg-1440-dark: System mit drei Wegen
+✓ weg-1440-dark: Korrektur beim Verlassen gespeichert
+✓ weg-1440-dark: Korrektur gespeichert
+✓ weg-1440-dark: Werkzeuge als nächste Etappe
+✓ weg-1440-dark: Werkzeug 1 von 93 (aktiv und im Aufbau)
+✓ weg-1440-dark: Einordnung gespeichert, Kenne ich nicht ohne Schreiben
+✓ weg-1440-dark: Bedienelemente Schritt 3 mindestens 44 px
+✓ weg-1440-dark: Ohne Parameter erscheint die Startkarte
+✓ weg-1440-dark: Startkarte führt Lea in den Wegweiser
+✓ weg-1440-dark: Lea sieht nur den Stand von Alex
+✓ weg-1440-dark: Ältere Funktion ohne Stand zeigt Abgabe
+✓ weg-1440-dark: Nach beiden Abgaben Vergleich ansehen
+✓ weg-1440-dark: Vergleich zeigt oben die drei wichtigsten Punkte
+✓ weg-1440-dark: Zurück zum Wegweiser
+✓ weg-1440-dark: Keine Gedankenstriche
+✓ weg-1440-dark: Keine Skriptfehler
+✓ weg-1440-dark: Schreibaufrufe tragen Person
+✓ 1440-light: Theme und Navigation
+✓ 1440-light: Tabs per Tastatur
+✓ 1440-light: Fokus sichtbar
+✓ 1440-light: Leere Steckbriefe und privater Entwurf verborgen
+✓ 1440-light: Steckbrief Chips gespeichert
+✓ 1440-light: Beschriftung greift
+✓ 1440-light: Freigegebener Ablauf sichtbar
+✓ 1440-light: 24 Fragen und keine vorzeitige Auswertung
+✓ 1440-light: Skalenenden korrekt
+✓ 1440-light: Nichtbeurteilung unter Skalenende
+✓ 1440-light: Schnelle Antwort und Beispiel bleiben erhalten
+✓ 1440-light: Kann nicht beurteilen gespeichert
+✓ 1440-light: Zahl ersetzt Nichtbeurteilung
+✓ 1440-light: Nichtbeurteilung ersetzt Zahl
+✓ 1440-light: Zahl null, Text und Wahl gespeichert
+✓ 1440-light: Speicherfehler bleibt sichtbar
+✓ 1440-light: Speicherfehler erneut gespeichert
+✓ 1440-light: Keine stillschweigende Rundung
+✓ 1440-light: Korrigierte Zahl gespeichert
+✓ 1440-light: Erste Bestätigung sendet nichts
+✓ 1440-light: Abgabe sperrt alle Felder und Chips
+✓ 1440-light: Zurücknehmen entsperrt
+✓ 1440-light: Andere Antworten bleiben vor zweiter Abgabe verborgen
+✓ 1440-light: Gemeinsame Auswertung ohne Wertung
+✓ 1440-light: Gemeinsame Auswertung wieder vorhanden
+✓ 1440-light: Beispiele für Wahl erscheinen
+✓ 1440-light: Neue Runde leer und bearbeitbar
+✓ 1440-light: Systemchips gespeichert
+✓ 1440-light: 93 Werkzeuge ohne Fokusverlust
+✓ 1440-light: Suche am Handy
+✓ 1440-light: Hubchips gespeichert
+✓ 1440-light: Hubzusammenfassung aktualisiert
+✓ 1440-light: Hubbearbeitung per Tastatur
+✓ 1440-light: Nur eine Hubbearbeitung offen
+✓ 1440-light: Noch offen grenzt Hub ein
+✓ 1440-light: Leere Suche benannt
+✓ 1440-light: Bedienelemente mindestens 44 px
+✓ 1440-light: Kein horizontales Scrollen bei 93 Werkzeugen
+✓ 1440-light: start ohne Überbreite
+✓ 1440-light: ist ohne Überbreite
+✓ 1440-light: umfrage ohne Überbreite
+✓ 1440-light: Fehler beim Personenwechsel entfernt alte Inhalte
+✓ 1440-light: Neu laden erholt sich
+✓ 1440-light: Keine Runde als Leerzustand
+✓ 1440-light: Keine Gedankenstriche in der Seite
+✓ 1440-light: Keine Skriptfehler
+✓ 1440-light: Schreibaufrufe tragen Person
+✓ weg-1440-light: Link öffnet den Wegweiser ohne Tabs
+✓ weg-1440-light: Gruß und Stand beider
+✓ weg-1440-light: Genau ein Hauptknopf
+✓ weg-1440-light: Spätere Schritte sagen danach
+✓ weg-1440-light: Keine Zeitangaben
+✓ weg-1440-light: Etappe 1 Frage 1 von 9
+✓ weg-1440-light: Sechs Antworten mit passt nicht zu mir
+✓ weg-1440-light: Drei Antworten gespeichert
+✓ weg-1440-light: Neu laden setzt bei Frage 4 fort
+✓ weg-1440-light: Etappe 1 geschafft
+✓ weg-1440-light: Link erneut zeigt Etappe 2 starten
+✓ weg-1440-light: Etappe 2 beginnt bei Frage 10
+✓ weg-1440-light: Frage 12 als Stepper
+✓ weg-1440-light: Stunden gespeichert
+✓ weg-1440-light: Frage 15 ist Pflichttext ohne Überspringen
+✓ weg-1440-light: Leere Pflichtantwort bleibt stehen
+✓ weg-1440-light: Pflichttext gespeichert
+✓ weg-1440-light: Frage 21 als vier Karten
+✓ weg-1440-light: Überspringen verwirft eingegebenen Text
+✓ weg-1440-light: Etappe 3 geschafft mit Abgabe
+✓ weg-1440-light: 24 Antworten, Text und Überspringen
+✓ weg-1440-light: Erste Bestätigung sendet nichts
+✓ weg-1440-light: Abgabe gespeichert, Schritt 2 aktiv
+✓ weg-1440-light: Zurücknehmen öffnet die Abgabe wieder
+✓ weg-1440-light: Ablauf 1 von 5
+✓ weg-1440-light: Vorschlag füllt den Namen und legt den Steckbrief sofort an
+✓ weg-1440-light: Chip sofort gespeichert
+✓ weg-1440-light: Neu laden öffnet den Ablauf an derselben Stelle
+✓ weg-1440-light: Ablauf beschrieben mit Freigeben
+✓ weg-1440-light: Steckbrief vollständig gespeichert
+✓ weg-1440-light: Pfad zeigt Ablauf 2
+✓ weg-1440-light: Bedienelemente mindestens 44 px
+✓ weg-1440-light: Kein horizontales Scrollen
+✓ weg-1440-light: Schritt 3 aktiv nach drei Abläufen
+✓ weg-1440-light: System mit drei Wegen
+✓ weg-1440-light: Korrektur beim Verlassen gespeichert
+✓ weg-1440-light: Korrektur gespeichert
+✓ weg-1440-light: Werkzeuge als nächste Etappe
+✓ weg-1440-light: Werkzeug 1 von 93 (aktiv und im Aufbau)
+✓ weg-1440-light: Einordnung gespeichert, Kenne ich nicht ohne Schreiben
+✓ weg-1440-light: Bedienelemente Schritt 3 mindestens 44 px
+✓ weg-1440-light: Ohne Parameter erscheint die Startkarte
+✓ weg-1440-light: Startkarte führt Lea in den Wegweiser
+✓ weg-1440-light: Lea sieht nur den Stand von Alex
+✓ weg-1440-light: Ältere Funktion ohne Stand zeigt Abgabe
+✓ weg-1440-light: Nach beiden Abgaben Vergleich ansehen
+✓ weg-1440-light: Vergleich zeigt oben die drei wichtigsten Punkte
+✓ weg-1440-light: Zurück zum Wegweiser
+✓ weg-1440-light: Keine Gedankenstriche
+✓ weg-1440-light: Keine Skriptfehler
+✓ weg-1440-light: Schreibaufrufe tragen Person
+
+415 Prüfungen bestanden. Bildschirmproben: /tmp/hh-arbeiten-abnahme-20261015

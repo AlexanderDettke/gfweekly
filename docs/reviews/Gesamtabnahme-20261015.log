@@ -1,0 +1,51 @@
+== Tokens gegen die Quelle ==
+== Thema dunkel: 57 Tokens in der Quelle ==
+  vollständig und wertgleich
+== Thema hell: 46 Tokens in der Quelle ==
+  vollständig und wertgleich
+
+Abweichungen: 0
+
+== Farbscan (Türkis in site/assets) ==
+null Funde
+
+== Kontrast beider Themen ==
+Paare unter der Schwelle: 0
+
+== Matrix (reine Funktion, ohne Edge Function) ==
+Alle Proben in Ordnung
+
+== Schirme (20 Seiten, 22 Ansichten, 1440 und 390, dunkel und hell) ==
+
+Bekannte Kontrastschuld übergangen: 137 Treffer (pruefung/kontrast-ausnahmen.json, docs/BEKANNTE-MAENGEL.md).
+
+Bilder: 92  ·  Meldungen: 0  ·  Ordner: /tmp/hh-gesamtabnahme-20261015
+
+== Bedienung (Vertretung, Vorhaben) ==
+Alle Bedienproben in Ordnung
+
+== Organisationsentscheidungen ==
+44 Oberflächenprüfungen bestanden (API abgefangen).
+
+== Kommunikation (V32): Rechenlogik, Vergleich mit dem Python-Rechner, Bedienung ==
+70 ok, 0 Fehler
+ok     Lusatia: 102 Veröffentlichungen, 3 Wochenaufgaben, 776 Schritte, 899 Zeilen, 0 Abweichungen
+ok     Malina, Morio & die Draußenbande: 102 Veröffentlichungen, 3 Wochenaufgaben, 770 Schritte, 893 Zeilen, 0 Abweichungen
+ok     by nature: 101 Veröffentlichungen, 3 Wochenaufgaben, 769 Schritte, 891 Zeilen, 0 Abweichungen
+ok     Wilde Möhre: 95 Veröffentlichungen, 3 Wochenaufgaben, 729 Schritte, 842 Zeilen, 0 Abweichungen
+ok     Fluidity: 96 Veröffentlichungen, 3 Wochenaufgaben, 738 Schritte, 852 Zeilen, 0 Abweichungen
+56 ok, 0 Fehler
+Organisation: Migration, vorhandene Freigabe, Entscheidungslogik und Rechte bestanden.
+31 ok, 0 Fehler
+113 ok, 0 Fehler
+
+== Wächter (statische Prüfungen) ==
+Wächter: keine Befunde.
+
+Alle Prüfungen bestanden.
+Hinweis: Schirme und Bedienung sind Oberflächentests, sie fangen die Edge Function ab.
+Sie belegen Aufbau, Kontrast, Überlauf und Bedienwege, nicht die Wirkung in der Datenbank.
+Beleg geschrieben: pruefung/letzte-abnahme.json
+
+== Wächter, vollständig (mit Frischeprüfung) ==
+Wächter: keine Befunde.

@@ -1,0 +1,123 @@
+/* Farben — Wilde-Habitate-Palette (Stand 20.09.2026): Waldschwarz, Waldgrün, Olivgrau, Elfenbein, Honiggold, Blattgrün, Apricot.
+   Keine Türkis-/Petrol-/Teal-/Cyan-Töne in Bedienelementen; Rollen: --action Honiggold mit dunkler Schrift, --link/--accent Blattgrün (hell: Olivgrün),
+   --disabled warmes Olivgrau, --warn Apricot. Die Token-Zone der Plattform (src/index.css) übernimmt dieselben Werte.
+   Dunkel ist Standard (:root). Hell über [data-theme="light"]. data-house="werkstatt|haus" färbt NICHT (wählt Tonalität).
+   Rollen im Spiel (GESTALTUNG.md): --bg Bühne hinter der Welt · --panel/--surface HUD, Panels, Aufgaben, Status ·
+   --text/--muted Haupt- und Nebentext · --action Primärknopf (Honiggold, Schrift --on-action dunkel) · --link/--accent Auswahl, Fortschritt (Blattgrün) · --warn Frist, Kasse im Minus,
+   Unterversorgung, ausverkauft · --pos erreicht, Aufwärtstrend · --crit ausgefallen, Abwärtstrend, Kasse < 0.
+   Farbe trägt Information nie allein: jedes Kennzeichen hat Symbol + Wort. */
+:root{
+  --bg:#171d18;
+  --surface:#242d23;
+  --surface-2:#333d2d;
+  --header-bg:#10150f;
+  --panel:#1d251d;
+  --border:rgba(244,238,220,0.13);
+  --border-strong:rgba(244,238,220,0.2);
+  --text:#f4eedc;
+  --text-2:rgba(244,238,220,0.7);
+  --text-3:rgba(244,238,220,0.55);
+  --fill:rgba(244,238,220,0.08);
+  --fill-soft:rgba(244,238,220,0.05);
+  --accent:#b9cc8a;
+  --accent-strong:#cddba6;
+  --accent-soft:rgba(185,204,138,0.16);
+  --action:#e4b85c;
+  --action-hover:#efc873;
+  --action-fg:#171d18;
+  --link:#b9cc8a;
+  --focus:#b9cc8a;
+  --warn:#f0a777;
+  --warn-bg:rgba(240,167,119,0.16);
+  --crit:#d98a80;
+  --crit-bg:rgba(217,138,128,0.14);
+  --crit-text:#e8aca4;
+  --pos:#8fbf9f;
+  --pos-bg:rgba(143,191,159,0.14);
+  --info:#c9cfa8;
+  --info-bg:rgba(185,204,138,0.12);
+  --chart-gruen:#a3b876;
+  --chart-peach:#cfae7e;
+  --chart-coral:#c56a4e;
+  --chart-grid:rgba(233,233,236,0.14);
+  --backdrop:rgba(23,29,24,0.6);
+  /* Text auf Foto/Szene (Startseite über dem Nachtgelände, Übergänge) — immer hell, in beiden Themen */
+  --photo-bg:#171d18;
+  --on-photo:#ebe6dd;
+  --on-photo-2:rgba(235,230,221,0.78);
+  --on-photo-3:rgba(235,230,221,0.62);
+  --on-photo-line:rgba(255,255,255,0.28);
+  --on-photo-fill:rgba(255,255,255,0.12);
+  --hero-scrim-strong:rgba(20,19,18,0.94);
+  --hero-scrim-soft:rgba(20,19,18,0.38);
+  --on-band:#171d18; /* Schrift auf Zustandsbändern (--warn, --crit) und Medaillen */
+  /* Chronik-Papier (Spiel-Tokens --ht-*): dunkel ist das Papier dunkel, die Textur liegt nur im Hellen darüber */
+  --ht-papier:#1b211b;
+  --ht-papier-2:#262e25;
+  --ht-tinte:#ece7dd;
+  --ht-tinte-2:rgba(236,231,221,0.72);
+  --ht-linie:rgba(236,231,221,0.16);
+  --ht-ocker:#d9b36a;
+  --chronik-papier-bild:none; /* @kind other */
+  /* Vorschlag für die Token-Zone: pages-spiel.css benutzt beide 33×, sie sind dort heute undefiniert. */
+  /* Deaktiviert — warmes Olivgrau statt bloßer Transparenz */
+  --disabled:#3f4a3a;
+  --disabled-fg:#a3a996;
+  --muted:var(--text-2);
+  --on-action:var(--action-fg);
+  /* Seltenheit der Sammelkarten — Rahmen als Verlauf, keine Bilddatei (Paket 36) */
+  --rang-gold:linear-gradient(160deg,#e2ac5a,#b7782a); /* @kind other */
+  --rang-silber:linear-gradient(160deg,#cfc8b9,#8d867a); /* @kind other */
+  --rang-bronze:linear-gradient(160deg,#c98b5a,#805127); /* @kind other */
+  color-scheme:dark;
+}
+[data-theme="light"]{
+  --bg:#f7f3ec;
+  --surface:#fffdf8;
+  --surface-2:#f1ebe0;
+  --header-bg:#f1ebe0;
+  --panel:#fffdf8;
+  --border:rgba(35,32,27,0.12);
+  --border-strong:rgba(35,32,27,0.25);
+  --text:#23201b;
+  --text-2:rgba(35,32,27,0.74);
+  --text-3:rgba(35,32,27,0.66);
+  --fill:rgba(35,32,27,0.07);
+  --fill-soft:rgba(35,32,27,0.045);
+  --accent:#5b7036;
+  --accent-strong:#465828;
+  --accent-soft:rgba(91,112,54,0.14);
+  --action:#e4b85c;
+  --action-hover:#d4a63f;
+  --action-fg:#171d18;
+  --link:#5b7036;
+  --focus:#5b7036;
+  --warn:#9c5122;
+  --warn-bg:rgba(240,167,119,0.22);
+  --crit:#b04a3e;
+  --crit-bg:rgba(217,138,128,0.18);
+  --crit-text:#93382e;
+  --pos:#2a6e46;
+  --pos-bg:rgba(143,191,159,0.22);
+  --info:#5a6640;
+  --info-bg:rgba(91,112,54,0.1);
+  --chart-gruen:#5e7438;
+  --chart-peach:#d3a878;
+  --chart-coral:#c56a4e;
+  --chart-grid:rgba(35,32,27,0.14);
+  --backdrop:rgba(23,29,24,0.45);
+  /* var()-Verweise werden am Ort der Definition aufgelöst — deshalb hier wiederholen, sonst erben helle Flächen die Dunkelwerte */
+  --disabled:#cfcdbd;
+  --disabled-fg:#5e6255;
+  --muted:var(--text-2);
+  --on-action:var(--action-fg);
+  --on-band:#ffffff;
+  --ht-papier:#efe9dd;
+  --ht-papier-2:#e6dfd0;
+  --ht-tinte:#23201b;
+  --ht-tinte-2:rgba(35,32,27,0.72);
+  --ht-linie:rgba(35,32,27,0.16);
+  --ht-ocker:#a8792a;
+  --chronik-papier-bild:url("../assets/chronik/chronik-papier.jpg"); /* @kind other */
+  color-scheme:light;
+}

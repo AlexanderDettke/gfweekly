@@ -23,6 +23,6 @@ Stand 15.10.2026. Auftrag von Alexander: Die technische Doppelfreigabe im Hohen 
 
 ## Grenzen
 
-Die globale Abnahme des gesamten Hauses ist nicht neu bestätigt. Die bisherige Datei `pruefung/letzte-abnahme.json` bleibt als historischer Beleg unverändert. Der vollständige Wächter meldet daher den veralteten Gesamtbeleg. Die externe Farbtokenquelle am früheren lokalen Pfad ist nicht vorhanden; der entsprechende vollständige Abnahmelauf kann hier nicht unverändert abgeschlossen werden. Die geänderte Entscheidungslogik ist gesondert wie oben geprüft. Styles und sonstige Fachbereiche wurden nicht verändert.
+Die zunächst offene technische Gesamtabnahme wurde am 15.10.2026 nach Wiederauffinden der originalen Farbvorlage abgeschlossen. Alle vorgesehenen Prüfungen bestanden; `pruefung/letzte-abnahme.json` ist erneuert und der vollständige Wächter meldet keine Befunde. Herkunft, Laufprotokoll und Aussagegrenzen: `Gesamtabnahme-20261015.md`. Styles und sonstige Fachbereiche wurden nicht verändert.
 
 Die produktiven Rollen wurden für den Test nicht als begonnen markiert. Die tatsächliche personenspezifische Anmeldung wurde nicht neu aufgebaut; das bestehende Hauspasswort und die bestehende Personenwahl bleiben gültig.

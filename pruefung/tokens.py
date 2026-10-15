@@ -1,8 +1,8 @@
 # Vergleicht die Token-Zone in site/assets/styles.css mit der Quelle tokens/colors.css des Design-Systems.
 # Aufruf: python3 pruefung/tokens.py [pfad/zu/colors.css]
 import re, os, sys
-STD = "/Users/alexanderdettke/Documents/Claude/00 Designs/Habitat-Tycoon Design System/wilde-habitate-farbpatch/neu/tokens/colors.css"
-quelle = sys.argv[1] if len(sys.argv) > 1 else STD
+STD = os.path.join(os.path.dirname(__file__), "referenz", "farbvorlage", "colors.css")
+quelle = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("HH_FARBVORLAGE", STD)
 css = os.path.join(os.path.dirname(__file__), '..', 'site', 'assets', 'styles.css')
 if not os.path.exists(quelle):
     print('Quelle nicht gefunden:', quelle); sys.exit(2)

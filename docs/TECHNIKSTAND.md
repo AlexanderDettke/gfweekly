@@ -1,3 +1,7 @@
+## Technische Gesamtabnahme vom 15.10.2026
+
+Vollständiger lokaler Prüflauf einschließlich Farbvorlage, Oberflächen, Bedienung, lokaler Datenbanken und Aktionsproben bestanden. Ergänzend bestanden 415 Wegweiserprüfungen. Prüfbeleg erneuert, Wächter einschließlich Frischeprüfung ohne Befunde. Die Originalvorlage wurde im Downloadarchiv wiedergefunden und unverändert mit Herkunft unter `pruefung/referenz/farbvorlage/` gesichert. Bericht und Grenzen: `docs/reviews/Gesamtabnahme-20261015.md`.
+
 ## Organisationsentwicklung: Entscheidungsführung vom 15.10.2026
 
 Gültige Regel `OE-20261015-ALEXANDER-LEA`: Alexander führt die Organisationsentwicklung und bezieht Lea gezielt ein. Die bisherige pauschale Doppelfreigabe im Bereich Organisation entfällt. Die historischen Beschreibungen zu V32 weiter unten dokumentieren den damaligen Stand.
