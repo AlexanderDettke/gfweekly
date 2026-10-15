@@ -24,10 +24,12 @@ try {
   const p=await ctx.newPage(), calls=[], errors=[];
   p.on('pageerror',e=>errors.push(e.message));
   let d={id:1,wahl:null,alex_frei:false,lea_frei:false,freigegeben_am:null,log_decision_id:null,rev:0};
-  const stoerung={begruendung:false,verknuepfen:false};
+  const stoerung={begruendung:false,verknuepfen:false,wahl401:false};
   await p.route('**/functions/v1/**',async route=>{
    const b=route.request().postDataJSON();calls.push(b);
    let result;
+   if(route.request().url().endsWith('/organisation')&&b.action==='wahl'&&stoerung.wahl401)
+    return route.fulfill({status:401,contentType:'application/json',body:JSON.stringify({error:'unauthorized'})});
    if(route.request().url().endsWith('/organisation')&&b.action==='begruendung'&&stoerung.begruendung)
     return route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:'Inzwischen geändert'})});
    if(route.request().url().endsWith('/organisation')&&b.action==='log_verknuepfen'&&stoerung.verknuepfen)
@@ -46,7 +48,11 @@ try {
      if(b.payload.who!=='Lea') throw Error('Alex braucht keine Freigabe');
      d={...d,lea_frei:b.payload.on,rev:d.rev+1};
      result={entscheidung:d,neu_freigegeben:false};
-    } else if(b.action==='log_verknuepfen') { d={...d,log_decision_id:b.payload.decision_id}; result={verknuepft:true}; }
+    } else if(b.action==='log_verknuepfen') {
+     const passt=!d.log_decision_id&&(b.payload.expect_rev===undefined||b.payload.expect_rev===d.rev);
+     if(passt) d={...d,log_decision_id:b.payload.decision_id};
+     result={verknuepft:passt};
+    }
     else if(b.action==='rolle') result={rolle:{id:b.payload.id,...b.payload.patch,rev:1}};
     else throw Error('Unerwartete Organisationsaktion '+b.action);
    } else if(b.action==='decision_add') result={decision:{id:'11111111-1111-4111-8111-111111111111'}};
@@ -115,8 +121,17 @@ try {
   const vorNachtrag=calls.filter(x=>x.action==='decision_add').length;
   await p.locator('[data-log="1"]').click();
   await p.waitForFunction(()=>!!dec(1).log_decision_id);
-  check(calls.filter(x=>x.action==='decision_add').length===vorNachtrag+1,'Nachtrag schreibt einen Logeintrag');
+  check(calls.filter(x=>x.action==='decision_add').length===vorNachtrag,'Erneuter Nachtrag verwendet den schon geschriebenen Logeintrag');
+  check(calls.filter(x=>x.action==='log_verknuepfen').every(x=>Number.isInteger(x.payload.expect_rev)),'Verknüpfung nennt die gesehene Revision');
   check(await p.locator('[data-log="1"]').count()===0,'Nach dem Nachtrag kein Knopf mehr');
+  check(await p.evaluate(()=>localStorage.getItem('gf_og_log_offen')==='{}'),'Verknüpfter Eintrag wird nicht mehr vorgemerkt');
+  // Abgelehnte Wahl ohne Neuladen (abgelaufenes Passwort): Anzeige springt sofort zurück.
+  stoerung.wahl401=true;
+  await p.locator('[data-wahl="1:0"]').click();
+  await p.waitForTimeout(400);
+  check(await p.locator('[data-wahl="1:2"]').getAttribute('aria-checked')==='true','Abgelehnte Wahl wird nicht als gewählt gezeigt');
+  check(d.wahl===2,'Abgelehnte Wahl ändert nichts');
+  stoerung.wahl401=false;
   check(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Kein horizontaler Seitenüberlauf');
   check(errors.length===0,'Keine Skriptfehler: '+errors.join(';'));
   const out=process.env.PROBE_OUT||'/tmp/organisation-entscheidungsfuehrung';fs.mkdirSync(out,{recursive:true});

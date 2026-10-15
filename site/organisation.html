@@ -527,7 +527,7 @@ async function wahl(id,i){
     ST.dec[id]=Object.assign({},alt,{wahl:i,alex_frei:true,freigegeben_am:alt.wahl===i?(alt.freigegeben_am||jetzt):jetzt},alt.wahl===i?{}:{lea_frei:false,log_decision_id:null}); render();
     let r;
     try{ r=await ogApi("wahl",{id,wahl:i,expect_rev:alt.rev}); }
-    catch(e){ ST.dec[id]=alt; await konflikt(e); return; }
+    catch(e){ ST.dec[id]=alt; render(); await konflikt(e); return; }
     ST.dec[id]=r.entscheidung; const gilt=!!r.entscheidung.freigegeben_am;
     merk("wahl",id,{wahl:i,vorher:alt.wahl,gilt}); render();
     if(gilt&&!r.entscheidung.log_decision_id){
@@ -558,19 +558,27 @@ async function freigabe(p,id){
     ST.dec[id]=r.entscheidung; merk(on?"rueckmeldung":"rueckmeldung_zurueck",id,{wahl:x.wahl}); render();
   }catch(e){ await konflikt(e); }
 }
+/* Schon geschriebene, noch nicht verknüpfte Logeinträge je geltender Entscheidung (Nummer, Wahl, gilt seit).
+   Ein Nachtrag verwendet sie wieder, statt einen zweiten Eintrag samt Talern anzulegen. */
+const LOG_OFFEN="gf_og_log_offen";
+const logOffen=()=>{ try{ return JSON.parse(localStorage.getItem(LOG_OFFEN)||"{}")||{}; }catch(e){ return {}; } };
+const logOffenSetzen=(k,v)=>{ try{ const m=logOffen(); if(v) m[k]=v; else delete m[k]; localStorage.setItem(LOG_OFFEN,JSON.stringify(m)); }catch(e){} };
 async function ins_log(d,x){
+  const rev=x.rev, schluessel=d.id+":"+x.wahl+":"+(x.freigegeben_am||"");
   try{
-    const frei=R.filter(r=>r.dep.includes(d.id)).map(r=>r.t).join(", ");
-    const res=await gfApi("decision_add",{decision:d.t+": "+d.opts[x.wahl]+(x.begruendung?" · Begründung: "+x.begruendung:""),
-      topic_title:"Organisation · Entscheidung "+d.id, strand:"habitate", decided_by:"Alex", owner:"Alex",
-      next_action:frei?"Teamaufbau: "+frei:"",
-      decided_at:x.freigegeben_am?new Date(x.freigegeben_am).toLocaleDateString("sv-SE",{timeZone:"Europe/Berlin"}):heuteIso()});
-    if(!(res&&res.decision&&res.decision.id)) throw new Error("keine Kennung erhalten");
-    const jetzt=dec(d.id);
-    if(jetzt.wahl!==x.wahl||jetzt.log_decision_id){ await laden(); return; }
-    const v=await ogApi("log_verknuepfen",{id:d.id,decision_id:res.decision.id});
-    if(v&&v.verknuepft){ ST.dec[d.id].log_decision_id=res.decision.id; render(); }
-    else { gfToast("Logeintrag geschrieben, aber nicht verknüpft. Stand neu geladen."); await laden(); }
+    let did=logOffen()[schluessel];
+    if(!did){
+      const frei=R.filter(r=>r.dep.includes(d.id)).map(r=>r.t).join(", ");
+      const res=await gfApi("decision_add",{decision:d.t+": "+d.opts[x.wahl]+(x.begruendung?" · Begründung: "+x.begruendung:""),
+        topic_title:"Organisation · Entscheidung "+d.id, strand:"habitate", decided_by:"Alex", owner:"Alex",
+        next_action:frei?"Teamaufbau: "+frei:"",
+        decided_at:x.freigegeben_am?new Date(x.freigegeben_am).toLocaleDateString("sv-SE",{timeZone:"Europe/Berlin"}):heuteIso()});
+      if(!(res&&res.decision&&res.decision.id)) throw new Error("keine Kennung erhalten");
+      did=res.decision.id; logOffenSetzen(schluessel,did);
+    }
+    const v=await ogApi("log_verknuepfen",{id:d.id,decision_id:did,expect_rev:rev});
+    if(v&&v.verknuepft){ logOffenSetzen(schluessel,null); ST.dec[d.id].log_decision_id=did; render(); }
+    else { gfToast("Logeintrag geschrieben, aber nicht verknüpft: die Entscheidung hat sich inzwischen geändert. Stand neu geladen."); await laden(); }
   }catch(e){ gfToast("Entschieden, aber nicht ins Entscheidungslog geschrieben: "+(e.message||"Verbindung")); }
 }
 /* Liefert true, wenn die Begründung gespeichert ist. */

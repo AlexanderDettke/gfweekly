@@ -8,7 +8,7 @@
    hier wird nur die Kennung des Logeintrags an der Entscheidung vermerkt (log_verknuepfen, einmalig). */
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const VERSION = 1;
+const VERSION = 2;
 const PASSWORD = Deno.env.get('GFWEEKLY_PASSWORD') ?? '';
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 const cors = {
@@ -95,7 +95,11 @@ Deno.serve(async (req) => {
     if (action === 'log_verknuepfen') {
       const id = intOr(t.id, 0)!; const did = str(t.decision_id, 60);
       if (!OPTS[id] || !/^[0-9a-f-]{36}$/.test(did)) return json({ error: 'Angaben fehlen' }, 400);
-      const { data, error } = await db.from('gfweekly_org_entscheidung').update({ log_decision_id: did }).eq('id', id).is('log_decision_id', null).select();
+      // Mit expect_rev hängt der Logeintrag nur an genau der gesehenen Entscheidung (Version 2, 15.10.2026).
+      const rev = intOr(t.expect_rev, null);
+      let q = db.from('gfweekly_org_entscheidung').update({ log_decision_id: did }).eq('id', id).is('log_decision_id', null);
+      if (rev !== null) q = q.eq('rev', rev);
+      const { data, error } = await q.select();
       if (error) throw error;
       return json({ verknuepft: (data || []).length === 1 });
     }
