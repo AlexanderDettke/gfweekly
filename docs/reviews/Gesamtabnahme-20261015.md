@@ -33,6 +33,14 @@ Die unveränderte Referenz liegt mit Herkunft und Prüfsummen unter `pruefung/re
 
 Laufprotokolle: `Gesamtabnahme-20261015.log` und `Wegweiser-Abnahme-20261015.log`. Der versionierte Prüfbeleg steht in `pruefung/letzte-abnahme.json`.
 
+## Automatische Gegenprüfung
+
+GitHub Actions hat den Commit `9007f101a270f37fb432c3defedb5b811f7fd0a4` ebenfalls erfolgreich geprüft. Beide Prüfgruppen sind abgeschlossen und grün, einschließlich Farbvorlage, Frischebeleg, Bildschirmen, Bedienung, Organisationsentscheidungen, Organisationsdatenbank und Matrix.
+
+Lauf: https://github.com/AlexanderDettke/gfweekly/actions/runs/38684027407
+
+Maschinenlesbarer Nachweis: `Gesamtabnahme-CI-20261015.json`. Die Anwendungsdateien unter `site/` blieben bei dieser Gesamtabnahme unverändert.
+
 ## Aussagegrenzen
 
 Dies ist die technische Gesamtabnahme des vorgesehenen Prüflaufs. Die bereits dokumentierten 137 Kontrastausnahmen sowie sonstige bekannte Mängel bleiben sichtbar und wurden nicht als behoben ausgegeben. Die Prüfungen mit nachgebauten Schnittstellen und lokalen Datenbanken belegen keine neue fachliche Annahme oder Wirkung in externen Produktivsystemen. Es wurden keine Produktionsdaten verändert. Die vorherige Freigabelogik bleibt mit ihrem gesonderten produktiven Prüfbeleg dokumentiert.
