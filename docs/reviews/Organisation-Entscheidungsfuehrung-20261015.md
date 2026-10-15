@@ -17,6 +17,10 @@ Stand 15.10.2026. Auftrag von Alexander: Die technische Doppelfreigabe im Hohen 
 3. 44 gezielte Oberflächenprüfungen bestanden: 390 und 1440 Pixel, hell und dunkel, beide Personen, Freigabe, Rückmeldung, Rücknahme, Rollenfortschritt, Entscheidungslog, Seitenüberlauf und Skriptfehler. API dabei abgefangen. Dies belegt die Bedienung und gesendete Nutzlast, keine produktiven Rollenschritte.
 4. Farbscan ohne Funde; Kontrastprüfung ohne Unterschreitung; 70 bestehende Kommunikationsprüfungen ohne Fehler; Referenzvergleich aller fünf Festivals ohne Abweichung. Statische Prüfungen ohne Frischeprüfung bestanden.
 
+5. Bestehende Bedienproben vollständig bestanden. Bildschirmprüfung: 92 Ansichten, keine neuen Meldungen; 137 bereits dokumentierte Kontrastausnahmen bleiben bestehen.
+6. Produktiv veröffentlicht: Commit `0e1856f68dfa91f8db022b0729bc2a67edbeb05a`, Netlify Bereitstellung `6ad05190704e0f2bb21b82b3`, Status ready. Ausgelieferte `organisation.html` ist bytegleich mit der geprüften Datei, HTTP 200. Die 44 gezielten Oberflächenprüfungen bestanden auch mit der produktiv ausgelieferten Seite und abgefangener API.
+7. Arbeitsradar: Arbeitspaket `hh-oe-entscheidungsfuehrung`, Revision 1, als umgesetzt gemeldet. Die Meldung enthält die Grenze der globalen Abnahme und gilt nicht als fachliche Annahme.
+
 ## Grenzen
 
 Die globale Abnahme des gesamten Hauses ist nicht neu bestätigt. Die bisherige Datei `pruefung/letzte-abnahme.json` bleibt als historischer Beleg unverändert. Der vollständige Wächter meldet daher den veralteten Gesamtbeleg. Die externe Farbtokenquelle am früheren lokalen Pfad ist nicht vorhanden; der entsprechende vollständige Abnahmelauf kann hier nicht unverändert abgeschlossen werden. Die geänderte Entscheidungslogik ist gesondert wie oben geprüft. Styles und sonstige Fachbereiche wurden nicht verändert.
