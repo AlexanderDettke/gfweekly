@@ -1,5 +1,7 @@
 # Das Hohe Haus (vormals GF Weekly)
 
+> **Organisationsentwicklung, 15.10.2026:** Alex entscheidet; Lea wird gezielt einbezogen. Die pauschale Doppelfreigabe entfällt im Bereich Organisation. Umsetzung und Prüfstand: `docs/reviews/Organisation-Entscheidungsfuehrung-20261015.md`.
+
 > **Stand 11.10.2026: V34 Wegweiser veröffentlicht.** „So arbeiten wir“ führt Alex und Lea durch kleine Etappen.
 > Persönlicher Einstieg: `arbeiten.html?person=alex&start=1` beziehungsweise `?person=lea&start=1`.
 > Funktion `arbeiten` v3 ist deployt, Commit `763a2dc` auf `main` veröffentlicht. 415 lokale Oberflächenprüfungen

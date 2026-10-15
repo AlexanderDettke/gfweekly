@@ -1,5 +1,5 @@
 /* Das Hohe Haus · Edge Function „organisation“ (V32, 05.10.2026)
-   Seite site/organisation.html: acht Entscheidungen vor Stufe 1 (Wahl, Freigabe Alex und Lea, Begründung),
+   Seite site/organisation.html: acht Entscheidungen vor Stufe 1 (Wahl, Freigabe Alex, optionale Rückmeldung Lea, Begründung),
    Teamaufbau je Rolle (Schritt 0 bis 6, Leitung, Stellvertretung) und Tore der vier Aufbaustufen.
    Eigene kleine Funktion wie „saison“ und „besetzung“ (gfweekly ist zu groß für den Deploy aus Cowork).
    Auth wie gfweekly: Passwort im Body oder im Header x-gfweekly-key, geprüft gegen das Secret GFWEEKLY_PASSWORD.

@@ -1,3 +1,15 @@
+## Organisationsentwicklung: Entscheidungsführung vom 15.10.2026
+
+Gültige Regel `OE-20261015-ALEXANDER-LEA`: Alexander führt die Organisationsentwicklung und bezieht Lea gezielt ein. Die bisherige pauschale Doppelfreigabe im Bereich Organisation entfällt. Die historischen Beschreibungen zu V32 weiter unten dokumentieren den damaligen Stand.
+
+`hh_org_freigabe` setzt und löscht `freigegeben_am` ausschließlich bei Alex. Die vorhandenen Felder `lea_frei` und `lea_am` halten eine optionale Zustimmung fest und beeinflussen den Freigabestatus nicht. Signatur, Passwortprüfung, Rollenabhängigkeiten, Zeilensperre und Schutz gegen eine veraltete Wahl bleiben bestehen. Eine geänderte Wahl setzt wie bisher Freigabe und Rückmeldung zurück.
+
+Migration `20261015040502` aktiviert vorhandene Freigaben von Alex ohne eine Zustimmung von Lea zu erfinden. Der Zeitpunkt der ursprünglichen Zustimmung bleibt in `alex_am`, das Wirksamwerden wird separat protokolliert. Im Organisationsverlauf erscheint ein Eintrag zur korrigierten Entscheidungsregel. Es entstehen dadurch keine nachträglichen gemeinsamen Entscheidungen oder Punktevergaben.
+
+Die Oberfläche fordert von Lea keine Freigabe mehr. Neue Einträge im Entscheidungslog nennen Alex als Entscheider und Verantwortlichen. Die Rollenprüfung der bestehenden Edge Function verwendet weiter `freigegeben_am`; eine erneute Bereitstellung der Funktion ist für diese Änderung nicht erforderlich. Die Änderung betrifft ausschließlich Organisationsentscheidungen und erteilt keine allgemeinen rechtlichen oder finanziellen Vollmachten.
+
+Prüfungen und Bereitstellungsstand: `docs/reviews/Organisation-Entscheidungsfuehrung-20261015.md`.
+
 # gfweekly · Technikstand, Ergänzungen aus V23/V24
 
 Dieses Blatt sammelt die Abschnitte, die in das Projektdokument „gfweekly_Technikstand“ gehören.

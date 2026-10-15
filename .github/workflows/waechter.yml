@@ -51,6 +51,10 @@ jobs:
         env:
           PLAYWRIGHT_MODUL: ${{ github.workspace }}/node_modules/playwright/index.mjs
         run: node pruefung/bedienung.mjs
+      - name: Organisationsentscheidungen
+        env:
+          PLAYWRIGHT_MODUL: ${{ github.workspace }}/node_modules/playwright/index.mjs
+        run: node pruefung/organisation-entscheidungsfuehrung.mjs
       - name: Matrix
         env:
           TS_BASIS: file://${{ github.workspace }}/node_modules/typescript/lib/typescript.js

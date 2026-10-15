@@ -222,7 +222,7 @@ export const ANTWORT = {
   /* V32 Organisation (Edge Function „organisation“). „get“ teilt sich den Namen mit „saison“; die Seite Saison liest rows und items, Organisation die übrigen Felder. */
   get: () => ({ rows:[], items:[],
     entscheidungen:[1,2,3,4,5,6,7,8].map(id => ({ id, wahl: id===4?1:(id===1?0:null), alex_frei: id===4||id===1, lea_frei: id===4, alex_am: id===4?zeit(-1):(id===1?zeit(-1):null), lea_am: id===4?zeit(-1):null,
-      begruendung: id===4?'Testbegründung':null, freigegeben_am: id===4?zeit(-1):null, log_decision_id:null, rev: id===4?3:(id===1?2:0) })),
+      begruendung: id===4?'Testbegründung':null, freigegeben_am: id===4||id===1?zeit(-1):null, log_decision_id:null, rev: id===4?3:(id===1?2:0) })),
     rollen:[ { id:'prod', schritt:2, leitung:'Testperson', stellvertretung:null, rev:2 } ],
     tore:[ { key:'1-0', erfuellt:false } ],
     log:[ { at:zeit(-1), who:'Alex', what:'freigabe', ref:'4', detail:{ wahl:1, beide:true } }, { at:zeit(-1), who:'Lea', what:'freigabe', ref:'4', detail:{ wahl:1, beide:false } },
