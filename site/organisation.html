@@ -477,7 +477,8 @@ function decAkte(id){
   <div class="og-opts" role="radiogroup" aria-label="Möglichkeiten">${d.opts.map((o,i)=>`<button type="button" class="og-opt" role="radio" aria-checked="${x.wahl===i}" data-wahl="${id}:${i}"><i></i><span>${gfEsc(o)}</span></button>`).join("")}</div>
   <label>Begründung fürs Entscheidungslog<textarea rows="2" id="ogWhy" data-id="${id}" placeholder="Warum diese Möglichkeit, was ihr bewusst in Kauf nehmt">${gfEsc(x.begruendung||"")}</textarea></label>
   <div class="og-apps">${app("Alex")}${app("Lea")}</div>
-  <div class="why">${ok?"Entschieden"+(x.log_decision_id?" und im Entscheidungslog.":".")+" Eine andere Wahl von Alex ersetzt die Entscheidung sofort.":(gew?"Gewählt, gilt noch nicht. Alex wählt die Möglichkeit oben, dann gilt sie.":"Noch keine Möglichkeit gewählt. Alex’ Wahl gilt sofort.")}</div>
+  ${ok&&!x.log_decision_id&&w==="Alex"?`<button type="button" class="btn btn-ghost" data-log="${id}">Ins Entscheidungslog nachtragen</button>`:""}
+  <div class="why">${ok?"Entschieden"+(x.log_decision_id?" und im Entscheidungslog.":", noch nicht im Entscheidungslog.")+" Eine andere Wahl von Alex ersetzt die Entscheidung sofort.":(gew?"Gewählt, gilt noch nicht. Alex wählt die Möglichkeit oben, dann gilt sie.":"Noch keine Möglichkeit gewählt. Alex’ Wahl gilt sofort.")}</div>
   <div class="og-sub">Schaltet frei</div><div class="og-chips">${frei.map(r=>`<button type="button" class="${fehlt(r).length?"":"ok"}" data-open="rolle:${r.id}">${gfEsc(r.t)}</button>`).join("")}</div>${miniVerlauf(l=>["wahl","freigabe","freigabe_zurueck","rueckmeldung","rueckmeldung_zurueck","entscheidungsregel"].includes(l.what)&&l.ref==String(id))}`;
 }
 function rolleAkte(id){
@@ -509,16 +510,24 @@ async function konflikt(e){
   try{ await laden(); }catch(x){}
 }
 function merk(what,ref,detail){ ST.log=[{at:new Date().toISOString(),who:ich(),what,ref:String(ref),detail:detail||{}}].concat(ST.log||[]).slice(0,40); }
-/* Alex’ Wahl ist die Entscheidung: sie gilt sofort, eine andere Wahl ersetzt sie. Lea wählt nicht. */
+/* Alex’ Wahl ist die Entscheidung: sie gilt sofort, eine andere Wahl ersetzt sie. Lea wählt nicht.
+   Je Entscheidung läuft nur ein Vorgang (Wahl samt Logeintrag) gleichzeitig, damit ein verspäteter
+   Logeintrag nicht an einer inzwischen ersetzten Wahl hängen bleibt. */
+const LAEUFT=new Set();
 async function wahl(id,i){
   const x=dec(id);
   if(ich()!=="Alex"){ gfToast("Alexander entscheidet. Deine Rückmeldung kannst du unten optional geben."); return; }
   if(x.wahl===i&&x.freigegeben_am) return;
-  const why=$("#ogWhy"); if(why&&why.dataset.id==id&&(why.value||"")!==(x.begruendung||"")) await begruendung(id,why.value);
-  const alt=Object.assign({},dec(id)), jetzt=new Date().toISOString();
-  ST.dec[id]=Object.assign({},alt,{wahl:i,alex_frei:true,freigegeben_am:alt.wahl===i?(alt.freigegeben_am||jetzt):jetzt},alt.wahl===i?{}:{lea_frei:false,log_decision_id:null}); render();
+  if(LAEUFT.has(id)){ gfToast("Die letzte Wahl wird noch gespeichert."); return; }
+  LAEUFT.add(id);
   try{
-    const r=await ogApi("wahl",{id,wahl:i,expect_rev:alt.rev});
+    const why=$("#ogWhy");
+    if(why&&why.dataset.id==id&&(why.value||"")!==(x.begruendung||"")&&!(await begruendung(id,why.value))) return;
+    const alt=Object.assign({},dec(id)), jetzt=new Date().toISOString();
+    ST.dec[id]=Object.assign({},alt,{wahl:i,alex_frei:true,freigegeben_am:alt.wahl===i?(alt.freigegeben_am||jetzt):jetzt},alt.wahl===i?{}:{lea_frei:false,log_decision_id:null}); render();
+    let r;
+    try{ r=await ogApi("wahl",{id,wahl:i,expect_rev:alt.rev}); }
+    catch(e){ ST.dec[id]=alt; await konflikt(e); return; }
     ST.dec[id]=r.entscheidung; const gilt=!!r.entscheidung.freigegeben_am;
     merk("wahl",id,{wahl:i,vorher:alt.wahl,gilt}); render();
     if(gilt&&!r.entscheidung.log_decision_id){
@@ -526,9 +535,16 @@ async function wahl(id,i){
       const n=R.filter(q=>q.dep.includes(id)&&!fehlt(q).length).length;
       const alle=D.every(y=>decOk(y.id));
       melde(alle?"Alle acht Entscheidungen stehen. Stufe 1 beginnt.":"Entscheidung "+id+" gilt · "+n+(n===1?" Rolle":" Rollen")+" startklar", alle?IMG[1].src:IMG[0].src);
-      ins_log(d, ST.dec[id]);
+      await ins_log(d, ST.dec[id]);
     }
-  }catch(e){ ST.dec[id]=alt; await konflikt(e); }
+  } finally { LAEUFT.delete(id); }
+}
+/* Geltende Entscheidung ohne Logeintrag (etwa nach einem Verbindungsfehler oder aus der Regeländerung) nachtragen. */
+async function nachtragen(id){
+  const x=dec(id);
+  if(ich()!=="Alex"||!x.freigegeben_am||x.log_decision_id||LAEUFT.has(id)) return;
+  LAEUFT.add(id);
+  try{ await ins_log(D.find(y=>y.id===id), x); } finally { LAEUFT.delete(id); }
 }
 /* Nur noch Leas optionale Rückmeldung. */
 async function freigabe(p,id){
@@ -547,13 +563,20 @@ async function ins_log(d,x){
     const frei=R.filter(r=>r.dep.includes(d.id)).map(r=>r.t).join(", ");
     const res=await gfApi("decision_add",{decision:d.t+": "+d.opts[x.wahl]+(x.begruendung?" · Begründung: "+x.begruendung:""),
       topic_title:"Organisation · Entscheidung "+d.id, strand:"habitate", decided_by:"Alex", owner:"Alex",
-      next_action:frei?"Teamaufbau: "+frei:"", decided_at:heuteIso()});
-    if(res&&res.decision&&res.decision.id){ await ogApi("log_verknuepfen",{id:d.id,decision_id:res.decision.id}); ST.dec[d.id].log_decision_id=res.decision.id; render(); }
+      next_action:frei?"Teamaufbau: "+frei:"",
+      decided_at:x.freigegeben_am?new Date(x.freigegeben_am).toLocaleDateString("sv-SE",{timeZone:"Europe/Berlin"}):heuteIso()});
+    if(!(res&&res.decision&&res.decision.id)) throw new Error("keine Kennung erhalten");
+    const jetzt=dec(d.id);
+    if(jetzt.wahl!==x.wahl||jetzt.log_decision_id){ await laden(); return; }
+    const v=await ogApi("log_verknuepfen",{id:d.id,decision_id:res.decision.id});
+    if(v&&v.verknuepft){ ST.dec[d.id].log_decision_id=res.decision.id; render(); }
+    else { gfToast("Logeintrag geschrieben, aber nicht verknüpft. Stand neu geladen."); await laden(); }
   }catch(e){ gfToast("Entschieden, aber nicht ins Entscheidungslog geschrieben: "+(e.message||"Verbindung")); }
 }
+/* Liefert true, wenn die Begründung gespeichert ist. */
 async function begruendung(id,text){
-  try{ const r=await ogApi("begruendung",{id,text}); ST.dec[id]=Object.assign({},dec(id),{begruendung:r.entscheidung.begruendung}); }
-  catch(e){ await konflikt(e); }
+  try{ const r=await ogApi("begruendung",{id,text}); ST.dec[id]=Object.assign({},dec(id),{begruendung:r.entscheidung.begruendung}); return true; }
+  catch(e){ await konflikt(e); return false; }
 }
 async function rolleSpeichern(id,patch,ok){
   const x=rol(id), alt=Object.assign({},x);
@@ -583,7 +606,8 @@ function oeffne(k,id){
 
 /* ---------- Bedienung ---------- */
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-open],[data-peek],[data-view],[data-fil],[data-wahl],[data-frei],[data-schritt],[data-tor],[data-zug],[data-rest]"); if(!t) return;
+  const t=e.target.closest("[data-open],[data-peek],[data-view],[data-fil],[data-wahl],[data-frei],[data-log],[data-schritt],[data-tor],[data-zug],[data-rest]"); if(!t) return;
+  if(t.dataset.log){ nachtragen(+t.dataset.log); return; }
   if(t.dataset.rest){ (t.dataset.rest==="dec"?$("#ogDecs"):$("#ogMain")).scrollIntoView({behavior:"smooth",block:"start"}); return; }
   if(t.dataset.open){ const [k,id]=t.dataset.open.split(":"); oeffne(k,k==="dec"?+id:id); return; }
   if(t.dataset.peek!==undefined){ const i=+t.dataset.peek; UI.peek=(UI.peek===i||i===stufe())?null:i; render(); return; }

@@ -2,7 +2,17 @@
 
 Vollständiger lokaler Prüflauf einschließlich Farbvorlage, Oberflächen, Bedienung, lokaler Datenbanken und Aktionsproben bestanden. Ergänzend bestanden 415 Wegweiserprüfungen. Prüfbeleg erneuert, Wächter einschließlich Frischeprüfung ohne Befunde. Die Originalvorlage wurde im Downloadarchiv wiedergefunden und unverändert mit Herkunft unter `pruefung/referenz/farbvorlage/` gesichert. Bericht und Grenzen: `docs/reviews/Gesamtabnahme-20261015.md`.
 
+## Organisation: Alex’ Wahl gilt sofort (15.10.2026, abends)
+
+Nach der Auswahl vom 15.10. (keine Freigaben) entfällt der eigene Freigabeschritt. Migration `20261015151918`: `hh_org_wahl` nimmt nur Wahlen von Alex an (Lea: PT400), setzt mit der Wahl `alex_frei` und `freigegeben_am`, eine andere Wahl ersetzt die Entscheidung, setzt Leas Rückmeldung und `log_decision_id` zurück und kommt dadurch neu ins Entscheidungslog. Wahl `null` nimmt die Entscheidung zurück (ohne Knopf in der Oberfläche). `hh_org_freigabe` führt nur noch Leas optionale Rückmeldung; für Alex liefert sie den unveränderten Stand, damit ein noch geöffneter alter Seitenstand nichts zurücknimmt. Rückfüllung: gewählte, nicht geltende Zeilen gelten ab dem Einspielen (live keine, alle acht galten schon). Signaturen unverändert, Edge Function unverändert.
+
+Oberfläche: kein Freigabeknopf und kein „Deine Freigabe fehlt“ mehr; die Akte zeigt „Alex hat entschieden · gilt seit“. Je Entscheidung läuft ein Vorgang (Wahl samt Logeintrag) gleichzeitig; die Verknüpfung prüft vorher die aktuelle Wahl und wertet `verknuepft` aus. Geltende Entscheidungen ohne Logeintrag (live 1, 2 und 5 aus der Regeländerung am Morgen) lassen sich mit „Ins Entscheidungslog nachtragen“ ergänzen. Scheitert das Speichern der Begründung, wird die Wahl nicht ausgelöst.
+
+Grenze: Die Person („als Alex“ oder „als Lea“) wählt der Browser; die Edge Function prüft nur das gemeinsame Passwort. „Lea wählt nicht“ ist damit eine Regel der Oberfläche und der Datenbankfunktion, keine Authentisierung. Eine Verknüpfung über zwei gleichzeitig offene Fenster bleibt ungeschützt, weil `log_verknuepfen` nur `log_decision_id is null` prüft.
+
 ## Organisationsentwicklung: Entscheidungsführung vom 15.10.2026
+
+Hinweis: Der folgende Absatz zu `hh_org_freigabe` beschreibt den Stand vom Morgen des 15.10.; seit Migration `20261015151918` gilt der Abschnitt oben.
 
 Gültige Regel `OE-20261015-ALEXANDER-LEA`: Alexander führt die Organisationsentwicklung und bezieht Lea gezielt ein. Die bisherige pauschale Doppelfreigabe im Bereich Organisation entfällt. Die historischen Beschreibungen zu V32 weiter unten dokumentieren den damaligen Stand.
 

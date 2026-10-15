@@ -24,10 +24,17 @@ try {
   const p=await ctx.newPage(), calls=[], errors=[];
   p.on('pageerror',e=>errors.push(e.message));
   let d={id:1,wahl:null,alex_frei:false,lea_frei:false,freigegeben_am:null,log_decision_id:null,rev:0};
+  const stoerung={begruendung:false,verknuepfen:false};
   await p.route('**/functions/v1/**',async route=>{
    const b=route.request().postDataJSON();calls.push(b);
    let result;
+   if(route.request().url().endsWith('/organisation')&&b.action==='begruendung'&&stoerung.begruendung)
+    return route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:'Inzwischen geändert'})});
+   if(route.request().url().endsWith('/organisation')&&b.action==='log_verknuepfen'&&stoerung.verknuepfen)
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({verknuepft:false})});
    if(route.request().url().endsWith('/organisation')) {
+    if(b.action==='begruendung') { d={...d,begruendung:b.payload.text}; result={entscheidung:d}; }
+    else
     if(b.action==='get') result={entscheidungen:[d],rollen:[],tore:[],log:[]};
     else if(b.action==='wahl') {
      if(b.payload.who!=='Alex') throw Error('Lea darf nicht wählen');
@@ -85,6 +92,31 @@ try {
   check(d.wahl===2&&!!d.freigegeben_am,'Andere Wahl ersetzt die Entscheidung sofort');
   check(calls.filter(x=>x.action==='decision_add').length===logs+1,'Geänderte Entscheidung kommt neu ins Entscheidungslog');
   check((await p.locator('#ogDecSum').innerText()).startsWith('1 von 8'),'Ersetzen zählt weiter als entschieden');
+  // Scheitert die Begründung, wird die Wahl nicht ausgelöst.
+  stoerung.begruendung=true;
+  const wahlen=calls.filter(x=>x.action==='wahl').length;
+  await p.locator('#ogWhy').fill('Testbegründung');
+  const gets=calls.filter(x=>x.action==='get').length;
+  await p.locator('[data-wahl="1:1"]').click();
+  await p.waitForTimeout(400);
+  check(calls.filter(x=>x.action==='get').length>gets,'Gescheiterte Begründung lädt den Stand neu');
+  check(calls.filter(x=>x.action==='wahl').length===wahlen,'Ohne gespeicherte Begründung keine Wahl');
+  check(d.wahl===2,'Entscheidung bleibt bei gescheiterter Begründung unverändert');
+  stoerung.begruendung=false;
+  // Geltende Entscheidung ohne Logeintrag: Nachtrag; eine abgelehnte Verknüpfung wird nicht als gespeichert gezeigt.
+  d={...d,log_decision_id:null}; stoerung.verknuepfen=true;
+  await p.evaluate(()=>laden());
+  const verk=calls.filter(x=>x.action==='log_verknuepfen').length;
+  await p.locator('[data-log="1"]').click();
+  await p.waitForTimeout(400);
+  check(calls.filter(x=>x.action==='log_verknuepfen').length===verk+1,'Nachtrag versucht die Verknüpfung');
+  check(await p.evaluate(()=>!dec(1).log_decision_id),'Abgelehnte Verknüpfung bleibt sichtbar offen');
+  stoerung.verknuepfen=false;
+  const vorNachtrag=calls.filter(x=>x.action==='decision_add').length;
+  await p.locator('[data-log="1"]').click();
+  await p.waitForFunction(()=>!!dec(1).log_decision_id);
+  check(calls.filter(x=>x.action==='decision_add').length===vorNachtrag+1,'Nachtrag schreibt einen Logeintrag');
+  check(await p.locator('[data-log="1"]').count()===0,'Nach dem Nachtrag kein Knopf mehr');
   check(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Kein horizontaler Seitenüberlauf');
   check(errors.length===0,'Keine Skriptfehler: '+errors.join(';'));
   const out=process.env.PROBE_OUT||'/tmp/organisation-entscheidungsfuehrung';fs.mkdirSync(out,{recursive:true});
