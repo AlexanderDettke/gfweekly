@@ -14,7 +14,7 @@ Gemeinsame Grundlagen in `site/assets/core.js` und `site/assets/styles.css`, dan
 
 ## Geprüft
 
-Siehe `PRUEFMATRIX.md`. Kurz: alle bestehenden Prüfungen grün, Webstandard-Prüfung von 70 harten Befunden auf 0, vierzehn Bedienproben bestanden, Rückweg ausprobiert. Alles Oberflächenprüfungen mit abgefangener Edge Function und synthetischen Daten; keine Wirkung in der Datenbank belegt.
+Siehe `PRUEFMATRIX.md`. Kurz: alle bestehenden Prüfungen grün, Webstandard-Prüfung von 70 harten Befunden auf 0, siebzehn Bedienproben bestanden, Rückweg ausprobiert. Alles Oberflächenprüfungen mit abgefangener Edge Function und synthetischen Daten; keine Wirkung in der Datenbank belegt.
 
 ## Unabhängige Prüfung
 
@@ -66,3 +66,6 @@ Unabhängige Gegenprüfung durch Codex (`codex exec -m gpt-6-sol --sandbox read-
 | --- | --- | --- | --- |
 | 1 | `871965c` | 9 (4 hoch, 5 mittel) | Alle 9 bestätigt und behoben: Besprechung beenden ohne bestätigtes Speichern (Besprechung, Board), Saison-Rad schloss vor dem Speichern, „heute besprochen“ meldete Erfolg vor der Antwort (alle drei schon im Bestand), Spielkarten aus dem Umfang genommen und selbstschließend, weitere Vortag-Fehler (Liste, Saison-Rad, Übergabe, `gfTomorrow`, Rückfallwerte), Escape-Listener im ⇄-Menü, Tabweg zu kurz und T-05 zu weit bewertet, T-11 „gespeichert“ zu weit formuliert, Review-Status vorweggenommen. Zwei neue Bedienproben. |
 | 2 | `5c1bb06` | 8 (2 hoch, 3 mittel, 3 niedrig) | Alle 8 bestätigt und behoben: Board wechselte bei ungespeichertem Entwurf ohne Abwarten, Board-Rückgängig verschluckte Fehler (dabei gefunden: „Rückgängig“ war mit der Maus gar nicht anklickbar), Spielkarten ohne Anfangsfokus, T-12 zu weit bewertet (jetzt Probe mit fester Uhr), Rückweg-Nachweis bezog sich auf einen älteren Stand (neu geprüft), Außenklick-Listener im ⇄-Menü, `aria-pressed` beim Zurücksetzen der Eingabe, zwei veraltete Inventarzeilen. Drei neue Bedienproben. |
+| 3 | `596aed7` | 5 (2 hoch, 3 mittel, kein kritischer) | Alle 5 bestätigt und nach der Runde behoben: Antwort 200 ohne Inhalt galt als Erfolg (Eingabe, alle Schreibwege über `gfApi`), Saison-Rad verlor eine Eingabe, wenn eine ältere Antwort sie als gespeichert markierte, „heute“ folgte der Gerätezeitzone statt Europe/Berlin, Spielkarte beim Tippen ohne Ankündigung, verzögerter Fokus nach sehr schnellem Schließen eines Detailbereichs. Drei neue Bedienproben, zwei davon scheitern nachweislich am Stand `596aed7`. |
+
+**Stand der unabhängigen Prüfung:** Drei Runden sind ausgeschöpft (Höchstzahl). Die Korrekturen nach Runde 3 sind technisch geprüft (Abnahme und Bedienproben), aber **nicht mehr unabhängig gegengeprüft**. Eine unabhängige Abnahme wird daher nicht behauptet. Kleinster nächster Schritt: eine gesonderte, kurze Gegenprüfung nur der Commits nach `596aed7`.

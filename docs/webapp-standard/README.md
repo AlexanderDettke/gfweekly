@@ -33,6 +33,6 @@ Die Seite selbst ist statisch (`site/`, kein Build). Mit echtem Passwort zeigt j
 | --- | --- |
 | Umgesetzt | Ja, auf Branch `paket/webstandard-pilot` (siehe ARBEITSSTAND.md) |
 | Technisch geprüft | Ja, an der Oberfläche mit abgefangener Edge Function; Werte und Grenzen in PRUEFMATRIX.md |
-| Unabhängig geprüft | Gegenprüfung durch Codex läuft in Runden; Stand, geprüfter Commit und Ergebnis in ARBEITSSTAND.md, Abschnitt Review. Erst ein dort dokumentierter Lauf ohne offene Befunde zählt als unabhängig geprüft |
+| Unabhängig geprüft | Teilweise. Drei Runden Codex-Gegenprüfung (`871965c`, `5c1bb06`, `596aed7`) mit 9, 8 und 5 Befunden, alle bestätigt und behoben. Die Korrekturen nach Runde 3 sind nicht mehr unabhängig gegengeprüft; keine unabhängige Abnahme (ARBEITSSTAND.md, Review) |
 | Veröffentlicht | Nein. Kein Push nach `main`, kein Deploy |
 | Fachlich angenommen | Nein. Steht aus (Testaufgaben in ARBEITSSTAND.md) |

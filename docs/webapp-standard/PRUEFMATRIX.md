@@ -23,7 +23,7 @@ Prüfumgebung: lokaler statischer Server über `site/`, Chromium Headless Shell 
 | Kurzmeldung als Statusmeldung angesagt | nein | ja | P-04 |
 | Kopieren meldet bei Verweigerung keinen Erfolg | nein | ja | B-04 |
 | Ladefehler sichtbar ohne stehendes „lädt …“ (4 Seiten) | 1 von 4 | 4 von 4 | B-07 |
-| Gezielte Bedienproben | 0 von 9 (vor Runde 1 der Gegenprüfung) | 14 von 14 | siehe 3 |
+| Gezielte Bedienproben | 0 von 9 (vor Runde 1 der Gegenprüfung) | 17 von 17 | siehe 3 |
 | Harte Befunde insgesamt | 70 | 0 | — |
 | Gemessene Kontrastfälle aus `pruefung/schirme.mjs` | 137 Treffer, 64 Einträge | 8 Treffer, 4 Einträge (Messgrenzen) | G-02 |
 
@@ -41,10 +41,10 @@ Belege: `belege/ausgang-05af97b.json`, `belege/ende.json`.
 | T-06 Details und Rückwege | Pilot · Board | Karte per Enter öffnen, Escape | Fokus zurück auf der Karte, Kontext erhalten | Fokus kehrt zur Karte zurück; Filter und Ansicht bleiben | bestanden (Bedienprüfung) | Probe 7 |
 | T-07 Suche, Filter, Auswahl | Pilot | Suchfelder mit Bezeichnung; Filter unverändert | Geltung erkennbar | Bezeichnung und Suchbereich vorhanden; Filter- und Zählerlogik unverändert durch bestehende Proben | bestanden (Messung, bestehende Proben); seitenübergreifende Auswahl nicht zutreffend (keine Mehrfachauswahl) | `pruefung/bedienung.mjs` |
 | T-08 Formular und Validierung | Pilot · Eingabe | Leeres Pflichtfeld, gültige Eingabe, Fehler | Fehler am Feld, Werte bleiben | Fehler am Feld mit `aria-invalid` und Fokus; Werte bleiben bei Fehler | bestanden (Bedienprüfung); Dateifelder nicht zutreffend (keine) | Proben 1 und 3 |
-| T-09 Speichern und Wiederholung | Pilot · Eingabe · Simulation | Langsame Antwort (1,2 s) mit Doppelklick; Serverfehler | Keine doppelte Wirkung, keine falsche Erfolgsmeldung | Genau eine Anfrage; Fehler bleibt am Knopf; Kopieren ohne falschen Erfolg | bestanden (Simulation) | Proben 2, 3; Dialogprobe |
+| T-09 Speichern und Wiederholung | Pilot · Eingabe, Liste, Board, Saison-Rad · Simulation | Langsame Antwort (1,2 s) mit Doppelklick; Serverfehler; Antwort ohne Inhalt (unklar); Speichern während weiterer Eingabe | Keine doppelte Wirkung, keine falsche Erfolgsmeldung, keine verlorene Eingabe | Genau eine Anfrage; Fehler bleibt am Knopf; unklare Antwort als „Unklare Antwort … Stand prüfen“, Eingabe bleibt; jüngste Eingabe wird nachgespeichert; Kopieren ohne falschen Erfolg | bestanden (Simulation) | Proben 2, 3, 11, 13 bis 15, 17; Dialogprobe |
 | T-10 Fachliche Zustände | Pilot | Statusbedeutungen geprüft, Erledigt-Darstellung | Nur Darstellung geändert | Keine Statuslogik geändert; Übergänge in Vorhaben durch bestehende Proben | bestanden (Codeprüfung, bestehende Proben) | `pruefung/bedienung.mjs` |
 | T-11 Zuordnung und Konflikt | Pilot · Board | Umsortieren ohne Ziehen; ⇄ per Tastatur | Gleiche Wirkung wie Ziehen | Speicheraufruf `update` mit `lane_order` ausgelöst (gleicher Weg wie beim Ablegen) und neue Reihenfolge angezeigt; dauerhafte Speicherung nach Neuladen nicht belegt, weil die Simulation keinen Zustand hält | bestanden für Aufruf und Anzeige (Simulation); Kapazität und Zeitkonflikt nicht zutreffend für das Board, Lücke L1 | Proben 4 bis 6, 10 |
-| T-12 Zeiten und Mengen | Pilot · feste Uhr in Europe/Berlin (STICHTAG 25.10.2026, Ende der Sommerzeit) | Kalendertag, „morgen“ und Frist-Wort kurz vor und nach Mitternacht und nach der Zeitumstellung; Codeprüfung aller Datumsstellen | Tag und Zeit eindeutig | `gfIsoTag`, `gfTomorrow` und `gfFrist` liefern in allen drei Fällen den richtigen Kalendertag; Vortag-Fehler in allen Seiten (Board, Entscheidungen, Check-in, Liste, Vertretung, Übergabe, Saison-Rad, Rückfallwerte in Launch, Kommunikation, Saison, Besetzung) und festes Datum in Organisation behoben | bestanden für Kalendertage (Simulation mit fester Uhr); über Mitternacht reichende Zeiträume nicht zutreffend (keine Schichten oder Termine mit Uhrzeit über Mitternacht im Inventar); Mengen und 0-Werte nur als Codeprüfung | Probe 12 |
+| T-12 Zeiten und Mengen | Pilot · feste Uhr in Europe/Berlin (STICHTAG 25.10.2026, Ende der Sommerzeit) | Kalendertag, „morgen“ und Frist-Wort kurz vor und nach Mitternacht und nach der Zeitumstellung, zusätzlich mit Gerätezeitzone UTC; Codeprüfung aller Datumsstellen | Tag und Zeit eindeutig | `gfIsoTag`, `gfTomorrow` und `gfFrist` liefern in allen drei Fällen den richtigen Kalendertag; Vortag-Fehler in allen Seiten (Board, Entscheidungen, Check-in, Liste, Vertretung, Übergabe, Saison-Rad, Rückfallwerte in Launch, Kommunikation, Saison, Besetzung) und festes Datum in Organisation behoben | bestanden für Kalendertage (Simulation mit fester Uhr); über Mitternacht reichende Zeiträume nicht zutreffend (keine Schichten oder Termine mit Uhrzeit über Mitternacht im Inventar); Mengen und 0-Werte nur als Codeprüfung | Proben 12, 16 |
 | T-13 Gleiche Daten in Ansichten | Pilot | Board, Liste, Detail mit denselben Testthemen | Kennung und Zustand gleich | Unverändert, bestehende Proben grün | bestanden (bestehende Proben) | `pruefung/schirme.mjs` |
 | T-14 Export und Rücklesen | — | — | — | Kein Datei-Export in der Webapp | nicht zutreffend (Inventar: nur Kopieren und `mailto:`) | `FUNKTIONSINVENTAR.md` 4.9 |
 | T-15 Externe Wirkung | Pilot | Rückfragetexte vor Asana geprüft | Ziel, Anzahl, Folge | Launch nennt Anzahl; andere nennen Ziel und Folge | nicht ausgeführt als Versand (keine Freigabe für Testempfänger); Texte als Codeprüfung | Lücke L8 |
@@ -72,6 +72,11 @@ Belege: `belege/ausgang-05af97b.json`, `belege/ende.json`.
 12. Datum: Kalendertag und „morgen“ in Berlin kurz vor und nach Mitternacht und am Tag der Zeitumstellung (aus Runde 2).
 13. Board: abgelehntes Rückgängig zeigt den Fehler und den gespeicherten Stand statt der alten Position (aus Runde 2; fand dabei, dass „Rückgängig“ mit der Maus nicht anklickbar war).
 14. Board: Wechsel zu einem anderen Thema bleibt bei abgelehntem Speichern beim Entwurf mit Eingaben (aus Runde 2).
+15. Eingabe: Antwort ohne Inhalt gilt als unklar, kein Erfolgszustand, Eingabe bleibt (aus Runde 3).
+16. Datum: auch bei Gerätezeitzone UTC gilt der Berliner Kalendertag (aus Runde 3).
+17. Saison-Rad: Schließen während laufenden Speicherns speichert die jüngste Eingabe nach (aus Runde 3).
+
+Die Proben 16 und 17 scheitern am Stand von Runde 3 (`596aed7`) und bestehen am Endstand (Gegenprobe im Vergleichsbaum).
 
 Die Proben fanden während der Umsetzung zwei echte Fehler, die dann behoben wurden: Enter auf ⇄ öffnete zusätzlich die Details (schon im Bestand), und das Umsortieren zählte eine unsichtbare wiederkehrende Karte mit.
 

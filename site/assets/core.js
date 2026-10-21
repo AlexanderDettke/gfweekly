@@ -25,9 +25,12 @@ async function gfApi(action, payload){
   try{ res = await fetch(GF_FN, { method:"POST", headers:{ "Content-Type":"application/json" }, keepalive:true,
     body: JSON.stringify({ action, password: gfPW(), payload }) }); }
   catch(e){ const f=new Error(navigator.onLine===false?"Keine Verbindung: Das Gerät ist offline. Bitte versuche es erneut, sobald du wieder verbunden bist.":"Keine Verbindung zum Server. Bitte prüfe die Verbindung und versuche es erneut."); f.offline=true; throw f; }
-  let d={}; try{ d = await res.json(); }catch(e){}
+  let d=null; try{ const txt=await res.text(); d=txt?JSON.parse(txt):null; }catch(e){ d=null; }
   if(res.status===401) throw { auth:true };
-  if(!res.ok){ const f=new Error(d.error || ("HTTP "+res.status)); f.status=res.status; f.data=d; if(res.status===409) f.konflikt=true; throw f; }   /* B-07: Status bleibt erhalten */
+  if(!res.ok){ d=d||{}; const f=new Error(d.error || ("HTTP "+res.status)); f.status=res.status; f.data=d; if(res.status===409) f.konflikt=true; throw f; }   /* B-07: Status bleibt erhalten */
+  /* B-04: Jede Aktion antwortet mit einem JSON-Objekt. Fehlt es trotz 200 (abgebrochene Antwort), ist unklar, ob die Aktion wirkte:
+     kein stilles {} mehr, sondern ein Fehler, der zum Prüfen des Stands vor einer Wiederholung auffordert. */
+  if(!d||typeof d!=="object"){ const f=new Error("Unklare Antwort des Servers: Es ist nicht sicher, ob die Änderung gespeichert wurde. Bitte den Stand prüfen, bevor du es erneut versuchst."); f.unklar=true; f.status=res.status; throw f; }
   return d;
 }
 
@@ -102,8 +105,10 @@ function gfQuadrant(key, opts={}){ const q=GF_QUADRANT[key]; if(!q) return "";
   return `<span class="zst${q.tone?" "+q.tone:""}" title="${gfEsc(opts.title||q.hint)}"><i aria-hidden="true">${q.i}</i>${q.w}</span>`; }
 /* Frist als Datum plus Wort: „24.09. · diese Woche“, „überfällig“, „ohne Frist“. */
 function gfFrist(d){ if(!d) return gfZustand("offen","ohne Frist");
-  const heute=new Date(); heute.setHours(0,0,0,0); const t=new Date(d+"T00:00:00"); const tage=Math.round((t-heute)/86400000);
-  const datum=t.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"});
+  /* D-03: Tage zwischen zwei Kalendertagen (heute in Europe/Berlin), in UTC gerechnet, damit Zeitumstellung und Gerätezeitzone nicht stören. */
+  const tag=s=>Date.UTC(+s.slice(0,4),+s.slice(5,7)-1,+s.slice(8,10)); const d0=(d+"").slice(0,10);
+  const tage=Math.round((tag(d0)-tag(gfIsoTag()))/86400000);
+  const datum=d0.slice(8,10)+"."+d0.slice(5,7)+".";
   const wort=tage<0?"überfällig":tage===0?"heute":tage===1?"morgen":tage<=7?"diese Woche":tage<=21?"in "+tage+" Tagen":"später";
   const kind=tage<0?"crit":tage<=7?"warn":"offen";
   return gfZustand(kind, datum+" · "+wort); }
@@ -119,7 +124,12 @@ const GF_KK_ICON={
 };
 /* Webapp Standard D-03: Kalendertag in Ortszeit (Europe/Berlin im Browser) als JJJJ-MM-TT. toISOString() verschöbe
    die lokale Mitternacht in Berlin auf den Vortag. */
-function gfIsoTag(d){ d=d?new Date(d):new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+/* Maßgebliche Tageswerte ohne Argument („heute“) in Europe/Berlin, unabhängig von der Gerätezeitzone (Projektprofil, D-03).
+   Mit Argument (ein aus Ortsbestandteilen gebautes Datum der seiteninternen Wochen- und Monatsrechnung) die Ortsbestandteile. */
+const GF_TZ="Europe/Berlin";
+function gfIsoTag(d){ if(d){ d=new Date(d); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  try{ return new Intl.DateTimeFormat("sv-SE",{timeZone:GF_TZ,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()); }
+  catch(e){ const n=new Date(); return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0"); } }
 function gfFmtInt(n){ return (Number(n)||0).toLocaleString("de-DE"); }
 function gfKachel(o){
   const tag=o.href?"a":"div", href=o.href?` href="${gfEsc(o.href)}"${/^https?:/.test(o.href)?' target="_blank" rel="noopener"':""}`:"";
@@ -342,7 +352,7 @@ function gfRelLabel(r){ return r ? (r.charAt(0).toUpperCase()+r.slice(1)) : ""; 
 function gfDefaultTime(t){ if(t.time_minutes) return t.time_minutes; return t.priority==="hoch"?15:(t.priority==="niedrig"?5:10); }
 function gfSrcBadge(src){ return ({ki:"KI-Vorschlag",manuell:"manuell",pruefen:"prüfen",bestaetigt:"bestätigt"})[src]||src||""; }
 function gfNames(s){ return (s||"").split(",").map(x=>x.trim()).filter(Boolean); }
-function gfTomorrow(){ const d=new Date(); return gfIsoTag(new Date(d.getFullYear(), d.getMonth(), d.getDate()+1)); }   /* D-03: nächster Kalendertag in Ortszeit, nicht „jetzt plus 24 Stunden in UTC“ */
+function gfTomorrow(){ return gfAddDays(gfIsoTag(), 1); }   /* D-03: nächster Kalendertag in Ortszeit, nicht „jetzt plus 24 Stunden in UTC“ */
 
 /* Delegations-Nachricht (kopierbar – es wird KEINE Mail automatisch versendet) */
 function gfDelegationMsg(t){
@@ -831,7 +841,7 @@ if(window.MutationObserver) document.addEventListener("DOMContentLoaded",()=>{ g
 function gfBereichAuf(panel){
   if(!panel) return; if(!panel.__gfAusl) panel.__gfAusl=document.activeElement;
   panel.setAttribute("role","dialog"); const h=panel.querySelector("h2,h3");
-  if(h){ if(!h.id) h.id="wsb"+(++_gfBzN); panel.setAttribute("aria-labelledby",h.id); h.setAttribute("tabindex","-1"); setTimeout(()=>{ if(!panel.contains(document.activeElement)) h.focus(); },40); }
+  if(h){ if(!h.id) h.id="wsb"+(++_gfBzN); panel.setAttribute("aria-labelledby",h.id); h.setAttribute("tabindex","-1"); setTimeout(()=>{ if(panel.getAttribute("aria-hidden")==="true"||!panel.classList.contains("open")||!panel.getClientRects().length) return; if(!panel.contains(document.activeElement)) h.focus(); },40); }   /* nicht mehr fokussieren, wenn der Bereich schon wieder zu ist */
 }
 function gfBereichZu(panel, ersatz){
   if(!panel) return; const a=panel.__gfAusl; panel.__gfAusl=null;

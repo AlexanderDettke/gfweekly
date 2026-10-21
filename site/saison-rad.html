@@ -236,7 +236,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#panel").classL
 function openItem(id, preset){
   const it=id?ITEMS.find(x=>x.id===id):Object.assign({row_id:(ROWS[2]||ROWS[0]).id,title:"",starts_on:TODAY,ends_on:TODAY,cat:"plan",form:"band",anchor_start:"fest",anchor_end:"fest",status:"vorschlag"},preset||{});
   if(!it) return;
-  OPEN={kind:"item",id:it.id||null,dirty:false};
+  OPEN={kind:"item",id:it.id||null,dirty:false,rev:0};
   const me=gfWho();
   $("#pBody").innerHTML=`<div class="fgrid">
     <div class="fld ffull"><label>Titel</label><input name="title" value="${gfEsc(it.title)}" placeholder="Was passiert?" /></div>
@@ -258,23 +258,30 @@ function openItem(id, preset){
     : `<button class="btn btn-primary" id="pSave">Anlegen</button><button class="btn btn-ghost" id="pCancel">Abbrechen</button>`;
   panelOpen(it.id?"Element bearbeiten":"Neues Element");
   const b=$("#pBody");
-  const mark=()=>{ OPEN.dirty=true; if(!OPEN.id) return; const s=$("#pState"); if(s) s.textContent="Ungespeichert …"; clearTimeout(TIMER); TIMER=setTimeout(()=>saveItem(true),700); };
+  const mark=()=>{ OPEN.dirty=true; OPEN.rev=(OPEN.rev||0)+1; if(!OPEN.id) return; const s=$("#pState"); if(s) s.textContent="Ungespeichert …"; clearTimeout(TIMER); TIMER=setTimeout(()=>saveItem(true),700); };
   b.addEventListener("input",mark); b.addEventListener("change",mark);
   if(it.id) $("#pDel").onclick=async()=>{ if(!confirm("Dieses Element entfernen?")) return; try{ await szApi("item_delete",{id:it.id,who:gfWho()}); ITEMS=ITEMS.filter(x=>x.id!==it.id); OPEN=null; panelClose(); await loadLog(); renderAll(); gfToast("Entfernt"); }catch(e){ gfToast("Fehler: "+e.message); } };
   else { $("#pSave").onclick=()=>saveItem(false); $("#pCancel").onclick=()=>{ OPEN=null; panelClose(); }; }
   setTimeout(()=>{ const f=b.querySelector('[name="title"]'); if(f&&!it.id) f.focus(); },60);
 }
 function readForm(){ const o={}; $$("#pBody [name]").forEach(f=>{ o[f.name]=f.value; }); return o; }
-async function saveItem(silent){
+/* Webapp Standard B-04: Speichern nacheinander (nie zwei Anfragen gleichzeitig) und mit Änderungsrevision. Eine Antwort setzt
+   „gespeichert“ nur, wenn sie die jüngste Eingabe enthält; sonst bleibt der Bereich „ungespeichert“ und der nächste Lauf speichert nach. */
+let SAVING=Promise.resolve();
+function saveItem(silent){ const vor=SAVING; const lauf=vor.catch(()=>{}).then(()=>saveItemJetzt(silent)); SAVING=lauf.catch(()=>{}); return lauf; }
+async function saveItemJetzt(silent){
   if(!OPEN||OPEN.kind!=="item") return true; clearTimeout(TIMER);
+  if(OPEN.id&&!OPEN.dirty) return true;
+  const rev=OPEN.rev||0, offen=OPEN;
   const f=readForm(); if(!f.ends_on) f.ends_on=f.starts_on;
   if(f.ends_on<f.starts_on){ const s=$("#pState"); if(s) s.textContent="Ende liegt vor dem Anfang"; else gfToast("Ende liegt vor dem Anfang"); return false; }
   const payload=Object.assign({},f,{id:OPEN.id||undefined,who:gfWho()});
   try{
     const d=await szApi("item_save",payload);
     const i=ITEMS.findIndex(x=>x.id===d.item.id); if(i>=0) ITEMS[i]=d.item; else ITEMS.push(d.item);
-    if(OPEN){ OPEN.dirty=false; }
-    const s=$("#pState"); if(s) s.textContent="Gespeichert";
+    const neuer=OPEN===offen&&(OPEN.rev||0)!==rev;
+    if(OPEN===offen&&!neuer){ OPEN.dirty=false; }
+    const s=$("#pState"); if(s&&OPEN===offen) s.textContent=neuer?"Ungespeichert …":"Gespeichert";
     loadLog().then(renderLog);
     draw(); renderStats(); renderOpen();
     if(!payload.id){ OPEN=null; panelClose(); gfToast("Angelegt"); openItem(d.item.id); }

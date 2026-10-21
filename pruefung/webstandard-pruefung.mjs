@@ -39,7 +39,7 @@ if (NUR) SEITEN.splice(0, SEITEN.length, ...SEITEN.filter(x => NUR.includes(x)))
 
 async function kontext(browser, o = {}) {
   const ctx = await browser.newContext({ viewport:{ width:o.w || 1440, height:o.h || 900 }, deviceScaleFactor:1, locale:'de-DE',
-    timezoneId:'Europe/Berlin', reducedMotion:o.reduced ? 'reduce' : 'no-preference' });
+    timezoneId:o.tz || 'Europe/Berlin', reducedMotion:o.reduced ? 'reduce' : 'no-preference' });
   await ctx.addInitScript((thema) => {
     try {
       localStorage.setItem('gf_theme', thema.t);
@@ -60,6 +60,8 @@ async function kontext(browser, o = {}) {
     if (pw && pw !== 'test') return route.fulfill({ status:401, contentType:'application/json', body:JSON.stringify({ error:'unauthorized' }) });
     if (o.warte && o.warte(action)) await new Promise(r => setTimeout(r, o.warte(action)));
     if (o.fehler && o.fehler(action)) return route.fulfill({ status:500, contentType:'application/json', body:JSON.stringify({ error:'Testfehler' }) });
+    if (o.leer && o.leer(action)) return route.fulfill({ status:200, contentType:'application/json', body:'' });   // abgebrochene Antwort
+    if (o.antwort) { const x = o.antwort(action, nutzlast); if (x !== undefined) return route.fulfill({ status:200, contentType:'application/json', body:JSON.stringify(x) }); }
     const roh = ANTWORT[action] || FALLBACK;
     const body = typeof roh === 'function' ? roh(nutzlast) : roh;
     await route.fulfill({ status: body && body.__status ? body.__status : 200, contentType:'application/json', body:JSON.stringify(body) });
@@ -397,6 +399,42 @@ try {
   }
   probe('Datum: Kalendertag und „morgen“ in Berlin kurz vor und nach Mitternacht und am Tag der Zeitumstellung', !fehlt.length, fehlt.join(' | '));
 } catch (e) { probe('Datum: Ablauf ohne Ausnahme', false, e.message.split('\n')[0]); }
+// Runde 3 der Gegenprüfung: unklare Antwort, Gerätezeitzone, Speichern während weiterer Eingabe (B-04, D-03)
+try {
+  const ctx = await kontext(browser, { leer: a => a === 'capture' });
+  const { page } = await oeffne(ctx, 'capture.html');
+  await page.fill('#raw', 'Gedanke mit unklarer Antwort'); await page.click('#sendBtn'); await page.waitForTimeout(400);
+  const r = await page.evaluate(() => ({ err: document.getElementById('sendErr').hidden ? '' : document.getElementById('sendErr').textContent, wert: document.getElementById('raw').value, ok: getComputedStyle(document.getElementById('ok')).display }));
+  probe('Eingabe: Antwort ohne Inhalt gilt als unklar, kein Erfolgszustand, Eingabe bleibt', /Unklare Antwort/.test(r.err) && r.wert === 'Gedanke mit unklarer Antwort' && r.ok === 'none', JSON.stringify(r));
+  await ctx.close();
+} catch (e) { probe('Unklare Antwort: Ablauf ohne Ausnahme', false, e.message.split('\n')[0]); }
+try {
+  const ctx = await kontext(browser, { tz:'UTC' });
+  const page = await ctx.newPage();
+  await page.clock.install({ time: new Date('2026-10-24T22:30:00Z') });   // STICHTAG: 25.10.2026 00:30 in Berlin, 24.10. 22:30 in UTC
+  await page.goto(BASE + '/entscheidungen.html', { waitUntil:'load' });
+  const r = await page.evaluate(() => ({ heute: gfIsoTag(), morgen: gfTomorrow() }));
+  probe('Datum: auch bei Gerätezeitzone UTC gilt der Berliner Kalendertag', r.heute === '2026-10-25' && r.morgen === '2026-10-26', JSON.stringify(r));
+  await ctx.close();
+} catch (e) { probe('Datum UTC: Ablauf ohne Ausnahme', false, e.message.split('\n')[0]); }
+try {
+  const gespeichert = [];
+  const ZEILEN = [{ id:'r1', label:'Habitat', level:1, kind:'department' }, { id:'r2', label:'Bereich', level:2, kind:'department' }, { id:'r3', label:'Linie', level:2, kind:'department' }];
+  const EL = { id:'i1', row_id:'r3', title:'Ausgang', body:'', starts_on:'2026-11-02', ends_on:'2026-11-04', cat:'plan', form:'band', anchor_start:'fest', anchor_end:'fest', status:'vorschlag' };
+  const ctx = await kontext(browser, {
+    warte: a => a === 'item_save' ? 300 : 0,
+    antwort: (a, p) => a === 'get' ? { rows:ZEILEN, items:[EL] } : a === 'log' ? { log:[] } : a === 'item_save' ? (gespeichert.push(p.title), { item:{ ...EL, ...p, id:'i1' } }) : undefined });
+  const { page } = await oeffne(ctx, 'saison-rad.html');
+  await page.evaluate(() => openItem('i1')); await page.waitForTimeout(150);
+  /* Ablauf aus Runde 3: Autospeichern startet 700 ms nach der ersten Eingabe (Antwort nach 300 ms); die zweite Eingabe fällt in die
+     laufende Anfrage; deren Antwort kommt vor dem nächsten Zeitgeber an; dann wird geschlossen. */
+  await page.fill('#pBody [name=title]', 'Erste Änderung'); await page.waitForTimeout(780);
+  await page.fill('#pBody [name=title]', 'Zweite Änderung'); await page.waitForTimeout(320);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(2000);
+  const zu = await page.evaluate(() => !document.getElementById('panel').classList.contains('open'));
+  probe('Saison-Rad: Schließen während laufenden Speicherns speichert die jüngste Eingabe nach', gespeichert[gespeichert.length - 1] === 'Zweite Änderung' && zu, JSON.stringify({ gespeichert, zu }));
+  await ctx.close();
+} catch (e) { probe('Saison-Rad: Ablauf ohne Ausnahme', false, e.message.split('\n')[0]); }
 // Tor und Ladefehler: falsches Passwort sichtbar und angesagt; Ladefehler nach der Anmeldung auf der Seite, Passwort bleibt
 try {
   const ctx = await kontext(browser, { ohnePw:true });
