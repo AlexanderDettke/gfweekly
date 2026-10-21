@@ -44,7 +44,7 @@
 .og-zi .txt{flex:1;min-width:0;display:flex;flex-direction:column;text-align:left;background:none;border:0;padding:0;color:var(--text);cursor:pointer}
 .og-zi .txt b{font-size:var(--stufe-2);font-weight:600}
 .og-zi .txt span{font-size:var(--stufe-2);color:var(--text-2)}
-.og-zi .btn{min-height:36px;padding:4px 12px;font-size:var(--stufe-2);white-space:nowrap}
+.og-zi .btn{min-height:var(--ziel-min);padding:4px 12px;font-size:var(--stufe-2);white-space:nowrap}
 .og-grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start}
 .og-sec-k{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 10px}
 .og-sec-k h3{margin:0;font-size:var(--stufe-4);font-weight:600}
@@ -67,7 +67,7 @@
 .og-steuer{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px}
 .og-seg{display:flex;gap:4px;padding:3px;border:1px solid var(--border-strong);border-radius:var(--radius-m)}
 .og-fil{display:flex;gap:6px;flex-wrap:wrap}
-.og-fil button{min-height:36px;padding:0 12px;border-radius:var(--radius-m);font-size:var(--stufe-2);border:1px solid var(--border-strong);background:transparent;color:var(--text-2);cursor:pointer}
+.og-fil button{min-height:var(--ziel-min);padding:0 12px;border-radius:var(--radius-m);font-size:var(--stufe-2);border:1px solid var(--border-strong);background:transparent;color:var(--text-2);cursor:pointer}
 .og-fil button[aria-pressed="true"]{background:var(--accent-soft);color:var(--text);border-color:var(--accent)}
 .og-fil small{margin-left:4px}
 .og-stufen{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
@@ -115,7 +115,7 @@
 .og-tor{margin:auto 12px 12px;padding:10px 12px;border-radius:var(--radius-m);background:var(--fill-soft);border:1px solid var(--border-strong);display:flex;flex-direction:column;gap:4px}
 .og-tor b{font-size:var(--stufe-2);color:var(--text)}
 .og-tor b.ok{color:var(--accent-strong)}
-.og-tor button{display:flex;gap:8px;align-items:flex-start;text-align:left;min-height:32px;padding:3px 0;background:none;border:0;color:var(--text);font-size:var(--stufe-2);line-height:1.35;cursor:pointer}
+.og-tor button{display:flex;gap:8px;align-items:flex-start;text-align:left;min-height:var(--ziel-min);padding:3px 0;background:none;border:0;color:var(--text);font-size:var(--stufe-2);line-height:1.35;cursor:pointer}
 .og-box{flex:none;margin-top:2px;width:16px;height:16px;border-radius:var(--radius-s);border:1px solid var(--text-3)}
 .og-box.on{background:var(--accent);border-color:var(--accent)}
 .og-zeit{overflow-x:auto;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-l)}
@@ -153,13 +153,14 @@
 .og-app small{font-size:var(--stufe-1)}
 /* G-05: bei großer Schrift untereinander statt seitlich hinaus */
 .og-apps{flex-wrap:wrap} .og-app{min-width:min(100%,12rem)}
+.og-zi button.txt{min-height:var(--ziel-min)}
 .og-app.mein{background:var(--action);color:var(--on-action);border:1px solid var(--action)}
 .og-app.frei{background:var(--accent-soft);color:var(--text);border:1px solid var(--accent)}
 .og-app.fest{cursor:default}
 .og-app.mein.gesperrt{background:transparent;color:var(--text-2);border:1px dashed var(--border-strong)}
 .og-sub{font-size:var(--stufe-1);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
 .og-chips{display:flex;flex-wrap:wrap;gap:6px}
-.og-chips button{min-height:32px;padding:3px 9px;border-radius:var(--radius-s);font-size:var(--stufe-2);text-align:left;cursor:pointer;border:1px solid var(--border);color:var(--text);background:var(--fill-soft)}
+.og-chips button{min-height:var(--ziel-min);padding:3px 9px;border-radius:var(--radius-s);font-size:var(--stufe-2);text-align:left;cursor:pointer;border:1px solid var(--border);color:var(--text);background:var(--fill-soft)}
 .og-chips button.ok{background:var(--accent-soft)}
 .og-zst{align-self:flex-start;font-size:var(--stufe-2);font-weight:600;padding:3px 10px;border-radius:var(--radius-s);background:var(--fill);color:var(--text-2)}
 .og-zst.frei{background:var(--accent-soft);color:var(--accent-strong)}

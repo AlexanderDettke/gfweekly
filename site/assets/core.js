@@ -819,7 +819,8 @@ function gfBezeichnungen(root){
   (root||document).querySelectorAll("label:not([for])").forEach(l=>{
     if(l.querySelector("input,select,textarea")) return;
     const c=l.nextElementSibling; if(!c) return;
-    if(c.matches("input:not([type=hidden]),select,textarea")){ if(c.labels&&c.labels.length) return; if(!c.id) c.id="wsf"+(++_gfBzN); l.htmlFor=c.id; return; }
+    /* Ohne id kann kein anderes Label auf das Feld zeigen; nur mit id wird nachgesehen (labels ist bei tausenden Feldern teuer). */
+    if(c.matches("input:not([type=hidden]),select,textarea")){ if(c.id&&document.querySelector(`label[for="${CSS.escape(c.id)}"]`)) return; if(!c.id) c.id="wsf"+(++_gfBzN); l.htmlFor=c.id; return; }
     if(c.matches(".fchips,.stepper,.chips")&&!c.getAttribute("aria-label")&&!c.getAttribute("aria-labelledby")){ if(!l.id) l.id="wsl"+(++_gfBzN); c.setAttribute("aria-labelledby",l.id); if(!c.getAttribute("role")) c.setAttribute("role","group"); }
   });
 }

@@ -1831,3 +1831,23 @@ button.del{min-height:var(--ziel-min);display:inline-flex;align-items:center}
 .fchips .chip::after,.au-gate .chip::after{content:"";position:absolute;inset:min(0px,calc(50% - var(--ziel-min) / 2))}
 /* B-08: sichtbarer Fokus auch an SVG-Bedienelementen */
 svg [role=button]:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+/* G-02, WP-04: Kontrastschuld abtragen, ohne Farbtokens zu ändern (die Token-Zone bleibt quellgleich mit dem Design-System).
+   Gesperrte Abzeichen: nur das Bild bleibt gedämpft, der Text ist lesbar; „offen“ steht als Wort daneben. */
+.bdg.locked{opacity:1} .bdg.locked .bl span{color:var(--text-2)} .bdg.locked img{opacity:.45}
+/* Warnton auf Warnfläche erreicht hell nur 4,19:1: Text in --text, das Symbol trägt die Farbe (nichttextlich, über 3:1). */
+[data-theme="light"] .zst.warn,[data-theme="light"] .p-mittel{color:var(--text)}
+[data-theme="light"] .zst.warn i{color:var(--warn)}
+/* Gruppenköpfe im Sichtungskorb: Bedeutung steht im Wort; Farbe nur noch mit ausreichendem Kontrast */
+.kgroup.rel-hoch>summary{color:var(--crit-text)}
+[data-theme="light"] .kgroup.rel-mittel>summary{color:var(--text)}
+/* G-02: Monatsnamen im Jahresband hell knapp unter 4,5:1; Phasenfarbe mit der Textfarbe gemischt, Farbton bleibt */
+[data-theme="light"] .cm:not(.now){color:color-mix(in srgb,var(--c) 65%,var(--text))}
+/* G-03: verbleibende Bedienelemente unter 44 px (Stepper innen, Zeilen und Gruppenköpfe der Neuigkeiten, Laufband) */
+.stepper{height:calc(var(--ziel-min) + 2 * var(--rahmen))}
+summary.tk-dayh,button.tk-row,.kgroup>summary.group-h,button.kd-row,.band .bi,.band-p{min-height:var(--ziel-min)}
+.band-p{min-width:var(--ziel-min)}
+.pill.prio[role=button]{position:relative;cursor:pointer}
+.pill.prio[role=button]::after{content:"";position:absolute;inset:min(0px,calc(50% - var(--ziel-min) / 2))}
+.sec-h .segs .seg{min-height:var(--ziel-min)}
+.seg{min-width:var(--ziel-min)}
+.vh-warte{min-height:var(--ziel-min)}

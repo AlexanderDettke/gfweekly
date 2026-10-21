@@ -183,6 +183,7 @@ for (const seite of SEITEN) {
       ohneName: m.ohneName.length, ohneBezeichnung: m.ohneBezeichnung.length, nurPlatzhalter: m.nurPlatzhalter.length, klickOhneFokus: m.klickOhneFokus.length });
     if (m.kleinschrift.length) melde(seite, `Schrift unter 12 px (${m.kleinschrift.length}): ` + [...new Set(m.kleinschrift)].slice(0, 4).join(', '));
     if (m.ziele_unter24.length) melde(seite, `Trefferfläche unter 24 px (${m.ziele_unter24.length}): ` + [...new Set(m.ziele_unter24)].slice(0, 4).join(', '));
+    if (m.ziele_unter44) melde(seite, `Trefferfläche unter 44 px (${m.ziele_unter44}, G-03): ` + [...new Set(m.ziele44)].slice(0, 4).join(', '));
     if (m.ohneName.length) melde(seite, `Bedienelement ohne Namen (${m.ohneName.length}): ` + [...new Set(m.ohneName)].slice(0, 4).join(', '));
     if (m.ohneBezeichnung.length) melde(seite, `Eingabe ohne Bezeichnung (${m.ohneBezeichnung.length}): ` + [...new Set(m.ohneBezeichnung)].slice(0, 4).join(', '));
     if (m.nurPlatzhalter.length) melde(seite, `Eingabe nur mit Platzhalter (${m.nurPlatzhalter.length}): ` + [...new Set(m.nurPlatzhalter)].slice(0, 3).join(', '));
@@ -280,7 +281,7 @@ for (const [seite, aktion] of [['vorhaben.html', 'vorhaben_list'], ['board.html'
 /* Gezielte Bedienproben zu geänderten Abläufen (T-05, T-06, T-08, T-09, T-11, B-07). Jede Probe nennt ihr Ergebnis einzeln. */
 const probe = (name, ok, info = '') => { ERG.proben = ERG.proben || {}; ERG.proben[name] = ok; if (!ok) melde('Probe', name + (info ? ' (' + info + ')' : '')); };
 // Eingabe: leeres Pflichtfeld, langsame Antwort mit Doppelklick, Fehler mit erhaltenen Eingaben
-{
+try {
   const log = [];
   const ctx = await kontext(browser, { log, warte: a => a === 'capture' ? 1200 : 0, fehler: a => a === 'capture' && log.filter(x => x.action === 'capture').length > 1 });
   const { page } = await oeffne(ctx, 'capture.html');
@@ -297,9 +298,9 @@ const probe = (name, ok, info = '') => { ERG.proben = ERG.proben || {}; ERG.prob
   const fehl = await page.evaluate(() => ({ err: !document.getElementById('sendErr').hidden && document.getElementById('sendErr').textContent, wert: document.getElementById('raw').value, form: getComputedStyle(document.getElementById('form')).display }));
   probe('Eingabe: Senden fehlgeschlagen bleibt am Knopf sichtbar, Eingabe bleibt erhalten', !!fehl.err && /erhalten/.test(fehl.err) && fehl.wert === 'Zweiter Gedanke' && fehl.form !== 'none', JSON.stringify(fehl));
   await ctx.close();
-}
+} catch (e) { probe('Eingabe: Ablauf ohne Ausnahme', false, e.message.split('\n')[0]); }
 // Board: Verschieben-Menü per Tastatur, Escape mit Fokusrückgabe, Umsortieren ohne Ziehen; Detailbereich mit Fokusrückgabe
-{
+try {
   const log = [];
   const ctx = await kontext(browser, { log });
   const { page } = await oeffne(ctx, 'board.html');
@@ -328,9 +329,9 @@ const probe = (name, ok, info = '') => { ERG.proben = ERG.proben || {}; ERG.prob
     probe('Board: Detailbereich öffnet per Enter mit Namen und Fokus, Escape schließt mit Fokus auf der Karte', p.offen && p.drin && p.name && pz.zu && pz.fokus, JSON.stringify({ p, pz }));
   }
   await ctx.close();
-}
+} catch (e) { probe('Board: Ablauf ohne Ausnahme', false, e.message.split('\n')[0]); }
 // Tor und Ladefehler: falsches Passwort sichtbar und angesagt; Ladefehler nach der Anmeldung auf der Seite, Passwort bleibt
-{
+try {
   const ctx = await kontext(browser, { ohnePw:true });
   const { page } = await oeffne(ctx, 'board.html');
   await page.fill('#pw', 'falsch'); await page.click('#unlock'); await page.waitForTimeout(300);
@@ -342,7 +343,7 @@ const probe = (name, ok, info = '') => { ERG.proben = ERG.proben || {}; ERG.prob
   const l = await p2.evaluate(() => ({ fehler: !!document.querySelector('.ws-fehler [data-ws-neu]'), tor: getComputedStyle(document.getElementById('gate')).display !== 'none', pw: sessionStorage.getItem('gf_pw') }));
   probe('Ladefehler nach der Anmeldung: Meldung mit „Erneut laden“ auf der Seite, Tor bleibt zu, Passwort bleibt', l.fehler && !l.tor && l.pw === 'test', JSON.stringify(l));
   await ctx2.close();
-}
+} catch (e) { probe('Tor und Ladefehler: Ablauf ohne Ausnahme', false, e.message.split('\n')[0]); }
 
 await browser.close();
 server.close();
