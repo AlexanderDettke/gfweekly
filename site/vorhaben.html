@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Das Hohe Haus · Vorhaben</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=34" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=34" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=34" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=34" />
-<link rel="stylesheet" href="/assets/styles.css?v=34" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=35" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=35" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=35" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=35" />
+<link rel="stylesheet" href="/assets/styles.css?v=35" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -58,19 +58,20 @@
 <button type="button" class="vh-fab" id="vhFab" aria-label="Einwurf: etwas eintragen"><span aria-hidden="true">+</span> Einwurf</button>
 <div class="modal-back" id="vhModal"></div>
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=34"></script>
-<script src="/assets/game.js?v=34"></script>
-<script src="/assets/eggs.js?v=34" defer></script>
+<script src="/assets/core.js?v=35"></script>
+<script src="/assets/game.js?v=35"></script>
+<script src="/assets/eggs.js?v=35" defer></script>
 <script>
 /* V31 · Vorhaben: eine Seite, drei Ansichten (Woche, Board, Liste), die Akte rechts (ab 1024 px) oder als Blatt.
-   Liest vorhaben_list und vorhaben_get, schreibt über vorhaben_save, punkt_*, verlauf_status, vorhaben_verknuepfen.
+   Liest vorhaben_list und vorhaben_get, schreibt über vorhaben_save, punkt_*, verlauf_status, vorhaben_verknuepfen,
+   vorhaben_abschliessen und vorhaben_wiedereroeffnen (21.10.2026: Erledigt, Filter „Erledigt“, Wieder öffnen).
    Ansicht und Filter stehen in localStorage gf_vh_view und gf_vh_filter, die Akte im Link (?v=<slug>&tab=verlauf). */
 const $=s=>document.querySelector(s);
-let DATA=null, AKTE=null, AKTE_SLUG=null, TAB="prozess", VL_FILTER="alle", AKTE_LAUF=0, GELOEST=null, ENTWURF={}, SPEICHERT=null;
+let DATA=null, ERL=null, AKTE=null, AKTE_SLUG=null, TAB="prozess", VL_FILTER="alle", AKTE_LAUF=0, GELOEST=null, ENTWURF={}, SPEICHERT=null;
 let VIEW=(()=>{ try{ const v=localStorage.getItem("gf_vh_view"); return ["woche","board","liste"].includes(v)?v:"woche"; }catch(e){ return "woche"; } })();
-let FILTER=(()=>{ try{ const v=localStorage.getItem("gf_vh_filter"); return ["alle","mir","bewegt","konflikte"].includes(v)?v:"alle"; }catch(e){ return "alle"; } })();
+let FILTER=(()=>{ try{ const v=localStorage.getItem("gf_vh_filter"); return ["alle","mir","bewegt","konflikte","erledigt"].includes(v)?v:"alle"; }catch(e){ return "alle"; } })();
 const Q=new URLSearchParams(location.search);
-if(Q.get("filter")==="mir") FILTER="mir";
+if(["mir","erledigt"].includes(Q.get("filter"))) FILTER=Q.get("filter");
 if(Q.get("view") && ["woche","board","liste"].includes(Q.get("view"))) VIEW=Q.get("view");
 if(Q.get("tab")==="verlauf") TAB="verlauf";
 
@@ -90,7 +91,10 @@ function passt(v, f=FILTER){
   if(f==="konflikte") return hatKonflikt(v);
   return true;
 }
-function sichtbar(){ return (DATA?.vorhaben||[]).filter(v=>passt(v)); }
+function sichtbar(){ return FILTER==="erledigt" ? (ERL||[]) : (DATA?.vorhaben||[]).filter(v=>passt(v)); }
+const offenZu=v=>["erledigt","archiviert"].includes(v?.status);
+/* Berliner Kalendertag eines Zeitpunkts als JJJJ-MM-TT */
+const berlinTag=ts=>ts?new Date(ts).toLocaleDateString("sv-SE",{timeZone:"Europe/Berlin"}):"";
 function vvk(v){ const s=v.saison; if(!s) return null; return s.vvk_start || (/vvk/i.test(s.item_title||"") ? s.item_von : null); }
 
 /* ---------- Kopf, Steuerung ---------- */
@@ -111,11 +115,13 @@ function renderKopf(){
 function renderSteuer(){
   const views=[["woche","Woche"],["board","Board"],["liste","Liste"]];
   $("#vhViews").innerHTML=views.map(([k,l])=>`<button type="button" class="chip${VIEW===k?" on":""}" aria-pressed="${VIEW===k}" data-view="${k}">${l}</button>`).join("");
-  const alle=DATA.vorhaben, filter=[["alle","Alle"],["mir","Bei mir"],["bewegt","Bewegt"],["konflikte","Konflikte"]];
-  $("#vhFilter").innerHTML=filter.map(([k,l])=>`<button type="button" class="chip${FILTER===k?" on":""}" aria-pressed="${FILTER===k}" data-filter="${k}">${l} · ${alle.filter(v=>passt(v,k)).length}</button>`).join("");
+  const alle=DATA.vorhaben, filter=[["alle","Alle"],["mir","Bei mir"],["bewegt","Bewegt"],["konflikte","Konflikte"],["erledigt","Erledigt"]];
+  const zahl=k=>k==="erledigt"?(ERL?" · "+ERL.length:""):" · "+alle.filter(v=>passt(v,k)).length;
+  $("#vhFilter").innerHTML=filter.map(([k,l])=>`<button type="button" class="chip${FILTER===k?" on":""}" aria-pressed="${FILTER===k}" data-filter="${k}">${l}${zahl(k)}</button>`).join("");
 }
 $("#vhViews").addEventListener("click",e=>{ const b=e.target.closest("[data-view]"); if(!b) return; VIEW=b.dataset.view; try{ localStorage.setItem("gf_vh_view",VIEW); }catch(x){} renderSteuer(); renderMain(); });
-$("#vhFilter").addEventListener("click",e=>{ const b=e.target.closest("[data-filter]"); if(!b) return; FILTER=b.dataset.filter; try{ localStorage.setItem("gf_vh_filter",FILTER); }catch(x){} renderSteuer(); renderMain(); });
+$("#vhFilter").addEventListener("click",async e=>{ const b=e.target.closest("[data-filter]"); if(!b) return; FILTER=b.dataset.filter; try{ localStorage.setItem("gf_vh_filter",FILTER); }catch(x){} renderSteuer(); renderMain();
+  if(FILTER==="erledigt"){ await ladenErledigt(); if(FILTER==="erledigt"){ renderSteuer(); renderMain(); } } });
 
 /* ---------- Karten ---------- */
 function marken(v, wocheVon){
@@ -192,26 +198,37 @@ function renderListe(liste){
   return `<div class="vh-liste-x"><div class="vh-liste">
     <div class="vh-l-kopf" aria-hidden="true"><span>Zustand</span><span>Vorhaben und Stand</span><span>Ball</span><span>Nächster Schritt</span><span>Frist</span><span>Punkte</span></div>
     ${gruppen.map(([g,its])=>`<section aria-label="${gfEsc(GF_VH_GRUPPE[g])}"><h3 class="vh-l-g">${gfEsc(GF_VH_GRUPPE[g])} <span>${its.length}</span></h3>
-      ${its.map(v=>{ const f=gfVhFrist(v); return `<button type="button" class="vh-l-z${AKTE_SLUG===v.slug?" on":""}" data-open="${gfEsc(v.slug)}">
+      ${its.map(v=>{ const f=gfVhFrist(v); return `<div class="vh-l-zeile"><button type="button" class="vh-l-fertig" data-fertig="${gfEsc(v.slug)}" aria-label="${gfEsc(v.title)}: als erledigt abschließen" title="Als erledigt abschließen"><i aria-hidden="true">✓</i></button><button type="button" class="vh-l-z${AKTE_SLUG===v.slug?" on":""}" data-open="${gfEsc(v.slug)}">
         <span>${gfVhZustand(v.zustand)}</span>
         <span class="vh-l-t"><b>${gfEsc(v.title)}</b><small>${gfEsc(v.stand||"ohne Stand")}</small></span>
         <span>${gfVhBall(v)}</span>
         <span class="vh-l-n">${gfEsc(v.naechster_schritt||"")}</span>
         <span>${f?gfFrist(f):(v.frist_text?gfEsc(v.frist_text):gfZustand("offen","ohne Frist"))}</span>
         <span class="vh-l-p">${v.punkte_erledigt} von ${v.punkte_gesamt}</span>
-      </button>`; }).join("")}</section>`).join("")}
+      </button></div>`; }).join("")}</section>`).join("")}
   </div></div>`;
 }
 
+/* ---------- Erledigt: in jeder Ansicht dieselbe ruhige Liste, zuletzt erledigte zuerst (90 Tage) ---------- */
+function renderErledigt(liste){
+  return `<p class="vh-sync vh-erl-h">Erledigt in den letzten 90 Tagen, zuletzt erledigte zuerst. Öffnen zeigt die Akte mit „Wieder öffnen“.</p>
+    <div class="vh-erl">${liste.map(v=>`<button type="button" class="vh-erl-z${AKTE_SLUG===v.slug?" on":""}" data-open="${gfEsc(v.slug)}">
+      <span class="vh-erl-d"><span class="zst"><i aria-hidden="true">✓</i>${gfEsc("erledigt "+gfVhTag(berlinTag(v.erledigt_am)))}</span></span>
+      <span class="vh-erl-t"><b>${gfEsc(v.title)}</b><small>${gfEsc(v.ergebnis||"ohne Ergebnissatz")}</small></span>
+      <span class="vh-erl-b">${gfVhBall(v)}</span>
+    </button>`).join("")}</div>`;
+}
 function renderMain(){
+  if(FILTER==="erledigt" && !ERL){ $("#vhMain").innerHTML=`<div class="loading">lädt …</div>`; return; }
   const liste=sichtbar();
-  if(!liste.length){ $("#vhMain").innerHTML=`<div class="empty soft">${({mir:"Im Filter „Bei mir“ steht gerade nichts.",bewegt:"Im Filter „Bewegt“ steht gerade nichts.",konflikte:"Im Filter „Konflikte“ steht gerade nichts."})[FILTER]||"Noch keine Vorhaben."} ${FILTER!=="alle"?`<button type="button" class="btn btn-sm btn-ghost" data-filter-reset>Alle zeigen</button>`:""}</div>`; return; }
-  $("#vhMain").innerHTML= VIEW==="board" ? renderBoard(liste) : VIEW==="liste" ? renderListe(liste) : renderWoche(liste);
-  gfStagger($("#vhMain"), ".vh-card,.vh-l-z");
+  if(!liste.length){ $("#vhMain").innerHTML=`<div class="empty soft">${({mir:"Im Filter „Bei mir“ steht gerade nichts.",bewegt:"Im Filter „Bewegt“ steht gerade nichts.",konflikte:"Im Filter „Konflikte“ steht gerade nichts.",erledigt:"In den letzten 90 Tagen wurde nichts erledigt."})[FILTER]||"Noch keine Vorhaben."} ${FILTER!=="alle"?`<button type="button" class="btn btn-sm btn-ghost" data-filter-reset>Alle zeigen</button>`:""}</div>`; return; }
+  $("#vhMain").innerHTML= FILTER==="erledigt" ? renderErledigt(liste) : VIEW==="board" ? renderBoard(liste) : VIEW==="liste" ? renderListe(liste) : renderWoche(liste);
+  gfStagger($("#vhMain"), ".vh-card,.vh-l-z,.vh-erl-z");
 }
 $("#vhMain").addEventListener("click",e=>{
   if(e.target.closest("[data-filter-reset]")){ FILTER="alle"; try{ localStorage.setItem("gf_vh_filter",FILTER); }catch(x){} renderSteuer(); renderMain(); return; }
   const w=e.target.closest("[data-ball]"); if(w){ const v=DATA.vorhaben.find(x=>x.slug===w.dataset.ball); if(v) ballWaehlen(v); return; }
+  const fe=e.target.closest("[data-fertig]"); if(fe){ const v=DATA.vorhaben.find(x=>x.slug===fe.dataset.fertig); if(v) abschliessenBlatt(v); return; }
   const o=e.target.closest("[data-open]"); if(o) oeffneAkte(o.dataset.open);
 });
 
@@ -267,8 +284,8 @@ async function oeffneAkte(slug, opts={}){
   const u=new URL(location.href); u.searchParams.set("v",slug); if(TAB==="verlauf") u.searchParams.set("tab","verlauf"); else u.searchParams.delete("tab"); history.replaceState(null,"",u);
   const a=$("#vhAkte"); a.hidden=false; document.documentElement.classList.add("vh-akte-offen");
   if(!opts.still) a.innerHTML=`<div class="loading">lädt …</div>`;
-  document.querySelectorAll(".vh-card.on,.vh-l-z.on").forEach(x=>x.classList.remove("on"));
-  document.querySelectorAll(`[data-slug="${CSS.escape(slug)}"].vh-card,.vh-l-z[data-open="${CSS.escape(slug)}"]`).forEach(x=>x.classList.add("on"));
+  document.querySelectorAll(".vh-card.on,.vh-l-z.on,.vh-erl-z.on").forEach(x=>x.classList.remove("on"));
+  document.querySelectorAll(`[data-slug="${CSS.escape(slug)}"].vh-card,.vh-l-z[data-open="${CSS.escape(slug)}"],.vh-erl-z[data-open="${CSS.escape(slug)}"]`).forEach(x=>x.classList.add("on"));
   /* Nur die jüngste Anfrage darf die Akte zeichnen: kommen zwei Antworten verkehrt herum an, gewinnt nicht die alte. */
   const lauf=++AKTE_LAUF;
   let d;
@@ -280,20 +297,39 @@ async function oeffneAkte(slug, opts={}){
 function schliesseAkte(){
   AKTE_LAUF++; AKTE=null; AKTE_SLUG=null; GELOEST=null; const a=$("#vhAkte"); a.hidden=true; a.innerHTML=""; document.documentElement.classList.remove("vh-akte-offen");
   const u=new URL(location.href); u.searchParams.delete("v"); u.searchParams.delete("tab"); history.replaceState(null,"",u);
-  document.querySelectorAll(".vh-card.on,.vh-l-z.on").forEach(x=>x.classList.remove("on"));
+  document.querySelectorAll(".vh-card.on,.vh-l-z.on,.vh-erl-z.on").forEach(x=>x.classList.remove("on"));
 }
 function quellenText(q){ const l=(Array.isArray(q)?q:[]).filter(x=>x&&x.quelle);
   if(!l.length) return "Noch kein Abgleich eingetragen.";
   return "Abgeglichen: "+l.map(x=>`${x.quelle} ${x.at?gfNewsWhen(x.at):""}`.trim()).join(" · "); }
+/* Abschlusseintrag im Verlauf („Erledigt: …“, von Cowork auch „Vorhaben erledigt: …“): Datum und Ergebnissatz. */
+function abschluss(d){
+  const e=(d.verlauf||[]).find(x=>x.art==="entscheidung" && x.status==="bestaetigt" && /^(Vorhaben )?erledigt:/i.test(x.text||""));
+  const satz=e?(e.text||"").replace(/^(Vorhaben )?erledigt:\s*/i,"").replace(/^ohne Ergebnissatz\s*/i,"").trim():"";
+  return { am:e?e.happened_at:d.vorhaben.updated_at, satz };
+}
 function renderAkte(){
-  const d=AKTE, v=d.vorhaben, a=$("#vhAkte"), f=gfVhFrist(v);
+  const d=AKTE, v=d.vorhaben, a=$("#vhAkte"), f=gfVhFrist(v), zu=offenZu(v);
   const offen=d.punkte.filter(p=>!p.erledigt), fertig=d.punkte.filter(p=>p.erledigt);
   const ballSeit=v.ball_seit?`seit ${gfNewsWhen(v.ball_seit)}`:"";
+  const ab=v.status==="erledigt"?abschluss(d):null;
+  /* Offene Vorhaben: „✓ Erledigt“ und das Menü ⋯ (Pausieren oder Fortsetzen, Archivieren). Abgeschlossene: nur lesen, „Wieder öffnen“. */
+  const aktion=zu
+    ? `<div class="vh-a-akt"><button type="button" class="btn btn-sm btn-primary" data-wieder>Wieder öffnen</button></div>`
+    : `<div class="vh-a-akt"><button type="button" class="btn btn-sm btn-primary" data-erledigt><span aria-hidden="true">✓</span> Erledigt</button>
+        <div class="vh-menu-w"><button type="button" class="btn btn-sm btn-ghost vh-menu-k" data-menu aria-haspopup="true" aria-expanded="false" aria-controls="vhMenu" aria-label="Weitere Aktionen">⋯</button>
+        <div class="vh-menu" id="vhMenu" role="menu" hidden>
+          <button type="button" role="menuitem" data-status="${v.status==="pausiert"?"aktiv":"pausiert"}">${v.status==="pausiert"?"Fortsetzen":"Pausieren"}</button>
+          <button type="button" role="menuitem" data-archiv>Archivieren …</button>
+        </div></div></div>`;
   a.innerHTML=`<div class="vh-a-kopf">
       <button type="button" class="btn btn-sm btn-ghost vh-a-zurueck" data-akte-zu>← Zurück</button>
-      <div class="vh-a-tt"><div class="vh-eyebrow">Akte · ${gfEsc(GF_VH_GRUPPE[v.gruppe]||v.gruppe)}${v.status!=="aktiv"?" · "+gfEsc(v.status):""}</div><h2 tabindex="-1">${gfEsc(v.title)}</h2></div>
+      <div class="vh-a-tt"><div class="vh-eyebrow">Akte · ${gfEsc(GF_VH_GRUPPE[v.gruppe]||v.gruppe)}${v.status!=="aktiv"&&v.status!=="erledigt"?" · "+gfEsc(v.status):""}</div><h2 tabindex="-1">${gfEsc(v.title)}</h2></div>
       <button type="button" class="icon-btn vh-a-x" data-akte-zu aria-label="Akte schließen">✕</button>
     </div>
+    ${aktion}
+    ${ab?`<div class="vh-a-erl" role="status"><span class="zst"><i aria-hidden="true">✓</i>${gfEsc("Erledigt am "+gfVhTag(berlinTag(ab.am)))}</span>${ab.satz?`<span>${gfEsc(ab.satz)}</span>`:""}</div>`:""}
+    ${zu&&v.status==="archiviert"?`<div class="vh-a-erl" role="status">${gfZustand("neutral","Archiviert")}<span>Nur lesend. „Wieder öffnen“ macht es wieder aktiv.</span></div>`:""}
     <div class="vh-a-kacheln">
       <div class="vh-k"><span>Ball</span><b>${gfVhBall(v)}</b><small>${gfEsc(ballSeit)}</small></div>
       <div class="vh-k"><span>Frist</span><b>${f?gfEsc(gfVhTag(f)):"keine"}</b><small>${gfEsc(v.frist_text||(f&&f!==v.frist?"aus einem Punkt":""))}</small></div>
@@ -301,42 +337,43 @@ function renderAkte(){
     </div>
     ${(v.konflikt||"").trim()?`<div class="vh-a-konf">${markeHtml(["warn","⚠","Konflikt"])} ${gfEsc(v.konflikt)}</div>`:""}
     ${d.einwuerfe.length?`<button type="button" class="vh-warte klein" data-einwurf-akte>${gfZustand("warn", d.einwuerfe.length===1?"1 Einwurf wartet":d.einwuerfe.length+" Einwürfe warten")} zu diesem Vorhaben. Öffnen</button>`:""}
-    <label class="vh-schritt"><span>Nächster Schritt${ENTWURF[v.id+"|naechster_schritt"]!==undefined?` <em class="vh-entwurf">nicht gespeichert, gespeichert ist: ${gfEsc(v.naechster_schritt||"leer")}</em>`:""}</span><textarea rows="2" data-feld="naechster_schritt" maxlength="1000" placeholder="Was passiert als Nächstes?">${gfEsc(ENTWURF[v.id+"|naechster_schritt"]??v.naechster_schritt??"")}</textarea></label>
+    <label class="vh-schritt"><span>Nächster Schritt${ENTWURF[v.id+"|naechster_schritt"]!==undefined?` <em class="vh-entwurf">nicht gespeichert, gespeichert ist: ${gfEsc(v.naechster_schritt||"leer")}</em>`:""}</span><textarea rows="2" data-feld="naechster_schritt" maxlength="1000" ${zu?"readonly":`placeholder="Was passiert als Nächstes?"`}>${gfEsc(ENTWURF[v.id+"|naechster_schritt"]??v.naechster_schritt??"")}</textarea></label>
     <div class="vh-tabs" role="tablist" aria-label="Akte">
       <button type="button" role="tab" id="vhTabP" aria-controls="vhPanel" aria-selected="${TAB==="prozess"}" data-tab="prozess">Prozess</button>
       <button type="button" role="tab" id="vhTabV" aria-controls="vhPanel" aria-selected="${TAB==="verlauf"}" data-tab="verlauf">Verlauf <span class="n">${d.verlauf.filter(e=>e.status==="bestaetigt").length}</span>${d.verlauf.some(e=>e.status==="vorschlag")?` <span class="vh-tab-v"><i aria-hidden="true">●</i> ${d.verlauf.filter(e=>e.status==="vorschlag").length} ${d.verlauf.filter(e=>e.status==="vorschlag").length===1?"Vorschlag":"Vorschläge"}</span>`:""}</button>
     </div>
     <div id="vhPanel" role="tabpanel" aria-labelledby="${TAB==="prozess"?"vhTabP":"vhTabV"}">${TAB==="prozess"?prozess(d):verlauf(d)}</div>`;
+  a.classList.toggle("zu", zu);
 }
 function prozess(d){
-  const v=d.vorhaben, p=d.punkte.slice().sort((a,b)=>(a.erledigt-b.erledigt)||(a.sort-b.sort));
+  const v=d.vorhaben, p=d.punkte.slice().sort((a,b)=>(a.erledigt-b.erledigt)||(a.sort-b.sort)), zu=offenZu(v);
   const sync=quellenText(v.quellen);
-  return `<label class="vh-stand"><span>Stand${ENTWURF[v.id+"|stand"]!==undefined?` <em class="vh-entwurf">nicht gespeichert, gespeichert ist: ${gfEsc(v.stand||"leer")}</em>`:""}</span><textarea rows="3" data-feld="stand" maxlength="2000" placeholder="Wo steht das Vorhaben?">${gfEsc(ENTWURF[v.id+"|stand"]??v.stand??"")}</textarea></label>
-    <div class="vh-sec-h"><h3>Checkliste</h3><button type="button" class="btn btn-sm btn-ghost" data-punkt-neu>+ Punkt hinzufügen</button></div>
+  return `<label class="vh-stand"><span>Stand${ENTWURF[v.id+"|stand"]!==undefined?` <em class="vh-entwurf">nicht gespeichert, gespeichert ist: ${gfEsc(v.stand||"leer")}</em>`:""}</span><textarea rows="3" data-feld="stand" maxlength="2000" ${zu?"readonly":`placeholder="Wo steht das Vorhaben?"`}>${gfEsc(ENTWURF[v.id+"|stand"]??v.stand??"")}</textarea></label>
+    <div class="vh-sec-h"><h3>Checkliste</h3>${zu?"":`<button type="button" class="btn btn-sm btn-ghost" data-punkt-neu>+ Punkt hinzufügen</button>`}</div>
     <div class="vh-punkt-neu" id="vhPunktNeu" hidden></div>
-    <ul class="vh-punkte">${p.map(punktZeile).join("")||`<li class="vh-nichts">Noch keine Punkte.</li>`}</ul>
+    <ul class="vh-punkte">${p.map(x=>punktZeile(x,zu)).join("")||`<li class="vh-nichts">Noch keine Punkte.</li>`}</ul>
     <div class="vh-sec-h"><h3>Verknüpft</h3></div>
     ${GELOEST&&GELOEST.vorhaben_id===v.id?`<div class="vh-geloest" role="status">Zuordnung gelöst: ${gfEsc(GELOEST.titel)} <button type="button" class="btn btn-sm btn-ghost" data-rueckgaengig>Rückgängig</button></div>`:""}
     <div class="vh-verkn">
-      ${verknBlock(["Thema","Themen"], d.themen, t=>`<a href="board.html?topic=${encodeURIComponent(t.id)}">${gfEsc(t.title)}</a>`, "thema")}
-      ${verknBlock(["neuer Kandidat","neue Kandidaten"], d.kandidaten, k=>`<a href="neuigkeiten.html">${gfEsc(k.title)}</a>`, "kandidat")}
+      ${verknBlock(["Thema","Themen"], d.themen, t=>`<a href="board.html?topic=${encodeURIComponent(t.id)}">${gfEsc(t.title)}</a>`, "thema", zu)}
+      ${verknBlock(["neuer Kandidat","neue Kandidaten"], d.kandidaten, k=>`<a href="neuigkeiten.html">${gfEsc(k.title)}</a>`, "kandidat", zu)}
     </div>
-    <div class="vh-sec-h"><h3>Ball geben an</h3></div>
-    <div class="fchips vh-ballchips" role="group" aria-label="Ball geben an">${GF_VH_BALL.map(([k,l])=>`<button type="button" class="chip${v.ball===k?" on":""}" aria-pressed="${v.ball===k}" data-ball-akte="${k}">${gfEsc(k==="offen"?"niemand":k===v.ball&&(k==="team"||k==="extern")?gfVhBallWort(k,v.ball_name):l)}</button>`).join("")}</div>
+    ${zu?"":`<div class="vh-sec-h"><h3>Ball geben an</h3></div>
+    <div class="fchips vh-ballchips" role="group" aria-label="Ball geben an">${GF_VH_BALL.map(([k,l])=>`<button type="button" class="chip${v.ball===k?" on":""}" aria-pressed="${v.ball===k}" data-ball-akte="${k}">${gfEsc(k==="offen"?"niemand":k===v.ball&&(k==="team"||k==="extern")?gfVhBallWort(k,v.ball_name):l)}</button>`).join("")}</div>`}
     <p class="vh-sync">${gfEsc(sync)}</p>`;
 }
-function verknBlock(namen, liste, link, kind){
+function verknBlock(namen, liste, link, kind, zu){
   const name=liste.length===1?namen[0]:namen[1];
   if(!liste.length) return `<div class="vh-vk leer">${gfZustand("offen","keine "+namen[1].replace(/^neue /,"neuen "))}</div>`;
-  return `<details class="vh-vk"><summary>${gfZustand("info", liste.length+" "+name)}</summary><ul>${liste.map(x=>`<li>${link(x)}<button type="button" class="btn btn-sm btn-ghost" data-loesen="${kind}" data-id="${gfEsc(x.id)}">Zuordnung lösen</button></li>`).join("")}</ul></details>`;
+  return `<details class="vh-vk"><summary>${gfZustand("info", liste.length+" "+name)}</summary><ul>${liste.map(x=>`<li>${link(x)}${zu?"":`<button type="button" class="btn btn-sm btn-ghost" data-loesen="${kind}" data-id="${gfEsc(x.id)}">Zuordnung lösen</button>`}</li>`).join("")}</ul></details>`;
 }
-function punktZeile(p){
+function punktZeile(p, zu){
   const meta=[p.stand, p.wer, p.frist?("Frist "+gfVhTag(p.frist)):"", p.erledigt&&p.erledigt_at?("erledigt "+gfNewsWhen(p.erledigt_at)+(p.erledigt_by?" von "+p.erledigt_by:"")):"", p.quelle?("Quelle: "+p.quelle):""].filter(Boolean).join(" · ");
   const spaet=!p.erledigt && p.frist && p.frist<heute();
   return `<li class="vh-punkt${p.erledigt?" fertig":""}" data-punkt="${p.id}">
-    <input type="checkbox" id="pk-${p.id}" ${p.erledigt?"checked":""} data-toggle="${p.id}">
+    <input type="checkbox" id="pk-${p.id}" ${p.erledigt?"checked":""} ${zu?"disabled":""} data-toggle="${p.id}">
     <label for="pk-${p.id}"><span class="t">${gfEsc(p.titel)}</span>${spaet?` ${markeHtml(["warn","⚠","überfällig"])}`:""}${meta?`<small>${gfEsc(meta)}</small>`:""}</label>
-    <button type="button" class="btn btn-sm btn-ghost vh-p-edit" data-punkt-edit="${p.id}" aria-label="${gfEsc(p.titel)} ändern">ändern</button>
+    ${zu?"":`<button type="button" class="btn btn-sm btn-ghost vh-p-edit" data-punkt-edit="${p.id}" aria-label="${gfEsc(p.titel)} ändern">ändern</button>`}
   </li>`;
 }
 /* Vorschlag mit seiner Wirkung beschriften: „Punkt erledigt“ hakt ab, „Stand“ öffnet den Punkt mit dem neuen Stand,
@@ -357,12 +394,12 @@ function verlauf(d){
   const zeile=e=>`<li class="vh-e${e.status==="vorschlag"?" vorschlag":""}${seen&&(e.created_at>seen)?" neu":""}">
       <div class="vh-e-k">${gfEsc(gfNewsWhen(e.happened_at))} · <b>${gfEsc(GF_VH_ART[e.art]||e.art)}</b>${e.wer?" · "+gfEsc(e.wer):""}${e.tag?` · <span class="vh-e-tag">${gfEsc(e.tag)}</span>`:""}${e.status==="vorschlag"?` ${markeHtml(["warn","●","Vorschlag"])}`:""}</div>
       <div class="vh-e-t">${gfEsc(e.text)}${e.source_url?` <a href="${gfEsc(e.source_url)}" target="_blank" rel="noopener">Quelle ↗</a>`:""}</div>
-      ${e.status==="vorschlag"?`<div class="vh-e-a">${vorschlagKnopf(e)}<button type="button" class="btn btn-sm btn-ghost" data-vstatus="verworfen" data-id="${e.id}">Verwerfen</button></div>`:""}
+      ${e.status==="vorschlag"&&!offenZu(d.vorhaben)?`<div class="vh-e-a">${vorschlagKnopf(e)}<button type="button" class="btn btn-sm btn-ghost" data-vstatus="verworfen" data-id="${e.id}">Verwerfen</button></div>`:""}
     </li>`;
   return `<div class="fchips compact vh-vlf" role="group" aria-label="Verlauf filtern">${[["alle","Alles"],["entscheidungen","Nur Entscheidungen"],["neu","Seit meinem letzten Besuch"]].map(([k,l])=>`<button type="button" class="chip${VL_FILTER===k?" on":""}" aria-pressed="${VL_FILTER===k}" data-vlf="${k}">${l}</button>`).join("")}</div>
     ${VL_FILTER==="neu"?`<p class="vh-sync">Seit ${gfEsc(gfNewsWhen(seen))}${gfVhSeen()?" (zuletzt „Alles gesehen“ auf Für dich)":" (letzte 24 Stunden)"}</p>`:""}
     <ul class="vh-verlauf">${filt.map(zeile).join("")||`<li class="vh-nichts">${VL_FILTER==="neu"?"Seitdem ist nichts dazugekommen.":VL_FILTER==="entscheidungen"?"Noch keine Entscheidung eingetragen.":"Noch kein Eintrag."}</li>`}</ul>
-    <button type="button" class="vh-eintragen" data-einwurf-akte>Etwas eintragen …</button>`;
+    ${offenZu(d.vorhaben)?"":`<button type="button" class="vh-eintragen" data-einwurf-akte>Etwas eintragen …</button>`}`;
 }
 /* Text, der nicht gespeichert werden konnte, bleibt als Entwurf im Feld stehen, bis er gespeichert oder verworfen ist. */
 async function feldSpeichern(feld, wert){
@@ -381,6 +418,11 @@ $("#vhAkte").addEventListener("change",async e=>{
 });
 $("#vhAkte").addEventListener("click",async e=>{
   if(e.target.closest("[data-akte-zu]")){ schliesseAkte(); return; }
+  if(e.target.closest("[data-erledigt]") && AKTE){ abschliessenBlatt(AKTE.vorhaben); return; }
+  if(e.target.closest("[data-wieder]") && AKTE){ await wiederOeffnen(AKTE.vorhaben, e.target.closest("[data-wieder]")); return; }
+  const mk=e.target.closest("[data-menu]"); if(mk){ menu(!mk.nextElementSibling||mk.nextElementSibling.hidden); return; }
+  const st=e.target.closest("[data-status]"); if(st && AKTE){ menu(false); await statusSetzen(AKTE.vorhaben, st.dataset.status); return; }
+  if(e.target.closest("[data-archiv]") && AKTE){ menu(false); archivieren(AKTE.vorhaben); return; }
   const tab=e.target.closest("[data-tab]"); if(tab){ if(SPEICHERT) await SPEICHERT; TAB=tab.dataset.tab; const u=new URL(location.href); if(TAB==="verlauf") u.searchParams.set("tab","verlauf"); else u.searchParams.delete("tab"); history.replaceState(null,"",u); renderAkte(); $("#"+(TAB==="prozess"?"vhTabP":"vhTabV"))?.focus(); return; }
   const vlf=e.target.closest("[data-vlf]"); if(vlf){ VL_FILTER=vlf.dataset.vlf; renderAkte(); return; }
   if(e.target.closest("[data-einwurf-akte]")){ einwurf({ vorhaben_id:AKTE.vorhaben.id }); return; }
@@ -438,6 +480,97 @@ function punktForm(p, vor={}){
       gfToast(p?"Punkt gespeichert":"Punkt hinzugefügt"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
     catch(err){ gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); }
   };
+}
+
+/* ---------- Abschließen, Rückgängig, Wieder öffnen, Pausieren, Archivieren (21.10.2026) ----------
+   Zwei Fingertipps: „✓ Erledigt“ (Akte) oder der Kreis in der Liste öffnet das Blatt, „Abschließen“ schließt ab.
+   Ergebnissatz optional; offene Punkte werden vorbelegt mit abgehakt, verknüpfte Themen bleiben vorbelegt offen
+   (bei XCeed laufen Themen weiter). Danach 10 Sekunden „Rückgängig“ mit genau den geänderten Punkten und Themen. */
+function menu(auf){
+  const m=$("#vhMenu"), k=document.querySelector("[data-menu]"); if(!m||!k) return;
+  m.hidden=!auf; k.setAttribute("aria-expanded", String(!!auf));
+  if(auf) m.querySelector("button")?.focus();
+}
+document.addEventListener("click",e=>{ if(!e.target.closest(".vh-menu-w")) menu(false); });
+function abschliessenBlatt(v){
+  const m=$("#vhModal"), np=Math.max(0,(v.punkte_gesamt||0)-(v.punkte_erledigt||0)), nt=v.themen_offen||0;
+  m.classList.add("vh-blatt-back");
+  m.innerHTML=`<div class="modal vh-dlg vh-blatt" role="dialog" aria-modal="true" aria-labelledby="vhErlH">
+    <div class="modal-h"><h3 id="vhErlH">Vorhaben abschließen</h3><button type="button" class="icon-btn" data-x aria-label="Schließen">✕</button></div>
+    <div class="vh-dlg-b">
+      <p class="vh-dlg-t"><b>${gfEsc(v.title)}</b></p>
+      <label class="vh-fld">Ergebnis in einem Satz (optional)<input type="text" id="vhErlSatz" maxlength="300" placeholder="z. B. Vertrag unterschrieben am …"></label>
+      ${np?`<label class="vh-haken"><input type="checkbox" id="vhErlPunkte" checked> Offene Punkte (${np}) mit abhaken</label>`:""}
+      ${nt?`<label class="vh-haken"><input type="checkbox" id="vhErlThemen"> Verknüpfte Themen im Board (${nt}) archivieren</label>`:""}
+      <div class="vh-ew-fehler" id="vhErlFehler" role="alert" hidden></div>
+    </div>
+    <div class="modal-f"><button type="button" class="btn btn-brand" data-x>Abbrechen</button><button type="button" class="btn btn-primary" id="vhErlOk" style="margin-left:auto"><span aria-hidden="true">✓</span> Abschließen</button></div>
+  </div>`;
+  m.classList.add("open"); const frei=gfModalAuf(m);
+  let laeuft=false;
+  const zu=()=>{ if(laeuft) return; m.classList.remove("open","vh-blatt-back"); m.innerHTML=""; m.onkeydown=null; m.onclick=null; frei(); };
+  m.querySelectorAll("[data-x]").forEach(b=>b.onclick=zu); m.onclick=e=>{ if(e.target===m) zu(); };
+  m.onkeydown=e=>{ if(e.key==="Escape") zu(); };
+  $("#vhErlOk").onclick=async()=>{
+    if(laeuft) return; laeuft=true;
+    const ok=$("#vhErlOk"); ok.disabled=true;
+    const nutz={ id:v.id, by:gfWho(), ergebnis:$("#vhErlSatz").value.trim()||undefined,
+      punkte_mit:!!$("#vhErlPunkte")?.checked, themen_mit:!!$("#vhErlThemen")?.checked, expect:v.updated_at||undefined };
+    try{
+      const d=await gfApi("vorhaben_abschliessen", nutz);
+      laeuft=false; zu();
+      if(AKTE_SLUG===v.slug) schliesseAkte();
+      rueckgaengigHinweis(v, d);
+      await laden(true);
+    }catch(err){ laeuft=false; ok.disabled=false; const f=$("#vhErlFehler"); f.hidden=false; f.textContent="Nicht abgeschlossen: "+(err.message||"Verbindung");
+      if(/neu laden|inzwischen|schon/i.test(err.message||"")) laden(true); }
+  };
+  setTimeout(()=>$("#vhErlOk")?.focus(),40);
+}
+let RUECK_T=null;
+function rueckgaengigHinweis(v, d){
+  let h=$("#vhRueck");
+  if(!h){ h=document.createElement("div"); h.id="vhRueck"; h.className="toast vh-rueck"; h.setAttribute("role","status"); document.body.appendChild(h); }
+  const teile=[d.punkte?`${d.punkte} ${d.punkte===1?"Punkt":"Punkte"} abgehakt`:"", d.themen?`${d.themen} ${d.themen===1?"Thema":"Themen"} archiviert`:""].filter(Boolean).join(", ");
+  h.innerHTML=`<span>${gfEsc(v.title)} erledigt${teile?" · "+gfEsc(teile):""}</span><button type="button" class="btn btn-sm btn-ghost" id="vhRueckK">Rückgängig</button>`;
+  h.classList.add("show"); clearTimeout(RUECK_T);
+  const weg=()=>{ clearTimeout(RUECK_T); h.classList.remove("show"); h.innerHTML=""; };
+  RUECK_T=setTimeout(weg, 10000);
+  $("#vhRueckK").onclick=async()=>{
+    const k=$("#vhRueckK"); if(k) k.disabled=true; clearTimeout(RUECK_T);
+    try{ await gfApi("vorhaben_wiedereroeffnen",{ id:v.id, by:gfWho(), rueckgaengig:d.rueckgaengig||{ punkte:[], themen:[] } }); weg(); gfToast(`${v.title} ist wieder offen`); await laden(true); }
+    catch(err){ weg(); gfToast("Nicht rückgängig gemacht: "+(err.message||"Verbindung")); await laden(true); }
+  };
+}
+async function wiederOeffnen(v, knopf){
+  if(knopf) knopf.disabled=true;
+  try{ const d=await gfApi("vorhaben_wiedereroeffnen",{ id:v.id, by:gfWho() });
+    gfToast(`${v.title} ist wieder offen`);
+    if(FILTER==="erledigt"){ FILTER="alle"; try{ localStorage.setItem("gf_vh_filter",FILTER); }catch(x){} }
+    await laden(true); oeffneAkte(d.vorhaben.slug,{tabKeep:true,still:true});
+  }catch(err){ if(knopf) knopf.disabled=false; gfToast("Nicht wieder geöffnet: "+(err.message||"Verbindung")); if(AKTE_SLUG) oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); }
+}
+async function statusSetzen(v, status){
+  try{ await gfApi("vorhaben_save",{ id:v.id, status, expect:{ status:v.status }, by:gfWho() });
+    gfToast(status==="pausiert"?"Pausiert":status==="aktiv"?"Fortgesetzt":"Archiviert");
+    await laden(true);
+    if(status==="archiviert"){ if(AKTE_SLUG===v.slug) schliesseAkte(); }
+    else if(AKTE_SLUG) oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true});
+  }catch(err){ gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); await laden(true); if(AKTE_SLUG) oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); }
+}
+function archivieren(v){
+  const m=$("#vhModal");
+  m.innerHTML=`<div class="modal vh-dlg" role="dialog" aria-modal="true" aria-labelledby="vhArchH">
+    <div class="modal-h"><h3 id="vhArchH">Archivieren?</h3><button type="button" class="icon-btn" data-x aria-label="Schließen">✕</button></div>
+    <div class="vh-dlg-b"><p class="vh-dlg-t"><b>${gfEsc(v.title)}</b><br>Archivierte Vorhaben stehen weder bei den offenen noch bei den erledigten. Die Akte bleibt mit ihrem Verlauf erhalten und lässt sich über ihren Link wieder öffnen. Für „fertig“ ist „✓ Erledigt“ gedacht.</p></div>
+    <div class="modal-f"><button type="button" class="btn btn-brand" data-x>Abbrechen</button><button type="button" class="btn btn-primary" id="vhArchOk" style="margin-left:auto">Archivieren</button></div>
+  </div>`;
+  m.classList.add("open"); const frei=gfModalAuf(m);
+  const zu=()=>{ m.classList.remove("open"); m.innerHTML=""; m.onkeydown=null; m.onclick=null; frei(); };
+  m.querySelectorAll("[data-x]").forEach(b=>b.onclick=zu); m.onclick=e=>{ if(e.target===m) zu(); };
+  m.onkeydown=e=>{ if(e.key==="Escape") zu(); };
+  $("#vhArchOk").onclick=async()=>{ zu(); await statusSetzen(v, "archiviert"); };
+  setTimeout(()=>m.querySelector("[data-x]")?.focus(),40);
 }
 
 /* ---------- Einwurf und Übergabe (Dialoge aus core.js, 31c und 31d) ---------- */
@@ -599,18 +732,28 @@ async function vhUebergabe(){
   render();
   setTimeout(()=>m.querySelector("[data-anlass]")?.focus(),40);
 }
-document.addEventListener("keydown",e=>{ if(e.key==="Escape" && AKTE_SLUG && !$("#vhModal").classList.contains("open") && !document.querySelector(".modal-back.open")) schliesseAkte(); });
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape" && $("#vhMenu") && !$("#vhMenu").hidden){ menu(false); document.querySelector("[data-menu]")?.focus(); return; }
+  if(e.key==="Escape" && AKTE_SLUG && !$("#vhModal").classList.contains("open") && !document.querySelector(".modal-back.open")) schliesseAkte(); });
 document.addEventListener("gf-who",()=>{ if(DATA){ renderSteuer(); renderMain(); } gfVhBadge(); });
 
+/* Erledigte kommen aus einer eigenen Abfrage (vorhaben_list mit status erledigt); DATA bleibt bei aktiv und pausiert,
+   damit Kopfzeile, Filterzahlen und Abzeichen nur Offenes zählen. */
+async function ladenErledigt(){
+  try{ ERL=(await gfApi("vorhaben_list",{ status:"erledigt" })).vorhaben||[]; }
+  catch(e){ if(e.auth) throw e; if(FILTER==="erledigt") $("#vhMain").innerHTML=`<div class="empty soft">Die erledigten Vorhaben ließen sich nicht laden: ${gfEsc(e.message||"Verbindung")}.</div>`; }
+}
 async function laden(still){
+  const erl=ladenErledigt();
   try{ DATA=await gfApi("vorhaben_list"); }
   catch(e){ if(e.auth) throw e; $("#vhMain").innerHTML=`<div class="empty soft">Die Vorhaben ließen sich nicht laden: ${gfEsc(e.message||"Verbindung")}. <button type="button" class="btn btn-sm btn-ghost" onclick="laden()">Noch einmal</button></div>`; return; }
   renderKopf(); renderSteuer(); renderMain(); gfVhBadge();
+  await erl; renderSteuer(); if(FILTER==="erledigt") renderMain();
 }
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("vorhaben");
   await laden();
-  const v=Q.get("v"); if(v){ const treffer=DATA?.vorhaben.find(x=>x.slug===v||x.id===v); oeffneAkte(treffer?treffer.slug:v,{ tab:TAB }); }
+  const v=Q.get("v"); if(v){ const treffer=DATA?.vorhaben.find(x=>x.slug===v||x.id===v)||ERL?.find(x=>x.slug===v||x.id===v); oeffneAkte(treffer?treffer.slug:v,{ tab:TAB }); }
 });
 </script>
 </body>

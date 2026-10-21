@@ -61,6 +61,7 @@ const SEITEN = [
   ['vertretung.html', '#absList'], ['uebergabe.html', '#list'], ['rueckkehr.html', '#entList'],
   ['saison.html', '#saLage'], ['kommunikation.html', '#kmFest'], ['launch.html', '#lnAufgaben'], ['organisation.html', '#ogDecs'],
   ['vorhaben.html', '#vhMain'], ['vorhaben.html?view=board&v=xceed', '#vhAkte'], ['vorhaben.html?view=liste&v=xceed&tab=verlauf', '#vhAkte'],
+  ['vorhaben.html?filter=erledigt', '.vh-erl'], ['vorhaben.html?filter=erledigt&v=saal-alt', '#vhAkte .vh-a-erl'],
 ];
 const SCHIRME = [ { name:'1440', w:1440, h:900 }, { name:'390', w:390, h:844 } ];
 const THEMES = ['dark','light'];

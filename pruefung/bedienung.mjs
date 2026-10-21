@@ -358,6 +358,82 @@ console.log('\n== Vorhaben (V31b): Ansichten, Akte, Punkt, Ball ==');
   await r.close();
 }
 
+console.log('\n== Vorhaben abschließen, Erledigt, Wieder öffnen (21.10.2026) ==');
+{
+  frisch();
+  const a = await seite('/vorhaben.html?v=xceed');
+  await a.locator('#vhAkte [data-erledigt]').click(); await a.waitForTimeout(200);
+  pruefe('„✓ Erledigt“ öffnet das Blatt', await a.locator('#vhModal.open .vh-blatt').count() === 1);
+  const hp = a.locator('#vhErlPunkte'), ht = a.locator('#vhErlThemen');
+  pruefe('Haken offene Punkte an (5), Themen aus (10)', await hp.isChecked() && !(await ht.isChecked())
+    && /\(5\)/.test(await a.locator('label:has(#vhErlPunkte)').innerText()) && /\(10\)/.test(await a.locator('label:has(#vhErlThemen)').innerText()));
+  await a.locator('#vhErlSatz').fill('Vertrag unterschrieben am 19.10.');
+  await a.locator('#vhErlOk').click(); await a.waitForTimeout(400);
+  const ab = letzte('vorhaben_abschliessen');
+  pruefe('Abschließen schickt Ergebnis, Punkte an, Themen aus und den gesehenen Stand', ab && ab.nutzlast.id === 'vh-xceed' && ab.nutzlast.ergebnis === 'Vertrag unterschrieben am 19.10.'
+    && ab.nutzlast.punkte_mit === true && ab.nutzlast.themen_mit === false && !!ab.nutzlast.expect && ab.nutzlast.by === 'Alex', JSON.stringify(ab && ab.nutzlast));
+  pruefe('danach: Akte zu, Karte weg, Hinweis mit Rückgängig', await a.locator('#vhAkte').isHidden() && await a.locator('#vhMain [data-open="xceed"]').count() === 0
+    && await a.locator('#vhRueck.show #vhRueckK').isVisible() && /XCeed Ticketing-Vertrag erledigt/.test(await a.locator('#vhRueck').innerText()));
+  await a.locator('#vhRueckK').click(); await a.waitForTimeout(400);
+  const wr = letzte('vorhaben_wiedereroeffnen');
+  pruefe('Rückgängig schickt genau die zurückgegebenen Kennungen', wr && wr.nutzlast.id === 'vh-xceed' && wr.nutzlast.rueckgaengig && wr.nutzlast.rueckgaengig.punkte.length === 5 && wr.nutzlast.rueckgaengig.themen.length === 0, JSON.stringify(wr && wr.nutzlast));
+  pruefe('nach Rückgängig ist die Karte wieder da', await a.locator('#vhMain [data-open="xceed"]').count() > 0);
+  await a.close();
+
+  /* Liste: Kreis am Zeilenanfang öffnet dasselbe Blatt; Themen-Haken an schickt themen_mit. */
+  frisch();
+  const l = await seite('/vorhaben.html?view=liste');
+  await l.locator('[data-fertig="lusatia"]').click(); await l.waitForTimeout(200);
+  pruefe('Kreis in der Liste öffnet das Blatt', /Lusatia/.test(await l.locator('#vhModal.open .vh-blatt').innerText()));
+  await l.locator('#vhErlThemen').check(); await l.locator('#vhErlOk').click(); await l.waitForTimeout(400);
+  const al = letzte('vorhaben_abschliessen');
+  pruefe('Liste: Abschließen mit Themen-Haken', al && al.nutzlast.id === 'vh-lusatia' && al.nutzlast.themen_mit === true && al.nutzlast.ergebnis === undefined, JSON.stringify(al && al.nutzlast));
+  pruefe('Liste: Zeile verschwindet', await l.locator('.vh-l-z[data-open="lusatia"]').count() === 0);
+  /* Filter Erledigt: gedämpfte Zeilen mit Datum und Ergebnis, Akte nur lesend, Wieder öffnen. */
+  await l.locator('[data-filter="erledigt"]').click(); await l.waitForTimeout(400);
+  pruefe('Filter Erledigt zeigt die erledigten mit Ergebnis', await l.locator('.vh-erl-z').count() === 2 && /Rechnung bezahlt/.test(await l.locator('.vh-erl').innerText()) && /erledigt/.test(await l.locator('.vh-erl-d').first().innerText()));
+  pruefe('Filterchip zählt die erledigten', /Erledigt · 2/.test(await l.locator('[data-filter="erledigt"]').innerText()));
+  await l.locator('.vh-erl-z[data-open="saal-alt"]').click(); await l.waitForTimeout(400);
+  pruefe('Akte eines erledigten: Erledigt am, nur lesend, Wieder öffnen', /Erledigt am/.test(await l.locator('.vh-a-erl').innerText()) && await l.locator('[data-wieder]').isVisible()
+    && await l.locator('[data-erledigt]').count() === 0 && await l.locator('[data-punkt-neu]').count() === 0 && await l.locator('[data-ball-akte]').count() === 0
+    && await l.locator('#vhAkte textarea[data-feld="stand"]').getAttribute('readonly') !== null);
+  const vor = gesendet.length;
+  await l.locator('#vhAkte textarea[data-feld="stand"]').click(); await l.keyboard.type('x'); await l.locator('#vhAkte h2').click(); await l.waitForTimeout(200);
+  pruefe('nur lesend: Tippen ins Feld speichert nichts', !gesendet.slice(vor).some(x => x.action === 'vorhaben_save'));
+  await l.locator('[data-wieder]').click(); await l.waitForTimeout(500);
+  const wo = letzte('vorhaben_wiedereroeffnen');
+  pruefe('Wieder öffnen ohne Rückgängig, Filter zurück auf Alle, Akte offen', wo && wo.nutzlast.id === 'vh-saal-alt' && wo.nutzlast.rueckgaengig === undefined
+    && await l.locator('[data-filter="alle"].on').count() === 1 && await l.locator('#vhAkte [data-erledigt]').isVisible(), JSON.stringify(wo && wo.nutzlast));
+  /* Menü ⋯: Pausieren mit gesehenem Status, Archivieren nur nach Rückfrage. */
+  await l.locator('[data-menu]').click();
+  pruefe('Menü ⋯ zeigt Pausieren und Archivieren', await l.locator('#vhMenu').isVisible() && /Pausieren/.test(await l.locator('#vhMenu').innerText()));
+  await l.locator('#vhMenu [data-status="pausiert"]').click(); await l.waitForTimeout(400);
+  const ps = letzte('vorhaben_save');
+  pruefe('Pausieren schickt status pausiert mit erwartetem Status', ps && ps.nutzlast.status === 'pausiert' && ps.nutzlast.expect && ps.nutzlast.expect.status === 'aktiv', JSON.stringify(ps && ps.nutzlast));
+  await l.locator('[data-menu]').click();
+  pruefe('nach dem Pausieren heißt der Eintrag Fortsetzen', /Fortsetzen/.test(await l.locator('#vhMenu').innerText()));
+  await l.locator('#vhMenu [data-archiv]').click(); await l.waitForTimeout(200);
+  const vorA = gesendet.length;
+  pruefe('Archivieren fragt erst nach', await l.locator('#vhArchOk').isVisible() && !gesendet.slice(vorA).some(x => x.action === 'vorhaben_save'));
+  await l.locator('#vhArchOk').click(); await l.waitForTimeout(400);
+  const pa = letzte('vorhaben_save');
+  pruefe('Archivieren schickt status archiviert', pa && pa.nutzlast.status === 'archiviert' && pa.nutzlast.expect.status === 'pausiert' && await l.locator('#vhAkte').isHidden(), JSON.stringify(pa && pa.nutzlast));
+  await l.close();
+
+  /* Handy 390 px: das Blatt kommt von unten. */
+  frisch();
+  const h = await ctx.newPage(); await h.setViewportSize({ width:390, height:844 }); h.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
+  await h.goto(BASE + '/vorhaben.html?v=xceed'); await h.waitForTimeout(700);
+  await h.locator('#vhAkte [data-erledigt]').click(); await h.waitForTimeout(300);
+  const bb = await h.locator('#vhModal .vh-blatt').boundingBox();
+  pruefe('Handy: Blatt steht unten, volle Breite', bb && Math.abs(bb.y + bb.height - 844) < 2 && bb.width >= 389, JSON.stringify(bb));
+  pruefe('Handy: keine waagrechte Rollleiste', await h.evaluate(() => document.documentElement.scrollWidth <= 390));
+  await h.locator('#vhErlOk').click(); await h.waitForTimeout(400);
+  const rb = await h.locator('#vhRueck').boundingBox();
+  pruefe('Handy: Hinweis mit Rückgängig passt in die Breite', rb && rb.x >= 0 && rb.x + rb.width <= 390, JSON.stringify(rb));
+  await h.close();
+}
+
 console.log('\n== Für dich, Übergabe, Rückkehr (V31d) ==');
 {
   frisch();

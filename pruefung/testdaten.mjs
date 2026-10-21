@@ -377,6 +377,8 @@ export const VORHABEN = [
   vhZeile({ slug:'booking', title:'Booking-Standards', gruppe:'team', ball:'lea', owner:'lea', sort:95, schritt:'Paket schnüren' }),
   vhZeile({ slug:'habitat-hub', title:'Habitat Hub und Aufgabenbereiche', gruppe:'system', ball:'alex', owner:'alex', frist:tag(89), sort:100, zustand:'bewegt', schritt:'Team einführen' }),
 ];
+/* Erledigt (21.10.2026): ein schon erledigtes Vorhaben für den Filter „Erledigt“ und „Wieder öffnen“. */
+VORHABEN.push(vhZeile({ slug:'saal-alt', title:'Saalmiete Winterfest', gruppe:'geld', ball:'alex', owner:'alex', frist:tag(-6), sort:60, status:'erledigt', pg:2, pe:2, th:0 }));
 const VH_SAAT = JSON.stringify(VORHABEN);
 function vhZuruecksetzen(){ VORHABEN.splice(0, VORHABEN.length, ...JSON.parse(VH_SAAT)); }
 const vhPunkte = [
@@ -395,7 +397,9 @@ const vhVerlauf = [
 /* Schalter für Fehlerwege in den Bedienproben. */
 export const SCHALTER = { rueckkehrFehler:false };
 export const VH_ANTWORT = {
-  vorhaben_list: () => ({ stand:zeit(0), heute, vorhaben:VORHABEN, metaphase:{ title:'Analyse und Retro', starts_on:tag(-12), ends_on:tag(12) },
+  vorhaben_list: (p) => p && p.status === 'erledigt'
+    ? ({ stand:zeit(0), heute, vorhaben:VORHABEN.filter(v => v.status === 'erledigt').map(v => ({ ...v, erledigt_am:zeit(-2), ergebnis:v.slug === 'saal-alt' ? 'Rechnung bezahlt, Schlüssel zurück' : null })) })
+    : ({ stand:zeit(0), heute, vorhaben:VORHABEN.filter(v => ['aktiv','pausiert'].includes(v.status)), metaphase:{ title:'Analyse und Retro', starts_on:tag(-12), ends_on:tag(12) },
     abwesenheiten:[A1].map(a=>({ id:a.id, person:a.person, von:a.von, bis:a.bis, bis_geschaetzt:a.bis_geschaetzt, status:a.status, vertretung_standard:a.vertretung_standard, test:a.test })),
     einwuerfe_offen:1, einwuerfe_ohne_vorhaben:1 }),
   vorhaben_badge: { einwuerfe:1, ueberfaellig_bei_mir:0, n:1 },
@@ -417,6 +421,19 @@ export const VH_ANTWORT = {
     for (const f of ['ball','ball_name','stand','naechster_schritt','frist','status']) if (p[f] !== undefined) v[f] = p[f];
     return { vorhaben:v, ball_geaendert: alt !== v.ball + '|' + (v.ball_name || ''), verlauf:1 };
   },
+  /* Abschließen und Wieder öffnen wie das Backend: Status, Rückgabe der geänderten Kennungen, 409 bei falschem Ausgang. */
+  vorhaben_abschliessen: (p) => { const v = VORHABEN.find(x => x.id === p.id || x.slug === p.slug);
+    if (!v) return { __status:404, error:'Vorhaben gibt es nicht' };
+    if (!['aktiv','pausiert'].includes(v.status)) return { __status:409, error:'Das Vorhaben ist schon erledigt, bitte neu laden' };
+    const punkte = p.punkte_mit ? Array.from({ length:v.punkte_gesamt - v.punkte_erledigt }, (_, i) => `00000000-0000-4000-8000-00000000000${i}`) : [];
+    const themen = p.themen_mit ? Array.from({ length:v.themen_offen }, (_, i) => `00000000-0000-4000-9000-00000000000${i}`) : [];
+    v.status = 'erledigt';
+    return { vorhaben:v, punkte:punkte.length, themen:themen.length, rueckgaengig:{ punkte, themen }, ergebnis:p.ergebnis || null }; },
+  vorhaben_wiedereroeffnen: (p) => { const v = VORHABEN.find(x => x.id === p.id || x.slug === p.slug);
+    if (!v) return { __status:404, error:'Vorhaben gibt es nicht' };
+    if (!['erledigt','archiviert'].includes(v.status)) return { __status:409, error:'Das Vorhaben ist nicht abgeschlossen (aktiv), bitte neu laden' };
+    v.status = 'aktiv';
+    return { vorhaben:v, punkte:(p.rueckgaengig?.punkte || []).length, themen:(p.rueckgaengig?.themen || []).length }; },
   vorhaben_get: (p) => { const v = VORHABEN.find(x => x.slug === p.slug || x.id === p.id || x.id === p.slug) || VORHABEN[0];
     return { vorhaben:v, punkte:vhPunkte.filter(x=>x.vorhaben_id===v.id), verlauf:vhVerlauf.filter(x=>x.vorhaben_id===v.id),
       themen:v.slug==='xceed'?[{ id:'t1', title:'Vertrag mit dem Landkreis verlängern', board_lane:'zu_besprechen', gate:'gf' }]:[],
@@ -447,7 +464,7 @@ export const SCHREIBEND = new Set(['wahl','freigabe','begruendung','log_verknuep
   'session_start','session_end','session_delete','ritual_toggle','ritual_save','ritual_delete','milestone_save','milestone_delete','news_update','news_accept','news_delete',
   'people_save','people_delete','link_add','link_delete','sites_save','sites_delete','category_save','gate_set','gate_set_many','inbox_promote','inbox_reject','tidy_suggest',
   'absence_end','absence_tick','deputies_set','handover_build','handover_dossier','handover_log_add','launch_set',
-  'handover_set_many','vorhaben_save','punkt_save','punkt_toggle','punkt_delete','verlauf_add','verlauf_status','vorhaben_verknuepfen','einwurf_verwerfen','vorschlag_stand']);
+  'handover_set_many','vorhaben_save','punkt_save','punkt_toggle','punkt_delete','verlauf_add','verlauf_status','vorhaben_verknuepfen','einwurf_verwerfen','vorschlag_stand','vorhaben_abschliessen','vorhaben_wiedereroeffnen']);
 
 /* Je Seite: Kerninhalt, der nach dem Laden gefuellt sein muss (Text laenger als 20 Zeichen).
    Ohne diese Probe wuerde eine leer gebliebene Seite als bestanden durchgehen, weil gfGate das Tor schon vorher versteckt. */

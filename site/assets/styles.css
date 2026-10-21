@@ -1712,3 +1712,48 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 .vh-ue-n::placeholder{color:var(--text-2);opacity:1}
 .vh-ue-test{display:flex;gap:8px;align-items:center;font-size:var(--stufe-2);color:var(--text-2)}
 .vh-entwurf{font-style:normal;font-weight:500;color:var(--crit-text);margin-left:6px}
+
+/* ===========================================================
+   21.10.2026 · Vorhaben abschließen: „✓ Erledigt“ und ⋯ in der Akte, Blatt zum Abschließen (am Handy von unten),
+   Hinweis mit Rückgängig, Kreis in der Liste, Filter „Erledigt“. Nur vorhandene Tokens.
+   =========================================================== */
+.vh-a-akt{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.vh-menu-w{position:relative}
+.vh-menu-k{min-width:var(--ziel-min);justify-content:center;font-size:var(--stufe-3);letter-spacing:.08em}
+.vh-menu{position:absolute;z-index:20;top:calc(100% + 6px);left:0;min-width:200px;display:flex;flex-direction:column;gap:2px;padding:6px;background:var(--surface);border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);box-shadow:var(--shadow-pop)}
+.vh-menu[hidden]{display:none}
+.vh-menu button{min-height:var(--ziel-min);padding:6px 10px;text-align:left;border-radius:var(--radius-s);color:var(--text);font-size:var(--stufe-2)}
+.vh-menu button:hover,.vh-menu button:focus-visible{background:var(--surface-2)}
+.vh-a-erl{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px 12px;border-radius:var(--radius-m);background:var(--surface);border:var(--rahmen) solid var(--border);font-size:var(--stufe-2)}
+.vh-akte.zu .vh-schritt{border-color:var(--border)}
+.vh-akte textarea[readonly]{background:var(--surface);color:var(--text-2);resize:none}
+.vh-haken{display:flex;gap:10px;align-items:center;min-height:var(--ziel-min);font-size:var(--stufe-2);color:var(--text)}
+.vh-haken input{width:20px;height:20px;margin:0;accent-color:var(--accent);flex:0 0 auto}
+.vh-ew-fehler[hidden]{display:none}
+.vh-rueck{display:flex;align-items:center;gap:12px;pointer-events:auto;max-width:calc(100vw - 32px)}
+.vh-rueck:not(.show){pointer-events:none}
+.vh-rueck span{min-width:0}
+.vh-rueck .btn{flex:0 0 auto}
+/* Liste: Kreis zum schnellen Abschließen vor jeder Zeile */
+.vh-l-zeile{display:grid;grid-template-columns:40px minmax(0,1fr);align-items:center;gap:4px}
+.vh-l-kopf{margin-left:44px}
+.vh-l-fertig{width:40px;height:var(--ziel-min);display:inline-grid;place-items:center;border-radius:var(--radius-m);color:var(--text-2)}
+.vh-l-fertig i{width:24px;height:24px;display:inline-grid;place-items:center;border-radius:50%;border:var(--rahmen) solid var(--border-strong);font-style:normal;font-size:var(--stufe-1);color:transparent}
+.vh-l-fertig:hover i,.vh-l-fertig:focus-visible i{border-color:var(--accent);color:var(--accent-strong);background:var(--accent-soft)}
+/* Filter „Erledigt“ */
+.vh-erl-h{border-top:0;padding-top:0;margin:0 0 8px}
+.vh-erl{display:flex;flex-direction:column;gap:6px}
+.vh-erl-z{display:grid;grid-template-columns:150px minmax(0,1fr) 160px;gap:14px;align-items:center;width:100%;text-align:left;padding:10px 12px;border-radius:var(--radius-m);border:var(--rahmen) solid var(--border);background:var(--panel);color:var(--text-2)}
+.vh-erl-z:hover{background:var(--surface)}
+.vh-erl-z.on{border-color:var(--accent);background:var(--accent-soft)}
+.vh-erl-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.vh-erl-t b{font-weight:600;color:var(--text-2)}
+.vh-erl-t small{font-size:var(--stufe-2);color:var(--text-2)}
+.vh-erl-b{min-width:0}
+@media(max-width:760px){
+  .vh-blatt-back{padding:0;align-items:flex-end}
+  .vh-blatt-back .modal{max-width:none;border-radius:var(--radius-l) var(--radius-l) 0 0;border-bottom:0;max-height:92vh}
+  .vh-blatt-back .modal-f{padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+  .vh-erl-z{grid-template-columns:minmax(0,1fr);gap:4px}
+  .vh-erl-b{display:none}
+}

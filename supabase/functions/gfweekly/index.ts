@@ -1115,6 +1115,11 @@ function vhBy(t: any): string {
   return w;
 }
 function vhText(x: unknown, max: number){ return (x ?? '').toString().trim().slice(0, max); }
+/* Ergebnissatz aus dem Abschlusseintrag: ohne Vorsatz „Erledigt:“ und ohne den Platzhalter für einen leeren Satz. */
+function vhErgebnis(text: string){
+  const s = (text || '').replace(/^(Vorhaben )?erledigt:\s*/i, '').trim();
+  return /^ohne Ergebnissatz/i.test(s) ? (s.replace(/^ohne Ergebnissatz\s*/i, '').trim() || null) : (s || null);
+}
 function vhBallWort(ball: string, name?: string | null){
   return ({ alex:'Alex', lea:'Lea', gf:'GF gemeinsam', offen:'niemand' } as Record<string,string>)[ball]
     || ((name || '').trim() || (ball === 'team' ? 'Team' : 'extern'));
@@ -2753,6 +2758,23 @@ Deno.serve(async (req: Request) => {
     }
 
     /* ----- Vorhaben (v38, V31) ----- */
+    if (action === 'vorhaben_list' && t.status === 'erledigt') {
+      /* Filter „Erledigt“: nur erledigte der letzten 90 Tage, zuletzt erledigte zuerst. Ergebnis und Datum stammen aus dem
+         jüngsten Abschlusseintrag im Verlauf („Erledigt: …“, von Cowork auch „Vorhaben erledigt: …“). */
+      const seit = new Date(Date.now() - 90 * 86400000).toISOString();
+      const { data: vh, error } = await admin.from('hh_vorhaben_lage').select('*').eq('status', 'erledigt').gte('updated_at', seit).order('updated_at', { ascending:false });
+      if (error) throw error;
+      const ids = (vh || []).map((v: any) => v.id);
+      const { data: vl, error: e2 } = ids.length
+        ? await admin.from('hh_vorhaben_verlauf').select('vorhaben_id,happened_at,text').in('vorhaben_id', ids).eq('art', 'entscheidung').eq('status', 'bestaetigt').order('happened_at', { ascending:false })
+        : { data: [], error: null } as any;
+      if (e2) throw e2;
+      const liste = (vh || []).map((v: any) => {
+        const e = (vl || []).find((x: any) => x.vorhaben_id === v.id && /^(Vorhaben )?erledigt:/i.test(x.text || ''));
+        return { ...v, erledigt_am: e?.happened_at || v.updated_at, ergebnis: e ? vhErgebnis(e.text) : null };
+      });
+      return json({ stand: new Date().toISOString(), heute: heuteBerlin(), vorhaben: liste });
+    }
     if (action === 'vorhaben_list') {
       let q = admin.from('hh_vorhaben_lage').select('*').order('sort').order('title');
       if (t.status !== 'alle') q = q.in('status', ['aktiv','pausiert']);
@@ -2850,6 +2872,36 @@ Deno.serve(async (req: Request) => {
       }
       if (!neu) return json({ error:'Kein freier slug gefunden' },409);
       return json({ vorhaben: await vhLese(neu.id), angelegt: true });
+    }
+    if (action === 'vorhaben_abschliessen') {
+      /* Abschließen mit zwei Fingertipps: Status erledigt, Verlauf, auf Wunsch offene Punkte und verknüpfte Themen.
+         Die Antwort nennt in rueckgaengig genau die geänderten Punkte und Themen für vorhaben_wiedereroeffnen. */
+      const by = vhBy(t);
+      const ref = (t.id || t.slug || '').toString().trim(); if (!ref) return json({ error:'id oder slug fehlt' },400);
+      const v = await vhLese(ref);
+      let expect: string | null = null;
+      if (t.expect !== undefined && t.expect !== null && t.expect !== '') {
+        if (isNaN(Date.parse(String(t.expect)))) return json({ error:'expect ist kein Zeitpunkt' },400);
+        expect = String(t.expect);
+      }
+      const r = await vhRpc('hh_vorhaben_abschliessen', { p_id: v.id, p_by: by, p_ergebnis: vhText(t.ergebnis, 300) || null,
+        p_punkte_mit: t.punkte_mit === true, p_themen_mit: t.themen_mit === true, p_expect: expect });
+      return json({ vorhaben: await vhLese(v.id), punkte: r.punkte, themen: r.themen, rueckgaengig: r.rueckgaengig, ergebnis: r.ergebnis });
+    }
+    if (action === 'vorhaben_wiedereroeffnen') {
+      const by = vhBy(t);
+      const ref = (t.id || t.slug || '').toString().trim(); if (!ref) return json({ error:'id oder slug fehlt' },400);
+      const v = await vhLese(ref);
+      let rg: { punkte: string[], themen: string[] } | null = null;
+      if (t.rueckgaengig !== undefined && t.rueckgaengig !== null) {
+        const x = t.rueckgaengig;
+        const liste = (a: unknown) => a === undefined ? [] : Array.isArray(a) && a.every(i => typeof i === 'string' && VH_UUID.test(i)) ? a as string[] : null;
+        const pk = typeof x === 'object' && !Array.isArray(x) ? liste(x.punkte) : null, th = typeof x === 'object' && !Array.isArray(x) ? liste(x.themen) : null;
+        if (!pk || !th) return json({ error:'rueckgaengig: { punkte: [uuid], themen: [uuid] }' },400);
+        rg = { punkte: pk, themen: th };
+      }
+      const r = await vhRpc('hh_vorhaben_wiedereroeffnen', { p_id: v.id, p_by: by, p_rueckgaengig: rg });
+      return json({ vorhaben: await vhLese(v.id), punkte: r.punkte, themen: r.themen });
     }
     if (action === 'punkt_save') {
       const by = vhBy(t);

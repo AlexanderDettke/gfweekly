@@ -1,3 +1,29 @@
+## Vorhaben abschließen (21.10.2026)
+
+Auftrag: `docs/PAKET-VORHABEN-ABSCHLIESSEN.md`. Vorhaben lassen sich jetzt in der Oberfläche schließen, als erledigt ansehen und wieder öffnen.
+
+Datenbank, Migration `20261021020322_hh_vorhaben_abschliessen` (angewendet am 21.10.2026 per `db query --linked`, Fernhistorie mit derselben Kennung):
+- `hh_vorhaben_abschliessen(p_id, p_by, p_ergebnis, p_punkte_mit, p_themen_mit, p_expect)` in einer Transaktion: Status `erledigt`, `updated_by`, Verlaufseintrag (`art` entscheidung, `status` bestaetigt, `created_by` hohes-haus, Text „Erledigt: <Ergebnis>“ bzw. „Erledigt: ohne Ergebnissatz“, dazu in Klammern die Zahl abgehakter Punkte und archivierter Themen), auf Wunsch offene Punkte abhaken (`erledigt_at`, `erledigt_by`) und verknüpfte `gfweekly_topics` archivieren (`updated_at` wird mitgesetzt, die Tabelle hat keinen Auslöser dafür). Rückgabe: Anzahlen und `rueckgaengig` mit den Kennungen genau der geänderten Punkte und Themen. PT409 bei schon erledigtem oder archiviertem Vorhaben und bei abweichendem `updated_at` (`p_expect`, millisekundengenau verglichen). Der Status wird direkt gesetzt, nicht über `hh_vorhaben_save`, damit kein zweiter Eintrag „Status: erledigt“ entsteht.
+- `hh_vorhaben_wiedereroeffnen(p_id, p_by, p_rueckgaengig)`: Status `aktiv` aus `erledigt` oder `archiviert` (sonst PT409), Verlaufseintrag „Wieder geöffnet“ bzw. „Wieder geöffnet (Abschluss rückgängig): …“. Mit `p_rueckgaengig` werden nur die genannten Punkte und Themen dieses Vorhabens zurückgesetzt, und nur, solange sie noch im Abschlusszustand sind.
+- Beide `security definer`, ausführbar nur für `service_role`.
+
+Edge Function `gfweekly` (deployt am 21.10.2026 mit `--use-api`; der Live-Stand war vorher identisch mit `main`):
+- `vorhaben_abschliessen` (`id`/`slug`, `by`, `ergebnis` bis 300 Zeichen, `punkte_mit`, `themen_mit`, `expect` = gesehenes `updated_at`) und `vorhaben_wiedereroeffnen` (`id`/`slug`, `by`, optional `rueckgaengig: { punkte: [uuid], themen: [uuid] }`, sonst 400). Rechte wie `vorhaben_save`: nur Alex oder Lea.
+- `vorhaben_list` mit `status: 'erledigt'`: nur erledigte mit `updated_at` in den letzten 90 Tagen, nach `updated_at` absteigend, je Vorhaben `erledigt_am` und `ergebnis` aus dem jüngsten Abschlusseintrag im Verlauf (auch „Vorhaben erledigt: …“ aus Cowork). Ohne diesen Status unverändert aktiv und pausiert.
+- `vorhaben_badge`, `vorhaben_seit`, Einwurf-Kontext (`vhKontext`) und Übergabekorb lesen weiter nur aktiv und pausiert; erledigte zählen nirgends als offen oder überfällig. `vorhaben_rueckkehr` zeigt als Rückblick auch Vorhaben, die inzwischen erledigt sind; dort zählt nichts als offen.
+
+Oberfläche `site/vorhaben.html`, Assets `?v=35`:
+- Akte: Zeile unter dem Titel mit „✓ Erledigt“ und „⋯“ (Pausieren oder Fortsetzen über `vorhaben_save` mit `expect.status`, Archivieren nach Rückfrage). Annahme: „neben Übergeben“ im Paket ist als Kopfzeile der Akte umgesetzt, weil „Übergeben“ ein Seitenknopf ist und „Erledigt“ ein bestimmtes Vorhaben betrifft.
+- Blatt „Vorhaben abschließen“ (am Handy von unten): Ergebnissatz optional, Haken „Offene Punkte (n) mit abhaken“ an, „Verknüpfte Themen im Board (n) archivieren“ aus, jeweils nur bei n > 0. Danach schließt die Akte, das Vorhaben verschwindet aus Woche, Board und Liste, unten steht 10 Sekunden „… erledigt · Rückgängig“; Rückgängig schickt die zurückgegebenen Kennungen.
+- Liste: Kreis am Zeilenanfang öffnet dasselbe Blatt. Filter „Erledigt“ (eigene Abfrage, die übrigen Zahlen bleiben bei aktiv und pausiert) zeigt erledigte gedämpft mit Datum und Ergebnissatz. Akte eines erledigten oder archivierten Vorhabens: „Erledigt am …“ bzw. „Archiviert“, Felder nur lesend, ohne Ball, Punkte, Zuordnungen und Vorschlagsknöpfe, Knopf „Wieder öffnen“ (setzt den Filter auf Alle zurück).
+
+Prüfungen am 21.10.2026:
+- `pruefung/abschliessen-probe.mjs` (Wirkung gegen das echte Backend, Testvorhaben `test-abschluss` aus `pruefung/abschliessen-testdaten.sql`): 22 von 22.
+- `pruefung/abschliessen-live.mjs` (echte Oberfläche lokal ausgeliefert, echte Edge Function, 390 px): Testvorhaben mit Punkten und Themen 10 von 10; XCeed (Filter Erledigt, Wieder öffnen ergibt aktiv und überfällig, Abschließen ohne Themen-Haken lässt die 11 Themen offen, Rückgängig stellt exakt her, am Ende wieder erledigt) 22 von 22, ohne Konsolenfehler. Testvorhaben und Testthemen danach gelöscht.
+- `pruefung/abnahme.sh`: alle Prüfungen bestanden; Bedienung um 22 Proben zum Abschließen erweitert (abgefangene API), Schirme um Filter „Erledigt“ und eine erledigte Akte (100 Bilder, 0 Meldungen).
+
+Grenzen: Wer abschließt, wählt der Browser („als Alex“ oder „als Lea“); die Edge Function prüft nur das gemeinsame Passwort. Der Rückgängig-Hinweis lebt nur auf der Seite, die abgeschlossen hat; danach geht es über „Wieder öffnen“, das abgehakte Punkte und archivierte Themen nicht zurücksetzt. Die XCeed-Proben haben im Verlauf von XCeed Einträge „Wieder geöffnet“ und „Erledigt: …“ hinterlassen.
+
 ## Technische Gesamtabnahme vom 15.10.2026
 
 Vollständiger lokaler Prüflauf einschließlich Farbvorlage, Oberflächen, Bedienung, lokaler Datenbanken und Aktionsproben bestanden. Ergänzend bestanden 415 Wegweiserprüfungen. Prüfbeleg erneuert, Wächter einschließlich Frischeprüfung ohne Befunde. Die Originalvorlage wurde im Downloadarchiv wiedergefunden und unverändert mit Herkunft unter `pruefung/referenz/farbvorlage/` gesichert. Bericht und Grenzen: `docs/reviews/Gesamtabnahme-20261015.md`.
