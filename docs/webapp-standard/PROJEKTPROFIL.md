@@ -1,0 +1,28 @@
+# Projektprofil · Webapp Standard (Pilot zur Erprobung)
+
+Grundlage: `WEBAPP-PILOT-0.2`, Abschnitt P-01. Stand 21.10.2026. Der Webapp Standard ist ein Pilot zur Erprobung und keine beschlossene Regel. Unbekanntes bleibt als unbekannt markiert.
+
+| Angabe | Eintrag |
+| --- | --- |
+| Ziel | Webapp im Repository `AlexanderDettke/gfweekly`, intern „Hohes Haus“, nach dem vorbereiteten, noch nicht zusammengeführten Paket „Kompass“ künftig Kompass (`docs/PAKET-KOMPASS.md` auf `paket/kompass`). Cockpit der Geschäftsführung der Wilden Habitate (Alex und Lea). Organisation: Wilde Möhre GmbH (Arbeitsradar `hub-b6de8edc-4a86-4c3b-ba77-106aeb5440b6`). Umfang dieses Auftrags: **alle 25 Seiten** unter `site/`, die gemeinsamen Bausteine in `site/assets/core.js` und `site/assets/styles.css`, Details, Formulare, Dialoge und Rückwege. |
+| Ausgangsstand | `origin/main` bei `05af97b` (21.10.2026, Paket „Vorhaben abschließen“). Begonnen wurde auf `paket/kompass` (`bbca119`), danach wurde der eigene Branch ohne die Kompass-Umbenennung auf `05af97b` gesetzt, damit beide Pakete unabhängig landen können. Parallel: Paket Kompass (unveröffentlicht, Zweitklon `~/gfweekly`), Branch `paket/v35-anmeldung` (lokal, Google-Anmeldung). Keine fremden Dateien geändert. |
+| Hauptaufgabe | Alex und Lea sehen, was bei ihnen liegt, entscheiden, protokollieren und übergeben: Vorhaben, Themen (Board, Liste, Entscheidungen), Besprechung, Jahr und Saison, Kommunikation, Launch, Organisation, Besetzung, Vertretung, Pflege. |
+| Pilotumfang | Gesamte Webapp. Ausgeschlossen: Edge Functions und Datenbank (keine Änderung), Inhalte und Fachbegriffe, Markenmerkmale (Habitate-Tokens, Archivo, Bildwelt), Easter Eggs und Spiel (`game.js`, `eggs.js`) bis auf Kontrast und Umbruch. |
+| Zielgruppe | Zwei regelmäßige Nutzende (Alex, Lea), Desktop und Handy. Neue Nutzende sind nicht vorgesehen. Rollen: eine Personenwahl „als Alex | Lea“ ohne eigene Anmeldung (siehe Rechte). |
+| Datenführung | Supabase-Projekt `bnfmupnmqyrcltrphfak`, Edge Functions `gfweekly`, `arbeiten`, `besetzung`, `organisation`, `saison`, extern `tpa`. Führend: Tabellen `gfweekly_*`, `hh_vorhaben*`, `komm_*`. Asana ist Ziel für Aufgaben (Launch, Übergabe, Kommunikation), das Hub-Register führt Werkzeugnamen. Einzelheiten: `docs/TECHNIKSTAND.md`. |
+| Zustände | Thema: Spalte (zu besprechen, in Klärung, entschieden, erledigt) und Status; Vorhaben: aktiv, pausiert, erledigt, archiviert, Ball, Frist; Entscheidung, Protokoll; Abwesenheit, Korb, Ampel; Launch: Vorschlag, bestätigt, gesendet. Übergänge und Rechte stehen im Funktionsinventar je Seite. |
+| Umgebung | Lokal: statischer Server über `site/`, Edge Function im Browser abgefangen und mit `pruefung/testdaten.mjs` beantwortet. Browser: Chromium Headless Shell (Revision 1248) über Playwright 1.63, Schirme 320, 390, 1280 und 1440 CSS px, dunkel und hell, reduzierte Bewegung. Kein echtes Touchgerät. Sichtbare Vorschau mit Testdaten: `pruefung/vorschau.mjs`. |
+| Testdaten | Ausschließlich synthetisch (`pruefung/testdaten.mjs`, dazu erzeugte Großmenge von 600 Themen für die Leistungsprobe). Keine produktiven Daten gelesen oder geschrieben. |
+| Gestaltung | Design-System „Wilde Habitate“ (Tokens aus der Quelle, geprüft mit `pruefung/tokens.py`), dunkel als Standard, hell über `data-theme`, Schrift Archivo (Google Fonts, freie Lizenz), Radien 4/6/8 px. Proxima Nova liegt nicht vor; nach dem Schriftweg von P-03 bleibt die angenommene Markenschrift Archivo maßgeblich, keine Systemschrift-Ersatzlösung nötig. |
+| Freigaben | Umsetzen, lokal prüfen und unabhängig prüfen lassen: ja (Auftrag vom 21.10.2026). Veröffentlichung: nicht beauftragt, kein Push nach `main`, kein Deploy. Keine Daten-, Asana- oder Nachrichtenwirkung. |
+| Wiederherstellung | Eigener Branch `paket/webstandard-pilot` im eigenen Worktree. Rückweg: die Pilot-Commits zurücknehmen (`git revert` der Commits auf `origin/main..paket/webstandard-pilot`) oder den Branch nicht zusammenführen. Ausprobiert in einer isolierten Kopie, Beleg in `PRUEFMATRIX.md`, T-20. |
+| Erfolg | Keine vorhandene Fähigkeit geht verloren (alle bestehenden Prüfungen grün); alle 34 Regeln zugeordnet; harte Befunde der Webstandard-Prüfung von 70 auf 0; Kontrastschuld abgebaut; Alexander kann die Testaufgaben ohne Erklärung abschließen. Kritisch wären Datenverlust, falsche Erfolgsmeldung, doppelte Wirkung, blockierter Hauptweg. |
+| Verantwortung | Technische Umsetzung: Claude Code (diese Sitzung). Unabhängige Prüfung: Codex (read-only). Fachliche Prüfung und Annahme: Alexander. Pflege des Baukastens nach dem Pilot: offen. |
+
+## Rechte, wie sie tatsächlich sind (Q-01)
+
+Ein gemeinsames Passwort, serverseitig in jeder Edge Function geprüft (401 ohne Passwort). Die Personenwahl „als Alex | Lea“ ist **keine Anmeldung**: der Browser sendet den gewählten Namen mit, der Server prüft nur, dass er Alex oder Lea lautet. Wer das Passwort kennt, kann jede der beiden Personen wählen. Die Oberfläche bildet das ehrlich ab und erteilt keine zusätzlichen Rechte. Die Google-Anmeldung mit getrennten Konten liegt als Paket V35 vor und ist nicht Teil dieses Piloten (BAUSTEIN-ZUGANG, ST-01 bis ST-03: bedingt, siehe `REGELZUORDNUNG.md`).
+
+## Zeitzone und Formate (D-03)
+
+Europe/Berlin aus dem Browser, Datumsanzeige `TT.MM.` oder `TT.MM.JJJJ`, Zahlen deutsch. Der Kalendertag wird seit diesem Pilot in Ortszeit gebildet (`gfIsoTag` in `core.js`); vorher verschoben `toISOString()` und lokale Mitternacht den Tag in Berlin auf den Vortag (Board, Entscheidungen, Check-in, Vertretung).

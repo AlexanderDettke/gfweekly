@@ -170,7 +170,7 @@ function gfGate(onReady){
    eine im Kopf stehen gebliebene „lädt …“-Zeile wird auf „Nicht geladen“ gesetzt. */
 function gfLadefehler(el, e, opts={}){
   const grund=e&&e.offline?e.message:("Laden fehlgeschlagen: "+((e&&e.message)||"unbekannter Fehler")+".");
-  if(el){ el.innerHTML=`<div class="ws-fehler" role="alert"><p><b>${gfEsc(opts.titel||"Nicht geladen.")}</b> ${gfEsc(grund)} Deine bisherigen Daten sind dadurch nicht verändert.</p><button type="button" class="btn btn-sm" data-ws-neu>Erneut laden</button></div>`;
+  if(el){ el.innerHTML=`<div class="ws-fehler" role="alert"><p><b>${gfEsc(opts.titel||"Nicht geladen.")}</b> ${gfEsc(grund)} Deine bisherigen Daten sind dadurch nicht verändert.</p><button type="button" class="btn btn-sm btn-brand" data-ws-neu>Erneut laden</button></div>`;
     el.querySelector("[data-ws-neu]").onclick=()=>location.reload(); }
   const sub=document.getElementById("heroSub"); if(sub&&/lädt/.test(sub.textContent)) sub.textContent="Nicht geladen";
   /* opts.auch: weitere Bereiche, die aus demselben Abruf gefüllt worden wären */

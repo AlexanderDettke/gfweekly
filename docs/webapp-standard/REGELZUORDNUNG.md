@@ -1,0 +1,81 @@
+# Regelzuordnung · Webapp Standard (Pilot zur Erprobung)
+
+Bibliothek 0.5.0, `content_sha256 55e526d2ad79…`, abgerufen und lokal zurückgelesen am 21.10.2026 (`organisationsstandards/AKTUELL.json`). Der Webapp Standard `WEBAPP-PILOT-0.2` ist ein Pilot zur Erprobung; die Übernahme einzelner Regeln entscheidet Alexander gesondert. Belege: `PRUEFMATRIX.md` (T-Kennungen), Tests in `pruefung/`.
+
+## 1. Bibliotheksstandards
+
+| Standard | Fassung · Status | Zweck | Zuordnung für diese Webapp | Betroffene Bereiche |
+| --- | --- | --- | --- | --- |
+| ORG-001 Prozesse und Verantwortung vor Neubau | 0.2.0 · Entwurf | Vor Neubau Ablauf, Verantwortung, Pflege klären | **Bedingt.** Kein Neubau; nur die Prüfung „keine neue Funktion ohne Arbeitsvorgang“ angewendet. | Umfangsentscheidungen |
+| ORG-002 Datenführung und Übergaben | 0.2.0 · Entwurf | Führender Pflegeort, nachvollziehbare Übergabe | **Bedingt.** Keine neuen Daten; Übergabe dieses Pakets mit Kennung, Stand und offenen Punkten (Arbeitsradar, `ARBEITSSTAND.md`). | Übergabe |
+| ORG-003 Nutzerprüfung, Abnahme, Lernen | 0.2.0 · Entwurf | Technische Prüfung, fachliche Annahme, Wirkung trennen | **Anwendbar.** Hauptweg und schwierige Fälle geprüft; fachliche Annahme bleibt bei Alexander. | Prüfmatrix, Übergabe |
+| ORG-004 Erkenntnisse fortlaufend übernehmen | 1.0.0 · für die Organisationswerkstatt entschieden | Arbeitsstand je relevantem Fortschritt | **Bedingt.** Gilt in der Organisationswerkstatt, nicht in diesem Repo. Fortschritt wird im vorhandenen Übergabeweg dieses Projekts festgehalten (Arbeitsradar, `docs/TECHNIKSTAND.md`). Kein Eintrag in fremde Werkstattstränge. | Übergabe |
+| Wilde Habitate · Digitale Werkzeuge (ST-01 bis ST-14) | Lesefassung 1.0 · dokumentierter Katalog | Zugang, Daten, Betrieb, Gestaltung | **Bedingt.** ST-11 (Gestaltung, Sprache, Barrierefreiheit) anwendbar und umgesetzt. ST-01 bis ST-04 (Google, Domänentor, Rollen, Zeilenschutz) betreffen V35 und das Backend, hier nicht geändert. ST-05 (Geheimnisse) geprüft: keine Schlüssel im Browsercode dieses Pakets. ST-08 vorhanden in `site/_headers`, unverändert. ST-10 (Rückweg, zweite Prüfung) angewendet. ST-12/13 unverändert. | `styles.css`, `core.js`, alle Seiten |
+| Reifegrad interner Anwendungen | Lesefassung 1.0 · Übernahme je Anwendung offen | Stabil, Beta, Vorschau, Experiment sichtbar | **Nicht zutreffend.** In dieser Webapp nicht übernommen (keine Registry, keine Kennzeichen). Q-04 verlangt das nur, wo übernommen. Kein Einbau ohne Entscheidung. | — |
+| Baustein Zugang mit Google und Rollen | Lesefassung 1.0 · Referenz | Anmeldung, Zulassung, Rechte trennen | **Bedingt.** Bezugspunkt für V35; in diesem Pilot nur die ehrliche Darstellung der heutigen Rechte (Q-01). | Profil |
+| Standards entdecken | Lesefassung 1.0 · Vorlage | Untersuchungsauftrag | **Nicht zutreffend.** Gesonderter Auftrag. | — |
+| Webapp Pilot 0.2 | 0.2 · Pilot zur Erprobung | Gestaltung, Bedienung, Daten gemeinsam | **Anwendbar, ganze Webapp** laut Auftrag vom 21.10.2026. Abschnitt 2 bis 4. | alle |
+
+## 2. Die 34 Regeln
+
+Anwendbarkeit: **A** anwendbar, **B** bedingt anwendbar, **N** nicht zutreffend (mit Grund). „Bestand“ ist der Ausgangsstand `05af97b`.
+
+| Regel | Anwendbarkeit mit Grund | Bestand | Umsetzung im Pilot | Nachweis oder Lücke |
+| --- | --- | --- | --- | --- |
+| G-01 Schriftrollen | A. Alle Seiten. Schrift Archivo bleibt (Abweichung A1). | Fünf Stufen, kleinste 0,7 rem (11,2 px), dazu feste 10 bis 11,5 px in Seiten; 1.486 Textelemente unter 12 px. | `--stufe-1` 0,75 rem (12 px), `--stufe-2` 0,875 rem (14 px), alle festen px-Größen in rem-Rollen, `small` nie unter 12 px. Abschnittstitel bleibt 18 px (Abweichung A2). | T-02: 0 Textelemente unter 12 px; Schrift wächst mit (T-04, 200 %). |
+| G-02 Farbrollen und Kontrast | A, mit Markenprofil (Abweichung A3). | Habitate-Tokens, 0 Tokenpaare unter Schwelle, aber 137 gemessene Kontrastfälle in 64 bekannten Einträgen. | Keine Tokenänderung. Ursachen behoben: Platzhalterfarbe, Deckkraft bei erledigten Karten und gesperrten Abzeichen, Warnmarken und Gruppenköpfe hell, Monatsnamen. Fokus als Umrandung an Feldern. | T-03: 8 Treffer aus 4 Einträgen übrig, alle Messgrenzen (Checkbox-Wert, Hintergrundbild). |
+| G-03 Maße, Dichte, Flächen | A. | `--ziel-min` 44 px vorhanden, aber 739 Ziele unter 44 px, 22 unter 24 px. | Gemeinsame Bausteine auf 44 px, kompakte Chips behalten ihr Bild mit unsichtbarer Trefferfläche 44 × 44, kleine Symbole ebenso. Rundungen 4/6/8 bleiben (Design-System). | T-02: 0 Ziele unter 44 px, harte Prüfung. Persönliche Dichtewahl: N (keine langen Arbeitslisten mit Dichtebedarf belegt). |
+| G-04 Bilder, Symbole, Beschriftung | A. | Kreuz „✕“ als Link-Löschen; Knöpfe ohne Namen nur bei Platzhalter-Symbolen. | Kreuz durch „Entfernen“ mit Ziel im Namen ersetzt, „Löschen“ zu „Punkt löschen“, Schließen-Kreuze benannt, Personenbilder unverändert mit Namen. | T-05: 0 Bedienelemente ohne Namen. |
+| G-05 Schmale Ansichten und Vergrößerung | A. | 2 Seiten mit Überlauf bei 320 px, 3 bei 200 % Text. Navigation unter 1024 px schon als Schublade. | Umbruch statt Überlauf (Besprechung, Liste, Für dich, Jahr, Organisation, Abzeichen), Kommunikationsblöcke wachsen mit der Schrift. | T-04: 0 Überläufe bei 320 px und bei 200 % Text auf 28 Ansichten. |
+| G-06 Bewegung und Rückmeldung | A. | CSS schaltet Animationen bei reduzierter Bewegung ab; Skript-Scrollen und Spielkarten nicht. | Skript-Scrollen springt bei reduzierter Bewegung sofort. Fehlermeldungen bleiben 7 s und hervorgehoben. Spielkarten unverändert (Lücke L4). | T-19: 0 laufende Animationen bei reduzierter Bewegung. |
+| B-01 Orientierung und Rückwege | A. | Aktive Seite markiert, Hierarchie Seitenleiste. | Sprunglink „Zum Inhalt springen“, Hauptbereich benannt; Rückweg aus Detailbereich und Dialogen zum Auslöser. | T-06, Bedienprobe Board-Detailbereich. |
+| B-02 Öffnen, Auswählen, Kontextaktionen | A. Kein Rechtsklick, kein Doppelklick vorhanden. | Board: Reihenfolge nur per Ziehen; Enter auf ⇄ öffnete zusätzlich die Details; Aufklapper in der Liste nur mit Maus. | ⇄-Menü mit „Ganz nach oben“, „Eine Stelle nach oben/unten“, Fokus und Escape; Enter auf Knöpfen in der Karte öffnet nicht mehr die Details; Liste mit Aufklappknopf und Zustand. | Bedienproben Board (T-11). |
+| B-03 Formulare und Sprache | A. | Viele Labels ohne Feldbezug, Platzhalter statt Bezeichnung (Suche, Eingabe, Vertretung, Inbox, Tor). | Label-Feld-Verknüpfung zentral, Bezeichnungen für Suche, Tor, Stepper und Tabellenfelder; Eingabe mit Fehler am Feld. | T-08: 0 Felder ohne Bezeichnung oder nur mit Platzhalter; Bedienprobe Eingabe. |
+| B-04 Speichern und fachlich bestätigen | A. | Kopieren meldete immer Erfolg; Eingabe konnte doppelt senden; Senden-Fehler nur 2,6 s. | Kopieren meldet nur echten Erfolg; Senden gesperrt während der Anfrage, Fehler bleibt am Knopf, Eingaben bleiben. Bestehende Abschlussarten (Autosave, Formular, Bestätigen, Asana) unverändert. | T-09: Bedienproben Doppelversand und Fehler; Dialogprobe Kopieren. |
+| B-05 Planung, Zuordnung, Konflikte | B. Zuordnung gibt es als Board-Verschieben, Launch- und Besetzungszuordnung. | Ziehen ohne Alternative für die Reihenfolge; Konfliktprüfung nur teilweise (Lücke L1). | Alternative ohne Ziehen im Board. Kapazitäts- und Zeitkonflikte: fachlich nicht im Umfang (Launch rechnet Zeit, siehe Launch-Logik). | T-11: Bedienprobe Board. Lücke L1. |
+| B-06 Sammelaktionen, Versand, Löschung | B. Sammelaktionen: Übergabe übernehmen, Asana senden. | Rückfragen vorhanden, teils ohne Anzahl; Punkt und Link löschen ohne Gegenstand. | Asana-Senden im Launch nennt Anzahl; Löschen nennt Gegenstand und Folge. Personalisierte Vorschau: N (keine Nachrichten an Personen). | T-15 Teilprüfung an den Texten; kein echter Versand. |
+| B-07 Leere, Fehler, Unterbrechung, Gleichzeitigkeit | A. | Ladefehler nach dem Tor unsichtbar und Passwort gelöscht; „lädt …“ blieb stehen; Ladefehler als „noch keine Besprechung“; kein Unterschied „keine Verbindung“. | Tor und Seitenaufbau getrennt; einheitlicher Ladefehler mit Ursache und „Erneut laden“; Verbindungsfehler benannt; HTTP-Status 409 bleibt am Fehler. Gleichzeitigkeit: vorhandener Schutz bei Vorhaben, Organisation, Übergabe unverändert, sonst Lücke L2. | Bedienprobe Ladefehler, Ladefehlerprobe an vier Seiten; T-17 Lücke L2. |
+| B-08 Tastatur, Fokus, Dialoge | A. | `gfModalAuf` nur im Vorhabenbereich; Text- und Neuigkeitsdialog ohne Fokusführung; Detailbereiche ohne Fokus; SVG im Saison-Rad nur mit Maus; Kurzmeldung nicht angesagt. | Text- und Neuigkeitsdialog, Abwesenheit anlegen modal mit Escape und Fokusrückgabe; Detailbereiche mit Namen und Fokus; Rollen „button“ per Enter und Leertaste; Saison-Rad per Tastatur; Kurzmeldung als Statusmeldung. | T-05: 0 Zeigerziele ohne Tastatur, 0 Fokus ohne Sichtbarkeit; Dialogproben. |
+| D-01 Ein Objekt, ein Pflegeort | B. Keine Datenänderung. | Pflegeorte dokumentiert in `docs/TECHNIKSTAND.md`. | Unverändert. | T-13 Teilprüfung (gleiche Kennung in Liste und Detail). |
+| D-02 Zustände getrennt führen | B. | Erledigt-Markierung über Deckkraft; Zustände mit Symbol und Wort (`gfZustand`). | Erledigt bleibt als Wort, Haken und Durchstreichung erkennbar, ohne Kontrastverlust. Keine Statusbedeutung geändert. | T-10 Teilprüfung. |
+| D-03 Werte, Mengen, Zeit | A. | Kalendertag in Berlin teils der Vortag; „eilt“ in Organisation gegen festes Datum 05.10.2026. | `gfIsoTag` (Ortszeit) auf vier Seiten; „eilt“ misst ab heute. | T-12 Teilprüfung; Lücke L3 (über Mitternacht nicht belegt). |
+| D-04 Geeignete Ansichten | B. | Liste, Board, Kacheln, Tabellen, Jahresrad, Diagramm vorhanden. | Keine neue Ansicht; Kommunikationsblöcke breiter, damit Titelspalten lesbar bleiben. | `pruefung/komm-bedienung.mjs` 56 von 56. |
+| D-05 Suche, Filter, Sortierung | A. | Suchen ohne bleibende Bezeichnung. | Suchfelder mit Bezeichnung und `role="search"`; Filterbedienung unverändert. | T-07 Teilprüfung; „Keine Treffer. Filter zurücksetzen“ in der Liste vorhanden. |
+| D-06 Exporte, externe Ausgaben | B. Kein Datei-Export; Kopieren und `mailto:` für Protokoll und Delegation, Asana. | Kopieren meldete Erfolg ohne Prüfung. | Ehrliches Kopieren. Datei-Export: N. | T-14 N (kein Export); Dialogprobe Kopieren. |
+| Q-01 Rechte und gemeinsame Technik | A. | Passwort am Server, Personenwahl ohne Anmeldung. | Keine Rechteänderung; ehrliche Beschreibung im Profil. | T-16 Teilprüfung (falsches Passwort, Tor). Lücke L5. |
+| Q-02 Gemeinsame Komponenten | A. | Bausteine in `core.js` (Chips, Stepper, Zustand, Kachel, Dialoge). | Grundlagen zentral: Dialoghilfe `gfDialogAuf`, Seitenbereich `gfBereichAuf/Zu`, `gfLadefehler`, `gfIsoTag`, Bezeichnungsverknüpfung, Tastatur für Rollen. Dokumentiert hier und im Code. | Nachbarprüfungen: alle Bedienproben grün. |
+| Q-03 Prüfung am Arbeitsvorgang | A, soweit Funktionen vorhanden. | Bestehende Oberflächentests ohne 320 px, Textvergrößerung, Tastatur. | Neue Prüfung `pruefung/webstandard-pruefung.mjs`, in `pruefung/abnahme.sh` eingebunden. | PRUEFMATRIX.md. Fachlicher Versuch mit zwei Personen offen. |
+| Q-04 Verantwortung, Versionen, Ausnahmen | A. | — | Fassung, Ausnahmen und Lücken hier und im Profil. Reifegrad: N. | Diese Datei. |
+| P-01 Projektprofil | A. | — | `PROJEKTPROFIL.md`. | Datei. |
+| P-02 Bestand sichern, Fähigkeiten erhalten | A. | 430 Fähigkeiten erhoben. | `FUNKTIONSINVENTAR.md`; Ausgangsmessung und Bilder vorher. | T-01. |
+| P-03 Werte und Komponenten zusammenführen | A. | Tokens in `styles.css`. | Rollen an einer Stelle, neuer Block am Ende von `styles.css`; Schriftweg: Archivo (angenommene Marke). Dunkler Modus erhalten. | T-02, T-03 in beiden Themen. |
+| P-04 Komponenten und Zustände | A. | — | Hauptknopf sperrt beim Senden, Kurzmeldung, Dialog, Seitenbereich, Tabellenfelder, Datum mit Bezeichnung. | Bedienproben. |
+| P-05 Komplexe Informationen | B. Keine neue Darstellungsentscheidung nötig. | — | Begründung statt drei Varianten (Ansichten bleiben). | — |
+| P-06 Sicherer Änderungsweg, Rückweg | A. | — | Eigener Worktree und Branch, Rückweg ausprobiert. | T-20. |
+| P-07 Schrittfolge | A. | — | Grundlagen zuerst, dann Seitengruppen, Commits je Schritt. | Git-Verlauf. |
+| P-08 Technische Qualität | A. | — | Konsole und Skriptfehler je Seite, Leistung mit gleicher Menge vorher und nachher. | T-18; Lücke L6 (Toleranz nicht vorab festgelegt). |
+| P-09 Wann der Pilot bestanden ist | A. | — | Getrennte Stände im README. Kein offener kritischer Fehler bekannt. | T-22. |
+| P-10 Ergebnislieferung | A. | — | README, Profil, Inventar, Zuordnung, Matrix, Arbeitsstand, Bilder, Vorschau. | T-22. |
+
+## 3. Abweichungen (G.3)
+
+| Kennung | Regel | Ansicht | Grund | Auswirkung | Alternative | Entscheidung | Geltung, Prüftermin |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| A1 | G-01 Zielschrift | alle | Angenommene Markenschrift Archivo (Design-System Wilde Habitate, freie Lizenz). Proxima Nova liegt nicht vor; P-03 sieht dann Work Sans oder Systemschrift vor, die Marke geht vor. | Keine | Work Sans | Offen, Alexander | Pilotdauer |
+| A2 | G-01 Abschnittstitel 20 px | alle | Stufe 4 bleibt 18 px wie im Design-System. | Etwas kleinere Hierarchie | 20 px | Offen, Alexander | Pilotdauer |
+| A3 | G-02 Farbtabelle | alle | Markenprofil Wilde Habitate (dunkel Standard, Honiggold, Blattgrün) statt der hellblauen Pilotpalette. G-02 lässt ein dokumentiertes Profil zu; Bedeutung und 4,5:1 gelten. Tokens bleiben quellgleich (`pruefung/tokens.py`). | Keine | Pilotpalette | Offen, Alexander | Pilotdauer |
+| A4 | G-03 Rundung 6/8 px | alle | Design-System 4/6/8 px. | Keine | — | Offen | Pilotdauer |
+| A5 | G-05 Schwelle 1024 px | Navigation | Bestand: Schublade unter 1024 px, schmale Leiste bis 1279 px. Entspricht der Schwelle. | Keine | — | — | — |
+
+## 4. Lücken (abnahmerelevant, nicht als bestanden gezählt)
+
+| Kennung | Regel | Lücke | Kleinster nächster Schritt |
+| --- | --- | --- | --- |
+| L1 | B-05 | Keine vollständige Konfliktprüfung (Kapazität, Zeit) bei Zuordnungen außerhalb des Launch. | Fachlich klären, ob nötig. |
+| L2 | B-07, T-17 | Mehrere Schreibwege ohne Konfliktschutz (Themen-Autosave, Entscheidungen, Seiten, Meilensteine, Launch-Sofortspeichern, Saison-Rad). Wer zuletzt speichert, gewinnt. | Backend-Paket mit erwarteter Revision je Aktion, wie bei Vorhaben (`expect`). |
+| L3 | D-03, T-12 | Anzeige über Mitternacht und bei Zeitumstellung nicht eigens geprüft. | Probe mit festem Stichtag. |
+| L4 | G-06 | Spielkarten schließen sich nach 7 bis 9 s selbst (`game.js`). | Entscheiden, ob das Spiel im Pilotumfang ist. |
+| L5 | Q-01, T-16 | Personenwahl ist keine Anmeldung; verweigerte Aktionen je Rolle nicht prüfbar. | Paket V35 (Google-Anmeldung). |
+| L6 | P-08, T-18 | Leistungstoleranz nicht vor der Umsetzung festgelegt; bei 600 synthetischen Themen braucht Bearbeiten rund 2,0 statt 1,3 bis 1,8 s. | Toleranz festlegen, Bearbeiten mit realer Menge messen. |
+| L7 | P-08, T-04 | Kein echtes Touchgerät, nur Emulation der Breite. | Alexanders Test am Handy. |
+| L8 | T-15, T-21 | Keine echte Wirkung nach außen und kein fachlicher Versuch mit zwei Personen. | Testaufgaben in `ARBEITSSTAND.md`. |

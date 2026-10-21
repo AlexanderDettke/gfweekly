@@ -31,6 +31,9 @@ node pruefung/schirme.mjs "$ZIEL"
 echo "\n== Bedienung (Vertretung, Vorhaben) =="
 node pruefung/bedienung.mjs | tail -1
 
+echo "\n== Webapp Standard, Pilot zur Erprobung: 320 px, 200 % Text, Schrift, Ziele, Namen, Tastatur, Bewegung, Dialoge, Bedienproben =="
+node pruefung/webstandard-pruefung.mjs | tail -2
+
 echo "\n== Organisationsentscheidungen =="
 node pruefung/organisation-entscheidungsfuehrung.mjs
 
@@ -55,7 +58,7 @@ cat > pruefung/letzte-abnahme.json <<JSON
   "stand": "$STAND",
   "commit": "$(git rev-parse HEAD)",
   "datum": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "laeufe": ["tokens", "farbscan", "kontrast", "matrix", "schirme (Oberfläche)", "bedienung (Oberfläche)", "kommunikation", "organisationsentscheidungen", "waechter"],
+  "laeufe": ["tokens", "farbscan", "kontrast", "matrix", "schirme (Oberfläche)", "bedienung (Oberfläche)", "kommunikation", "organisationsentscheidungen", "webstandard (Oberfläche)", "waechter"],
   "ungeprueft": "Wirkung in der Datenbank, Asana-Lebenszyklus, Nebenläufigkeit, verborgene Oberflächenteile"
 }
 JSON
