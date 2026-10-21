@@ -159,7 +159,7 @@ function renderStat(){
 
 /* Anlegen: genau fünf Eingaben. „unklar“ schaltet das Enddatum auf eine Schätzung in Tagen um. */
 function neuModal(){
-  const heute=new Date().toISOString().slice(0,10);
+  const heute=gfIsoTag();   /* D-03: Ortszeit; vorher UTC, kurz nach Mitternacht der Vortag */
   const m=document.getElementById("modal");
   m.innerHTML=`<div class="modal vt-modal" role="dialog" aria-modal="true" aria-label="Abwesenheit anlegen">
     <div class="modal-h"><h3>Abwesenheit anlegen</h3><button class="icon-btn" data-x aria-label="Schließen">✕</button></div>
@@ -167,20 +167,20 @@ function neuModal(){
       <div class="fld"><label>Wer ist weg</label>${gfChips("person",["Alex","Lea"],gfWho(),{label:"Person"})}</div>
       <div class="fld"><label>Ab wann</label><input class="txt" type="date" name="von" value="${heute}"></div>
       <div class="fld"><label>Bis wann</label>
-        <div class="ub-r3"><input class="txt" type="date" name="bis" style="max-width:200px">
+        <div class="ub-r3"><input class="txt" type="date" name="bis" aria-label="Bis wann" style="max-width:200px">
         ${gfChips("offen",[["","Datum steht fest"],["1","unklar"]],"",{label:"Enddatum"})}</div>
         <div id="schaetzWrap" hidden style="margin-top:6px">${gfStepper("tage",7,{min:1,max:120,label:"Geschätzte Tage"})} <span class="fd-muted">Tage geschätzt</span></div>
       </div>
       <div class="fld"><label>Planbar oder sofort</label>${gfChips("art",[["geplant","planbar"],["sofort","sofort"]],"geplant",{label:"Art"})}</div>
       <div class="fld"><label>Kontakt in der Zeit</label>
         ${gfChips("kontakt",[["keiner","keiner"],["wochenbrief","Wochenbrief"],["gespraech","Gespräch"]],"keiner",{label:"Kontakt"})}
-        <div id="zeitWrap" hidden style="margin-top:6px"><input class="txt" name="gespraech_zeit" placeholder="Zeit des Gesprächs, zum Beispiel dienstags 9 Uhr"></div>
-        <input class="txt" name="kanal" style="margin-top:6px" placeholder="nur Notfall über …">
+        <div id="zeitWrap" hidden style="margin-top:6px"><input class="txt" name="gespraech_zeit" aria-label="Zeit des Gesprächs" placeholder="Zeit des Gesprächs, zum Beispiel dienstags 9 Uhr"></div>
+        <input class="txt" name="kanal" aria-label="Erreichbar nur im Notfall über" style="margin-top:6px" placeholder="nur Notfall über …">
       </div>
     </div>
     <div class="modal-f"><button class="btn btn-primary" data-save>Anlegen und Übergabe öffnen</button><button class="btn btn-brand" data-x style="margin-left:auto">Abbrechen</button></div>
   </div>`;
-  m.classList.add("open");
+  gfDialogAuf(m, ".fchips .chip.on");   /* B-08: modal, Anfangsfokus, Escape, Fokus zurück zu „Abwesenheit anlegen“ */
   const q=s=>m.querySelector(s);
   m.addEventListener("change",e=>{
     if(e.target.name==="offen"){ const unklar=e.target.value==="1"; q("#schaetzWrap").hidden=!unklar; q("[name=bis]").disabled=unklar; }

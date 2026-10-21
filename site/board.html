@@ -58,7 +58,7 @@
 <!-- Detail-Panel -->
 <div class="panel-back" id="panelBack"></div>
 <aside class="panel" id="panel" aria-hidden="true">
-  <div class="panel-h"><h3 id="pTitle">Thema</h3><button class="icon-btn" id="pClose" title="Schließen">✕</button></div>
+  <div class="panel-h"><h3 id="pTitle">Thema</h3><button class="icon-btn" id="pClose" title="Schließen" aria-label="Schließen">✕</button></div>
   <div class="panel-b" id="pBody"></div>
   <div class="panel-f" id="pFoot"></div>
 </aside>
@@ -269,12 +269,13 @@ function openPanel(id){
   $("#pTidy").onclick=()=>openTidy(t.id);
   $("#pDiscussed").onclick=()=>savePanel({extra:{last_discussed:iso(today)}, toast:"Als heute besprochen markiert"});
   $("#pDelete").onclick=async()=>{ if(!confirm(`„${t.title}" löschen?`)) return; try{ await gfApi("delete",{id:t.id}); TOPICS=TOPICS.filter(x=>x.id!==t.id); P_DIRTY=false; render(); closePanel(true); gfToast("Gelöscht"); }catch(e){ gfToast("Fehler: "+e.message); } };
-  $("#panel").classList.add("open"); $("#panel").setAttribute("aria-hidden","false"); $("#panelBack").classList.add("open");
+  $("#panel").classList.add("open"); $("#panel").setAttribute("aria-hidden","false"); $("#panelBack").classList.add("open"); gfBereichAuf($("#panel"));
   const tidy=gfTidyTopic(t); $("#pTidy").classList.toggle("has-hint",!!tidy); if(tidy) $("#pTidy").title="Es gibt Marker im Text („"+tidy.found.slice(0,3).join("“, „")+"“). Aufteilung vorschlagen.";
 }
 async function closePanel(force){
   if(!force && OPEN && P_DIRTY){ const ok=await savePanel({silent:true}); if(!ok && !confirm("Speichern ist fehlgeschlagen. Trotzdem schließen? Die Änderungen gehen dann verloren.")) return; }
-  $("#panel").classList.remove("open"); $("#panel").setAttribute("aria-hidden","true"); $("#panelBack").classList.remove("open"); OPEN=null; P_DIRTY=false; clearTimeout(P_TIMER);
+  const zuId=OPEN; $("#panel").classList.remove("open"); $("#panel").setAttribute("aria-hidden","true"); $("#panelBack").classList.remove("open"); OPEN=null; P_DIRTY=false; clearTimeout(P_TIMER);
+  gfBereichZu($("#panel"), zuId?document.querySelector(`.bcard[data-id="${zuId}"]`):null);   /* B-08: Fokus zurück zur Karte */
 }
 window.addEventListener("beforeunload",e=>{ if(OPEN && P_DIRTY){ savePanel({silent:true}); e.preventDefault(); e.returnValue=""; } });
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden" && OPEN && P_DIRTY) savePanel({silent:true}); });

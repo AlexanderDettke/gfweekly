@@ -92,7 +92,7 @@
   .km-tabelle.stapel td:nth-child(3) br{display:none}
   .km-tabelle.stapel td:nth-child(3) .km-muted{margin-left:.4em}
 }
-.km-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;align-items:start}
+.km-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,21rem),1fr));gap:12px;align-items:start}   /* G-01, G-05: wächst mit der Schrift (vorher 280px) */
 .km-block{background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:10px 12px;display:grid;gap:8px;min-width:0}
 .km-block h3{font-size:var(--stufe-3)}
 

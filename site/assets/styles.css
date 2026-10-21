@@ -573,7 +573,7 @@ label.rit .mini.del{color:var(--muted)} label.rit .mini.del:hover{color:var(--cr
 .c-more:hover{text-decoration:underline}
 /* Unternavigation */
 .subnav{display:flex;gap:2px;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:3px;width:max-content;margin:0 0 12px}
-.subnav a{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:var(--radius-s);font-size:var(--stufe-2);font-weight:500;color:var(--text-2);text-decoration:none;transition:background var(--motion-fast) var(--motion-ease)}
+.subnav a{display:inline-flex;align-items:center;min-height:var(--ziel-min);padding:0 12px;border-radius:var(--radius-s);font-size:var(--stufe-2);font-weight:500;color:var(--text-2);text-decoration:none;transition:background var(--motion-fast) var(--motion-ease)}
 .subnav a:hover{background:var(--surface-2);color:var(--text)} .subnav a.on{background:var(--action);color:var(--on-action)}
 /* Bewegung nach Design System: nur transform/opacity, 120/200/400, ein Einlauf */
 @keyframes ht-rise{from{opacity:0;transform:translateY(var(--motion-rise))}to{opacity:1;transform:none}}
@@ -919,7 +919,7 @@ html[data-nav="rail"] .sb-toggle svg{transform:rotate(180deg)}
 .sb-nav a .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .sb-nav a .nbadge{margin-left:auto;display:inline-flex;align-items:center;justify-content:center}
 .sb-sub{display:flex;flex-direction:column;margin:2px 0 6px}
-.sb-sub a{padding:6px 10px 6px 45px;min-height:32px;font-size:var(--stufe-2);color:var(--text-3);border-left:3px solid transparent}
+.sb-sub a{padding:6px 10px 6px 45px;min-height:var(--ziel-min);font-size:var(--stufe-2);color:var(--text-3);border-left:3px solid transparent}
 .sb-sub a::before{content:"";width:5px;height:5px;background:currentColor;opacity:.45;position:absolute;left:31px;top:50%;transform:translateY(-50%)}
 .sb-sub a:hover{color:var(--text)}
 .sb-sub a.on{color:var(--text);background:var(--fill-soft)} .sb-sub a.on::before{opacity:1;background:var(--accent)}
@@ -1428,7 +1428,7 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 .ub-r2 .fchips{margin:0}
 .ub-r3{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .ub-r3 label{display:inline-flex;align-items:center;gap:6px;font-size:var(--stufe-2);color:var(--text-2)}
-.ub-r3 input[type=date]{background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-s);color:var(--text);padding:6px 8px;min-height:36px}
+.ub-r3 input[type=date]{background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-s);color:var(--text);padding:6px 8px;min-height:var(--ziel-min)}
 .ub-r3 input.txt{flex:1;min-width:180px}
 .ub-doss[hidden]{display:none}
 .ub-doss{background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);display:flex;flex-direction:column;gap:6px}
@@ -1511,7 +1511,7 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 .vh-c-n.leer{font-style:italic}
 .vh-c-fuss{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
 .vh-c-p{font-size:var(--stufe-1);color:var(--text-2);font-variant-numeric:tabular-nums;white-space:nowrap}
-.vh-weiter{align-self:flex-start;margin:0 12px 10px;min-height:36px}
+.vh-weiter{align-self:flex-start;margin:0 12px 10px;min-height:var(--ziel-min)}
 
 /* Woche */
 .vh-woche{border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);overflow:hidden;background:var(--panel)}
@@ -1588,7 +1588,7 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 .vh-punkt label .t{color:var(--text)}
 .vh-punkt label small{font-size:var(--stufe-1);color:var(--text-2)}
 .vh-punkt.fertig label .t{text-decoration:line-through;color:var(--text-2)}
-.vh-p-edit{min-height:32px;padding:2px 8px}
+.vh-p-edit{min-height:var(--ziel-min);padding:2px 8px}
 .vh-punkt-form{grid-column:1/-1}
 .vh-pform{display:flex;flex-direction:column;gap:8px;padding:10px;border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);background:var(--surface)}
 .vh-pform-z{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,160px);gap:8px}
@@ -1597,11 +1597,11 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 .vh-fld input,.vh-fld textarea,.vh-fld select{min-height:var(--ziel-min);padding:8px 10px;border-radius:var(--radius-s);border:var(--rahmen) solid var(--border-strong);background:var(--surface-2);color:var(--text);font:inherit;font-size:var(--stufe-3);font-weight:400}
 .vh-fld[hidden]{display:none}
 .vh-verkn{display:flex;flex-direction:column;gap:6px}
-.vh-vk summary{cursor:pointer;list-style:none;min-height:32px;display:flex;align-items:center}
+.vh-vk summary{cursor:pointer;list-style:none;min-height:var(--ziel-min);display:flex;align-items:center}
 .vh-vk ul{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
 .vh-vk li{display:flex;gap:8px;align-items:center;justify-content:space-between;font-size:var(--stufe-2)}
 .vh-vk li a{min-width:0;overflow:hidden;text-overflow:ellipsis}
-.vh-vk li .btn{min-height:32px;padding:2px 8px;flex:0 0 auto}
+.vh-vk li .btn{min-height:var(--ziel-min);padding:2px 8px;flex:0 0 auto}
 .vh-ballchips .chip{min-height:var(--ziel-min)}
 .vh-sync{margin:0;padding-top:10px;border-top:var(--rahmen) solid var(--border);font-size:var(--stufe-1);color:var(--text-2)}
 .vh-vlf{margin-bottom:2px}
@@ -1674,7 +1674,7 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 .vh-ew-vorschau{margin:0;padding:10px 12px;border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);font-size:var(--stufe-2);line-height:var(--leading-text)}
 .vh-ew-haken{margin:0;padding:10px 12px;border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);display:flex;flex-direction:column;gap:8px}
 .vh-ew-haken legend{font-size:var(--stufe-2);font-weight:600;padding:0 4px}
-.vh-ew-haken label{display:flex;gap:8px;align-items:flex-start;font-size:var(--stufe-2);min-height:32px}
+.vh-ew-haken label{display:flex;gap:8px;align-items:flex-start;font-size:var(--stufe-2);min-height:var(--ziel-min)}
 .vh-ew-haken input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--accent);flex:0 0 auto}
 .vh-ew-haken small{color:var(--text-2)}
 .vh-ew-warn{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;padding:8px 10px;border:var(--rahmen) solid var(--warn);border-radius:var(--radius-m);font-size:var(--stufe-2)}
@@ -1826,3 +1826,8 @@ button.del{min-height:var(--ziel-min);display:inline-flex;align-items:center}
 /* G-05, T-02: lange deutsche Wörter brechen in schmalen Kästchen um, statt hinauszuragen */
 .badgebar .bl,.badgebar .bl span{min-width:0;overflow-wrap:anywhere;hyphens:auto}
 .hab .steps{flex-wrap:wrap;gap:4px 12px}
+/* G-03: kompakte Chip-Reihen behalten ihr Bild (28 bis 32 px), die Trefferfläche ist mindestens 44 × 44 px, mittig, nie kleiner als der Knopf */
+.fchips .chip,.au-gate .chip{position:relative}
+.fchips .chip::after,.au-gate .chip::after{content:"";position:absolute;inset:min(0px,calc(50% - var(--ziel-min) / 2))}
+/* B-08: sichtbarer Fokus auch an SVG-Bedienelementen */
+svg [role=button]:focus-visible{outline:2px solid var(--focus);outline-offset:2px}

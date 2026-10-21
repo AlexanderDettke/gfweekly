@@ -52,7 +52,7 @@ details[open]>summary .chev{transform:rotate(90deg)}
 .ln-weg .body{padding:0 16px 16px;display:grid;gap:12px}
 .ln-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .ln-row label{display:inline-flex;align-items:center;gap:6px;font-size:var(--stufe-2);color:var(--text-2)}
-.ln-row input[type=date],.ln-row select,.ln-sel{background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-s);color:var(--text);padding:6px 8px;min-height:36px;font-size:var(--stufe-2);max-width:100%}
+.ln-row input[type=date],.ln-row select,.ln-sel{background:var(--surface-2);border:var(--rahmen) solid var(--border);border-radius:var(--radius-s);color:var(--text);padding:6px 8px;min-height:var(--ziel-min);font-size:var(--stufe-2);max-width:100%}
 .ln-row .chk{display:inline-flex;align-items:center;gap:6px;font-size:var(--stufe-2);color:var(--text-2)}
 .ln-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .ln-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:8px 10px;background:var(--surface-2);border-radius:var(--radius-m);font-size:var(--stufe-2)}
@@ -417,7 +417,7 @@ document.addEventListener("click", async e=>{
     return;
   }
   if(act==="send"){
-    if(!confirm(`Bestätigte Aufgaben von ${f.kurzname} nach Asana senden? Bestehende Aufgaben werden aktualisiert, nicht verdoppelt.`)) return;
+    if(!confirm(`${f.kurzname}: ${b.textContent.trim()}? Nur bestätigte Aufgaben gehen nach Asana; bestehende Aufgaben werden aktualisiert, nicht verdoppelt.`)) return;   /* B-06: Ziel und Anzahl vor der Wirkung nach außen */
     b.disabled=true; b.textContent="sendet …";
     try{ const r=await gfApi("launch_send",{ event_id:f.event_id, by:gfWho() });
       const teile=[`${r.neu} neu, ${r.aktualisiert} aktualisiert, ${r.unteraufgaben} Unteraufgaben.`];

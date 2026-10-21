@@ -27,7 +27,7 @@ async function gfApi(action, payload){
   catch(e){ const f=new Error(navigator.onLine===false?"Keine Verbindung: Das Gerät ist offline. Bitte versuche es erneut, sobald du wieder verbunden bist.":"Keine Verbindung zum Server. Bitte prüfe die Verbindung und versuche es erneut."); f.offline=true; throw f; }
   let d={}; try{ d = await res.json(); }catch(e){}
   if(res.status===401) throw { auth:true };
-  if(!res.ok) throw new Error(d.error || ("HTTP "+res.status));
+  if(!res.ok){ const f=new Error(d.error || ("HTTP "+res.status)); f.status=res.status; f.data=d; if(res.status===409) f.konflikt=true; throw f; }   /* B-07: Status bleibt erhalten */
   return d;
 }
 
@@ -824,10 +824,22 @@ function gfBezeichnungen(root){
   });
 }
 if(window.MutationObserver) document.addEventListener("DOMContentLoaded",()=>{ gfBezeichnungen(); new MutationObserver(()=>{ cancelAnimationFrame(_gfBzRaf); _gfBzRaf=requestAnimationFrame(()=>gfBezeichnungen()); }).observe(document.body,{childList:true,subtree:true}); });
+/* Webapp Standard P-04, B-08: Seitlicher Bereich (Detailpanel). Er bleibt nicht modal, damit der Ausgangsdatensatz am großen
+   Bildschirm sichtbar bleibt, bekommt aber einen Namen, den Fokus beim Öffnen und gibt ihn beim Schließen an den Auslöser zurück
+   (oder an ersatz, wenn der Auslöser inzwischen neu gerendert wurde). */
+function gfBereichAuf(panel){
+  if(!panel) return; if(!panel.__gfAusl) panel.__gfAusl=document.activeElement;
+  panel.setAttribute("role","dialog"); const h=panel.querySelector("h2,h3");
+  if(h){ if(!h.id) h.id="wsb"+(++_gfBzN); panel.setAttribute("aria-labelledby",h.id); h.setAttribute("tabindex","-1"); setTimeout(()=>{ if(!panel.contains(document.activeElement)) h.focus(); },40); }
+}
+function gfBereichZu(panel, ersatz){
+  if(!panel) return; const a=panel.__gfAusl; panel.__gfAusl=null;
+  const ziel=(a&&a.isConnected&&a!==document.body)?a:ersatz; if(ziel&&ziel.focus) ziel.focus();
+}
 /* B-08: Elemente mit role="button", die kein echter Knopf sind, reagieren auf Enter und Leertaste wie auf einen Klick. */
 document.addEventListener("keydown",e=>{
   const el=e.target; if(!el||!el.getAttribute||el.getAttribute("role")!=="button"||/^(BUTTON|A|INPUT|SELECT|TEXTAREA|SUMMARY)$/.test(el.tagName)) return;
-  if(e.key==="Enter"||e.key===" "){ e.preventDefault(); el.click(); }
+  if(e.key==="Enter"||e.key===" "){ e.preventDefault(); if(typeof el.click==="function") el.click(); else el.dispatchEvent(new MouseEvent("click",{bubbles:true})); }   /* SVG-Elemente haben kein click() */
 });
 let GF_VH_LISTE=null;
 async function gfVhListe(neu){ if(!GF_VH_LISTE||neu){ const d=await gfApi("vorhaben_list"); GF_VH_LISTE=d.vorhaben||[]; } return GF_VH_LISTE; }
