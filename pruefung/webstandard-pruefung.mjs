@@ -42,20 +42,23 @@ async function kontext(browser, o = {}) {
     timezoneId:'Europe/Berlin', reducedMotion:o.reduced ? 'reduce' : 'no-preference' });
   await ctx.addInitScript((thema) => {
     try {
-      localStorage.setItem('gf_theme', thema);
+      localStorage.setItem('gf_theme', thema.t);
       localStorage.setItem('gf_nav', 'open');
       const d = new Date();
       const tag = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
       for (const w of ['Alex','Lea']) localStorage.setItem(`gf_ci_${w}_${tag}`, '1');
-      sessionStorage.setItem('gf_pw', 'test');
+      if (!thema.ohnePw) sessionStorage.setItem('gf_pw', 'test');
       sessionStorage.setItem('gf_who', 'Alex');
     } catch (e) {}
-  }, o.thema || 'dark');
+  }, { t: o.thema || 'dark', ohnePw: !!o.ohnePw });
   await ctx.route('**/functions/v1/**', async (route) => {
     const req = route.request();
     if (req.url().includes('/tpa')) return route.fulfill({ status:200, contentType:'application/json', body:JSON.stringify(TPA) });
-    let action = '', nutzlast = {};
-    try { const b = JSON.parse(req.postData() || '{}'); action = b.action || ''; nutzlast = b.payload || {}; } catch (e) {}
+    let action = '', nutzlast = {}, pw = '';
+    try { const b = JSON.parse(req.postData() || '{}'); action = b.action || ''; nutzlast = b.payload || {}; pw = b.password || ''; } catch (e) {}
+    if (o.log) o.log.push({ action, nutzlast });
+    if (pw && pw !== 'test') return route.fulfill({ status:401, contentType:'application/json', body:JSON.stringify({ error:'unauthorized' }) });
+    if (o.warte && o.warte(action)) await new Promise(r => setTimeout(r, o.warte(action)));
     if (o.fehler && o.fehler(action)) return route.fulfill({ status:500, contentType:'application/json', body:JSON.stringify({ error:'Testfehler' }) });
     const roh = ANTWORT[action] || FALLBACK;
     const body = typeof roh === 'function' ? roh(nutzlast) : roh;
@@ -272,6 +275,73 @@ for (const [seite, aktion] of [['vorhaben.html', 'vorhaben_list'], ['board.html'
   ERG['ladefehler_' + seite] = r;
   if (!r.hinweis || r.laedt) melde(seite, `Ladefehler bei ${aktion}: Hinweis sichtbar=${r.hinweis}, „lädt …“ bleibt=${r.laedt}`);
   await ctx.close();
+}
+
+/* Gezielte Bedienproben zu geänderten Abläufen (T-05, T-06, T-08, T-09, T-11, B-07). Jede Probe nennt ihr Ergebnis einzeln. */
+const probe = (name, ok, info = '') => { ERG.proben = ERG.proben || {}; ERG.proben[name] = ok; if (!ok) melde('Probe', name + (info ? ' (' + info + ')' : '')); };
+// Eingabe: leeres Pflichtfeld, langsame Antwort mit Doppelklick, Fehler mit erhaltenen Eingaben
+{
+  const log = [];
+  const ctx = await kontext(browser, { log, warte: a => a === 'capture' ? 1200 : 0, fehler: a => a === 'capture' && log.filter(x => x.action === 'capture').length > 1 });
+  const { page } = await oeffne(ctx, 'capture.html');
+  await page.click('#sendBtn');
+  const leer = await page.evaluate(() => ({ err: !document.getElementById('rawErr').hidden, inv: document.getElementById('raw').getAttribute('aria-invalid'), fokus: document.activeElement.id }));
+  probe('Eingabe: leeres Pflichtfeld zeigt Fehler am Feld und fokussiert es', leer.err && leer.inv === 'true' && leer.fokus === 'raw', JSON.stringify(leer));
+  await page.fill('#raw', 'Testgedanke für die Prüfung');
+  await page.click('#sendBtn'); await page.click('#sendBtn', { force:true }).catch(() => {});
+  const waehrend = await page.evaluate(() => ({ dis: document.getElementById('sendBtn').disabled, txt: document.getElementById('sendBtn').textContent }));
+  await page.waitForTimeout(1600);
+  probe('Eingabe: während des Sendens gesperrt, Doppelklick erzeugt genau eine Anfrage', waehrend.dis && /gesendet/.test(waehrend.txt) && log.filter(x => x.action === 'capture').length === 1, JSON.stringify(waehrend) + ' Anfragen ' + log.filter(x => x.action === 'capture').length);
+  await page.click('#again'); await page.fill('#raw', 'Zweiter Gedanke');
+  await page.click('#sendBtn'); await page.waitForTimeout(1600);
+  const fehl = await page.evaluate(() => ({ err: !document.getElementById('sendErr').hidden && document.getElementById('sendErr').textContent, wert: document.getElementById('raw').value, form: getComputedStyle(document.getElementById('form')).display }));
+  probe('Eingabe: Senden fehlgeschlagen bleibt am Knopf sichtbar, Eingabe bleibt erhalten', !!fehl.err && /erhalten/.test(fehl.err) && fehl.wert === 'Zweiter Gedanke' && fehl.form !== 'none', JSON.stringify(fehl));
+  await ctx.close();
+}
+// Board: Verschieben-Menü per Tastatur, Escape mit Fokusrückgabe, Umsortieren ohne Ziehen; Detailbereich mit Fokusrückgabe
+{
+  const log = [];
+  const ctx = await kontext(browser, { log });
+  const { page } = await oeffne(ctx, 'board.html');
+  const lane = await page.evaluate(() => { const l = [...document.querySelectorAll('.lane')].find(x => x.querySelectorAll('.bcard').length >= 2); return l ? { col: l.dataset.col, ids: [...l.querySelectorAll('.bcard')].map(c => c.dataset.id) } : null; });
+  if (!lane) probe('Board: Spalte mit zwei Karten in den Testdaten', false);
+  else {
+    const sel = `.bcard[data-id="${lane.ids[0]}"] .mv`;
+    await page.focus(sel); await page.keyboard.press('Enter'); await page.waitForTimeout(80);
+    const auf = await page.evaluate(() => ({ offen: !document.getElementById('movePop').hidden, drin: document.getElementById('movePop').contains(document.activeElement), runter: [...document.querySelectorAll('#movePop [data-ord]')].map(b => b.textContent) }));
+    await page.keyboard.press('Escape'); await page.waitForTimeout(60);
+    const zu = await page.evaluate((sel) => ({ zu: document.getElementById('movePop').hidden, fokus: document.activeElement === document.querySelector(sel) }), sel);
+    probe('Board: ⇄ öffnet per Tastatur mit Fokus im Menü, Escape schließt und gibt den Fokus zurück', auf.offen && auf.drin && zu.zu && zu.fokus, JSON.stringify({ auf, zu }));
+    probe('Board: Umsortieren ohne Ziehen wird angeboten', auf.runter.some(t => /nach unten/.test(t)), JSON.stringify(auf.runter));
+    await page.focus(sel); await page.keyboard.press('Enter'); await page.waitForTimeout(60);
+    const vorher = log.length;
+    await page.evaluate(() => [...document.querySelectorAll('#movePop [data-ord]')].find(b => /Eine Stelle nach unten/.test(b.textContent))?.click());
+    await page.waitForTimeout(300);
+    const nach = await page.evaluate((col) => [...document.querySelector(`.lane[data-col="${col}"]`).querySelectorAll('.bcard')].map(c => c.dataset.id), lane.col);
+    const upd = log.slice(vorher).filter(x => x.action === 'update' && x.nutzlast.lane_order != null);
+    probe('Board: „Eine Stelle nach unten“ speichert die Reihenfolge und zeigt sie', upd.length > 0 && nach.indexOf(lane.ids[0]) === 1, 'Reihenfolge ' + nach.join(',') + ' · Speicheraufrufe ' + upd.length);
+    const karte = `.bcard[data-id="${lane.ids[1]}"]`;
+    await page.focus(karte); await page.keyboard.press('Enter'); await page.waitForTimeout(200);
+    const p = await page.evaluate(() => ({ offen: document.getElementById('panel').classList.contains('open'), drin: document.getElementById('panel').contains(document.activeElement), name: !!document.getElementById('panel').getAttribute('aria-labelledby') }));
+    await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+    const pz = await page.evaluate((k) => ({ zu: !document.getElementById('panel').classList.contains('open'), fokus: document.activeElement === document.querySelector(k) }), karte);
+    probe('Board: Detailbereich öffnet per Enter mit Namen und Fokus, Escape schließt mit Fokus auf der Karte', p.offen && p.drin && p.name && pz.zu && pz.fokus, JSON.stringify({ p, pz }));
+  }
+  await ctx.close();
+}
+// Tor und Ladefehler: falsches Passwort sichtbar und angesagt; Ladefehler nach der Anmeldung auf der Seite, Passwort bleibt
+{
+  const ctx = await kontext(browser, { ohnePw:true });
+  const { page } = await oeffne(ctx, 'board.html');
+  await page.fill('#pw', 'falsch'); await page.click('#unlock'); await page.waitForTimeout(300);
+  const t = await page.evaluate(() => ({ label: !!document.querySelector('label[for="pw"]'), err: document.getElementById('gateErr').textContent, rolle: document.getElementById('gateErr').getAttribute('role') }));
+  probe('Tor: sichtbare Bezeichnung, falsches Passwort als Meldung mit role=alert', t.label && /Falsches Passwort/.test(t.err) && t.rolle === 'alert', JSON.stringify(t));
+  await ctx.close();
+  const ctx2 = await kontext(browser, { fehler: a => a === 'list' });
+  const { page: p2 } = await oeffne(ctx2, 'cockpit.html');
+  const l = await p2.evaluate(() => ({ fehler: !!document.querySelector('.ws-fehler [data-ws-neu]'), tor: getComputedStyle(document.getElementById('gate')).display !== 'none', pw: sessionStorage.getItem('gf_pw') }));
+  probe('Ladefehler nach der Anmeldung: Meldung mit „Erneut laden“ auf der Seite, Tor bleibt zu, Passwort bleibt', l.fehler && !l.tor && l.pw === 'test', JSON.stringify(l));
+  await ctx2.close();
 }
 
 await browser.close();

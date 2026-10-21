@@ -193,7 +193,7 @@ function bind(){
     el.addEventListener("dragstart",e=>{ DRAG=el.dataset.id; el.classList.add("dragging"); e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",DRAG); });
     el.addEventListener("dragend",()=>{ el.classList.remove("dragging"); document.querySelectorAll(".lane.over").forEach(l=>l.classList.remove("over")); });
     el.addEventListener("click",e=>{ if(e.target.closest(".c-more")) return; if(e.target.closest(".mv")){ e.stopPropagation(); openMovePop(el.dataset.id, e.target.closest(".mv")); return; } if(MEET && MEET.queue.includes(el.dataset.id)){ MEET.idx=MEET.queue.indexOf(el.dataset.id); saveMeet(); renderMeet(); $("#meet").scrollIntoView({behavior:"smooth",block:"start"}); return; } openPanel(el.dataset.id); });
-    el.addEventListener("keydown",e=>{ if(e.key==="Enter") openPanel(el.dataset.id); });
+    el.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target===el) openPanel(el.dataset.id); });   /* B-02: Enter auf ⇄ oder „mehr“ öffnet nicht zusätzlich die Details */
   });
   document.querySelectorAll(".lane").forEach(l=>{
     l.addEventListener("dragover",e=>{ e.preventDefault(); l.classList.add("over"); });
@@ -352,7 +352,10 @@ function openMovePop(id, anchor){
   const cur = GROUP==="ablauf"?t.board_lane:GROUP==="prio"?t.priority:GROUP==="zeitraum"?zeitOf(t):personKey(t);
   const pop=$("#movePop");
   /* Webapp Standard B-02, B-05: Reihenfolge innerhalb der Spalte auch ohne Ziehen ändern (wirkt wie das Ablegen an dieser Stelle). */
-  const lane=GROUP==="ablauf"?TOPICS.filter(x=>x.board_lane===t.board_lane).sort((a,b)=>a.lane_order-b.lane_order):[];
+  /* Gezählt werden die sichtbaren Karten der Spalte in ihrer angezeigten Reihenfolge, wie beim Ablegen nach dem Ziehen
+     (wiederkehrende Themen stehen mit lane_order in derselben Spalte, werden aber nicht als Karte gezeigt). */
+  const laneEl=GROUP==="ablauf"?document.querySelector(`.lane[data-col="${CSS.escape(t.board_lane||"")}"]`):null;
+  const lane=laneEl?[...laneEl.querySelectorAll(".bcard")].map(c=>TOPICS.find(x=>x.id===c.dataset.id)).filter(Boolean):[];
   const pos=lane.findIndex(x=>x.id===id);
   const reihe=GROUP==="ablauf"&&lane.length>1?`<div class="pop-h">Reihenfolge in „${gfEsc((cols.find(c=>c.key===cur)||{label:""}).label.split(" ·")[0])}“ (Platz ${pos+1} von ${lane.length})</div>`+
     (pos>0?`<button class="pop-i" data-ord="${gfEsc(lane[0].id)}">Ganz nach oben</button><button class="pop-i" data-ord="${gfEsc(lane[pos-1].id)}">Eine Stelle nach oben</button>`:"")+

@@ -476,14 +476,15 @@ function punktForm(p, vor={}){
     ${p?`<label class="vh-fld">Stand<input name="stand" maxlength="1000" value="${gfEsc(vor.stand!==undefined&&vor.stand!==""?vor.stand:(p.stand||""))}"></label>`:""}
     <div class="vh-pform-z"><label class="vh-fld">Wer<input name="wer" maxlength="120" value="${gfEsc(p?.wer||"")}"></label>
     <label class="vh-fld">Frist<input name="frist" type="date" value="${gfEsc(p?.frist||"")}"></label></div>
-    <div class="vh-pform-a"><button type="submit" class="btn btn-sm btn-primary">${p?"Speichern":"Hinzufügen"}</button><button type="button" class="btn btn-sm btn-ghost" data-pform-x>Abbrechen</button>${p?`<button type="button" class="btn btn-sm btn-ghost" data-pform-del style="margin-left:auto">Löschen</button>`:""}</div>
+    <div class="vh-pform-a"><button type="submit" class="btn btn-sm btn-primary">${p?"Speichern":"Hinzufügen"}</button><button type="button" class="btn btn-sm btn-ghost" data-pform-x>Abbrechen</button>${p?`<button type="button" class="btn btn-sm btn-ghost" data-pform-del style="margin-left:auto">Punkt löschen</button>`:""}</div>
   </form>`;
   const form=box.querySelector("form");
   /* Beim Stand-Vorschlag wird nur der Stand übernommen; die übrigen Felder stehen zur Ansicht da. */
   if(vor.vorschlag){ for(const n of ["titel","wer","frist"]) { form[n].readOnly=true; form[n].setAttribute("aria-readonly","true"); } form.stand.focus(); } else form.titel.focus();
   form.querySelector("[data-pform-x]").onclick=()=>{ box.innerHTML=""; if(!p) box.hidden=true; };
   const del=form.querySelector("[data-pform-del]");
-  if(del) del.onclick=async()=>{ try{ await gfApi("punkt_delete",{ id:p.id, by:gfWho() }); gfToast("Punkt gelöscht"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }catch(err){ gfToast(err.message||"Nicht gelöscht"); } };
+  /* Webapp Standard B-06, G-04: Löschen nennt Gegenstand und Folge, bevor es endgültig wirkt (vorher ohne Rückfrage). */
+  if(del) del.onclick=async()=>{ if(!confirm(`Punkt „${p.titel}“ endgültig löschen? Das lässt sich nicht rückgängig machen. Hat der Punkt schon Verlauf, wird das Löschen abgelehnt; setze ihn dann auf erledigt.`)) return; try{ await gfApi("punkt_delete",{ id:p.id, by:gfWho() }); gfToast("Punkt gelöscht"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }catch(err){ gfToast(err.message||"Nicht gelöscht"); } };
   form.onsubmit=async ev=>{ ev.preventDefault();
     const daten={ titel:form.titel.value.trim(), wer:form.wer.value.trim(), frist:form.frist.value||null };
     if(p) daten.stand=form.stand.value.trim();

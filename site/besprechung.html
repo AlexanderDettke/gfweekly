@@ -58,7 +58,7 @@
 const $=s=>document.querySelector(s);
 const NOW=new Date(); const TODAY=NOW.toLocaleDateString("sv-SE");
 const PO={hoch:0,kritisch:0,mittel:1,niedrig:2};
-let ITEMS=[], PEOPLE=[], LASTSESS=null, LASTDEC=[], TOPICS=[];
+let ITEMS=[], PEOPLE=[], LASTSESS=null, LASTDEC=[], TOPICS=[], LASTERR=null;
 /* V24b: Punkte, die im Übergabekorb einer Abwesenheit rot liegen, tragen in der Agenda die Marke „Vertretung“.
    VERTRETUNG hält dazu je Vorgang die abwesende Person. */
 let VERTRETUNG={};
@@ -109,6 +109,7 @@ function renderAgenda(){
   $("#bsAgL").querySelectorAll(".bs-go").forEach(b=>b.onclick=()=>{ MEET.cur=b.dataset.key; saveMeet(); renderMeet(); $("#meet").scrollIntoView({behavior:"smooth",block:"start"}); });
 }
 function renderLast(){
+  if(LASTERR){ gfLadefehler($("#bsLastL"), LASTERR, {titel:"Letzte Besprechung nicht geladen."}); return; }
   if(!LASTSESS){ $("#bsLastL").innerHTML=`<p class="fd-empty">Noch keine Besprechung protokolliert.</p>`; return; }
   const when=gfFmtShort(LASTSESS.started_at);
   $("#bsLastN").textContent=`${when} · ${LASTDEC.length}`;
@@ -227,10 +228,12 @@ async function endMeet(){
   gfTextModal("Protokoll der Besprechung", text, { subject:`GF-Besprechung ${gfFmtShort(ended)} · Protokoll`, intro:"Gespeichert unter Themen › Entscheidungen. Hier kopieren oder per Mail verschicken.", extra:`<a class="btn btn-ghost" href="entscheidungen.html">Entscheidungslog</a>` });
 }
 function renderAll(){ renderTop(); renderMeet(); renderAgenda(); renderLast(); }
+/* Webapp Standard B-07: ein Ladefehler ist kein „noch keine Besprechung“. LASTERR hält ihn fest, renderLast zeigt ihn. */
 async function loadLast(){
-  const s=await gfApi("sessions_list",{limit:5}).catch(()=>({sessions:[]}));
+  LASTERR=null;
+  const s=await gfApi("sessions_list",{limit:5}).catch(e=>{ LASTERR=e; return {sessions:[]}; });
   LASTSESS=(s.sessions||[]).find(x=>x.ended_at)||null;
-  LASTDEC=LASTSESS ? ((await gfApi("decisions_list",{session_id:LASTSESS.id}).catch(()=>({decisions:[]}))).decisions||[]) : [];
+  LASTDEC=LASTSESS ? ((await gfApi("decisions_list",{session_id:LASTSESS.id}).catch(e=>{ LASTERR=e; return {decisions:[]}; })).decisions||[]) : [];
 }
 /* Rote Korbzeilen laufender Abwesenheiten einsammeln, damit die Agenda sie kennzeichnen kann. */
 async function ladeVertretung(){
