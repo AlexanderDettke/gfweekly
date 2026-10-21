@@ -1,6 +1,6 @@
 {
   "fassung": "WEBAPP-PILOT-0.2",
-  "datum": "2026-10-21T05:06:29.420Z",
+  "datum": "2026-10-21T05:27:33.873Z",
   "seiten": {
     "arbeiten.html": {
       "kleinschrift": 0,
@@ -472,6 +472,9 @@
     "Board: Wechsel zu einem anderen Thema bleibt bei abgelehntem Speichern beim Entwurf mit Eingaben": true,
     "Liste: „heute besprochen“ zeigt bei Serverfehler den Fehler statt einer Erfolgsmeldung": true,
     "Datum: Kalendertag und „morgen“ in Berlin kurz vor und nach Mitternacht und am Tag der Zeitumstellung": true,
+    "Eingabe: Antwort ohne Inhalt gilt als unklar, kein Erfolgszustand, Eingabe bleibt": true,
+    "Datum: auch bei Gerätezeitzone UTC gilt der Berliner Kalendertag": true,
+    "Saison-Rad: Schließen während laufenden Speicherns speichert die jüngste Eingabe nach": true,
     "Tor: sichtbare Bezeichnung, falsches Passwort als Meldung mit role=alert": true,
     "Ladefehler nach der Anmeldung: Meldung mit „Erneut laden“ auf der Seite, Tor bleibt zu, Passwort bleibt": true
   },
