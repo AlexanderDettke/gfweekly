@@ -24,6 +24,8 @@ Codex (read-only) gegen den vollständigen Änderungsumfang und den Auftragstext
 
 L1 bis L8 in `REGELZUORDNUNG.md`, Abschnitt 4. Dazu:
 
+- **Pflicht vor jedem Push: Asset-Version anheben.** Die Seiten laden `core.js` und `styles.css` mit `?v=35`; der Pilot ändert beide Dateien, die Seitenskripte rufen neue Helfer auf (`gfIsoTag`, `gfLadefehler`, `gfDialogAuf`, `gfBereichAuf`). Ohne neue Versionsnummer liefert der Browser-Cache das alte `core.js` zu den neuen Seiten aus, und diese Aufrufe brechen ab. Nach dem Zusammenführen mit Kompass einheitlich auf die höchste Nummer plus eins setzen, auf allen Seiten.
+- **Wo der Branch liegt.** `paket/webstandard-pilot` (Commit `dd9b1d5`) liegt im Klon `~/gfweekly`; dort gibt es laut `docs/PAKET-KOMPASS.md` keinen Push-Zugang. Zum Pushen in den Klon holen, aus dem gepusht wird: `git fetch ~/gfweekly paket/webstandard-pilot:paket/webstandard-pilot`.
 - **Zusammenführen mit dem Paket Kompass.** Beide Branches setzen auf `05af97b` auf. Konflikte zu erwarten nur in `site/assets/core.js` (Name, Bildmarke; der Pilot ändert andere Zeilen) und in den Asset-Versionen der Seitenköpfe, die der Pilot nicht anfasst. Nach dem Zusammenführen Asset-Version einheitlich erhöhen (die Seiten laden `core.js` und `styles.css` mit `?v=`), sonst sehen Browser alte Dateien.
 - **Veröffentlichung** nur auf Alexanders Auftrag: Push nach `main` löst das Netlify-Deployment aus. Danach ausgelieferte Dateien und Hauptwege live prüfen.
 - **Fachliche Annahme** durch Alexander (Testaufgaben unten).
@@ -37,7 +39,8 @@ Alexander testet mit `pruefung/vorschau.mjs` (Testdaten) die fünf Aufgaben unte
 Vorschau starten (öffnet Chrome mit Testdaten, nichts wird gespeichert):
 
 ```sh
-cd <gfweekly-Worktree mit paket/webstandard-pilot>
+git -C ~/gfweekly worktree add ~/gfweekly-webstandard paket/webstandard-pilot   # einmalig
+cd ~/gfweekly-webstandard
 PLAYWRIGHT_MODUL=~/Documents/GitHub/habitat-hub/node_modules/playwright/index.mjs node pruefung/vorschau.mjs
 ```
 
