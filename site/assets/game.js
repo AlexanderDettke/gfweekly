@@ -93,6 +93,9 @@
     const close=()=>{ if(!el.isConnected) return; const drin=el.contains(document.activeElement); el.remove(); document.removeEventListener("keydown",k); if(drin&&vorher&&vorher.isConnected&&vorher.focus) vorher.focus(); const n=QUEUE.shift(); if(n) setTimeout(()=>showCard(n),250); };
     el.addEventListener("click",e=>{ if(e.target===el || e.target.closest("[data-close]")) close(); });
     document.addEventListener("keydown",k);
+    /* Anfangsfokus auf „Weiter“ (oder die erste Aktion), damit der Tastaturweg zur Karte führt; beim Schließen zurück (siehe close). */
+    /* Nicht während des Tippens: liegt der Fokus in einem Eingabefeld, bleibt er dort (sonst gingen Anschläge verloren); Escape schließt. */
+    setTimeout(()=>{ if(!el.isConnected) return; const a=document.activeElement; if(a&&(/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)||a.isContentEditable)) return; const f=el.querySelector("[data-close]")||el.querySelector("button,[href]"); if(f) f.focus(); },30);
     if(o.auto && !REDUCED) setTimeout(()=>{ if(el.isConnected && !el.matches(":hover") && !el.contains(document.activeElement)) close(); }, o.auto);
     return el;
   }

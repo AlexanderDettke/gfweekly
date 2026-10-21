@@ -82,7 +82,7 @@ $("#sendBtn").onclick=async()=>{ const raw=$("#raw").value.trim(); if(!raw){ $("
     $("#form").style.display="none"; $("#ok").style.display="block"; $("#ok h2").setAttribute("tabindex","-1"); $("#ok h2").focus();
   }catch(e){ $("#sendErr").textContent="Senden fehlgeschlagen: "+(e.message||"unbekannter Fehler")+". Deine Eingaben sind erhalten, bitte nochmal versuchen."; $("#sendErr").hidden=false; gfToast("Senden fehlgeschlagen",{fehler:true}); }
   finally{ btn.disabled=false; btn.textContent=txt; } };
-$("#again").onclick=()=>{ ["raw","related","stake","owner","due"].forEach(i=>$("#"+i).value=""); pick.urg="";pick.typ=""; document.querySelectorAll("#urg .chip,#typ .chip").forEach(x=>x.classList.remove("on")); $("#ok").style.display="none"; $("#form").style.display="block"; $("#raw").focus(); };
+$("#again").onclick=()=>{ ["raw","related","stake","owner","due"].forEach(i=>$("#"+i).value=""); pick.urg="";pick.typ=""; document.querySelectorAll("#urg .chip,#typ .chip").forEach(x=>{ x.classList.remove("on"); x.setAttribute("aria-pressed","false"); }); $("#ok").style.display="none"; $("#form").style.display="block"; $("#raw").focus(); };
 </script>
 </body>
 </html>

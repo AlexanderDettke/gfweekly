@@ -184,7 +184,11 @@ async function move(id, col, beforeId){
 function showUndo(id,before){
   clearTimeout(UNDO_T); UNDO={id,before};
   const tt=$("#toast"); tt.innerHTML=`<span class="undo">Verschoben <button id="undoBtn">Rückgängig</button></span>`; tt.classList.add("show");
-  $("#undoBtn").onclick=async()=>{ const t=TOPICS.find(x=>x.id===UNDO.id); Object.assign(t,UNDO.before); render(); try{ await gfApi("update",{id:UNDO.id,...UNDO.before}); }catch(e){} tt.classList.remove("show"); UNDO=null; };
+  /* B-04: Rückgängig gilt erst nach bestätigter Antwort; bei Fehler zeigt die Ansicht wieder den Serverstand und bietet es erneut an. */
+  $("#undoBtn").onclick=async()=>{ const u=UNDO; if(!u) return; const t=TOPICS.find(x=>x.id===u.id); if(!t) return; const nachher={}; for(const k of Object.keys(u.before)) nachher[k]=t[k];
+    clearTimeout(UNDO_T); Object.assign(t,u.before); render(); $("#undoBtn")?.setAttribute("disabled","");
+    try{ await gfApi("update",{id:u.id,...u.before}); tt.classList.remove("show"); UNDO=null; gfToast("Rückgängig gemacht"); }
+    catch(e){ Object.assign(t,nachher); render(); showUndo(u.id,u.before); tt.innerHTML=`<span class="undo">Rückgängig fehlgeschlagen: ${gfEsc(e.message||"Verbindung")}. <button id="undoBtn">Erneut versuchen</button></span>`; tt.classList.add("fehler"); clearTimeout(UNDO_T); UNDO_T=setTimeout(()=>{ tt.classList.remove("show","fehler"); UNDO=null; },12000); $("#undoBtn").onclick=()=>{ tt.classList.remove("fehler"); showUndo(u.id,u.before); $("#undoBtn").click(); }; } };
   UNDO_T=setTimeout(()=>{ tt.classList.remove("show"); UNDO=null; },5000);
 }
 
@@ -235,9 +239,11 @@ async function savePanel(opts={}){
   }catch(e){ setPStatus("Nicht gespeichert: "+(e.message||"Verbindung"),"err"); gfToast("Speichern fehlgeschlagen: "+(e.message||"Verbindung")); return false; }
   finally{ P_BUSY=false; }
 }
-function openPanel(id){
+/* Webapp Standard B-04: Wechsel zu einem anderen Thema erst nach bestätigtem Speichern des offenen Entwurfs. Scheitert es,
+   bleibt das bisherige Thema mit seinen Eingaben offen (vorher wurde ohne Abwarten gewechselt, der Entwurf war bei Fehler weg). */
+async function openPanel(id){
   const t=TOPICS.find(x=>x.id===id); if(!t) return;
-  if(OPEN && OPEN!==id && P_DIRTY) savePanel({silent:true});
+  if(OPEN && OPEN!==id && (P_DIRTY||P_BUSY)){ while(P_BUSY) await new Promise(r=>setTimeout(r,50)); if(P_DIRTY&&!(await savePanel({silent:true}))){ gfToast("Nicht gewechselt: Die Änderungen am offenen Thema sind nicht gespeichert. Bitte erneut speichern oder verwerfen.",{fehler:true}); return; } }
   OPEN=id; P_DIRTY=false; clearTimeout(P_TIMER);
   const people=[...new Set([...PEOPLE.map(p=>p.name),"Alex","Lea","Lea & Alex"].filter(Boolean))];
   $("#pBody").innerHTML=`
@@ -347,8 +353,8 @@ $("#newTopic").onclick=async()=>{ const title=prompt("Neues Thema (Titel):"); if
 
 /* ---- Verschieben per Menü (Touch, Tastatur) ---- */
 /* B-08: Genau ein Escape-Listener je geöffnetem Menü; jeder Schließweg läuft über mvZu und setzt Zustand und Fokus am aktuellen Auslöser. */
-let MV_ESC=null, MV_AUSL=null;
-function mvZu(fokus){ const pop=$("#movePop"); pop.hidden=true; if(MV_ESC){ document.removeEventListener("keydown",MV_ESC); MV_ESC=null; }
+let MV_ESC=null, MV_AUSL=null, MV_AUSSEN=null;
+function mvZu(fokus){ const pop=$("#movePop"); pop.hidden=true; if(MV_ESC){ document.removeEventListener("keydown",MV_ESC); MV_ESC=null; } if(MV_AUSSEN){ document.removeEventListener("click",MV_AUSSEN); MV_AUSSEN=null; }
   const a=MV_AUSL; MV_AUSL=null; if(a){ a.setAttribute("aria-expanded","false"); if(fokus&&a.isConnected) a.focus(); } }
 function openMovePop(id, anchor){
   const t=TOPICS.find(x=>x.id===id); if(!t) return;
@@ -376,9 +382,8 @@ function openMovePop(id, anchor){
   pop.style.left=Math.max(12, Math.min(r.left, window.innerWidth-w-12))+"px"; pop.style.top=(r.bottom+window.scrollY+6)+"px"; pop.style.width=w+"px";
   pop.querySelectorAll("[data-col]").forEach(b=>b.onclick=()=>{ mvZu(false); if(b.dataset.col!==cur) move(id,b.dataset.col,null); });
   pop.querySelector("[data-details]").onclick=()=>{ mvZu(false); openPanel(id); };
-  setTimeout(()=>document.addEventListener("click",closePop,{once:true}),0);
+  setTimeout(()=>{ if(pop.hidden||MV_AUSL!==anchor) return; MV_AUSSEN=e=>{ if(!pop.contains(e.target)) mvZu(false); }; document.addEventListener("click",MV_AUSSEN); },0);
 }
-function closePop(e){ const pop=$("#movePop"); if(e && pop.contains(e.target)){ document.addEventListener("click",closePop,{once:true}); return; } if(!pop.hidden) mvZu(false); }
 
 /* ---- Besprechungsmodus (Sprint C) ---- */
 let MEET=null, MEET_T=null;

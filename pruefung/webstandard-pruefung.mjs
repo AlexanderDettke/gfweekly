@@ -336,6 +336,34 @@ try {
   }
   await ctx.close();
 } catch (e) { probe('Board: Ablauf ohne Ausnahme', false, e.message.split('\n')[0]); }
+// Board bei abgelehntem Speichern: Rückgängig zeigt den Fehler und den Serverstand; Wechsel mit ungespeichertem Entwurf bleibt beim Entwurf (B-04)
+try {
+  let ablehnen = false;
+  const ctx = await kontext(browser, { fehler: a => a === 'update' && ablehnen });
+  const { page } = await oeffne(ctx, 'board.html');
+  const ids = await page.evaluate(() => [...document.querySelectorAll('.bcard')].map(c => c.dataset.id));
+  {
+    const vorher = await page.evaluate((id) => TOPICS.find(t => t.id === id).board_lane, ids[0]);
+    await page.click(`.bcard[data-id="${ids[0]}"] .mv`); await page.waitForTimeout(60);
+    await page.evaluate(() => [...document.querySelectorAll('#movePop [data-col]')].find(b => !b.classList.contains('on'))?.click());
+    await page.waitForTimeout(300);
+    const verschoben = await page.evaluate((id) => TOPICS.find(t => t.id === id).board_lane, ids[0]);
+    ablehnen = true;
+    await page.click('#undoBtn'); await page.waitForTimeout(400);
+    const r = await page.evaluate((id) => ({ lane: TOPICS.find(t => t.id === id).board_lane, text: document.getElementById('toast').textContent }), ids[0]);
+    probe('Board: abgelehntes Rückgängig zeigt den Fehler und den gespeicherten Stand statt der alten Position', vorher !== verschoben && r.lane === verschoben && /fehlgeschlagen/.test(r.text), JSON.stringify({ vorher, verschoben, r }));
+  }
+  {
+    await page.evaluate(() => document.getElementById('toast').classList.remove('show'));
+    await page.focus(`.bcard[data-id="${ids[0]}"]`); await page.keyboard.press('Enter'); await page.waitForTimeout(200);
+    const feld = await page.$('#pBody [name=title]');
+    await feld.fill('Ungespeicherter Entwurf');
+    await page.evaluate((id) => openPanel(id), ids[1]); await page.waitForTimeout(500);
+    const w = await page.evaluate(() => ({ offen: OPEN, wert: document.querySelector('#pBody [name=title]')?.value }));
+    probe('Board: Wechsel zu einem anderen Thema bleibt bei abgelehntem Speichern beim Entwurf mit Eingaben', w.offen === ids[0] && w.wert === 'Ungespeicherter Entwurf', JSON.stringify(w));
+  }
+  await ctx.close();
+} catch (e) { probe('Board-Speichern: Ablauf ohne Ausnahme', false, e.message.split('\n')[0]); }
 // Liste: „heute besprochen“ meldet bei abgelehntem Speichern keinen Erfolg (B-04)
 try {
   const ctx = await kontext(browser, { fehler: a => a === 'update' });
@@ -349,6 +377,26 @@ try {
   }
   await ctx.close();
 } catch (e) { probe('Liste: Ablauf ohne Ausnahme', false, e.message.split('\n')[0]); }
+// D-03, T-12: Kalendertag in Berlin mit fester Uhr (STICHTAG 25.10.2026, Ende der Sommerzeit um 03:00): kurz nach Mitternacht,
+// kurz vor Mitternacht, nach der Zeitumstellung; dazu „morgen“ über den 25-Stunden-Tag.
+try {
+  const faelle = [
+    ['2026-10-24T22:30:00Z', { heute:'2026-10-25', morgen:'2026-10-26' }],   // 25.10. 00:30 Sommerzeit
+    ['2026-10-24T21:30:00Z', { heute:'2026-10-24', morgen:'2026-10-25' }],   // 24.10. 23:30 Sommerzeit
+    ['2026-10-25T22:30:00Z', { heute:'2026-10-25', morgen:'2026-10-26' }],   // 25.10. 23:30 Winterzeit
+  ];
+  const fehlt = [];
+  for (const [zeit, soll] of faelle) {
+    const ctx = await kontext(browser, {});
+    const page = await ctx.newPage();
+    await page.clock.install({ time: new Date(zeit) });
+    await page.goto(BASE + '/entscheidungen.html', { waitUntil:'load' });
+    const ist = await page.evaluate(() => ({ heute: gfIsoTag(), morgen: gfTomorrow(), frist: (() => { const d = document.createElement('div'); d.innerHTML = gfFrist(gfTomorrow()); return d.textContent; })() }));
+    if (ist.heute !== soll.heute || ist.morgen !== soll.morgen || !/morgen/.test(ist.frist)) fehlt.push(zeit + ' ' + JSON.stringify(ist));
+    await ctx.close();
+  }
+  probe('Datum: Kalendertag und „morgen“ in Berlin kurz vor und nach Mitternacht und am Tag der Zeitumstellung', !fehlt.length, fehlt.join(' | '));
+} catch (e) { probe('Datum: Ablauf ohne Ausnahme', false, e.message.split('\n')[0]); }
 // Tor und Ladefehler: falsches Passwort sichtbar und angesagt; Ladefehler nach der Anmeldung auf der Seite, Passwort bleibt
 try {
   const ctx = await kontext(browser, { ohnePw:true });

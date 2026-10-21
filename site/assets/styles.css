@@ -1851,3 +1851,7 @@ summary.tk-dayh,button.tk-row,.kgroup>summary.group-h,button.kd-row,.band .bi,.b
 .sec-h .segs .seg{min-height:var(--ziel-min)}
 .seg{min-width:var(--ziel-min)}
 .vh-warte{min-height:var(--ziel-min)}
+/* B-04, G-03: Aktionen in der Kurzmeldung (etwa „Rückgängig“ auf dem Board) sind anklickbar; vorher fing .toast{pointer-events:none}
+   jeden Klick ab, Rückgängig ging nur per Tastatur. */
+.toast.show .undo,.toast.show button{pointer-events:auto}
+.toast .undo button{min-height:var(--ziel-min);padding:0 8px}

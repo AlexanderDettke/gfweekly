@@ -23,7 +23,7 @@ Prüfumgebung: lokaler statischer Server über `site/`, Chromium Headless Shell 
 | Kurzmeldung als Statusmeldung angesagt | nein | ja | P-04 |
 | Kopieren meldet bei Verweigerung keinen Erfolg | nein | ja | B-04 |
 | Ladefehler sichtbar ohne stehendes „lädt …“ (4 Seiten) | 1 von 4 | 4 von 4 | B-07 |
-| Gezielte Bedienproben | 0 von 9 (vor Runde 1 der Gegenprüfung) | 11 von 11 | siehe 3 |
+| Gezielte Bedienproben | 0 von 9 (vor Runde 1 der Gegenprüfung) | 14 von 14 | siehe 3 |
 | Harte Befunde insgesamt | 70 | 0 | — |
 | Gemessene Kontrastfälle aus `pruefung/schirme.mjs` | 137 Treffer, 64 Einträge | 8 Treffer, 4 Einträge (Messgrenzen) | G-02 |
 
@@ -44,7 +44,7 @@ Belege: `belege/ausgang-05af97b.json`, `belege/ende.json`.
 | T-09 Speichern und Wiederholung | Pilot · Eingabe · Simulation | Langsame Antwort (1,2 s) mit Doppelklick; Serverfehler | Keine doppelte Wirkung, keine falsche Erfolgsmeldung | Genau eine Anfrage; Fehler bleibt am Knopf; Kopieren ohne falschen Erfolg | bestanden (Simulation) | Proben 2, 3; Dialogprobe |
 | T-10 Fachliche Zustände | Pilot | Statusbedeutungen geprüft, Erledigt-Darstellung | Nur Darstellung geändert | Keine Statuslogik geändert; Übergänge in Vorhaben durch bestehende Proben | bestanden (Codeprüfung, bestehende Proben) | `pruefung/bedienung.mjs` |
 | T-11 Zuordnung und Konflikt | Pilot · Board | Umsortieren ohne Ziehen; ⇄ per Tastatur | Gleiche Wirkung wie Ziehen | Speicheraufruf `update` mit `lane_order` ausgelöst (gleicher Weg wie beim Ablegen) und neue Reihenfolge angezeigt; dauerhafte Speicherung nach Neuladen nicht belegt, weil die Simulation keinen Zustand hält | bestanden für Aufruf und Anzeige (Simulation); Kapazität und Zeitkonflikt nicht zutreffend für das Board, Lücke L1 | Proben 4 bis 6, 10 |
-| T-12 Zeiten und Mengen | Pilot | Kalendertag in Ortszeit; Codeprüfung der Datumshelfer | Tag und Zeit eindeutig | Vortag-Fehler in allen Seiten (Board, Entscheidungen, Check-in, Liste, Vertretung, Übergabe, Saison-Rad, Rückfallwerte in Launch, Kommunikation, Saison, Besetzung), `gfTomorrow` und festes Datum in Organisation behoben | bestanden (Codeprüfung); Mitternacht und Zeitumstellung nicht ausgeführt, L3 | `site/assets/core.js` `gfIsoTag` |
+| T-12 Zeiten und Mengen | Pilot · feste Uhr in Europe/Berlin (STICHTAG 25.10.2026, Ende der Sommerzeit) | Kalendertag, „morgen“ und Frist-Wort kurz vor und nach Mitternacht und nach der Zeitumstellung; Codeprüfung aller Datumsstellen | Tag und Zeit eindeutig | `gfIsoTag`, `gfTomorrow` und `gfFrist` liefern in allen drei Fällen den richtigen Kalendertag; Vortag-Fehler in allen Seiten (Board, Entscheidungen, Check-in, Liste, Vertretung, Übergabe, Saison-Rad, Rückfallwerte in Launch, Kommunikation, Saison, Besetzung) und festes Datum in Organisation behoben | bestanden für Kalendertage (Simulation mit fester Uhr); über Mitternacht reichende Zeiträume nicht zutreffend (keine Schichten oder Termine mit Uhrzeit über Mitternacht im Inventar); Mengen und 0-Werte nur als Codeprüfung | Probe 12 |
 | T-13 Gleiche Daten in Ansichten | Pilot | Board, Liste, Detail mit denselben Testthemen | Kennung und Zustand gleich | Unverändert, bestehende Proben grün | bestanden (bestehende Proben) | `pruefung/schirme.mjs` |
 | T-14 Export und Rücklesen | — | — | — | Kein Datei-Export in der Webapp | nicht zutreffend (Inventar: nur Kopieren und `mailto:`) | `FUNKTIONSINVENTAR.md` 4.9 |
 | T-15 Externe Wirkung | Pilot | Rückfragetexte vor Asana geprüft | Ziel, Anzahl, Folge | Launch nennt Anzahl; andere nennen Ziel und Folge | nicht ausgeführt als Versand (keine Freigabe für Testempfänger); Texte als Codeprüfung | Lücke L8 |
@@ -69,6 +69,9 @@ Belege: `belege/ausgang-05af97b.json`, `belege/ende.json`.
 9. Ladefehler nach der Anmeldung: Meldung mit „Erneut laden“ auf der Seite, Tor bleibt zu, Passwort bleibt.
 10. Board: nach Außenklick und Öffnen an einer anderen Karte schließt Escape das richtige Menü mit Fokus auf dessen Auslöser (aus Runde 1 der Gegenprüfung).
 11. Liste: „heute besprochen“ zeigt bei Serverfehler den Fehler statt einer Erfolgsmeldung (aus Runde 1 der Gegenprüfung).
+12. Datum: Kalendertag und „morgen“ in Berlin kurz vor und nach Mitternacht und am Tag der Zeitumstellung (aus Runde 2).
+13. Board: abgelehntes Rückgängig zeigt den Fehler und den gespeicherten Stand statt der alten Position (aus Runde 2; fand dabei, dass „Rückgängig“ mit der Maus nicht anklickbar war).
+14. Board: Wechsel zu einem anderen Thema bleibt bei abgelehntem Speichern beim Entwurf mit Eingaben (aus Runde 2).
 
 Die Proben fanden während der Umsetzung zwei echte Fehler, die dann behoben wurden: Enter auf ⇄ öffnete zusätzlich die Details (schon im Bestand), und das Umsortieren zählte eine unsichtbare wiederkehrende Karte mit.
 
