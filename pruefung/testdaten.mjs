@@ -395,7 +395,7 @@ const vhVerlauf = [
   { id:'e4', vorhaben_id:'vh-xceed', happened_at:zeit(-9), art:'entscheidung', wer:'Alex und Lea', text:'XCeed wird Ticketanbieter.', tag:'Entscheidung', status:'bestaetigt', source_ref:'seed:2', source_url:null, created_at:zeit(-9) },
 ];
 /* Schalter für Fehlerwege in den Bedienproben. */
-export const SCHALTER = { rueckkehrFehler:false };
+export const SCHALTER = { rueckkehrFehler:false, wiederFehler:false };
 export const VH_ANTWORT = {
   vorhaben_list: (p) => p && p.status === 'erledigt'
     ? ({ stand:zeit(0), heute, vorhaben:VORHABEN.filter(v => v.status === 'erledigt').map(v => ({ ...v, erledigt_am:zeit(-2), ergebnis:v.slug === 'saal-alt' ? 'Rechnung bezahlt, Schlüssel zurück' : null })) })
@@ -429,7 +429,8 @@ export const VH_ANTWORT = {
     const themen = p.themen_mit ? Array.from({ length:v.themen_offen }, (_, i) => `00000000-0000-4000-9000-00000000000${i}`) : [];
     v.status = 'erledigt';
     return { vorhaben:v, punkte:punkte.length, themen:themen.length, rueckgaengig:{ punkte, themen, zeit:zeit(0) }, ergebnis:p.ergebnis || null }; },
-  vorhaben_wiedereroeffnen: (p) => { const v = VORHABEN.find(x => x.id === p.id || x.slug === p.slug);
+  vorhaben_wiedereroeffnen: (p) => { if (SCHALTER.wiederFehler) { SCHALTER.wiederFehler = false; return { __status:500, error:'Verbindung unterbrochen' }; }
+    const v = VORHABEN.find(x => x.id === p.id || x.slug === p.slug);
     if (!v) return { __status:404, error:'Vorhaben gibt es nicht' };
     if (!['erledigt','archiviert'].includes(v.status)) return { __status:409, error:'Das Vorhaben ist nicht abgeschlossen (aktiv), bitte neu laden' };
     v.status = 'aktiv';

@@ -1186,6 +1186,11 @@ async function vhAbgeschlossen(zeilen: any[]){
   if (error) throw error;
   return new Set<string>((data || []).map((v: any) => v.id));
 }
+/* Korbzeilen ohne die zu erledigten oder archivierten Vorhaben: für Zähler, Briefing, Wache und Asana-Export. */
+async function ohneAbgeschlossene<T>(zeilen: T[]): Promise<T[]> {
+  const zu = await vhAbgeschlossen(zeilen as any[]);
+  return zu.size ? zeilen.filter((r: any) => !(r.kind === 'vorhaben' && zu.has(String(r.ref_id)))) : zeilen;
+}
 async function vhVerlaufAdd(row: Record<string, unknown>){
   const { data, error } = await admin.from('hh_vorhaben_verlauf').insert(row).select().single();
   if (error) throw error; return data;
@@ -1925,7 +1930,7 @@ Deno.serve(async (req: Request) => {
       }
       const bau = await handoverBuild(absence);
       const { data: rows } = await admin.from('gfweekly_handover').select('*').eq('absence_id', absence.id);
-      return json({ absence, bau, zaehler: handoverZaehler(rows || []) });
+      return json({ absence, bau, zaehler: handoverZaehler(await ohneAbgeschlossene(rows || [])) });
     }
     if (action === 'absence_list') {
       let q = admin.from('gfweekly_absences').select('*').order('von', { ascending:false });
@@ -1935,8 +1940,9 @@ Deno.serve(async (req: Request) => {
       const ids = (data || []).map((a: any) => a.id);
       let zaehler: Record<string, unknown> = {};
       if (ids.length) {
-        const { data: rows } = await admin.from('gfweekly_handover').select('absence_id,quadrant,cluster,ampel,status,luecke,vertretung').in('absence_id', ids);
-        for (const a of (data || [])) zaehler[a.id] = handoverZaehler((rows || []).filter((r: any) => r.absence_id === a.id));
+        const { data: roh } = await admin.from('gfweekly_handover').select('absence_id,kind,ref_id,quadrant,cluster,ampel,status,luecke,vertretung').in('absence_id', ids);
+        const rows = await ohneAbgeschlossene(roh || []);
+        for (const a of (data || [])) zaehler[a.id] = handoverZaehler(rows.filter((r: any) => r.absence_id === a.id));
       }
       return json({ absences: data, zaehler });
     }
@@ -1981,7 +1987,7 @@ Deno.serve(async (req: Request) => {
       if (error || !absence) return json({ error:'Abwesenheit fehlt' },404);
       const bau = await handoverBuild(absence);
       const { data: rows } = await admin.from('gfweekly_handover').select('*').eq('absence_id', absence.id);
-      return json({ bau, zaehler: handoverZaehler(rows || []) });
+      return json({ bau, zaehler: handoverZaehler(await ohneAbgeschlossene(rows || [])) });
     }
     if (action === 'handover_list') {
       if (!t.absence_id) return json({ error:'absence_id fehlt' },400);
@@ -2165,7 +2171,8 @@ Deno.serve(async (req: Request) => {
         if (absence.status === 'aktiv' && ende && heute > ende) {
           const { data: log } = await admin.from('gfweekly_handover_log').select('art,text,at').eq('absence_id', absence.id).order('at');
           const gruppe = (art: string) => (log || []).filter((l: any) => l.art === art).length;
-          const { data: offen } = await admin.from('gfweekly_handover').select('id,title,ampel,status').eq('absence_id', absence.id).neq('status','erledigt');
+          const { data: offenRoh } = await admin.from('gfweekly_handover').select('id,kind,ref_id,title,ampel,status').eq('absence_id', absence.id).neq('status','erledigt');
+          const offen = await ohneAbgeschlossene(offenRoh || []);
           const briefing = [
             `Seit ${absence.von} bis ${ende}:`,
             `${gruppe('entscheidung')} Entscheidungen in Vertretung`,
@@ -2203,8 +2210,9 @@ Deno.serve(async (req: Request) => {
         }
 
         // Wache: was in den nächsten drei Tagen fällig wird, bekommt eine Marke im Dossier
-        const { data: bald } = await admin.from('gfweekly_handover').select('id,dossier,frist,status')
+        const { data: baldRoh } = await admin.from('gfweekly_handover').select('id,kind,ref_id,dossier,frist,status')
           .eq('absence_id', absence.id).neq('status','erledigt').not('frist','is',null).lte('frist', addDays(heute, 3));
+        const bald = await ohneAbgeschlossene(baldRoh || []);
         for (const r of (bald || [])) {
           const d = { ...(r.dossier || {}), wache:true };
           await admin.from('gfweekly_handover').update({ dossier:d }).eq('id', r.id);
@@ -2232,8 +2240,9 @@ Deno.serve(async (req: Request) => {
       if (!t.absence_id) return json({ error:'absence_id fehlt' },400);
       const { data: absence } = await admin.from('gfweekly_absences').select('*').eq('id', t.absence_id).single();
       if (!absence) return json({ error:'Abwesenheit fehlt' },404);
-      const { data: rows } = await admin.from('gfweekly_handover').select('*').eq('absence_id', absence.id)
+      const { data: rowsRoh } = await admin.from('gfweekly_handover').select('*').eq('absence_id', absence.id)
         .eq('status','bestaetigt').neq('ampel','vorher');
+      const rows = await ohneAbgeschlossene(rowsRoh || []);
       if (!rows || !rows.length) return json({ error:'nichts zu exportieren', hinweis:'Es gibt keine bestätigten Zeilen außerhalb von „vor Abreise“.' },400);
       const [{ data: leute, error: lf }, { data: deputies, error: df }] = await Promise.all([
         admin.from('gfweekly_people').select('id,name,email,asana_gid'),
@@ -2786,7 +2795,7 @@ Deno.serve(async (req: Request) => {
       /* Filter „Erledigt“: alle erledigten, zuletzt erledigte zuerst (die Seite trennt die letzten 90 Tage von früheren).
          Nichts verschwindet; Datum und Ergebnis stammen aus dem jüngsten Abschlusseintrag im Verlauf („Erledigt: …“, von
          Cowork auch „Vorhaben erledigt: …“), ohne solchen Eintrag gilt updated_at. */
-      const { data: vh, error } = await admin.from('hh_vorhaben_lage').select('*').eq('status', 'erledigt').order('updated_at', { ascending:false }).limit(1000);
+      const { data: vh, error, count: gesamt } = await admin.from('hh_vorhaben_lage').select('*', { count:'exact' }).eq('status', 'erledigt').order('updated_at', { ascending:false }).limit(1000);
       if (error) throw error;
       const ids = (vh || []).map((v: any) => v.id);
       const { data: vl, error: e2 } = ids.length
@@ -2797,7 +2806,7 @@ Deno.serve(async (req: Request) => {
         const e = (vl || []).find((x: any) => x.vorhaben_id === v.id && /^(Vorhaben )?erledigt:/i.test(x.text || ''));
         return { ...v, erledigt_am: e?.happened_at || v.updated_at, ergebnis: e ? vhErgebnis(e.text) : null };
       }).sort((a: any, b: any) => String(b.erledigt_am).localeCompare(String(a.erledigt_am)));
-      return json({ stand: new Date().toISOString(), heute: heuteBerlin(), vorhaben: liste });
+      return json({ stand: new Date().toISOString(), heute: heuteBerlin(), vorhaben: liste, gesamt: gesamt ?? liste.length, gekuerzt: (gesamt ?? 0) > liste.length });
     }
     if (action === 'vorhaben_list') {
       let q = admin.from('hh_vorhaben_lage').select('*').order('sort').order('title');

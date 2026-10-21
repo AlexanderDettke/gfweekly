@@ -377,6 +377,11 @@ console.log('\n== Vorhaben abschließen, Erledigt, Wieder öffnen (21.10.2026) =
     && ab.nutzlast.punkte_mit === true && ab.nutzlast.themen_mit === false && !!ab.nutzlast.expect && ab.nutzlast.by === 'Alex', JSON.stringify(ab && ab.nutzlast));
   pruefe('danach: Akte zu, Karte weg, Hinweis mit Rückgängig', await a.locator('#vhAkte').isHidden() && await a.locator('#vhMain [data-open="xceed"]').count() === 0
     && await a.locator('#vhRueck.show #vhRueckK').isVisible() && /XCeed Ticketing-Vertrag erledigt/.test(await a.locator('#vhRueck').innerText()));
+  /* Störung beim Rückgängig: der Hinweis bleibt mit „Noch einmal?“, der zweite Versuch schickt denselben Wert. */
+  SCHALTER.wiederFehler = true; erwarteterFehler = true;
+  await a.locator('#vhRueckK').click(); await a.waitForTimeout(400);
+  erwarteterFehler = false;
+  pruefe('Störung beim Rückgängig: Hinweis bleibt mit erneutem Versuch', await a.locator('#vhRueck.show #vhRueckK').isEnabled() && /Noch einmal/.test(await a.locator('#vhRueck').innerText()));
   await a.locator('#vhRueckK').click(); await a.waitForTimeout(400);
   const wr = letzte('vorhaben_wiedereroeffnen');
   pruefe('Rückgängig schickt genau die zurückgegebenen Kennungen', wr && wr.nutzlast.id === 'vh-xceed' && wr.nutzlast.rueckgaengig && wr.nutzlast.rueckgaengig.punkte.length === 5 && wr.nutzlast.rueckgaengig.themen.length === 0 && !!wr.nutzlast.rueckgaengig.zeit, JSON.stringify(wr && wr.nutzlast));
@@ -428,6 +433,7 @@ console.log('\n== Vorhaben abschließen, Erledigt, Wieder öffnen (21.10.2026) =
   frisch();
   const u = await seite('/vorhaben.html?filter=erledigt');
   await u.locator('[data-filter="alle"]').click(); await u.waitForTimeout(200);
+  pruefe('Filter Erledigt auch ohne Parameter im Link teilbar', await (async () => { await u.locator('[data-filter="erledigt"]').click(); await u.waitForTimeout(300); const ja = new URL(u.url()).searchParams.get('filter') === 'erledigt'; await u.locator('[data-filter="alle"]').click(); await u.waitForTimeout(200); return ja; })());
   pruefe('Filterwechsel führt den Link nach', !new URL(u.url()).searchParams.has('filter'), u.url());
   await u.close();
 

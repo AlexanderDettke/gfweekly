@@ -67,7 +67,7 @@
    vorhaben_abschliessen und vorhaben_wiedereroeffnen (21.10.2026: Erledigt, Filter „Erledigt“, Wieder öffnen).
    Ansicht und Filter stehen in localStorage gf_vh_view und gf_vh_filter, die Akte im Link (?v=<slug>&tab=verlauf). */
 const $=s=>document.querySelector(s);
-let DATA=null, ERL=null, ERL_FEHLER="", LADE_LAUF=0, ERL_LAUF=0, AKTE=null, AKTE_SLUG=null, TAB="prozess", VL_FILTER="alle", AKTE_LAUF=0, GELOEST=null, ENTWURF={}, SPEICHERT=null;
+let DATA=null, ERL=null, ERL_GESAMT=0, ERL_FEHLER="", LADE_LAUF=0, ERL_LAUF=0, AKTE=null, AKTE_SLUG=null, TAB="prozess", VL_FILTER="alle", AKTE_LAUF=0, GELOEST=null, ENTWURF={}, SPEICHERT=null;
 let VIEW=(()=>{ try{ const v=localStorage.getItem("gf_vh_view"); return ["woche","board","liste"].includes(v)?v:"woche"; }catch(e){ return "woche"; } })();
 let FILTER=(()=>{ try{ const v=localStorage.getItem("gf_vh_filter"); return ["alle","mir","bewegt","konflikte","erledigt"].includes(v)?v:"alle"; }catch(e){ return "alle"; } })();
 const Q=new URLSearchParams(location.search);
@@ -120,9 +120,10 @@ function renderSteuer(){
   $("#vhFilter").innerHTML=filter.map(([k,l])=>`<button type="button" class="chip${FILTER===k?" on":""}" aria-pressed="${FILTER===k}" data-filter="${k}">${l}${zahl(k)}</button>`).join("");
 }
 $("#vhViews").addEventListener("click",e=>{ const b=e.target.closest("[data-view]"); if(!b) return; VIEW=b.dataset.view; try{ localStorage.setItem("gf_vh_view",VIEW); }catch(x){} renderSteuer(); renderMain(); });
-/* Filter merken (localStorage) und im Link nachführen, damit Neuladen nicht auf einen alten ?filter= zurückspringt. */
+/* Filter merken (localStorage) und im Link nachführen: „Bei mir“ und „Erledigt“ stehen als ?filter= im Link (teilbar),
+   die übrigen nehmen den Parameter heraus, damit Neuladen nicht auf einen alten Filter zurückspringt. */
 function filterSetzen(f){ FILTER=f; try{ localStorage.setItem("gf_vh_filter",FILTER); }catch(x){}
-  const u=new URL(location.href); if(u.searchParams.has("filter")){ if(["mir","erledigt"].includes(f)) u.searchParams.set("filter",f); else u.searchParams.delete("filter"); history.replaceState(null,"",u); } }
+  const u=new URL(location.href); if(["mir","erledigt"].includes(f)) u.searchParams.set("filter",f); else u.searchParams.delete("filter"); history.replaceState(null,"",u); }
 $("#vhFilter").addEventListener("click",async e=>{ const b=e.target.closest("[data-filter]"); if(!b) return; filterSetzen(b.dataset.filter); renderSteuer(); renderMain();
   if(FILTER==="erledigt"){ await ladenErledigt(); if(FILTER==="erledigt"){ renderSteuer(); renderMain(); } } });
 
@@ -217,7 +218,8 @@ function renderErledigt(liste){
   const grenze=gfAddDays(heute(),-90), neu=liste.filter(v=>berlinTag(v.erledigt_am)>=grenze), alt=liste.filter(v=>berlinTag(v.erledigt_am)<grenze);
   return `<p class="vh-sync vh-erl-h">Zuletzt erledigte zuerst. Öffnen zeigt die Akte mit „Wieder öffnen“.</p>
     ${neu.length?`<h3 class="vh-l-g">Letzte 90 Tage <span>${neu.length}</span></h3>${erledigtZeilen(neu)}`:""}
-    ${alt.length?`<h3 class="vh-l-g">Früher <span>${alt.length}</span></h3>${erledigtZeilen(alt)}`:""}`;
+    ${alt.length?`<h3 class="vh-l-g">Früher <span>${alt.length}</span></h3>${erledigtZeilen(alt)}`:""}
+    ${ERL_GESAMT?`<p class="vh-sync">Gezeigt sind die ${liste.length} zuletzt erledigten von ${ERL_GESAMT}.</p>`:""}`;
 }
 function erledigtZeilen(liste){
   return `<div class="vh-erl">${liste.map(v=>`<button type="button" class="vh-erl-z${AKTE_SLUG===v.slug?" on":""}" data-open="${gfEsc(v.slug)}">
@@ -550,8 +552,14 @@ function rueckgaengigHinweis(v, d){
   RUECK_T=setTimeout(weg, 10000);
   $("#vhRueckK").onclick=async()=>{
     const k=$("#vhRueckK"); if(k) k.disabled=true; clearTimeout(RUECK_T);
-    try{ await gfApi("vorhaben_wiedereroeffnen",{ id:v.id, by:gfWho(), rueckgaengig:d.rueckgaengig||{ punkte:[], themen:[] } }); weg(); gfToast(`${v.title} ist wieder offen`); await laden(true); }
-    catch(err){ weg(); gfToast("Nicht rückgängig gemacht: "+(err.message||"Verbindung")); await laden(true); }
+    try{ await gfApi("vorhaben_wiedereroeffnen",{ id:v.id, by:gfWho(), rueckgaengig:d.rueckgaengig }); weg(); gfToast(`${v.title} ist wieder offen`); await laden(true); }
+    catch(err){
+      /* Gilt der Abschluss nicht mehr (409, inzwischen geändert), ist Rückgängig vorbei. Bei einer Störung bleibt der Hinweis
+         mit Wert stehen, damit ein zweiter Versuch Punkte und Themen noch zurückholt. */
+      if(/neu laden|nicht abgeschlossen|letzten Abschluss/i.test(err.message||"")){ weg(); gfToast("Nicht rückgängig gemacht: "+err.message); await laden(true); return; }
+      const sp=h.querySelector("span"); if(sp) sp.textContent=`Rückgängig hat nicht geklappt (${err.message||"Verbindung"}). Noch einmal?`;
+      if(k) k.disabled=false; RUECK_T=setTimeout(weg, 30000);
+    }
   };
 }
 async function wiederOeffnen(v, knopf){
@@ -756,7 +764,7 @@ document.addEventListener("gf-who",()=>{ if(DATA){ renderSteuer(); renderMain();
 /* Nur die jüngste Anfrage zählt: kommen Antworten verkehrt herum an, überschreibt eine alte nicht den neueren Stand. */
 async function ladenErledigt(){
   const lauf=++ERL_LAUF;
-  try{ const d=await gfApi("vorhaben_list",{ status:"erledigt" }); if(lauf!==ERL_LAUF) return; ERL=d.vorhaben||[]; ERL_FEHLER=""; }
+  try{ const d=await gfApi("vorhaben_list",{ status:"erledigt" }); if(lauf!==ERL_LAUF) return; ERL=d.vorhaben||[]; ERL_GESAMT=d.gekuerzt?d.gesamt:0; ERL_FEHLER=""; }
   catch(e){ if(e.auth) throw e; if(lauf!==ERL_LAUF) return; ERL_FEHLER=e.message||"Verbindung"; }
 }
 async function laden(still){

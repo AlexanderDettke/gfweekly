@@ -1,10 +1,11 @@
 /* Wirkungsprobe · Vorhaben abschließen (21.10.2026) gegen das echte Backend, ohne Abfangen.
    Aufruf:  GF_PW=<passwort> node pruefung/abschliessen-probe.mjs [--xceed]
    Vorher legt pruefung/abschliessen-testdaten-anlegen.sql das Testvorhaben test-abschluss mit zwei offenen und einem
-   erledigten Punkt, zwei verknüpften Testthemen und einer Korbzeile in einer beendeten Testabwesenheit an; danach räumt
-   pruefung/abschliessen-testdaten-loeschen.sql alles wieder ab.
+   erledigten Punkt, zwei verknüpften Testthemen und einer Korbzeile in einer beendeten Testabwesenheit an; am Ende (auch
+   nach einem Abbruch) führt die Probe pruefung/abschliessen-testdaten-loeschen.sql selbst aus (--testdaten-behalten: nicht).
    Mit --xceed spielt die Probe den Ablauf aus dem Paket am echten Vorhaben xceed durch und lässt es am Ende erledigt
    (verknüpfte Themen bleiben offen, Punkte gibt es dort keine). */
+import { execSync } from 'node:child_process';
 const FN = process.env.GF_FN || 'https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/gfweekly';
 const PW = process.env.GF_PW || '';
 if (!PW) { console.error('GF_PW fehlt (Passwort des Hohen Hauses in der Umgebung).'); process.exit(2); }
@@ -80,19 +81,20 @@ async function testvorhaben() {
   ok(a.verlauf.some(x => x.text === 'Erledigt: ohne Ergebnissatz'), 'leerer Ergebnissatz wird als „ohne Ergebnissatz“ verbucht');
   const w2 = await api('vorhaben_wiedereroeffnen', { id: v.id, by: 'Alex' });
   ok(w2.vorhaben.status === 'aktiv', 'Wieder öffnen ohne Rückgängig');
-  /* Ein alter Rückgängig-Aufruf setzt nur zurück, was noch im Zustand dieses Abschlusses steht: ein Punkt, den inzwischen
-     jemand wieder geöffnet und neu abgehakt hat, und ein Thema, das jemand bearbeitet hat, bleiben. */
+  /* Rückgängig gilt nur für den jüngsten Abschluss: nach Wieder öffnen und erneutem Abschluss gibt ein alter Wert 409
+     und ändert nichts, auch nicht an einem inzwischen von Lea neu abgehakten Punkt. */
   const r3 = await api('vorhaben_abschliessen', { id: v.id, by: 'Alex', punkte_mit: true, themen_mit: true });
   await api('vorhaben_wiedereroeffnen', { id: v.id, by: 'Alex' });
-  const [p1, p2] = r3.rueckgaengig.punkte;
+  const [p1] = r3.rueckgaengig.punkte;
   await api('punkt_toggle', { id: p1, erledigt: false, by: 'Lea' });
   await api('punkt_toggle', { id: p1, erledigt: true, by: 'Lea' });
-  await api('vorhaben_abschliessen', { id: v.id, by: 'Alex' });
-  const w4 = await api('vorhaben_wiedereroeffnen', { id: v.id, by: 'Alex', rueckgaengig: r3.rueckgaengig });
+  const r4 = await api('vorhaben_abschliessen', { id: v.id, by: 'Alex' });
+  const vorAlt = await api('vorhaben_get', { slug: 'test-abschluss' });
+  await api('vorhaben_wiedereroeffnen', { id: v.id, by: 'Alex', rueckgaengig: r3.rueckgaengig }, 409).then(d => ok(/letzten Abschluss/.test(d.error), 'alter Rückgängig-Wert nach erneutem Abschluss gibt 409'));
   a = await api('vorhaben_get', { slug: 'test-abschluss' });
-  const pz = (id) => a.punkte.find(x => x.id === id);
-  ok(w4.punkte === 1 && pz(p1).erledigt && pz(p1).erledigt_by === 'Lea' && !pz(p2).erledigt, 'alter Rückgängig-Aufruf lässt den neu abgehakten Punkt stehen, setzt nur den unberührten zurück', w4);
-  ok(w4.themen === 2 && a.themen.length === 2, 'unberührte Themen kommen mit dem alten Aufruf zurück', w4.themen);
+  ok(a.vorhaben.status === 'erledigt' && JSON.stringify(a.punkte) === JSON.stringify(vorAlt.punkte) && a.themen.length === vorAlt.themen.length, 'und ändert nichts');
+  const w4 = await api('vorhaben_wiedereroeffnen', { id: v.id, by: 'Alex', rueckgaengig: r4.rueckgaengig });
+  ok(w4.vorhaben.status === 'aktiv' && w4.punkte === 0 && w4.themen === 0, 'Rückgängig des jüngsten Abschlusses (ohne Haken) öffnet nur wieder', w4);
   s = await api('vorhaben_save', { id: v.id, status: 'archiviert', expect: { status: 'aktiv' }, by: 'Alex' });
   ok(s.vorhaben.status === 'archiviert' && !(await offen()).some(x => x.slug === 'test-abschluss') && !(await erledigt()).some(x => x.slug === 'test-abschluss'), 'Archivieren: weder offen noch erledigt');
 }
@@ -122,6 +124,11 @@ try { if (process.argv.includes('--xceed')) await xceed(); else await testvorhab
 catch (e) { ok(false, 'Probe abgebrochen', e.message); }
 finally {
   /* Sicherung: XCeed endet erledigt, auch wenn die Probe mittendrin abbricht. */
+  /* Testdaten abräumen, auch nach einem Abbruch (über die angemeldete Supabase-CLI, wie beim Anlegen). */
+  if (!process.argv.includes('--xceed') && !process.argv.includes('--testdaten-behalten')) {
+    try { execSync(`npx --yes supabase db query --linked --project-ref bnfmupnmqyrcltrphfak -f "${decodeURIComponent(new URL('./abschliessen-testdaten-loeschen.sql', import.meta.url).pathname)}"`, { stdio: ['ignore', 'ignore', 'inherit'] }); console.log('  · Testdaten abgeräumt'); }
+    catch (e) { ok(false, 'Testdaten nicht abgeräumt, bitte pruefung/abschliessen-testdaten-loeschen.sql ausführen'); }
+  }
   if (process.argv.includes('--xceed')) {
     const v = (await api('vorhaben_get', { slug: 'xceed' }).catch(() => ({}))).vorhaben;
     if (v && v.status !== 'erledigt') { await api('vorhaben_abschliessen', { id: v.id, by: 'Alex', ergebnis: 'Ticketing-Vertrag mit Xceed abgeschlossen' }).catch(() => {}); console.log('  · Sicherung: XCeed wieder erledigt'); }

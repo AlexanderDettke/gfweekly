@@ -3,11 +3,13 @@
    Aufruf:  GF_PW=<passwort> PLAYWRIGHT_MODUL=<pfad>/playwright/index.mjs node pruefung/abschliessen-live.mjs xceed|test
    xceed: Filter Erledigt, Wieder öffnen (aktiv, überfällig), Abschließen ohne Themen-Haken (11 Themen bleiben),
           Rückgängig stellt exakt her, am Ende wieder erledigt.
-   test:  braucht test-abschluss aus pruefung/abschliessen-testdaten-anlegen.sql; Abschließen mit Punkten und Themen, Rückgängig. */
+   test:  braucht test-abschluss aus pruefung/abschliessen-testdaten-anlegen.sql; Abschließen mit Punkten und Themen, Rückgängig;
+          räumt die Testdaten am Ende selbst ab (--testdaten-behalten: nicht). */
 const { chromium } = await import(process.env.PLAYWRIGHT_MODUL || 'playwright');
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 
 const PW = process.env.GF_PW || '';
 if (!PW) { console.error('GF_PW fehlt'); process.exit(2); }
@@ -117,7 +119,14 @@ if (FALL === 'xceed') {
   ok(a.vorhaben.status === 'aktiv' && JSON.stringify(fix(a)) === JSON.stringify(fix(vorher)), 'Rückgängig stellt Punkte und Themen exakt her');
 }
 } catch (e) { ok(false, 'Probe abgebrochen', e.message); }
-finally { if (FALL === 'xceed') await xceedSichern().catch(e => ok(false, 'Sicherung gescheitert', e.message)); }
+finally {
+  if (FALL === 'xceed') await xceedSichern().catch(e => ok(false, 'Sicherung gescheitert', e.message));
+  /* Testdaten abräumen, auch nach einem Abbruch (über die angemeldete Supabase-CLI, wie beim Anlegen). */
+  else if (!process.argv.includes('--testdaten-behalten')) {
+    try { execSync(`npx --yes supabase db query --linked --project-ref bnfmupnmqyrcltrphfak -f "${decodeURIComponent(new URL('./abschliessen-testdaten-loeschen.sql', import.meta.url).pathname)}"`, { stdio: ['ignore', 'ignore', 'inherit'] }); console.log('  · Testdaten abgeräumt'); }
+    catch (e) { ok(false, 'Testdaten nicht abgeräumt, bitte pruefung/abschliessen-testdaten-loeschen.sql ausführen'); }
+  }
+}
 ok(await p.evaluate(() => document.documentElement.scrollWidth <= 390), 'keine waagrechte Rollleiste bei 390 px');
 ok(!konsole.length, 'keine Konsolenfehler', konsole.join(' | '));
 await browser.close(); server.close();
