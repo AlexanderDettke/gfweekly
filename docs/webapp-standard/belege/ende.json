@@ -1,6 +1,6 @@
 {
   "fassung": "WEBAPP-PILOT-0.2",
-  "datum": "2026-10-21T04:49:24.229Z",
+  "datum": "2026-10-21T05:06:29.420Z",
   "seiten": {
     "arbeiten.html": {
       "kleinschrift": 0,
@@ -468,7 +468,10 @@
     "Board: „Eine Stelle nach unten“ löst den Speicheraufruf mit lane_order aus und zeigt die neue Reihenfolge (Simulation, kein Neuladen)": true,
     "Board: Detailbereich öffnet per Enter mit Namen und Fokus, Escape schließt mit Fokus auf der Karte": true,
     "Board: nach Außenklick und Öffnen an einer anderen Karte schließt Escape das richtige Menü mit Fokus auf dessen Auslöser": true,
+    "Board: abgelehntes Rückgängig zeigt den Fehler und den gespeicherten Stand statt der alten Position": true,
+    "Board: Wechsel zu einem anderen Thema bleibt bei abgelehntem Speichern beim Entwurf mit Eingaben": true,
     "Liste: „heute besprochen“ zeigt bei Serverfehler den Fehler statt einer Erfolgsmeldung": true,
+    "Datum: Kalendertag und „morgen“ in Berlin kurz vor und nach Mitternacht und am Tag der Zeitumstellung": true,
     "Tor: sichtbare Bezeichnung, falsches Passwort als Meldung mit role=alert": true,
     "Ladefehler nach der Anmeldung: Meldung mit „Erneut laden“ auf der Seite, Tor bleibt zu, Passwort bleibt": true
   },
