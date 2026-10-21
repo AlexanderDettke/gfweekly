@@ -364,6 +364,9 @@ console.log('\n== Vorhaben abschließen, Erledigt, Wieder öffnen (21.10.2026) =
   const a = await seite('/vorhaben.html?v=xceed');
   await a.locator('#vhAkte [data-erledigt]').click(); await a.waitForTimeout(200);
   pruefe('„✓ Erledigt“ öffnet das Blatt', await a.locator('#vhModal.open .vh-blatt').count() === 1);
+  await a.keyboard.press('Escape'); await a.waitForTimeout(200);
+  pruefe('Escape schließt nur das Blatt, die Akte bleibt offen', await a.locator('#vhModal.open').count() === 0 && await a.locator('#vhAkte').isVisible());
+  await a.locator('#vhAkte [data-erledigt]').click(); await a.waitForTimeout(200);
   const hp = a.locator('#vhErlPunkte'), ht = a.locator('#vhErlThemen');
   pruefe('Haken offene Punkte an (5), Themen aus (10)', await hp.isChecked() && !(await ht.isChecked())
     && /\(5\)/.test(await a.locator('label:has(#vhErlPunkte)').innerText()) && /\(10\)/.test(await a.locator('label:has(#vhErlThemen)').innerText()));
@@ -376,7 +379,7 @@ console.log('\n== Vorhaben abschließen, Erledigt, Wieder öffnen (21.10.2026) =
     && await a.locator('#vhRueck.show #vhRueckK').isVisible() && /XCeed Ticketing-Vertrag erledigt/.test(await a.locator('#vhRueck').innerText()));
   await a.locator('#vhRueckK').click(); await a.waitForTimeout(400);
   const wr = letzte('vorhaben_wiedereroeffnen');
-  pruefe('Rückgängig schickt genau die zurückgegebenen Kennungen', wr && wr.nutzlast.id === 'vh-xceed' && wr.nutzlast.rueckgaengig && wr.nutzlast.rueckgaengig.punkte.length === 5 && wr.nutzlast.rueckgaengig.themen.length === 0, JSON.stringify(wr && wr.nutzlast));
+  pruefe('Rückgängig schickt genau die zurückgegebenen Kennungen', wr && wr.nutzlast.id === 'vh-xceed' && wr.nutzlast.rueckgaengig && wr.nutzlast.rueckgaengig.punkte.length === 5 && wr.nutzlast.rueckgaengig.themen.length === 0 && !!wr.nutzlast.rueckgaengig.zeit, JSON.stringify(wr && wr.nutzlast));
   pruefe('nach Rückgängig ist die Karte wieder da', await a.locator('#vhMain [data-open="xceed"]').count() > 0);
   await a.close();
 
@@ -393,6 +396,7 @@ console.log('\n== Vorhaben abschließen, Erledigt, Wieder öffnen (21.10.2026) =
   await l.locator('[data-filter="erledigt"]').click(); await l.waitForTimeout(400);
   pruefe('Filter Erledigt zeigt die erledigten mit Ergebnis', await l.locator('.vh-erl-z').count() === 2 && /Rechnung bezahlt/.test(await l.locator('.vh-erl').innerText()) && /erledigt/.test(await l.locator('.vh-erl-d').first().innerText()));
   pruefe('Filterchip zählt die erledigten', /Erledigt · 2/.test(await l.locator('[data-filter="erledigt"]').innerText()));
+  pruefe('Erledigt gruppiert: Letzte 90 Tage', /Letzte 90 Tage/.test(await l.locator('#vhMain').innerText()));
   await l.locator('.vh-erl-z[data-open="saal-alt"]').click(); await l.waitForTimeout(400);
   pruefe('Akte eines erledigten: Erledigt am, nur lesend, Wieder öffnen', /Erledigt am/.test(await l.locator('.vh-a-erl').innerText()) && await l.locator('[data-wieder]').isVisible()
     && await l.locator('[data-erledigt]').count() === 0 && await l.locator('[data-punkt-neu]').count() === 0 && await l.locator('[data-ball-akte]').count() === 0
@@ -419,6 +423,13 @@ console.log('\n== Vorhaben abschließen, Erledigt, Wieder öffnen (21.10.2026) =
   const pa = letzte('vorhaben_save');
   pruefe('Archivieren schickt status archiviert', pa && pa.nutzlast.status === 'archiviert' && pa.nutzlast.expect.status === 'pausiert' && await l.locator('#vhAkte').isHidden(), JSON.stringify(pa && pa.nutzlast));
   await l.close();
+
+  /* ?filter=erledigt im Link: Wechsel auf Alle nimmt den Parameter heraus. */
+  frisch();
+  const u = await seite('/vorhaben.html?filter=erledigt');
+  await u.locator('[data-filter="alle"]').click(); await u.waitForTimeout(200);
+  pruefe('Filterwechsel führt den Link nach', !new URL(u.url()).searchParams.has('filter'), u.url());
+  await u.close();
 
   /* Handy 390 px: das Blatt kommt von unten. */
   frisch();

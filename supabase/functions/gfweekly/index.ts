@@ -1115,10 +1115,12 @@ function vhBy(t: any): string {
   return w;
 }
 function vhText(x: unknown, max: number){ return (x ?? '').toString().trim().slice(0, max); }
-/* Ergebnissatz aus dem Abschlusseintrag: ohne Vorsatz „Erledigt:“ und ohne den Platzhalter für einen leeren Satz. */
+/* Ergebnissatz aus dem Abschlusseintrag: ohne Vorsatz „Erledigt:“, ohne den Platzhalter für einen leeren Satz und ohne
+   die angehängten Zahlen („ · 2 Punkte abgehakt, 1 Thema archiviert“, bis Migration 20261021024034 in Klammern). */
+const VH_ZAHLEN = /\s*(?:·\s*|\()(?:\d+ (?:Punkte?) abgehakt|\d+ (?:Thema|Themen) archiviert)(?:, \d+ (?:Thema|Themen) archiviert)?\)?\s*$/;
 function vhErgebnis(text: string){
-  const s = (text || '').replace(/^(Vorhaben )?erledigt:\s*/i, '').trim();
-  return /^ohne Ergebnissatz/i.test(s) ? (s.replace(/^ohne Ergebnissatz\s*/i, '').trim() || null) : (s || null);
+  const s = (text || '').replace(/^(Vorhaben )?erledigt:\s*/i, '').replace(VH_ZAHLEN, '').replace(/^ohne Ergebnissatz\s*$/i, '').trim();
+  return s || null;
 }
 function vhBallWort(ball: string, name?: string | null){
   return ({ alex:'Alex', lea:'Lea', gf:'GF gemeinsam', offen:'niemand' } as Record<string,string>)[ball]
@@ -1175,6 +1177,14 @@ async function vhRpc(name: string, args: Record<string, unknown>){
 }
 async function vhSave(id: string, patch: Record<string, unknown>, by: string, notiz?: string | null, anlass?: string | null){
   return await vhRpc('hh_vorhaben_save', { p_id: id, p_patch: patch, p_by: by, p_notiz: notiz || null, p_anlass: anlass || null }) as { vorhaben: any, ball_geaendert: boolean, verlauf: number };
+}
+/* Kennungen der erledigten oder archivierten Vorhaben unter den Korbzeilen (kind vorhaben, ref_id). */
+async function vhAbgeschlossen(zeilen: any[]){
+  const ids = [...new Set(zeilen.filter((r: any) => r && r.kind === 'vorhaben' && VH_UUID.test(String(r.ref_id))).map((r: any) => String(r.ref_id)))];
+  if (!ids.length) return new Set<string>();
+  const { data, error } = await admin.from('hh_vorhaben').select('id').in('id', ids).in('status', ['erledigt','archiviert']);
+  if (error) throw error;
+  return new Set<string>((data || []).map((v: any) => v.id));
 }
 async function vhVerlaufAdd(row: Record<string, unknown>){
   const { data, error } = await admin.from('hh_vorhaben_verlauf').insert(row).select().single();
@@ -1981,9 +1991,16 @@ Deno.serve(async (req: Request) => {
       if (t.quadrant) q = q.in('quadrant', Array.isArray(t.quadrant) ? t.quadrant : [t.quadrant]);
       if (t.status) q = q.in('status', Array.isArray(t.status) ? t.status : [t.status]);
       q = q.range(0, 4999);
-      const { data, error, count } = await q; if (error) throw error;
-      const { data: alle, count: alleZahl } = await admin.from('gfweekly_handover')
-        .select('quadrant,cluster,ampel,status,luecke', { count:'exact' }).eq('absence_id', t.absence_id).range(0, 4999);
+      const { data: roh, error, count: rohZahl } = await q; if (error) throw error;
+      const { data: alleRoh, count: alleRohZahl } = await admin.from('gfweekly_handover')
+        .select('kind,ref_id,quadrant,cluster,ampel,status,luecke', { count:'exact' }).eq('absence_id', t.absence_id).range(0, 4999);
+      /* 21.10.2026: Korbzeilen zu erledigten oder archivierten Vorhaben sind keine Arbeit mehr; sie fallen aus Liste und Zählern
+         (handover_set lehnt sie ab). Wird das Vorhaben wieder geöffnet, steht die Zeile wieder da. */
+      const zu = await vhAbgeschlossen([...(roh || []), ...(alleRoh || [])]);
+      const data = (roh || []).filter((r: any) => !(r.kind === 'vorhaben' && zu.has(String(r.ref_id))));
+      const alle = (alleRoh || []).filter((r: any) => !(r.kind === 'vorhaben' && zu.has(String(r.ref_id))));
+      const count = rohZahl === null || rohZahl === undefined ? rohZahl : rohZahl - ((roh || []).length - data.length);
+      const alleZahl = alleRohZahl === null || alleRohZahl === undefined ? alleRohZahl : alleRohZahl - ((alleRoh || []).length - alle.length);
       const { data: absence } = await admin.from('gfweekly_absences').select('*').eq('id', t.absence_id).single();
       /* Nicht nur der Bau kann an eine Obergrenze stoßen, auch die Antwort selbst. Dann zeigt die Seite
          einen Ausschnitt und zu kleine Zähler; gesagt wird es hier, nicht erst beim nächsten Bau. */
@@ -1999,6 +2016,13 @@ Deno.serve(async (req: Request) => {
       const ergebnis: any[] = []; const misslungen: any[] = []; let n = 0;
       for (const it of liste) {
         if (!it.id) { misslungen.push({ id:null, titel:null, grund:'ohne id' }); continue; }
+        /* 21.10.2026: Korbzeilen zu erledigten oder archivierten Vorhaben bewegen keinen Ball mehr. */
+        const { data: hz } = await admin.from('gfweekly_handover').select('kind,ref_id,title').eq('id', it.id).maybeSingle();
+        if (hz && hz.kind === 'vorhaben' && (await vhAbgeschlossen([hz])).size) {
+          const grund = 'Das Vorhaben ist inzwischen abgeschlossen, bitte neu laden';
+          if (action === 'handover_set') return json({ error:'Übergabe nicht gespeichert: ' + grund }, 409);
+          misslungen.push({ id: it.id, titel: hz.title ?? null, grund, konflikt: true }); continue;
+        }
         const patch: Record<string, unknown> = {};
         if (it.cluster !== undefined && HO_CLUSTER.includes(it.cluster)) patch.cluster = it.cluster;
         if (it.ampel !== undefined && HO_AMPEL.includes(it.ampel)) patch.ampel = it.ampel;
@@ -2759,10 +2783,10 @@ Deno.serve(async (req: Request) => {
 
     /* ----- Vorhaben (v38, V31) ----- */
     if (action === 'vorhaben_list' && t.status === 'erledigt') {
-      /* Filter „Erledigt“: nur erledigte der letzten 90 Tage, zuletzt erledigte zuerst. Ergebnis und Datum stammen aus dem
-         jüngsten Abschlusseintrag im Verlauf („Erledigt: …“, von Cowork auch „Vorhaben erledigt: …“). */
-      const seit = new Date(Date.now() - 90 * 86400000).toISOString();
-      const { data: vh, error } = await admin.from('hh_vorhaben_lage').select('*').eq('status', 'erledigt').gte('updated_at', seit).order('updated_at', { ascending:false });
+      /* Filter „Erledigt“: alle erledigten, zuletzt erledigte zuerst (die Seite trennt die letzten 90 Tage von früheren).
+         Nichts verschwindet; Datum und Ergebnis stammen aus dem jüngsten Abschlusseintrag im Verlauf („Erledigt: …“, von
+         Cowork auch „Vorhaben erledigt: …“), ohne solchen Eintrag gilt updated_at. */
+      const { data: vh, error } = await admin.from('hh_vorhaben_lage').select('*').eq('status', 'erledigt').order('updated_at', { ascending:false }).limit(1000);
       if (error) throw error;
       const ids = (vh || []).map((v: any) => v.id);
       const { data: vl, error: e2 } = ids.length
@@ -2772,7 +2796,7 @@ Deno.serve(async (req: Request) => {
       const liste = (vh || []).map((v: any) => {
         const e = (vl || []).find((x: any) => x.vorhaben_id === v.id && /^(Vorhaben )?erledigt:/i.test(x.text || ''));
         return { ...v, erledigt_am: e?.happened_at || v.updated_at, ergebnis: e ? vhErgebnis(e.text) : null };
-      });
+      }).sort((a: any, b: any) => String(b.erledigt_am).localeCompare(String(a.erledigt_am)));
       return json({ stand: new Date().toISOString(), heute: heuteBerlin(), vorhaben: liste });
     }
     if (action === 'vorhaben_list') {
@@ -2892,13 +2916,15 @@ Deno.serve(async (req: Request) => {
       const by = vhBy(t);
       const ref = (t.id || t.slug || '').toString().trim(); if (!ref) return json({ error:'id oder slug fehlt' },400);
       const v = await vhLese(ref);
-      let rg: { punkte: string[], themen: string[] } | null = null;
+      let rg: { punkte: string[], themen: string[], zeit: string | null } | null = null;
       if (t.rueckgaengig !== undefined && t.rueckgaengig !== null) {
         const x = t.rueckgaengig;
         const liste = (a: unknown) => a === undefined ? [] : Array.isArray(a) && a.every(i => typeof i === 'string' && VH_UUID.test(i)) ? a as string[] : null;
         const pk = typeof x === 'object' && !Array.isArray(x) ? liste(x.punkte) : null, th = typeof x === 'object' && !Array.isArray(x) ? liste(x.themen) : null;
-        if (!pk || !th) return json({ error:'rueckgaengig: { punkte: [uuid], themen: [uuid] }' },400);
-        rg = { punkte: pk, themen: th };
+        const zeit = typeof x === 'object' && !Array.isArray(x) && x.zeit !== undefined && x.zeit !== null ? String(x.zeit) : null;
+        if (!pk || !th || (zeit !== null && isNaN(Date.parse(zeit))) || ((pk.length || th.length) && !zeit))
+          return json({ error:'rueckgaengig: { punkte: [uuid], themen: [uuid], zeit: Zeitpunkt des Abschlusses }' },400);
+        rg = { punkte: pk, themen: th, zeit };
       }
       const r = await vhRpc('hh_vorhaben_wiedereroeffnen', { p_id: v.id, p_by: by, p_rueckgaengig: rg });
       return json({ vorhaben: await vhLese(v.id), punkte: r.punkte, themen: r.themen });

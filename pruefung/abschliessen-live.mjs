@@ -3,7 +3,7 @@
    Aufruf:  GF_PW=<passwort> PLAYWRIGHT_MODUL=<pfad>/playwright/index.mjs node pruefung/abschliessen-live.mjs xceed|test
    xceed: Filter Erledigt, Wieder öffnen (aktiv, überfällig), Abschließen ohne Themen-Haken (11 Themen bleiben),
           Rückgängig stellt exakt her, am Ende wieder erledigt.
-   test:  braucht test-abschluss aus pruefung/abschliessen-testdaten.sql; Abschließen mit Punkten und Themen, Rückgängig. */
+   test:  braucht test-abschluss aus pruefung/abschliessen-testdaten-anlegen.sql; Abschließen mit Punkten und Themen, Rückgängig. */
 const { chromium } = await import(process.env.PLAYWRIGHT_MODUL || 'playwright');
 import http from 'node:http';
 import fs from 'node:fs';
@@ -45,6 +45,12 @@ const antworten = [];
 p.on('response', async r => { if (r.url() === FN) { try { const j = JSON.parse(r.request().postData() || '{}'); antworten.push({ action:j.action, status:r.status(), body:await r.json() }); } catch (e) {} } });
 const letzteAntwort = (a) => [...antworten].reverse().find(x => x.action === a);
 
+/* Sicherung: was auch passiert, XCeed endet erledigt (ohne Punkte- und Themen-Haken). */
+async function xceedSichern() {
+  const v = (await api('vorhaben_get', { slug:'xceed' })).vorhaben;
+  if (v && v.status !== 'erledigt') { await api('vorhaben_abschliessen', { id:v.id, by:'Alex', ergebnis:'Ticketing-Vertrag mit Xceed abgeschlossen' }); console.log('  · Sicherung: XCeed wieder erledigt'); }
+}
+try {
 if (FALL === 'xceed') {
   const vorher = await api('vorhaben_get', { slug:'xceed' });
   const themen = vorher.themen.map(t => t.id).sort().join('|');
@@ -110,6 +116,8 @@ if (FALL === 'xceed') {
   a = await api('vorhaben_get', { slug:'test-abschluss' });
   ok(a.vorhaben.status === 'aktiv' && JSON.stringify(fix(a)) === JSON.stringify(fix(vorher)), 'Rückgängig stellt Punkte und Themen exakt her');
 }
+} catch (e) { ok(false, 'Probe abgebrochen', e.message); }
+finally { if (FALL === 'xceed') await xceedSichern().catch(e => ok(false, 'Sicherung gescheitert', e.message)); }
 ok(await p.evaluate(() => document.documentElement.scrollWidth <= 390), 'keine waagrechte Rollleiste bei 390 px');
 ok(!konsole.length, 'keine Konsolenfehler', konsole.join(' | '));
 await browser.close(); server.close();

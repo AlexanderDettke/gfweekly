@@ -428,7 +428,7 @@ export const VH_ANTWORT = {
     const punkte = p.punkte_mit ? Array.from({ length:v.punkte_gesamt - v.punkte_erledigt }, (_, i) => `00000000-0000-4000-8000-00000000000${i}`) : [];
     const themen = p.themen_mit ? Array.from({ length:v.themen_offen }, (_, i) => `00000000-0000-4000-9000-00000000000${i}`) : [];
     v.status = 'erledigt';
-    return { vorhaben:v, punkte:punkte.length, themen:themen.length, rueckgaengig:{ punkte, themen }, ergebnis:p.ergebnis || null }; },
+    return { vorhaben:v, punkte:punkte.length, themen:themen.length, rueckgaengig:{ punkte, themen, zeit:zeit(0) }, ergebnis:p.ergebnis || null }; },
   vorhaben_wiedereroeffnen: (p) => { const v = VORHABEN.find(x => x.id === p.id || x.slug === p.slug);
     if (!v) return { __status:404, error:'Vorhaben gibt es nicht' };
     if (!['erledigt','archiviert'].includes(v.status)) return { __status:409, error:'Das Vorhaben ist nicht abgeschlossen (aktiv), bitte neu laden' };

@@ -1,7 +1,8 @@
 /* Wirkungsprobe · Vorhaben abschließen (21.10.2026) gegen das echte Backend, ohne Abfangen.
    Aufruf:  GF_PW=<passwort> node pruefung/abschliessen-probe.mjs [--xceed]
-   Vorher legt pruefung/abschliessen-testdaten.sql (Teil „anlegen“) das Testvorhaben test-abschluss mit zwei offenen und
-   einem erledigten Punkt und zwei verknüpften Testthemen an, danach löscht derselbe Teil „löschen“ alles wieder.
+   Vorher legt pruefung/abschliessen-testdaten-anlegen.sql das Testvorhaben test-abschluss mit zwei offenen und einem
+   erledigten Punkt, zwei verknüpften Testthemen und einer Korbzeile in einer beendeten Testabwesenheit an; danach räumt
+   pruefung/abschliessen-testdaten-loeschen.sql alles wieder ab.
    Mit --xceed spielt die Probe den Ablauf aus dem Paket am echten Vorhaben xceed durch und lässt es am Ende erledigt
    (verknüpfte Themen bleiben offen, Punkte gibt es dort keine). */
 const FN = process.env.GF_FN || 'https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/gfweekly';
@@ -15,6 +16,14 @@ async function api(action, payload = {}, erwartet = 200) {
   if (res.status !== erwartet) throw new Error(`${action}: HTTP ${res.status} statt ${erwartet}: ${d.error || ''}`);
   return d;
 }
+let KORBZEILE = null;
+/* Die beendete Testabwesenheit „Abschluss-Probe“ aus den Testdaten und ihre Korbzeile. */
+async function korbAbwesenheit() {
+  const l = await api('absence_list', { include_test: true, alle: true }).catch(() => ({}));
+  const a = (l.absences || l.abwesenheiten || []).find(x => x.note === 'Abschluss-Probe');
+  if (!a) throw new Error('Testabwesenheit „Abschluss-Probe“ fehlt: erst pruefung/abschliessen-testdaten-anlegen.sql ausführen');
+  return a.id;
+}
 const offen = async () => (await api('vorhaben_list')).vorhaben;
 const erledigt = async () => (await api('vorhaben_list', { status: 'erledigt' })).vorhaben;
 
@@ -23,6 +32,9 @@ async function testvorhaben() {
   let a = await api('vorhaben_get', { slug: 'test-abschluss' });
   const v = a.vorhaben;
   ok(v.status === 'aktiv' && a.punkte.filter(p => !p.erledigt).length === 2 && a.themen.length === 2, 'Ausgang: aktiv, 2 offene Punkte, 2 Themen', { s: v.status, p: a.punkte.length, t: a.themen.length });
+  const abw0 = await korbAbwesenheit();
+  KORBZEILE = (await api('handover_list', { absence_id: abw0 })).items.find(x => x.ref_id === v.id)?.id || null;
+  ok(!!KORBZEILE, 'Ausgang: Korbzeile zum Testvorhaben in der Testabwesenheit');
   const vorher = { punkte: a.punkte.map(p => [p.id, p.erledigt, p.erledigt_at]).sort().join('|'), themen: a.themen.map(t => t.id).sort().join('|') };
   await api('vorhaben_abschliessen', { id: v.id, by: 'Gast' }, 400).then(d => ok(/Alex oder Lea/.test(d.error), 'by Gast wird abgelehnt'));
   await api('vorhaben_abschliessen', { id: v.id, by: 'Alex', expect: '2020-01-01T00:00:00Z' }, 409).then(d => ok(/inzwischen/.test(d.error), 'veralteter Stand (expect) gibt 409'));
@@ -33,17 +45,28 @@ async function testvorhaben() {
   a = await api('vorhaben_get', { slug: 'test-abschluss' });
   ok(a.punkte.every(p => p.erledigt) && a.themen.length === 0, 'danach: alle Punkte erledigt, keine offenen Themen');
   const e = a.verlauf.find(x => x.art === 'entscheidung');
-  ok(e && e.text === 'Erledigt: Probe abgeschlossen (2 Punkte abgehakt, 2 Themen archiviert)' && e.created_by === 'hohes-haus' && e.wer === 'Alex', 'Verlaufseintrag Entscheidung mit Ergebnis', e);
+  ok(e && e.text === 'Erledigt: Probe abgeschlossen · 2 Punkte abgehakt, 2 Themen archiviert' && e.created_by === 'hohes-haus' && e.wer === 'Alex', 'Verlaufseintrag Entscheidung mit Ergebnis', e);
   ok(!a.verlauf.some(x => /^Status: /.test(x.text) && new Date(x.created_at) > new Date(Date.now() - 60000)), 'kein zusätzlicher „Status:“-Eintrag');
   ok(!(await offen()).some(x => x.slug === 'test-abschluss'), 'verschwindet aus der Liste offener Vorhaben');
   const el = (await erledigt()).find(x => x.slug === 'test-abschluss');
-  ok(el && el.ergebnis === 'Probe abgeschlossen (2 Punkte abgehakt, 2 Themen archiviert)' && el.erledigt_am, 'erscheint im Filter Erledigt mit Ergebnis und Datum', el);
+  ok(el && el.ergebnis === 'Probe abgeschlossen' && el.erledigt_am, 'erscheint im Filter Erledigt mit Ergebnissatz (ohne Zahlen) und Datum', el);
+  /* Übergabekorb: die Zeile zum erledigten Vorhaben fällt heraus und lässt sich nicht mehr entscheiden. */
+  const abw = await korbAbwesenheit();
+  let korb = await api('handover_list', { absence_id: abw });
+  ok(!korb.items.some(x => x.ref_id === v.id) && korb.gesamt === 0, 'Übergabekorb zeigt das erledigte Vorhaben nicht mehr', { n: korb.items.length, gesamt: korb.gesamt });
+  await api('handover_set', { id: KORBZEILE, ampel: 'ruht', by: 'Alex' }, 409).then(d => ok(/abgeschlossen/.test(d.error), 'Übergabe einer erledigten Korbzeile gibt 409'));
+  const vielen = await api('handover_set_many', { items: [{ id: KORBZEILE, ampel: 'ruht' }], by: 'Alex' });
+  ok(vielen.ok === false && vielen.updated === 0 && vielen.misslungen[0]?.konflikt === true, 'handover_set_many lehnt sie ebenso ab', vielen);
+  ok(r.rueckgaengig.zeit && !isNaN(Date.parse(r.rueckgaengig.zeit)), 'Rückgabe nennt den Zeitpunkt des Abschlusses');
+  await api('vorhaben_wiedereroeffnen', { id: v.id, by: 'Alex', rueckgaengig: { punkte: r.rueckgaengig.punkte, themen: [] } }, 400).then(() => ok(true, 'rueckgaengig ohne zeit wird abgelehnt'));
   await api('vorhaben_wiedereroeffnen', { id: v.id, by: 'Alex', rueckgaengig: { punkte: ['x'] } }, 400).then(() => ok(true, 'kaputtes rueckgaengig wird abgelehnt'));
   const w = await api('vorhaben_wiedereroeffnen', { id: v.id, by: 'Lea', rueckgaengig: r.rueckgaengig });
   ok(w.vorhaben.status === 'aktiv' && w.punkte === 2 && w.themen === 2, 'Rückgängig: aktiv, 2 Punkte offen, 2 Themen zurück', w);
   a = await api('vorhaben_get', { slug: 'test-abschluss' });
   const nachher = { punkte: a.punkte.map(p => [p.id, p.erledigt, p.erledigt_at]).sort().join('|'), themen: a.themen.map(t => t.id).sort().join('|') };
   ok(nachher.punkte === vorher.punkte && nachher.themen === vorher.themen, 'Rückgängig stellt Punkte und Themen exakt her', { vorher, nachher });
+  korb = await api('handover_list', { absence_id: abw });
+  ok(korb.items.some(x => x.ref_id === v.id) && korb.gesamt === 1, 'nach dem Wieder öffnen steht die Korbzeile wieder da');
   await api('vorhaben_wiedereroeffnen', { id: v.id, by: 'Alex' }, 409).then(d => ok(/nicht abgeschlossen/.test(d.error), 'Wieder öffnen eines aktiven Vorhabens gibt 409'));
   /* Pausieren, Fortsetzen, Archivieren laufen über vorhaben_save. */
   let s = await api('vorhaben_save', { id: v.id, status: 'pausiert', expect: { status: 'aktiv' }, by: 'Alex' });
@@ -57,6 +80,19 @@ async function testvorhaben() {
   ok(a.verlauf.some(x => x.text === 'Erledigt: ohne Ergebnissatz'), 'leerer Ergebnissatz wird als „ohne Ergebnissatz“ verbucht');
   const w2 = await api('vorhaben_wiedereroeffnen', { id: v.id, by: 'Alex' });
   ok(w2.vorhaben.status === 'aktiv', 'Wieder öffnen ohne Rückgängig');
+  /* Ein alter Rückgängig-Aufruf setzt nur zurück, was noch im Zustand dieses Abschlusses steht: ein Punkt, den inzwischen
+     jemand wieder geöffnet und neu abgehakt hat, und ein Thema, das jemand bearbeitet hat, bleiben. */
+  const r3 = await api('vorhaben_abschliessen', { id: v.id, by: 'Alex', punkte_mit: true, themen_mit: true });
+  await api('vorhaben_wiedereroeffnen', { id: v.id, by: 'Alex' });
+  const [p1, p2] = r3.rueckgaengig.punkte;
+  await api('punkt_toggle', { id: p1, erledigt: false, by: 'Lea' });
+  await api('punkt_toggle', { id: p1, erledigt: true, by: 'Lea' });
+  await api('vorhaben_abschliessen', { id: v.id, by: 'Alex' });
+  const w4 = await api('vorhaben_wiedereroeffnen', { id: v.id, by: 'Alex', rueckgaengig: r3.rueckgaengig });
+  a = await api('vorhaben_get', { slug: 'test-abschluss' });
+  const pz = (id) => a.punkte.find(x => x.id === id);
+  ok(w4.punkte === 1 && pz(p1).erledigt && pz(p1).erledigt_by === 'Lea' && !pz(p2).erledigt, 'alter Rückgängig-Aufruf lässt den neu abgehakten Punkt stehen, setzt nur den unberührten zurück', w4);
+  ok(w4.themen === 2 && a.themen.length === 2, 'unberührte Themen kommen mit dem alten Aufruf zurück', w4.themen);
   s = await api('vorhaben_save', { id: v.id, status: 'archiviert', expect: { status: 'aktiv' }, by: 'Alex' });
   ok(s.vorhaben.status === 'archiviert' && !(await offen()).some(x => x.slug === 'test-abschluss') && !(await erledigt()).some(x => x.slug === 'test-abschluss'), 'Archivieren: weder offen noch erledigt');
 }
@@ -82,6 +118,14 @@ async function xceed() {
   ok(z.vorhaben.status === 'erledigt', 'Am Ende: XCeed wieder erledigt');
 }
 
-if (process.argv.includes('--xceed')) await xceed(); else await testvorhaben();
+try { if (process.argv.includes('--xceed')) await xceed(); else await testvorhaben(); }
+catch (e) { ok(false, 'Probe abgebrochen', e.message); }
+finally {
+  /* Sicherung: XCeed endet erledigt, auch wenn die Probe mittendrin abbricht. */
+  if (process.argv.includes('--xceed')) {
+    const v = (await api('vorhaben_get', { slug: 'xceed' }).catch(() => ({}))).vorhaben;
+    if (v && v.status !== 'erledigt') { await api('vorhaben_abschliessen', { id: v.id, by: 'Alex', ergebnis: 'Ticketing-Vertrag mit Xceed abgeschlossen' }).catch(() => {}); console.log('  · Sicherung: XCeed wieder erledigt'); }
+  }
+}
 console.log(`\n${n - fehler} von ${n} bestanden`);
 process.exit(fehler ? 1 : 0);

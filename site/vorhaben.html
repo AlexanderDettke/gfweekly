@@ -67,7 +67,7 @@
    vorhaben_abschliessen und vorhaben_wiedereroeffnen (21.10.2026: Erledigt, Filter „Erledigt“, Wieder öffnen).
    Ansicht und Filter stehen in localStorage gf_vh_view und gf_vh_filter, die Akte im Link (?v=<slug>&tab=verlauf). */
 const $=s=>document.querySelector(s);
-let DATA=null, ERL=null, AKTE=null, AKTE_SLUG=null, TAB="prozess", VL_FILTER="alle", AKTE_LAUF=0, GELOEST=null, ENTWURF={}, SPEICHERT=null;
+let DATA=null, ERL=null, ERL_FEHLER="", LADE_LAUF=0, ERL_LAUF=0, AKTE=null, AKTE_SLUG=null, TAB="prozess", VL_FILTER="alle", AKTE_LAUF=0, GELOEST=null, ENTWURF={}, SPEICHERT=null;
 let VIEW=(()=>{ try{ const v=localStorage.getItem("gf_vh_view"); return ["woche","board","liste"].includes(v)?v:"woche"; }catch(e){ return "woche"; } })();
 let FILTER=(()=>{ try{ const v=localStorage.getItem("gf_vh_filter"); return ["alle","mir","bewegt","konflikte","erledigt"].includes(v)?v:"alle"; }catch(e){ return "alle"; } })();
 const Q=new URLSearchParams(location.search);
@@ -120,7 +120,10 @@ function renderSteuer(){
   $("#vhFilter").innerHTML=filter.map(([k,l])=>`<button type="button" class="chip${FILTER===k?" on":""}" aria-pressed="${FILTER===k}" data-filter="${k}">${l}${zahl(k)}</button>`).join("");
 }
 $("#vhViews").addEventListener("click",e=>{ const b=e.target.closest("[data-view]"); if(!b) return; VIEW=b.dataset.view; try{ localStorage.setItem("gf_vh_view",VIEW); }catch(x){} renderSteuer(); renderMain(); });
-$("#vhFilter").addEventListener("click",async e=>{ const b=e.target.closest("[data-filter]"); if(!b) return; FILTER=b.dataset.filter; try{ localStorage.setItem("gf_vh_filter",FILTER); }catch(x){} renderSteuer(); renderMain();
+/* Filter merken (localStorage) und im Link nachführen, damit Neuladen nicht auf einen alten ?filter= zurückspringt. */
+function filterSetzen(f){ FILTER=f; try{ localStorage.setItem("gf_vh_filter",FILTER); }catch(x){}
+  const u=new URL(location.href); if(u.searchParams.has("filter")){ if(["mir","erledigt"].includes(f)) u.searchParams.set("filter",f); else u.searchParams.delete("filter"); history.replaceState(null,"",u); } }
+$("#vhFilter").addEventListener("click",async e=>{ const b=e.target.closest("[data-filter]"); if(!b) return; filterSetzen(b.dataset.filter); renderSteuer(); renderMain();
   if(FILTER==="erledigt"){ await ladenErledigt(); if(FILTER==="erledigt"){ renderSteuer(); renderMain(); } } });
 
 /* ---------- Karten ---------- */
@@ -211,14 +214,20 @@ function renderListe(liste){
 
 /* ---------- Erledigt: in jeder Ansicht dieselbe ruhige Liste, zuletzt erledigte zuerst (90 Tage) ---------- */
 function renderErledigt(liste){
-  return `<p class="vh-sync vh-erl-h">Erledigt in den letzten 90 Tagen, zuletzt erledigte zuerst. Öffnen zeigt die Akte mit „Wieder öffnen“.</p>
-    <div class="vh-erl">${liste.map(v=>`<button type="button" class="vh-erl-z${AKTE_SLUG===v.slug?" on":""}" data-open="${gfEsc(v.slug)}">
+  const grenze=gfAddDays(heute(),-90), neu=liste.filter(v=>berlinTag(v.erledigt_am)>=grenze), alt=liste.filter(v=>berlinTag(v.erledigt_am)<grenze);
+  return `<p class="vh-sync vh-erl-h">Zuletzt erledigte zuerst. Öffnen zeigt die Akte mit „Wieder öffnen“.</p>
+    ${neu.length?`<h3 class="vh-l-g">Letzte 90 Tage <span>${neu.length}</span></h3>${erledigtZeilen(neu)}`:""}
+    ${alt.length?`<h3 class="vh-l-g">Früher <span>${alt.length}</span></h3>${erledigtZeilen(alt)}`:""}`;
+}
+function erledigtZeilen(liste){
+  return `<div class="vh-erl">${liste.map(v=>`<button type="button" class="vh-erl-z${AKTE_SLUG===v.slug?" on":""}" data-open="${gfEsc(v.slug)}">
       <span class="vh-erl-d"><span class="zst"><i aria-hidden="true">✓</i>${gfEsc("erledigt "+gfVhTag(berlinTag(v.erledigt_am)))}</span></span>
       <span class="vh-erl-t"><b>${gfEsc(v.title)}</b><small>${gfEsc(v.ergebnis||"ohne Ergebnissatz")}</small></span>
       <span class="vh-erl-b">${gfVhBall(v)}</span>
     </button>`).join("")}</div>`;
 }
 function renderMain(){
+  if(FILTER==="erledigt" && ERL_FEHLER){ $("#vhMain").innerHTML=`<div class="empty soft">Die erledigten Vorhaben ließen sich nicht laden: ${gfEsc(ERL_FEHLER)}. <button type="button" class="btn btn-sm btn-ghost" data-erl-neu>Noch einmal</button></div>`; return; }
   if(FILTER==="erledigt" && !ERL){ $("#vhMain").innerHTML=`<div class="loading">lädt …</div>`; return; }
   const liste=sichtbar();
   if(!liste.length){ $("#vhMain").innerHTML=`<div class="empty soft">${({mir:"Im Filter „Bei mir“ steht gerade nichts.",bewegt:"Im Filter „Bewegt“ steht gerade nichts.",konflikte:"Im Filter „Konflikte“ steht gerade nichts.",erledigt:"In den letzten 90 Tagen wurde nichts erledigt."})[FILTER]||"Noch keine Vorhaben."} ${FILTER!=="alle"?`<button type="button" class="btn btn-sm btn-ghost" data-filter-reset>Alle zeigen</button>`:""}</div>`; return; }
@@ -226,7 +235,8 @@ function renderMain(){
   gfStagger($("#vhMain"), ".vh-card,.vh-l-z,.vh-erl-z");
 }
 $("#vhMain").addEventListener("click",e=>{
-  if(e.target.closest("[data-filter-reset]")){ FILTER="alle"; try{ localStorage.setItem("gf_vh_filter",FILTER); }catch(x){} renderSteuer(); renderMain(); return; }
+  if(e.target.closest("[data-erl-neu]")){ ERL_FEHLER=""; renderMain(); ladenErledigt().then(()=>{ renderSteuer(); renderMain(); }); return; }
+  if(e.target.closest("[data-filter-reset]")){ filterSetzen("alle"); renderSteuer(); renderMain(); return; }
   const w=e.target.closest("[data-ball]"); if(w){ const v=DATA.vorhaben.find(x=>x.slug===w.dataset.ball); if(v) ballWaehlen(v); return; }
   const fe=e.target.closest("[data-fertig]"); if(fe){ const v=DATA.vorhaben.find(x=>x.slug===fe.dataset.fertig); if(v) abschliessenBlatt(v); return; }
   const o=e.target.closest("[data-open]"); if(o) oeffneAkte(o.dataset.open);
@@ -302,10 +312,12 @@ function schliesseAkte(){
 function quellenText(q){ const l=(Array.isArray(q)?q:[]).filter(x=>x&&x.quelle);
   if(!l.length) return "Noch kein Abgleich eingetragen.";
   return "Abgeglichen: "+l.map(x=>`${x.quelle} ${x.at?gfNewsWhen(x.at):""}`.trim()).join(" · "); }
+/* Angehängte Zahlen im Abschlusseintrag („ · 2 Punkte abgehakt, 1 Thema archiviert“, früher in Klammern), wie vhErgebnis im Backend. */
+const VH_ZAHLEN=/\s*(?:·\s*|\()(?:\d+ (?:Punkte?) abgehakt|\d+ (?:Thema|Themen) archiviert)(?:, \d+ (?:Thema|Themen) archiviert)?\)?\s*$/;
 /* Abschlusseintrag im Verlauf („Erledigt: …“, von Cowork auch „Vorhaben erledigt: …“): Datum und Ergebnissatz. */
 function abschluss(d){
   const e=(d.verlauf||[]).find(x=>x.art==="entscheidung" && x.status==="bestaetigt" && /^(Vorhaben )?erledigt:/i.test(x.text||""));
-  const satz=e?(e.text||"").replace(/^(Vorhaben )?erledigt:\s*/i,"").replace(/^ohne Ergebnissatz\s*/i,"").trim():"";
+  const satz=e?(e.text||"").replace(/^(Vorhaben )?erledigt:\s*/i,"").replace(VH_ZAHLEN,"").replace(/^ohne Ergebnissatz\s*$/i,"").trim():"";
   return { am:e?e.happened_at:d.vorhaben.updated_at, satz };
 }
 function renderAkte(){
@@ -336,7 +348,7 @@ function renderAkte(){
       <div class="vh-k"><span>Punkte</span><b>${fertig.length} von ${d.punkte.length}</b><small>${offen.length?offen.length+" offen":"alles erledigt"}</small></div>
     </div>
     ${(v.konflikt||"").trim()?`<div class="vh-a-konf">${markeHtml(["warn","⚠","Konflikt"])} ${gfEsc(v.konflikt)}</div>`:""}
-    ${d.einwuerfe.length?`<button type="button" class="vh-warte klein" data-einwurf-akte>${gfZustand("warn", d.einwuerfe.length===1?"1 Einwurf wartet":d.einwuerfe.length+" Einwürfe warten")} zu diesem Vorhaben. Öffnen</button>`:""}
+    ${d.einwuerfe.length&&!zu?`<button type="button" class="vh-warte klein" data-einwurf-akte>${gfZustand("warn", d.einwuerfe.length===1?"1 Einwurf wartet":d.einwuerfe.length+" Einwürfe warten")} zu diesem Vorhaben. Öffnen</button>`:""}
     <label class="vh-schritt"><span>Nächster Schritt${ENTWURF[v.id+"|naechster_schritt"]!==undefined?` <em class="vh-entwurf">nicht gespeichert, gespeichert ist: ${gfEsc(v.naechster_schritt||"leer")}</em>`:""}</span><textarea rows="2" data-feld="naechster_schritt" maxlength="1000" ${zu?"readonly":`placeholder="Was passiert als Nächstes?"`}>${gfEsc(ENTWURF[v.id+"|naechster_schritt"]??v.naechster_schritt??"")}</textarea></label>
     <div class="vh-tabs" role="tablist" aria-label="Akte">
       <button type="button" role="tab" id="vhTabP" aria-controls="vhPanel" aria-selected="${TAB==="prozess"}" data-tab="prozess">Prozess</button>
@@ -425,7 +437,7 @@ $("#vhAkte").addEventListener("click",async e=>{
   if(e.target.closest("[data-archiv]") && AKTE){ menu(false); archivieren(AKTE.vorhaben); return; }
   const tab=e.target.closest("[data-tab]"); if(tab){ if(SPEICHERT) await SPEICHERT; TAB=tab.dataset.tab; const u=new URL(location.href); if(TAB==="verlauf") u.searchParams.set("tab","verlauf"); else u.searchParams.delete("tab"); history.replaceState(null,"",u); renderAkte(); $("#"+(TAB==="prozess"?"vhTabP":"vhTabV"))?.focus(); return; }
   const vlf=e.target.closest("[data-vlf]"); if(vlf){ VL_FILTER=vlf.dataset.vlf; renderAkte(); return; }
-  if(e.target.closest("[data-einwurf-akte]")){ einwurf({ vorhaben_id:AKTE.vorhaben.id }); return; }
+  if(e.target.closest("[data-einwurf-akte]")){ if(!offenZu(AKTE.vorhaben)) einwurf({ vorhaben_id:AKTE.vorhaben.id }); return; }
   const bc=e.target.closest("[data-ball-akte]"); if(bc){ const v=AKTE.vorhaben; if(bc.dataset.ballAkte==="team"||bc.dataset.ballAkte==="extern") ballWaehlen(v, bc.dataset.ballAkte); else if(bc.dataset.ballAkte!==v.ball) await ballSetzen(v, bc.dataset.ballAkte, null); if(AKTE_SLUG) oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); return; }
   const vs=e.target.closest("[data-vstatus]"); if(vs){ vs.disabled=true;
     try{ const r=await gfApi("verlauf_status",{ id:vs.dataset.id, status:vs.dataset.vstatus, by:gfWho() }); gfToast(vs.dataset.vstatus==="bestaetigt"?(r.angewendet?.geaendert?"Übernommen, Punkt abgehakt":"Übernommen"):"Verworfen"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
@@ -510,7 +522,7 @@ function abschliessenBlatt(v){
   let laeuft=false;
   const zu=()=>{ if(laeuft) return; m.classList.remove("open","vh-blatt-back"); m.innerHTML=""; m.onkeydown=null; m.onclick=null; frei(); };
   m.querySelectorAll("[data-x]").forEach(b=>b.onclick=zu); m.onclick=e=>{ if(e.target===m) zu(); };
-  m.onkeydown=e=>{ if(e.key==="Escape") zu(); };
+  m.onkeydown=e=>{ if(e.key==="Escape"){ e.stopPropagation(); zu(); } };
   $("#vhErlOk").onclick=async()=>{
     if(laeuft) return; laeuft=true;
     const ok=$("#vhErlOk"); ok.disabled=true;
@@ -546,7 +558,7 @@ async function wiederOeffnen(v, knopf){
   if(knopf) knopf.disabled=true;
   try{ const d=await gfApi("vorhaben_wiedereroeffnen",{ id:v.id, by:gfWho() });
     gfToast(`${v.title} ist wieder offen`);
-    if(FILTER==="erledigt"){ FILTER="alle"; try{ localStorage.setItem("gf_vh_filter",FILTER); }catch(x){} }
+    if(FILTER==="erledigt") filterSetzen("alle");
     await laden(true); oeffneAkte(d.vorhaben.slug,{tabKeep:true,still:true});
   }catch(err){ if(knopf) knopf.disabled=false; gfToast("Nicht wieder geöffnet: "+(err.message||"Verbindung")); if(AKTE_SLUG) oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); }
 }
@@ -568,7 +580,7 @@ function archivieren(v){
   m.classList.add("open"); const frei=gfModalAuf(m);
   const zu=()=>{ m.classList.remove("open"); m.innerHTML=""; m.onkeydown=null; m.onclick=null; frei(); };
   m.querySelectorAll("[data-x]").forEach(b=>b.onclick=zu); m.onclick=e=>{ if(e.target===m) zu(); };
-  m.onkeydown=e=>{ if(e.key==="Escape") zu(); };
+  m.onkeydown=e=>{ if(e.key==="Escape"){ e.stopPropagation(); zu(); } };
   $("#vhArchOk").onclick=async()=>{ zu(); await statusSetzen(v, "archiviert"); };
   setTimeout(()=>m.querySelector("[data-x]")?.focus(),40);
 }
@@ -578,8 +590,10 @@ function einwurf(o={}){
   if(typeof gfEinwurf==="function") gfEinwurf({ ...o, onDone:async(r)=>{ await laden(true); const slug=r?.vorhaben?.slug; if(slug) oeffneAkte(slug,{tab:"verlauf"}); else if(AKTE_SLUG) oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); } });
   else gfToast("Der Einwurf ließ sich nicht laden. Bitte die Seite neu laden.");
 }
-$("#vhEinwurf").onclick=()=>einwurf(AKTE?{ vorhaben_id:AKTE.vorhaben.id }:{});
-$("#vhFab").onclick=()=>einwurf(AKTE?{ vorhaben_id:AKTE.vorhaben.id }:{});
+/* Eine erledigte oder archivierte Akte ist nur lesend; der Einwurf wählt dann kein Vorhaben vor. */
+const einwurfZiel=()=>AKTE&&!offenZu(AKTE.vorhaben)?{ vorhaben_id:AKTE.vorhaben.id }:{};
+$("#vhEinwurf").onclick=()=>einwurf(einwurfZiel());
+$("#vhFab").onclick=()=>einwurf(einwurfZiel());
 $("#vhWarte").onclick=()=>gfEinwurfWarteschlange({ onDone:()=>laden(true), nachJedem:()=>laden(true) });
 $("#vhAkte").addEventListener("click",e=>{ const b=e.target.closest(".vh-warte.klein"); if(b && typeof gfEinwurfWarteschlange==="function"){ e.stopPropagation(); gfEinwurfWarteschlange({ vorhaben_id:AKTE.vorhaben.id, onDone:()=>{ laden(true); oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); } }); } }, true);
 $("#vhUebergabe").onclick=()=>vhUebergabe();
@@ -739,16 +753,21 @@ document.addEventListener("gf-who",()=>{ if(DATA){ renderSteuer(); renderMain();
 
 /* Erledigte kommen aus einer eigenen Abfrage (vorhaben_list mit status erledigt); DATA bleibt bei aktiv und pausiert,
    damit Kopfzeile, Filterzahlen und Abzeichen nur Offenes zählen. */
+/* Nur die jüngste Anfrage zählt: kommen Antworten verkehrt herum an, überschreibt eine alte nicht den neueren Stand. */
 async function ladenErledigt(){
-  try{ ERL=(await gfApi("vorhaben_list",{ status:"erledigt" })).vorhaben||[]; }
-  catch(e){ if(e.auth) throw e; if(FILTER==="erledigt") $("#vhMain").innerHTML=`<div class="empty soft">Die erledigten Vorhaben ließen sich nicht laden: ${gfEsc(e.message||"Verbindung")}.</div>`; }
+  const lauf=++ERL_LAUF;
+  try{ const d=await gfApi("vorhaben_list",{ status:"erledigt" }); if(lauf!==ERL_LAUF) return; ERL=d.vorhaben||[]; ERL_FEHLER=""; }
+  catch(e){ if(e.auth) throw e; if(lauf!==ERL_LAUF) return; ERL_FEHLER=e.message||"Verbindung"; }
 }
 async function laden(still){
-  const erl=ladenErledigt();
-  try{ DATA=await gfApi("vorhaben_list"); }
-  catch(e){ if(e.auth) throw e; $("#vhMain").innerHTML=`<div class="empty soft">Die Vorhaben ließen sich nicht laden: ${gfEsc(e.message||"Verbindung")}. <button type="button" class="btn btn-sm btn-ghost" onclick="laden()">Noch einmal</button></div>`; return; }
-  renderKopf(); renderSteuer(); renderMain(); gfVhBadge();
-  await erl; renderSteuer(); if(FILTER==="erledigt") renderMain();
+  const lauf=++LADE_LAUF;
+  const erl=ladenErledigt().catch(()=>{});
+  let d;
+  try{ d=await gfApi("vorhaben_list"); }
+  catch(e){ if(e.auth) throw e; if(lauf!==LADE_LAUF) return; $("#vhMain").innerHTML=`<div class="empty soft">Die Vorhaben ließen sich nicht laden: ${gfEsc(e.message||"Verbindung")}. <button type="button" class="btn btn-sm btn-ghost" onclick="laden()">Noch einmal</button></div>`; return; }
+  if(lauf!==LADE_LAUF) return;
+  DATA=d; renderKopf(); renderSteuer(); renderMain(); gfVhBadge();
+  await erl; if(lauf!==LADE_LAUF) return; renderSteuer(); if(FILTER==="erledigt") renderMain();
 }
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("vorhaben");
