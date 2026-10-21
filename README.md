@@ -1,5 +1,10 @@
 # Das Hohe Haus (vormals GF Weekly)
 
+> **Stand 21.10.2026: Webapp Standard, Pilot zur Erprobung**, auf dem Branch `paket/webstandard-pilot` (nicht gepusht).
+> Gesamte Webapp an `WEBAPP-PILOT-0.2` angepasst: Schrift ab 12 px, Bedienelemente 44 px, Tastatur und Fokus,
+> Bezeichnungen, Ladefehler sichtbar, Umbruch bei 320 px und 200 % Text. Unterlagen in `docs/webapp-standard/README.md`.
+> Webstandard-Prüfung von 70 harten Befunden auf 0; fachliche Annahme durch Alex steht aus.
+
 > **Organisationsentwicklung, 15.10.2026:** Alex entscheidet; Lea wird gezielt einbezogen. Die pauschale Doppelfreigabe entfällt im Bereich Organisation. Umsetzung und Prüfstand: `docs/reviews/Organisation-Entscheidungsfuehrung-20261015.md`.
 
 > **Stand 11.10.2026: V34 Wegweiser veröffentlicht.** „So arbeiten wir“ führt Alex und Lea durch kleine Etappen.

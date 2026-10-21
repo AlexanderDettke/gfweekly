@@ -109,6 +109,10 @@ am genauen Commit prüfen. Zusammenarbeit, die es nicht gibt, wird nicht behaupt
 - **Zuständig:** frei.
 - **Stand:** offen. Die Ausnahmeliste hält den Lauf grün, zählt die Treffer aber bei jedem Lauf sichtbar mit
   (zuletzt 137 Treffer aus 64 Einträgen). Neue Verstöße und Verschlechterungen lassen den Lauf sofort scheitern.
+- **Nachtrag 21.10.2026 (Webapp Standard, Branch `paket/webstandard-pilot`):** Platzhalterfarbe, Deckkraft bei erledigten
+  Karten und gesperrten Abzeichen, Warnmarken, Gruppenköpfe und Monatsnamen behoben, ohne Tokenänderung. Liste neu erzeugt:
+  8 Treffer aus 4 Einträgen, alle Messgrenzen (Wert einer Checkbox, Hintergrundbild; gehört zu WP-05). Abgeschlossen ist
+  WP-04 erst mit dem Zusammenführen nach `main`.
 - **Abnahmekriterien:** `pruefung/kontrast-ausnahmen.json` ist leer, und die Schirme melden null Kontrastfälle.
   Farben nur über Tokens, keine neuen Farben.
 

@@ -1,3 +1,11 @@
+## Webapp Standard, Pilot zur Erprobung (21.10.2026)
+
+Auftrag Alexander vom 21.10.2026: Organisationsstandards 0.5.0 übernehmen und den Webapp Standard `WEBAPP-PILOT-0.2` auf die gesamte Webapp anwenden. Der Standard bleibt ein Pilot zur Erprobung, keine beschlossene Regel. Unterlagen: `docs/webapp-standard/README.md` (Profil, Inventar mit 430 Fähigkeiten, Regelzuordnung aller 34 Regeln, Prüfmatrix T-01 bis T-22, Arbeitsstand). Bibliothek geprüft unter `organisationsstandards/` (`organisationsstandards/AKTUELL.json`).
+
+Branch `paket/webstandard-pilot` auf `05af97b`, nicht gepusht, nicht deployt. Keine Änderung an Edge Functions oder Datenbank. Neu in `site/assets/core.js`: `gfDialogAuf`, `gfBereichAuf`/`gfBereichZu`, `gfLadefehler`, `gfIsoTag`, `gfBezeichnungen`; `gfGate` trennt Passwortprüfung und Seitenaufbau. Neu in `site/assets/styles.css`: Block „Webapp Standard“ am Ende; `--stufe-1` 0,75 rem und `--stufe-2` 0,875 rem.
+
+Prüfung: `pruefung/webstandard-pruefung.mjs` (Oberflächentest, in `pruefung/abnahme.sh` eingebunden) von 70 harten Befunden am Ausgangsstand auf 0; neun Bedienproben bestanden; `pruefung/kontrast-ausnahmen.json` von 64 auf 4 Einträge neu erzeugt (verbleibend Messgrenzen). Vorschau mit Testdaten: `pruefung/vorschau.mjs`. Offene Lücken L1 bis L8 in `docs/webapp-standard/REGELZUORDNUNG.md`.
+
 ## Vorhaben abschließen (21.10.2026)
 
 Auftrag: `docs/PAKET-VORHABEN-ABSCHLIESSEN.md`. Vorhaben lassen sich jetzt in der Oberfläche schließen, als erledigt ansehen und wieder öffnen.

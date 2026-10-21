@@ -235,3 +235,10 @@ Im Folgenden bezeichnet **P** die maßgebliche [Paketdatei](/Users/alexanderdett
 Die größten verbleibenden Risiken sind falsche oder verlorene Zuständigkeiten beim Übergang zwischen Abwesenheit und Rückkehr, unsichtbare Entscheidungen, unvollständige Körbe bei längerer Abwesenheit und doppelte beziehungsweise nicht sauber abgeschlossene Asana Vorgänge. Die vorhandenen Prüfungen sichern gerade diese Übergänge nicht ab; mehrere Dokumentationsaussagen vermitteln deshalb mehr Verlässlichkeit, als die Umsetzung bietet.
 
 **Der geprüfte Stand ist nicht abnahmefähig.**
+
+## Nachtrag 21.10.2026: Webapp Standard (Pilot zur Erprobung)
+
+Auf dem Branch `paket/webstandard-pilot` sind die Kontrastschuld bis auf 4 Messgrenzen (`pruefung/kontrast-ausnahmen.json`), die
+Schrift unter 12 px, die Ziele unter 44 px, der Überlauf bei 320 px und 200 % und die unsichtbaren Ladefehler behoben. Neu
+festgestellt und nicht behoben: mehrere Schreibwege ohne Konfliktschutz (Themen-Autosave, Entscheidungen, Seiten, Meilensteine,
+Launch, Saison-Rad) und die Personenwahl ohne Anmeldung. Einzelheiten: `docs/webapp-standard/REGELZUORDNUNG.md`, Lücken L1 bis L8.
