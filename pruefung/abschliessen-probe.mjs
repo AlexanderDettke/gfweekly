@@ -95,6 +95,17 @@ async function testvorhaben() {
   ok(a.vorhaben.status === 'erledigt' && JSON.stringify(a.punkte) === JSON.stringify(vorAlt.punkte) && a.themen.length === vorAlt.themen.length, 'und ändert nichts');
   const w4 = await api('vorhaben_wiedereroeffnen', { id: v.id, by: 'Alex', rueckgaengig: r4.rueckgaengig });
   ok(w4.vorhaben.status === 'aktiv' && w4.punkte === 0 && w4.themen === 0, 'Rückgängig des jüngsten Abschlusses (ohne Haken) öffnet nur wieder', w4);
+  /* Nach Wieder öffnen und Status „erledigt“ über vorhaben_save verfällt der Rückgängig-Wert ebenfalls. */
+  const r6 = await api('vorhaben_abschliessen', { id: v.id, by: 'Alex', punkte_mit: true });
+  await api('vorhaben_wiedereroeffnen', { id: v.id, by: 'Alex' });
+  await api('vorhaben_save', { id: v.id, status: 'erledigt', expect: { status: 'aktiv' }, by: 'Alex' });
+  await api('vorhaben_wiedereroeffnen', { id: v.id, by: 'Alex', rueckgaengig: r6.rueckgaengig }, 409).then(d => ok(/letzten Abschluss/.test(d.error), 'alter Rückgängig-Wert nach Wieder öffnen und Status erledigt gibt 409'));
+  /* Einwurf auf ein erledigtes Vorhaben: mehr als der Verlaufseintrag wird abgelehnt. */
+  const ew = (await api('einwurf_list', {})).einwuerfe?.find(x => x.source_ref === 'probe:abschluss:1') || null;
+  if (ew) await api('einwurf_apply', { id: ew.id, vorhaben_id: v.id, auswahl: { naechster_schritt: true }, bearbeitet: { naechster_schritt: 'Probe' }, by: 'Alex' }, 409)
+    .then(d => ok(/nur der Verlaufseintrag/.test(d.error), 'Einwurf mit nächstem Schritt auf ein erledigtes Vorhaben gibt 409'));
+  else ok(false, 'Testeinwurf probe:abschluss:1 nicht gefunden');
+  await api('vorhaben_wiedereroeffnen', { id: v.id, by: 'Alex' });
   s = await api('vorhaben_save', { id: v.id, status: 'archiviert', expect: { status: 'aktiv' }, by: 'Alex' });
   ok(s.vorhaben.status === 'archiviert' && !(await offen()).some(x => x.slug === 'test-abschluss') && !(await erledigt()).some(x => x.slug === 'test-abschluss'), 'Archivieren: weder offen noch erledigt');
 }

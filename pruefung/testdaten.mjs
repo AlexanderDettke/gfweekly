@@ -395,7 +395,7 @@ const vhVerlauf = [
   { id:'e4', vorhaben_id:'vh-xceed', happened_at:zeit(-9), art:'entscheidung', wer:'Alex und Lea', text:'XCeed wird Ticketanbieter.', tag:'Entscheidung', status:'bestaetigt', source_ref:'seed:2', source_url:null, created_at:zeit(-9) },
 ];
 /* Schalter für Fehlerwege in den Bedienproben. */
-export const SCHALTER = { rueckkehrFehler:false, wiederFehler:false };
+export const SCHALTER = { rueckkehrFehler:false, wiederFehler:false, abschlussKonflikt:false };
 export const VH_ANTWORT = {
   vorhaben_list: (p) => p && p.status === 'erledigt'
     ? ({ stand:zeit(0), heute, vorhaben:VORHABEN.filter(v => v.status === 'erledigt').map(v => ({ ...v, erledigt_am:zeit(-2), ergebnis:v.slug === 'saal-alt' ? 'Rechnung bezahlt, Schlüssel zurück' : null })) })
@@ -425,6 +425,7 @@ export const VH_ANTWORT = {
   vorhaben_abschliessen: (p) => { const v = VORHABEN.find(x => x.id === p.id || x.slug === p.slug);
     if (!v) return { __status:404, error:'Vorhaben gibt es nicht' };
     if (!['aktiv','pausiert'].includes(v.status)) return { __status:409, error:'Das Vorhaben ist schon erledigt, bitte neu laden' };
+    if (SCHALTER.abschlussKonflikt) { SCHALTER.abschlussKonflikt = false; return { __status:409, error:'Das Vorhaben wurde inzwischen geändert, bitte neu laden' }; }
     const punkte = p.punkte_mit ? Array.from({ length:v.punkte_gesamt - v.punkte_erledigt }, (_, i) => `00000000-0000-4000-8000-00000000000${i}`) : [];
     const themen = p.themen_mit ? Array.from({ length:v.themen_offen }, (_, i) => `00000000-0000-4000-9000-00000000000${i}`) : [];
     v.status = 'erledigt';

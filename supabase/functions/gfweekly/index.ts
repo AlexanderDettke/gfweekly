@@ -2798,10 +2798,15 @@ Deno.serve(async (req: Request) => {
       const { data: vh, error, count: gesamt } = await admin.from('hh_vorhaben_lage').select('*', { count:'exact' }).eq('status', 'erledigt').order('updated_at', { ascending:false }).limit(1000);
       if (error) throw error;
       const ids = (vh || []).map((v: any) => v.id);
-      const { data: vl, error: e2 } = ids.length
-        ? await admin.from('hh_vorhaben_verlauf').select('vorhaben_id,happened_at,text').in('vorhaben_id', ids).eq('art', 'entscheidung').eq('status', 'bestaetigt').order('happened_at', { ascending:false })
-        : { data: [], error: null } as any;
-      if (e2) throw e2;
+      /* Nur Abschlusseinträge (ilike grenzt vor, die Regel unten entscheidet), seitenweise, damit kein Antwortlimit ältere abschneidet. */
+      const vl: any[] = [];
+      for (let von = 0; ids.length && von < 20000; von += 1000) {
+        const { data, error: e2 } = await admin.from('hh_vorhaben_verlauf').select('vorhaben_id,happened_at,text').in('vorhaben_id', ids)
+          .eq('art', 'entscheidung').eq('status', 'bestaetigt').ilike('text', '%erledigt:%').order('happened_at', { ascending:false }).order('id').range(von, von + 999);
+        if (e2) throw e2;
+        vl.push(...(data || []));
+        if ((data || []).length < 1000) break;
+      }
       const liste = (vh || []).map((v: any) => {
         const e = (vl || []).find((x: any) => x.vorhaben_id === v.id && /^(Vorhaben )?erledigt:/i.test(x.text || ''));
         return { ...v, erledigt_am: e?.happened_at || v.updated_at, ergebnis: e ? vhErgebnis(e.text) : null };
@@ -3066,6 +3071,10 @@ Deno.serve(async (req: Request) => {
         punkte: Array.isArray(a.punkte) ? a.punkte.map(String).filter((x: string) => VH_UUID.test(x)).slice(0, 50) : [],
         neue_punkte: Array.isArray(a.neue_punkte) ? a.neue_punkte.map((x: unknown) => parseInt(String(x))).filter((x: number) => x >= 0 && x < 50) : [] };
       const ben = ['sofort','morgen'].includes(t.benachrichtigung) ? t.benachrichtigung : null;
+      /* 21.10.2026: Ein erledigtes oder archiviertes Vorhaben nimmt aus dem Einwurf nur noch den Verlaufseintrag an (wie der
+         Abgleich); Ball, nächster Schritt, Frist und Punkte erst nach „Wieder öffnen“. */
+      if (['erledigt','archiviert'].includes(vh.status) && (auswahl.ball || auswahl.naechster_schritt || auswahl.frist || auswahl.punkte.length || auswahl.neue_punkte.length))
+        return json({ error:`„${vh.title}“ ist ${vh.status === 'erledigt' ? 'erledigt' : 'archiviert'}: nur der Verlaufseintrag lässt sich übernehmen, alles andere erst nach „Wieder öffnen“.` },409);
       /* revision: der Vorschlag, den die Person gesehen hat (Review 31a Runde 2, Befund 5). */
       const erg = await vhRpc('hh_einwurf_apply', { p_id: ew.id, p_vorhaben: vh.id, p_auswahl: auswahl, p_bearbeitet: bearbeitet, p_benachrichtigung: ben, p_by: by,
         p_revision: t.revision ? String(t.revision).slice(0, 64) : null, p_expect_ball: VH_BALL.includes(t.expect_ball) ? t.expect_ball : null });

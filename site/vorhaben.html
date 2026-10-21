@@ -291,7 +291,9 @@ async function ballSetzen(v, ball, name, notiz){
 }
 
 /* ---------- Akte ---------- */
+let AKTE_VON=null;   // Knopf, der die Akte geöffnet hat; dorthin kehrt der Fokus beim Schließen zurück
 async function oeffneAkte(slug, opts={}){
+  const af=document.activeElement; if(af && af!==document.body && !$("#vhAkte").contains(af) && !$("#vhModal").contains(af)) AKTE_VON=af;
   AKTE_SLUG=slug; if(!opts.tab) TAB=opts.tabKeep?TAB:"prozess"; else TAB=opts.tab;
   const u=new URL(location.href); u.searchParams.set("v",slug); if(TAB==="verlauf") u.searchParams.set("tab","verlauf"); else u.searchParams.delete("tab"); history.replaceState(null,"",u);
   const a=$("#vhAkte"); a.hidden=false; document.documentElement.classList.add("vh-akte-offen");
@@ -307,7 +309,14 @@ async function oeffneAkte(slug, opts={}){
   AKTE=d; renderAkte(); if(!opts.still) a.querySelector("h2")?.focus();
 }
 function schliesseAkte(){
+  const slug=AKTE_SLUG, hatteFokus=$("#vhAkte").contains(document.activeElement);
   AKTE_LAUF++; AKTE=null; AKTE_SLUG=null; GELOEST=null; const a=$("#vhAkte"); a.hidden=true; a.innerHTML=""; document.documentElement.classList.remove("vh-akte-offen");
+  /* Fokus nicht im Nichts lassen: zurück zum auslösenden Knopf, sonst zur Karte des Vorhabens, sonst zur Überschrift. */
+  if(hatteFokus || document.activeElement===document.body){
+    const ziel=(AKTE_VON&&AKTE_VON.isConnected&&AKTE_VON.getClientRects().length?AKTE_VON:null)
+      || (slug&&document.querySelector(`#vhMain [data-open="${CSS.escape(slug)}"]`)) || document.querySelector(".vh-kopf h2");
+    if(ziel){ if(ziel.matches("h2")) ziel.setAttribute("tabindex","-1"); ziel.focus(); } }
+  AKTE_VON=null;
   const u=new URL(location.href); u.searchParams.delete("v"); u.searchParams.delete("tab"); history.replaceState(null,"",u);
   document.querySelectorAll(".vh-card.on,.vh-l-z.on,.vh-erl-z.on").forEach(x=>x.classList.remove("on"));
 }
@@ -536,8 +545,11 @@ function abschliessenBlatt(v){
       if(AKTE_SLUG===v.slug) schliesseAkte();
       rueckgaengigHinweis(v, d);
       await laden(true);
-    }catch(err){ laeuft=false; ok.disabled=false; const f=$("#vhErlFehler"); f.hidden=false; f.textContent="Nicht abgeschlossen: "+(err.message||"Verbindung");
-      if(/neu laden|inzwischen|schon/i.test(err.message||"")) laden(true); }
+    }catch(err){ laeuft=false; ok.disabled=false;
+      /* Konflikt (inzwischen geändert oder schon erledigt): das Blatt kennt einen alten Stand, also zu, neu laden, Hinweis.
+         Bei einer Störung bleibt es mit dem eingetippten Satz offen für einen zweiten Versuch. */
+      if(/neu laden|inzwischen|schon/i.test(err.message||"")){ zu(); gfToast("Nicht abgeschlossen: "+err.message); await laden(true); if(AKTE_SLUG===v.slug) oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); return; }
+      const f=$("#vhErlFehler"); f.hidden=false; f.textContent="Nicht abgeschlossen: "+(err.message||"Verbindung"); }
   };
   setTimeout(()=>$("#vhErlOk")?.focus(),40);
 }

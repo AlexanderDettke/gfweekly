@@ -364,6 +364,14 @@ console.log('\n== Vorhaben abschließen, Erledigt, Wieder öffnen (21.10.2026) =
   const a = await seite('/vorhaben.html?v=xceed');
   await a.locator('#vhAkte [data-erledigt]').click(); await a.waitForTimeout(200);
   pruefe('„✓ Erledigt“ öffnet das Blatt', await a.locator('#vhModal.open .vh-blatt').count() === 1);
+  /* Konflikt beim Abschließen: das Blatt schließt, die Akte lädt neu, nichts bleibt auf altem Stand stehen. */
+  await a.keyboard.press('Escape'); await a.waitForTimeout(200);
+  SCHALTER.abschlussKonflikt = true; erwarteterFehler = true;
+  await a.locator('#vhAkte [data-erledigt]').click(); await a.waitForTimeout(200);
+  await a.locator('#vhErlOk').click(); await a.waitForTimeout(500);
+  erwarteterFehler = false;
+  pruefe('Konflikt beim Abschließen: Blatt zu, Akte offen', await a.locator('#vhModal.open').count() === 0 && await a.locator('#vhAkte [data-erledigt]').isVisible());
+  await a.locator('#vhAkte [data-erledigt]').click(); await a.waitForTimeout(200);
   await a.keyboard.press('Escape'); await a.waitForTimeout(200);
   pruefe('Escape schließt nur das Blatt, die Akte bleibt offen', await a.locator('#vhModal.open').count() === 0 && await a.locator('#vhAkte').isVisible());
   await a.locator('#vhAkte [data-erledigt]').click(); await a.waitForTimeout(200);
@@ -386,6 +394,10 @@ console.log('\n== Vorhaben abschließen, Erledigt, Wieder öffnen (21.10.2026) =
   const wr = letzte('vorhaben_wiedereroeffnen');
   pruefe('Rückgängig schickt genau die zurückgegebenen Kennungen', wr && wr.nutzlast.id === 'vh-xceed' && wr.nutzlast.rueckgaengig && wr.nutzlast.rueckgaengig.punkte.length === 5 && wr.nutzlast.rueckgaengig.themen.length === 0 && !!wr.nutzlast.rueckgaengig.zeit, JSON.stringify(wr && wr.nutzlast));
   pruefe('nach Rückgängig ist die Karte wieder da', await a.locator('#vhMain [data-open="xceed"]').count() > 0);
+  /* Fokus: Akte per Tastatur öffnen, mit Escape schließen, der Fokus steht wieder auf der Karte. */
+  await a.locator('#vhMain [data-open="lusatia"]').first().focus(); await a.keyboard.press('Enter'); await a.waitForTimeout(400);
+  await a.locator('#vhAkte h2').focus(); await a.keyboard.press('Escape'); await a.waitForTimeout(200);
+  pruefe('Escape schließt die Akte, Fokus zurück auf dem auslösenden Knopf', await a.evaluate(() => document.activeElement?.dataset?.open === 'lusatia'), await a.evaluate(() => document.activeElement?.outerHTML.slice(0, 80)));
   await a.close();
 
   /* Liste: Kreis am Zeilenanfang öffnet dasselbe Blatt; Themen-Haken an schickt themen_mit. */
