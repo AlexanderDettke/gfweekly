@@ -241,7 +241,7 @@ export const ANTWORT = {
   list: { topics: THEMEN },
   links_all: { links:[ { id:'l1', item_id:'t1', title:'Vertragsentwurf', type:'drive', url:'https://example.org/v', description:'', added_by:'Alex', created_at:zeit(-10) } ] },
   sites_list: { categories:[ { id:'c1', key:'arbeit', label:'Arbeiten', sort_order:1 }, { id:'c2', key:'technik', label:'Technik', sort_order:2 } ],
-    sites:[ { id:'s1', name:'Das Hohe Haus', url:'https://hohes-haus.netlify.app', category:'arbeit', purpose:'Cockpit der GF', notes:'', login_user:'', login_password:'', login_note:'', status:'aktiv', preview:'', sort_order:1 },
+    sites:[ { id:'s1', name:'Das Hohe Haus', url:'https://kompass.wildehabitate.de', category:'arbeit', purpose:'Cockpit der GF', notes:'', login_user:'', login_password:'', login_note:'', status:'aktiv', preview:'', sort_order:1 },
             { id:'s2', name:'Team- und Partneranalyse', url:'https://team-partner-analyse.netlify.app', category:'technik', purpose:'Einschätzungen', notes:'', login_user:'alex', login_password:'geheim', login_note:'', status:'aktiv', preview:'', sort_order:2 } ] },
   cycle_get: { year:new Date().getFullYear(), phases:PHASEN,
     transitions:[ { id:'x1', key:'planungsauftakt', label:'Planungsauftakt', month:1, day:15, description:'Jahresstart', sort_order:1 },

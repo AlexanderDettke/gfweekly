@@ -54,6 +54,10 @@ Prüfungen am 21.10.2026:
 
 Grenzen: Wer abschließt, wählt der Browser („als Alex“ oder „als Lea“); die Edge Function prüft nur das gemeinsame Passwort. Der Rückgängig-Hinweis lebt nur auf der Seite, die abgeschlossen hat; danach geht es über „Wieder öffnen“, das abgehakte Punkte und archivierte Themen nicht zurücksetzt. Die XCeed-Proben haben im Verlauf von XCeed Einträge „Wieder geöffnet“ und „Erledigt: …“ hinterlassen.
 
+## Kompass (21.10.2026)
+
+Das Hohe Haus heißt seit 20.10.2026 Kompass, Adresse https://kompass.wildehabitate.de/ (Netlify-Hauptdomain seit 18.10.2026, hohes-haus.netlify.app leitet weiter). Name in Seitentiteln, Login, Seitenleiste (`GF_APP_NAME`), Manifest und Fußzeilen; neue Bildmarke `site/assets/img/kompass.svg` und `kompass-klein.svg` mit allen Favicon-Größen und og-image.png; `HH_BASIS` in gfweekly und besetzung auf die neue Domain; Assets `?v=35`. Einzelheiten und Offenes: `docs/PAKET-KOMPASS.md`.
+
 ## Technische Gesamtabnahme vom 15.10.2026
 
 Vollständiger lokaler Prüflauf einschließlich Farbvorlage, Oberflächen, Bedienung, lokaler Datenbanken und Aktionsproben bestanden. Ergänzend bestanden 415 Wegweiserprüfungen. Prüfbeleg erneuert, Wächter einschließlich Frischeprüfung ohne Befunde. Die Originalvorlage wurde im Downloadarchiv wiedergefunden und unverändert mit Herkunft unter `pruefung/referenz/farbvorlage/` gesichert. Bericht und Grenzen: `docs/reviews/Gesamtabnahme-20261015.md`.

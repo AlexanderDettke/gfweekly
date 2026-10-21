@@ -1,5 +1,5 @@
 /* ===========================================================
-   Das Hohe Haus (vormals GF Weekly) · V21 · gemeinsamer Kern
+   Kompass (vormals Das Hohe Haus, davor GF Weekly) · V21 · gemeinsamer Kern
    API-Zugriff, Login-Gate, Navigation, Theme-Umschaltung, Helfer.
    V21: Element-Bausteine des Design-Systems (Chip-Reihe statt <select>, Stepper statt <input type=number>,
    Zustand als Symbol plus Wort, KPI-Kachel) und der Plattform-Block (Wilde Habitate, Wild Wild Partner).
@@ -133,7 +133,7 @@ function gfGate(onReady){
 /* ---- Seitenleiste (V18): links, einklappbar zur Symbolleiste, am Handy als Schublade hinter einer schmalen Kopfzeile.
    Gruppen: Heute (Für dich, Neuigkeiten, Besprechung) · Arbeiten (Themen mit Board/Kacheln/Liste/Entscheidungen, Eingabe) · Verwalten (Wichtige Seiten, Bearbeiten).
    Unten: Habitat-Taler (game.js hängt sich an .tb-ctl), Dunkel/Hell, Person. Zustand offen/schmal in localStorage gf_nav. ---- */
-const GF_APP_NAME="Das Hohe Haus";
+const GF_APP_NAME="Kompass";
 const GF_APP_SUB="Geschäftsführung der Wilden Habitate";
 const GF_APP_MOTTO="Große Fragen. Klare Entscheidungen. Gelegentlich Kaffee oder besser Wein?";
 const GF_AVATAR={ Alex:"/assets/img/avatar-alex.webp", Lea:"/assets/img/avatar-lea.webp" };
@@ -195,7 +195,7 @@ function gfMountTopbar(active){
     <div class="sb-backdrop" id="navBackdrop"></div>
     <aside class="sidebar" id="sidebar" aria-label="Navigation">
       <div class="sb-head">
-        <a class="brand" href="index.html"><div class="mark pic"><img src="/assets/img/burg-144.png" srcset="/assets/img/burg-288.png 2x" alt="" width="36" height="36"></div><div class="brand-txt"><h1>${GF_APP_NAME}</h1><div class="meta">${GF_APP_SUB}</div></div></a>
+        <a class="brand" href="index.html"><div class="mark pic"><img src="/assets/img/kompass-144.png" srcset="/assets/img/kompass-288.png 2x" alt="" width="36" height="36"></div><div class="brand-txt"><h1>${GF_APP_NAME}</h1><div class="meta">${GF_APP_SUB}</div></div></a>
         <button class="sb-toggle" id="navToggle" aria-label="Menü einklappen" title="Menü einklappen">${GF_ICONS.chev}</button>
         <button class="sb-close" id="navClose" aria-label="Menü schließen">${GF_ICONS.x}</button>
       </div>
@@ -306,7 +306,7 @@ function gfAsanaText(t){
          `Kontext: ${t.short_description||(t.context||"").split("\n")[0]||"offen"}\n`+
          `Empfehlung: ${t.recommendation||"offen"}\n`+
          `Nächster Schritt: ${t.next_action||"offen"}\n`+
-         `Quelle: Das Hohe Haus`;
+         `Quelle: Kompass`;
 }
 
 /* ---- V13: Modal mit Text (Protokoll, Wochenmail): kopieren, per Mail, schließen ---- */
@@ -351,7 +351,7 @@ function gfProtocolText(meta, log, openTopics){
   grp("vertagt","Vertagt",(e)=>`- ${e.title}${e.until?` → ${gfFmtShort(e.until)}`:""}`);
   grp("besprochen","Besprochen ohne Beschluss",(e)=>`- ${e.title}${e.next_action?`: ${e.next_action}`:""}`);
   if(openTopics&&openTopics.length){ L.push(`Offen geblieben (zu besprechen): ${openTopics.length}`); openTopics.slice(0,12).forEach(t=>L.push(`- ${t.title}${t.priority==="hoch"?" (hoch)":""}`)); if(openTopics.length>12) L.push(`- … und ${openTopics.length-12} weitere`); L.push(""); }
-  L.push(`Erstellt mit Das Hohe Haus · hohes-haus.netlify.app`);
+  L.push(`Erstellt mit Kompass · kompass.wildehabitate.de`);
   return L.join("\n");
 }
 
@@ -612,7 +612,7 @@ async function gfLoadTeam(el){
 
 /* ===== V21 (20.09.2026) · Plattformen, letzte 7 Tage (Startseite): Wilde Habitate und Wild Wild Partner.
    Fakten live aus platform_digest (Views hh_feed_*), Briefing-Text aus gfweekly_news (kind lage, Strang habitate bzw. wwp),
-   geschrieben vom täglichen Lauf. Das Hohe Haus liest nur. ===== */
+   geschrieben vom täglichen Lauf. Der Kompass liest nur. ===== */
 const GF_PLATFORMS=[
   { key:"habitate", strand:"habitate", name:"Wilde Habitate", sub:"Plattform · Planung, Entscheidungen, Changelog", url:"https://wilde-habitate.netlify.app" },
   { key:"wwp", strand:"wwp", name:"Wild Wild Partner", sub:"Plattform · Partnergespräche", url:"https://wild-wild-partner.netlify.app" },

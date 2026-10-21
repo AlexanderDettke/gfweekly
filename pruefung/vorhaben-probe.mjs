@@ -8,7 +8,7 @@
    Die KI-Proben brauchen ANTHROPIC_API_KEY in der Edge Function. */
 const FN = process.env.GF_FN || 'https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/gfweekly';
 const PW = process.env.GF_PW || '';
-if (!PW) { console.error('GF_PW fehlt (Passwort des Hohen Hauses in der Umgebung).'); process.exit(2); }
+if (!PW) { console.error('GF_PW fehlt (Passwort des Kompasses in der Umgebung).'); process.exit(2); }
 const BY = 'Alex';
 let fehler = 0, n = 0;
 const ok = (bed, text, extra) => { n++; if (bed) console.log('  ✓ ' + text); else { fehler++; console.log('  ✕ ' + text + (extra !== undefined ? '  → ' + JSON.stringify(extra).slice(0, 300) : '')); } };

@@ -1,5 +1,5 @@
 /* ===========================================================
-   Das Hohe Haus · styles.css · V23 (21.09.2026)
+   Kompass · styles.css · V23 (21.09.2026)
    Design-System „Wilde Habitate / Habitat-Tycoon" (Claude Design d8550ead), Farbtokens aus tokens/colors.css, Stand 20.09.2026.
    Dunkel ist Standard (:root), Hell über [data-theme="light"]. Eine Schrift (Archivo) in fünf Stufen, Zahlen tabular.
    Abstände 4/8/12/16/24/32/48 · Radien 4/6/8 (V21: Modernist-Kanten aus V9.1/V11 zurückgenommen) · Rahmen 1 px, Farbe wechselt nach Zustand ·
@@ -27,7 +27,7 @@
   --info:#c9cfa8; --info-bg:rgba(185,204,138,0.12);
   --chart-gruen:#a3b876; --chart-peach:#cfae7e; --chart-coral:#c56a4e; --chart-grid:rgba(233,233,236,0.14);
   --on-band:#171d18; --backdrop:rgba(23,29,24,0.6);
-  /* Chronik-Papier und Rang-Rahmen aus tokens/colors.css. Das Hohe Haus benutzt sie heute nirgends;
+  /* Chronik-Papier und Rang-Rahmen aus tokens/colors.css. Der Kompass benutzt sie heute nirgends;
      sie stehen hier, damit die Token-Zone die Quelle vollständig abbildet (das Papierbild liegt im Spiel-Repo). */
   --ht-papier:#1b211b; --ht-papier-2:#262e25; --ht-tinte:#ece7dd; --ht-tinte-2:rgba(236,231,221,0.72);
   --ht-linie:rgba(236,231,221,0.16); --ht-ocker:#d9b36a; --chronik-papier-bild:none;

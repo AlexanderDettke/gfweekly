@@ -1,4 +1,6 @@
-# Das Hohe Haus (vormals GF Weekly)
+# Kompass (vormals Das Hohe Haus, davor GF Weekly)
+
+> **Stand 21.10.2026: Umbenennung in Kompass.** Adresse https://kompass.wildehabitate.de/, neue Bildmarke und Favicon (Kompassrose). Paket und Prüfstand: `docs/PAKET-KOMPASS.md`. Technische Schlüssel bleiben gfweekly.
 
 > **Organisationsentwicklung, 15.10.2026:** Alex entscheidet; Lea wird gezielt einbezogen. Die pauschale Doppelfreigabe entfällt im Bereich Organisation. Umsetzung und Prüfstand: `docs/reviews/Organisation-Entscheidungsfuehrung-20261015.md`.
 

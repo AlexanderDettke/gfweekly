@@ -5,25 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
-<title>Das Hohe Haus · Jahr</title>
+<title>Kompass · Jahr</title>
 <meta name="description" content="Jahr: Zyklus, Jahreszyklus, Meilensteine, wichtigste Themen, Rituale. Vertraulich." />
-<meta property="og:title" content="Das Hohe Haus · Geschäftsführung der Wilden Habitate" />
+<meta property="og:title" content="Kompass · Geschäftsführung der Wilden Habitate" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung, Wilde Möhre." />
 <meta property="og:image" content="assets/og-image.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=36" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=36" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=36" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=36" />
-<link rel="stylesheet" href="/assets/styles.css?v=36" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=37" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=37" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=37" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=37" />
+<link rel="stylesheet" href="/assets/styles.css?v=37" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
 
 <div id="gate">
   <div class="gate-card">
-    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <div class="mark pic"><img src="/assets/img/kompass-288.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
-    <h1>Das Hohe Haus</h1>
+    <h1>Kompass</h1>
     <div class="sub">Große Fragen. Klare Entscheidungen. Gelegentlich Kaffee oder besser Wein?</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
@@ -88,9 +88,9 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=36"></script>
-<script src="/assets/game.js?v=36"></script>
-<script src="/assets/eggs.js?v=36" defer></script>
+<script src="/assets/core.js?v=37"></script>
+<script src="/assets/game.js?v=37"></script>
+<script src="/assets/eggs.js?v=37" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const MON=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -350,7 +350,7 @@ document.addEventListener("gf-game",e=>renderHabitat(e.detail));
 async function loadQuick(){
   try{
     const d=await gfApi("sites_list");
-    const sites=(d.sites||[]).filter(s=>s.status==="aktiv" && s.category==="steuerung" && !/gfweekly\.netlify\.app|hohes-haus\.netlify\.app/.test(s.url)).slice(0,6);
+    const sites=(d.sites||[]).filter(s=>s.status==="aktiv" && s.category==="steuerung" && !/gfweekly\.netlify\.app|hohes-haus\.netlify\.app|kompass\.wildehabitate\.de/.test(s.url)).slice(0,6);
     $("#quick").innerHTML=sites.map(s=>`<a class="qcard" href="${gfEsc(s.url)}" target="_blank" rel="noopener"><div class="qn">${gfEsc(s.name)}</div><div class="qp">${gfEsc(s.purpose||"")}</div><div class="qh">${gfEsc((()=>{try{return new URL(s.url).host}catch(e){return s.url}})())} ↗</div></a>`).join("") || `<div class="empty soft">Noch keine Seiten im Bereich Steuerung &amp; Planung.</div>`;
   }catch(e){ $("#quick").innerHTML=""; }
 }

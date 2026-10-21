@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
-<title>Das Hohe Haus · Launch verteilen</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=36" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=36" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=36" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=36" />
-<link rel="stylesheet" href="/assets/styles.css?v=36" />
+<title>Kompass · Launch verteilen</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=37" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=37" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=37" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=37" />
+<link rel="stylesheet" href="/assets/styles.css?v=37" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 <style>
 /* Launch verteilen (V27 Phase B, 30.09.2026; V29, 02.10.2026: Ist-Stunden, Stand aus Asana): Festivalwahl, Lage, vier Wege, Aufgaben je Bereich,
@@ -125,9 +125,9 @@ details[open]>summary .chev{transform:rotate(90deg)}
 
 <div id="gate">
   <div class="gate-card">
-    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <div class="mark pic"><img src="/assets/img/kompass-288.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
-    <h1>Das Hohe Haus</h1>
+    <h1>Kompass</h1>
     <div class="sub">Launch verteilen · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
@@ -197,10 +197,10 @@ details[open]>summary .chev{transform:rotate(90deg)}
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=36"></script>
-<script src="/assets/launch-logik.js?v=36"></script>
-<script src="/assets/game.js?v=36"></script>
-<script src="/assets/eggs.js?v=36" defer></script>
+<script src="/assets/core.js?v=37"></script>
+<script src="/assets/launch-logik.js?v=37"></script>
+<script src="/assets/game.js?v=37"></script>
+<script src="/assets/eggs.js?v=37" defer></script>
 <script>
 /* V27 Phase B · Launch verteilen. Die Seite hält alle Daten aus launch_list, rechnet mit LaunchLogik
    und schreibt über launch_set, launch_confirm, launch_send. Nach jedem Schreiben wird neu geladen. */
@@ -260,7 +260,7 @@ function renderLage(R){
   /* V29b: läuft der Rückweg seit über zwei Stunden nicht, obwohl Aufgaben in Asana stehen, sagt die Seite das. */
   const syAlt=sy.aeltester?(Date.now()-Date.parse(sy.aeltester))>2*3600000:true;   // nur der gespeicherte älteste Plan-Stand zählt
   const inAsana=(D.meilensteine||[]).some(m=>m.asana_task_gid);
-  $("#lnSync").textContent=(inAsana&&D.asanaConfigured&&syAlt?"Achtung: der Rückweg aus Asana ist seit über zwei Stunden nicht gelaufen; Stand aus Asana holen. ":"")+(sy.uebersprungen?`Rückweg aus Asana: ${sy.uebersprungen}.`:sy.synced_at?`Zuletzt aus Asana geholt: ${new Date(sy.synced_at).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}${sy.automatisch?" (automatisch)":""}${sy.geprueft!==undefined?`, ${sy.geprueft} Aufgaben geprüft, ${sy.erledigt||0} erledigt, ${sy.faelligkeit||0} Fälligkeiten, ${sy.kommentare||0} Kommentare${sy.fehler?", "+sy.fehler+" Fehler":""}`:""}. Erledigt in Asana heißt erledigt im Haus.`:"Noch kein Rückweg aus Asana gelaufen.");
+  $("#lnSync").textContent=(inAsana&&D.asanaConfigured&&syAlt?"Achtung: der Rückweg aus Asana ist seit über zwei Stunden nicht gelaufen; Stand aus Asana holen. ":"")+(sy.uebersprungen?`Rückweg aus Asana: ${sy.uebersprungen}.`:sy.synced_at?`Zuletzt aus Asana geholt: ${new Date(sy.synced_at).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}${sy.automatisch?" (automatisch)":""}${sy.geprueft!==undefined?`, ${sy.geprueft} Aufgaben geprüft, ${sy.erledigt||0} erledigt, ${sy.faelligkeit||0} Fälligkeiten, ${sy.kommentare||0} Kommentare${sy.fehler?", "+sy.fehler+" Fehler":""}`:""}. Erledigt in Asana heißt erledigt im Kompass.`:"Noch kein Rückweg aus Asana gelaufen.");
 }
 
 /* ---- Weg A: so zuweisen wie vorgeschlagen ---- */
@@ -384,7 +384,7 @@ function renderBest(R){
     <div class="ln-row">${gfChips("bestVon",["Alex","Lea"],UI.best.von||gfWho(),{label:"Wer bestätigt"})}<button class="btn btn-primary" data-act="confirm" ${vorschlaege?"":"disabled"}>${vorschlaege?`${vorschlaege} ${vorschlaege===1?"Zuordnung":"Zuordnungen"} bestätigen`:"nichts zu bestätigen"}</button></div>
     <p class="ln-muted">Bestätigt heißt: die Person steht als Zuständige am Meilenstein, die Besetzung des Bereichs ist fest. Eine Bestätigung von Alex oder Lea reicht.</p>
     <div class="ln-vorschau"><h3>Vorschau Asana-Projekt „Launch ${gfEsc(f.kurzname)} 2027“</h3>
-      <p class="ln-muted">Je Bereich ein Abschnitt, je bestätigtem Meilenstein eine Aufgabe beim Zuständigen mit Termin, Aufwand, Dauer, Vorgängern und Link ins Hohe Haus. Externe ohne Asana-Konto bekommen keine Aufgabe; stattdessen entsteht beim Übergebenden (${gfEsc(ueber?ueber.name:"Festivalverantwortung, sonst Alex")}) die Aufgabe „Angebot einholen und beauftragen“. Wer kein Asana-Konto hat, bleibt als Notiz hier auf der Seite.</p>
+      <p class="ln-muted">Je Bereich ein Abschnitt, je bestätigtem Meilenstein eine Aufgabe beim Zuständigen mit Termin, Aufwand, Dauer, Vorgängern und Link in den Kompass. Externe ohne Asana-Konto bekommen keine Aufgabe; stattdessen entsteht beim Übergebenden (${gfEsc(ueber?ueber.name:"Festivalverantwortung, sonst Alex")}) die Aufgabe „Angebot einholen und beauftragen“. Wer kein Asana-Konto hat, bleibt als Notiz hier auf der Seite.</p>
       ${vorschau||`<p class="ln-muted">Noch nichts bestätigt, darum noch nichts zu senden.</p>`}
       <div class="ln-row"><button class="btn ${sendbar.length?"btn-primary":"btn-brand"}" data-act="send" ${sendbar.length&&D.asanaConfigured?"":"disabled"}>${sendbar.length?`${sendbar.length} ${sendbar.length===1?"Aufgabe":"Aufgaben"} nach Asana senden`:"nach Asana senden"}</button>${D.asanaConfigured?"":`<span class="ln-muted">Das Asana-Token fehlt in den Secrets; senden geht erst danach.</span>`}</div>
       <div id="lnSendErgebnis"></div>
