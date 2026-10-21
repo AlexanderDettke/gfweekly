@@ -1,6 +1,6 @@
 {
   "fassung": "WEBAPP-PILOT-0.2",
-  "datum": "2026-10-21T04:31:53.420Z",
+  "datum": "2026-10-21T04:49:24.229Z",
   "seiten": {
     "arbeiten.html": {
       "kleinschrift": 0,
@@ -465,8 +465,10 @@
     "Eingabe: Senden fehlgeschlagen bleibt am Knopf sichtbar, Eingabe bleibt erhalten": true,
     "Board: ⇄ öffnet per Tastatur mit Fokus im Menü, Escape schließt und gibt den Fokus zurück": true,
     "Board: Umsortieren ohne Ziehen wird angeboten": true,
-    "Board: „Eine Stelle nach unten“ speichert die Reihenfolge und zeigt sie": true,
+    "Board: „Eine Stelle nach unten“ löst den Speicheraufruf mit lane_order aus und zeigt die neue Reihenfolge (Simulation, kein Neuladen)": true,
     "Board: Detailbereich öffnet per Enter mit Namen und Fokus, Escape schließt mit Fokus auf der Karte": true,
+    "Board: nach Außenklick und Öffnen an einer anderen Karte schließt Escape das richtige Menü mit Fokus auf dessen Auslöser": true,
+    "Liste: „heute besprochen“ zeigt bei Serverfehler den Fehler statt einer Erfolgsmeldung": true,
     "Tor: sichtbare Bezeichnung, falsches Passwort als Meldung mit role=alert": true,
     "Ladefehler nach der Anmeldung: Meldung mit „Erneut laden“ auf der Seite, Tor bleibt zu, Passwort bleibt": true
   },
