@@ -1,0 +1,14 @@
+[
+  {
+    "id": "WEBAPP-PILOT",
+    "file": "WEBAPP-PILOT-0.2.md",
+    "prompt_id": "WEBAPP-PILOT-PROMPT",
+    "prompt_file": "WEBAPP-PILOT-UMSETZUNGSPROMPT.md",
+    "title": "Webapps gemeinsam gestalten und bedienen",
+    "kind": "Pilot",
+    "version": "0.2",
+    "source_date": "2026-10-20",
+    "status": "Pilot zur Erprobung. Keine allgemein beschlossene Regel.",
+    "teaser": "34 Regeln für Gestaltung, Bedienung und Daten sowie 22 Testfälle. Mit vollständigem Umsetzungsprompt für eine ausgewählte Seite."
+  }
+]

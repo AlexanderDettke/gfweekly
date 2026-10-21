@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "source_url": "https://organisationswerkstatt.netlify.app/standards/current.json",
+  "package_version": "0.5.0",
+  "content_sha256": "55e526d2ad79d4f94735e1dc5a3a05a3de578a531b192ae26f165c40c35eae7e",
+  "folder": "fassungen/0.5.0-55e526d2ad79",
+  "checked_at": "2026-10-21T02:33:56.723449+00:00",
+  "status": "mixed",
+  "files": 22,
+  "verification": "sha256-after-local-write",
+  "standards": [
+    {
+      "id": "ORG-001",
+      "version": "0.2.0",
+      "status": "draft"
+    },
+    {
+      "id": "ORG-002",
+      "version": "0.2.0",
+      "status": "draft"
+    },
+    {
+      "id": "ORG-003",
+      "version": "0.2.0",
+      "status": "draft"
+    },
+    {
+      "id": "ORG-004",
+      "version": "1.0.0",
+      "status": "decided_for_project"
+    }
+  ]
+}

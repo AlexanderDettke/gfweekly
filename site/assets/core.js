@@ -20,8 +20,11 @@ function gfEsc(s){ return (s||"").toString().replace(/[&<>"]/g,c=>({"&":"&amp;",
 
 /* ---- API ---- */
 async function gfApi(action, payload){
-  const res = await fetch(GF_FN, { method:"POST", headers:{ "Content-Type":"application/json" }, keepalive:true,
-    body: JSON.stringify({ action, password: gfPW(), payload }) });
+  /* Webapp Standard B-07: „keine Verbindung“ ist ein eigener Zustand und kein unverständliches „Failed to fetch“. */
+  let res;
+  try{ res = await fetch(GF_FN, { method:"POST", headers:{ "Content-Type":"application/json" }, keepalive:true,
+    body: JSON.stringify({ action, password: gfPW(), payload }) }); }
+  catch(e){ const f=new Error(navigator.onLine===false?"Keine Verbindung: Das Gerät ist offline. Bitte versuche es erneut, sobald du wieder verbunden bist.":"Keine Verbindung zum Server. Bitte prüfe die Verbindung und versuche es erneut."); f.offline=true; throw f; }
   let d={}; try{ d = await res.json(); }catch(e){}
   if(res.status===401) throw { auth:true };
   if(!res.ok) throw new Error(d.error || ("HTTP "+res.status));
@@ -30,12 +33,22 @@ async function gfApi(action, payload){
 
 /* ---- toast ---- */
 let _gft;
-function gfToast(m){
+/* Webapp Standard P-04: Die Kurzmeldung ist eine Statusmeldung für Vorlesesoftware. Fehler bleiben länger stehen und sind
+   hervorgehoben; erkannt werden sie am Wortlaut („Fehler …“, „… fehlgeschlagen“, „nicht möglich“) oder über opts.fehler.
+   Wo ein Fehler dauerhaft am Vorgang stehen muss, zeigt ihn die Seite zusätzlich dort an. */
+const GF_TOAST_FEHLER=/^(fehler|speichern fehlgeschlagen|keine verbindung|konnte)|fehlgeschlagen|nicht möglich|nicht gespeichert/i;
+function gfToast(m, opts={}){
   let t=document.getElementById("toast");
-  if(!t){ t=document.createElement("div"); t.id="toast"; t.className="toast"; document.body.appendChild(t); }
-  t.textContent=m; t.classList.add("show"); clearTimeout(_gft); _gft=setTimeout(()=>t.classList.remove("show"),2600);
+  if(!t){ t=document.createElement("div"); t.id="toast"; t.className="toast"; t.setAttribute("role","status"); t.setAttribute("aria-atomic","true"); document.body.appendChild(t); }
+  const fehler=opts.fehler??GF_TOAST_FEHLER.test(m||"");
+  t.setAttribute("aria-live", fehler?"assertive":"polite"); t.classList.toggle("fehler", fehler);
+  t.textContent=m; t.classList.add("show"); clearTimeout(_gft); _gft=setTimeout(()=>t.classList.remove("show"), fehler?7000:2600);
 }
-function gfCopy(text){ try{ navigator.clipboard.writeText(text); gfToast("In die Zwischenablage kopiert"); }catch(e){ gfToast("Kopieren nicht möglich"); } }
+/* B-04: Erfolg erst melden, wenn das Kopieren tatsächlich gelungen ist. */
+async function gfCopy(text){
+  try{ if(!navigator.clipboard||!navigator.clipboard.writeText) throw new Error("ohne Zwischenablage"); await navigator.clipboard.writeText(text); gfToast("In die Zwischenablage kopiert"); return true; }
+  catch(e){ gfToast("Kopieren nicht möglich. Bitte den Text markieren und von Hand kopieren.",{fehler:true}); return false; }
+}
 
 /* ---- V21 · Element-Bausteine des Design-Systems ----
    gfChips(name, options, cur, opts): Chip-Reihe mit genau einem gewählten Chip statt <select>. Der Wert liegt in einem
@@ -180,10 +193,15 @@ function gfApplyNav(){
   const t=document.getElementById("navToggle"); if(t){ const l=(m==="rail")?"Menü ausklappen":"Menü einklappen"; t.setAttribute("aria-label",l); t.title=l; }
   const sb=document.getElementById("sidebar"); if(sb) sb.setAttribute("aria-hidden", m==="drawer" && h.dataset.drawer!=="open" ? "true":"false");
 }
-function gfDrawer(open){ const h=document.documentElement; if(open) h.dataset.drawer="open"; else delete h.dataset.drawer; const b=document.getElementById("navOpen"); if(b) b.setAttribute("aria-expanded", open?"true":"false"); const sb=document.getElementById("sidebar"); if(sb) sb.setAttribute("aria-hidden", open?"false":"true"); if(open){ const f=sb&&sb.querySelector("a.active")||sb&&sb.querySelector("a"); if(f) setTimeout(()=>f.focus(),60); } }
+function gfDrawer(open){ const h=document.documentElement; const warDrin=!open&&document.getElementById("sidebar")?.contains(document.activeElement); if(open) h.dataset.drawer="open"; else delete h.dataset.drawer; if(warDrin) document.getElementById("navOpen")?.focus(); const b=document.getElementById("navOpen"); if(b) b.setAttribute("aria-expanded", open?"true":"false"); const sb=document.getElementById("sidebar"); if(sb) sb.setAttribute("aria-hidden", open?"false":"true"); if(open){ const f=sb&&sb.querySelector("a.active")||sb&&sb.querySelector("a"); if(f) setTimeout(()=>f.focus(),60); } }
 function gfMountTopbar(active){
   const el=document.getElementById("topbar"); if(!el) return;
   el.className="topbar";
+  /* Webapp Standard B-01, B-08: Sprunglink zum Inhalt und ein benannter Hauptbereich für Tastatur und Vorlesesoftware. */
+  const appEl=document.getElementById("app");
+  if(appEl){ if(!appEl.closest("main")&&!appEl.getAttribute("role")) appEl.setAttribute("role","main");
+    if(!document.getElementById("wsSprung")){ const sp=document.createElement("a"); sp.id="wsSprung"; sp.className="ws-sprung"; sp.href="#app"; sp.textContent="Zum Inhalt springen";
+      sp.onclick=e=>{ e.preventDefault(); if(!appEl.hasAttribute("tabindex")) appEl.setAttribute("tabindex","-1"); appEl.focus({preventScroll:false}); }; document.body.prepend(sp); } }
   const themeSw=(id)=>`<div class="theme-sw" id="${id}" role="group" aria-label="Designmodus"><button data-th="dark" aria-label="Dunkler Modus">Dunkel</button><button data-th="light" aria-label="Heller Modus">Hell</button></div>`;
   const groups=GF_NAV.map(([g,items])=>`<div class="sb-group"><div class="sb-gl">${g}</div>${items.map(([k,h,l,ic,badge,tip])=>`<a href="${h}" data-k="${k}" title="${gfEsc(tip||l)}"><span class="ic">${GF_ICONS[ic]||""}</span><span class="lbl">${l}</span>${badge?`<span class="nbadge" id="${badge}" style="display:none">0</span>`:""}</a>${k==="themen"?`<div class="sb-sub" id="subnavSlot">${GF_SUBNAV.map(([sk,sh,sl,st])=>`<a href="${sh}" data-sk="${sk}" title="${gfEsc(st)}">${sl}</a>`).join("")}</div>`:""}`).join("")}</div>`).join("");
   el.innerHTML=`
@@ -210,11 +228,11 @@ function gfMountTopbar(active){
     </aside>`;
   const a=el.querySelector(`.sb-nav a[data-k="${active}"]`); if(a){ a.classList.add("active"); a.setAttribute("aria-current","page"); }
   const cur=gfTheme();
-  el.querySelectorAll(".theme-sw button").forEach(b=>{ if(b.dataset.th===cur) b.classList.add("on");
-    b.onclick=()=>{ gfApplyTheme(b.dataset.th); el.querySelectorAll(".theme-sw button").forEach(x=>x.classList.toggle("on",x.dataset.th===b.dataset.th)); }; });
+  el.querySelectorAll(".theme-sw button").forEach(b=>{ b.classList.toggle("on",b.dataset.th===cur); b.setAttribute("aria-pressed",b.dataset.th===cur?"true":"false");
+    b.onclick=()=>{ gfApplyTheme(b.dataset.th); el.querySelectorAll(".theme-sw button").forEach(x=>{ const on=x.dataset.th===b.dataset.th; x.classList.toggle("on",on); x.setAttribute("aria-pressed",on?"true":"false"); }); }; });
   const w0=gfWho()==="Lea"?"Lea":"Alex"; if(gfWho()!==w0) gfSetWho(w0);
-  el.querySelectorAll("#whoSw button").forEach(b=>{ b.classList.toggle("on",b.dataset.w===w0);
-    b.onclick=()=>{ gfSetWho(b.dataset.w); el.querySelectorAll("#whoSw button").forEach(x=>x.classList.toggle("on",x===b)); document.dispatchEvent(new CustomEvent("gf-who",{detail:b.dataset.w})); }; });
+  el.querySelectorAll("#whoSw button").forEach(b=>{ b.classList.toggle("on",b.dataset.w===w0); b.setAttribute("aria-pressed",b.dataset.w===w0?"true":"false");
+    b.onclick=()=>{ gfSetWho(b.dataset.w); el.querySelectorAll("#whoSw button").forEach(x=>{ x.classList.toggle("on",x===b); x.setAttribute("aria-pressed",x===b?"true":"false"); }); document.dispatchEvent(new CustomEvent("gf-who",{detail:b.dataset.w})); }; });
   /* Ein-/Ausklappen, Schublade */
   el.querySelector("#navToggle").onclick=()=>{ const m=gfNavMode()==="rail"?"open":"rail"; try{ localStorage.setItem("gf_nav",m); }catch(e){} gfApplyNav(); };
   el.querySelector("#navOpen").onclick=()=>gfDrawer(true);
@@ -317,12 +335,12 @@ function gfTextModal(title, text, opts={}){
   const subject=opts.subject||title;
   const mailto=`mailto:${opts.to||GF_MAIL_TO}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
   m.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="${gfEsc(title)}">
-    <div class="modal-h"><h3>${gfEsc(title)}</h3><button class="icon-btn" data-x title="Schließen">✕</button></div>
+    <div class="modal-h"><h3>${gfEsc(title)}</h3><button class="icon-btn" data-x title="Schließen" aria-label="Schließen">✕</button></div>
     ${opts.pic?`<figure class="modal-pic"><img src="${GF_IMG[opts.pic]||opts.pic}" alt="${gfEsc(GF_IMG_ALT[opts.pic]||"")}"></figure>`:""}${opts.intro?`<p class="modal-intro">${opts.intro}</p>`:""}
     <textarea class="modal-text" readonly>${gfEsc(text)}</textarea>
     <div class="modal-f"><button class="btn btn-primary" data-copy>Kopieren</button><a class="btn btn-brand" href="${mailto}">Per Mail senden</a>${opts.extra||""}<button class="btn btn-brand" data-x style="margin-left:auto">Schließen</button></div>
   </div>`;
-  m.classList.add("open");
+  gfDialogAuf(m, "[data-copy]");
   m.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>m.classList.remove("open"));
   m.onclick=e=>{ if(e.target===m) m.classList.remove("open"); };
   m.querySelector("[data-copy]").onclick=()=>gfCopy(text);
@@ -463,7 +481,7 @@ function gfNewsModal(x, opts={}){
   if(!m){ m=document.createElement("div"); m.id="gfModal"; m.className="modal-back"; document.body.appendChild(m); }
   const topic=opts.topic||null;
   m.innerHTML=`<div class="modal nw-modal" role="dialog" aria-modal="true" aria-label="${gfEsc(x.title)}">
-    <div class="modal-h"><h3>${gfEsc(x.title)}</h3><button class="icon-btn" data-x title="Schließen">✕</button></div>
+    <div class="modal-h"><h3>${gfEsc(x.title)}</h3><button class="icon-btn" data-x title="Schließen" aria-label="Schließen">✕</button></div>
     <div class="nw-mbody">
       <div class="nw-mmeta"><span class="nw-src src-${gfEsc(x.source)}">${GF_NEWS_SRC[x.source]||gfEsc(x.source||"")}</span><span>${gfEsc(gfNewsWhen(x.happened_at))}</span>${x.who?gfNewsWho(x.who):""}${opts.strand?`<span>${gfEsc(opts.strand)}</span>`:""}${x.relevance?`<span class="nw-rel rel-${x.relevance}">${x.relevance}</span>`:""}</div>
       ${x.body?`<p>${gfEsc(x.body)}</p>`:""}
@@ -472,10 +490,9 @@ function gfNewsModal(x, opts={}){
     </div>
     <div class="modal-f">${opts.actions||""}<button class="btn btn-brand" data-x style="margin-left:auto">Schließen</button></div>
   </div>`;
-  m.classList.add("open");
+  gfDialogAuf(m, ".modal-f [data-x]");
   m.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>m.classList.remove("open"));
   m.onclick=e=>{ if(e.target===m) m.classList.remove("open"); };
-  const esc=e=>{ if(e.key==="Escape"){ m.classList.remove("open"); document.removeEventListener("keydown",esc); } }; document.addEventListener("keydown",esc);
   return m;
 }
 /* Auswahl fürs Laufband: neu seit dem letzten Besuch, sonst die letzten 24 Stunden, sonst die letzten sechs; höchstens 20, neueste zuerst */
@@ -744,6 +761,27 @@ function gfModalAuf(back){
       /* Knöpfe, die nur bei Zeiger oder Fokus in ihrer Karte sichtbar sind: erst die Karte fokussieren, dann den Knopf. */
       if(document.activeElement!==zuvor){ const k=zuvor.closest("article,li,section")?.querySelector("button:not([disabled]),[href]"); if(k){ k.focus(); zuvor.focus(); } } } }catch(x){} };
 }
+/* Webapp Standard B-08, P-04: öffnet einen Dialog aus #gfModal und Co. modal. Anfangsfokus auf sel (sonst erstes Bedienelement),
+   Escape schließt, der Rest der Seite ist inert. Geschlossen wird über das Entfernen der Klasse „open“, egal von wem:
+   ein Beobachter hebt dann Modalität und Escape wieder auf und gibt den Fokus an den Auslöser zurück. */
+function gfDialogAuf(m, sel){
+  if(!m.classList.contains("open")){ m.classList.add("open"); }
+  if(!m.__gfFrei){
+    const frei=gfModalAuf(m);
+    const esc=e=>{ if(e.key==="Escape"&&m.classList.contains("open")){ e.preventDefault(); m.classList.remove("open"); } };
+    document.addEventListener("keydown",esc);
+    const mo=new MutationObserver(()=>{ if(!m.classList.contains("open")&&m.__gfFrei){ const f=m.__gfFrei; m.__gfFrei=null; f(); } });
+    m.__gfFrei=()=>{ mo.disconnect(); document.removeEventListener("keydown",esc); frei(); };
+    mo.observe(m,{attributes:true,attributeFilter:["class"]});
+  }
+  const ziel=(sel&&m.querySelector(sel))||m.querySelector('button:not([disabled]),[href],input:not([type=hidden]),textarea,select');
+  if(ziel) setTimeout(()=>{ if(m.classList.contains("open")) ziel.focus(); },30);
+}
+/* B-08: Elemente mit role="button", die kein echter Knopf sind, reagieren auf Enter und Leertaste wie auf einen Klick. */
+document.addEventListener("keydown",e=>{
+  const el=e.target; if(!el||!el.getAttribute||el.getAttribute("role")!=="button"||/^(BUTTON|A|INPUT|SELECT|TEXTAREA|SUMMARY)$/.test(el.tagName)) return;
+  if(e.key==="Enter"||e.key===" "){ e.preventDefault(); el.click(); }
+});
 let GF_VH_LISTE=null;
 async function gfVhListe(neu){ if(!GF_VH_LISTE||neu){ const d=await gfApi("vorhaben_list"); GF_VH_LISTE=d.vorhaben||[]; } return GF_VH_LISTE; }
 function gfEwModal(){

@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "package_version": "0.5.0",
+  "published_on": "2026-10-21",
+  "release_id": "standards-20261021-v0.5.0",
+  "content_sha256": "55e526d2ad79d4f94735e1dc5a3a05a3de578a531b192ae26f165c40c35eae7e",
+  "files": [
+    {
+      "path": "README.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/README.md",
+      "sha256": "09dc895219fe2500533f666bcc2b974e440cbaeab0270b33775b1f06c77981f1",
+      "bytes": 5722
+    },
+    {
+      "path": "AGENTS.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/AGENTS.md",
+      "sha256": "02565e01ba7006a766a98575d0e261f01cb66bf4162630356490a14e26a667d5",
+      "bytes": 2331
+    },
+    {
+      "path": "CLAUDE.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/CLAUDE.md",
+      "sha256": "becc1f7322fc8d76bbf97db18fabf4cc53dff415b0bbd5a0cc9d0efda843aab0",
+      "bytes": 372
+    },
+    {
+      "path": "STARTPROMPT.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/STARTPROMPT.md",
+      "sha256": "58242e9bb169651ad4e86beeaa982086eecaf4a4671f206643f783667737fe29",
+      "bytes": 5530
+    },
+    {
+      "path": "ORDNERANWEISUNG.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/ORDNERANWEISUNG.md",
+      "sha256": "904ad33f60702b0aacf4835947f3f7a1f214d13b6ecb2d8b41145330bae22c79",
+      "bytes": 1954
+    },
+    {
+      "path": "sync-standards.py",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/sync-standards.py",
+      "sha256": "1d3c2ea7681364d0f76dbdbed479c398cf0f64bcfdbad4693f38eb0bb080a676",
+      "bytes": 7649
+    },
+    {
+      "path": "QUELLEN.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/QUELLEN.md",
+      "sha256": "dd95fb5e3556d5c04395b5bc2a2e6198b3a93a70ce8a5889d7b113789c47c3d2",
+      "bytes": 10628
+    },
+    {
+      "path": "vorlagen/VORHABEN.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/vorlagen/VORHABEN.md",
+      "sha256": "87c579a4694e30a89a5b3592b59caf4ceb2e560ff17d202d15e67c720f8de0c2",
+      "bytes": 1822
+    },
+    {
+      "path": "vorlagen/LERNFALL.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/vorlagen/LERNFALL.md",
+      "sha256": "11b5dc749e82988fd807182e1cf74727ef39422c7e8013e073bd8858c1c67aa4",
+      "bytes": 1144
+    },
+    {
+      "path": "vorlagen/ARBEITSSTAND.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/vorlagen/ARBEITSSTAND.md",
+      "sha256": "ecf618db41b046cef96db1fe31e439ed7ad1a91fbd18382ca12fc59f112015fb",
+      "bytes": 482
+    },
+    {
+      "path": "ergaenzungen.json",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/ergaenzungen.json",
+      "sha256": "5176cc24b355079bd3276fd72f9cb686f7640458e8684f0b8258b79dbc44e675",
+      "bytes": 1447
+    },
+    {
+      "path": "piloten.json",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/piloten.json",
+      "sha256": "414b0ad1351ab8b06a07253fae77cdcbdbdc7d7020a5a76c2bd49e5550e213af",
+      "bytes": 525
+    },
+    {
+      "path": "ORG-001.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/ORG-001.md",
+      "sha256": "62eb23abf3a8fd3cdc1fb88d98626da6714419ffb380fb3653115f405bc44f10",
+      "bytes": 5508
+    },
+    {
+      "path": "ORG-002.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/ORG-002.md",
+      "sha256": "b1e60e8c0002c11814fc45cb6786606ce1221a8ad8c68b0cb151e594bfbde5db",
+      "bytes": 6058
+    },
+    {
+      "path": "ORG-003.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/ORG-003.md",
+      "sha256": "e0cb6c05562e4056cfb096257f84b3106345328625252818976eb9d21a0827e5",
+      "bytes": 6655
+    },
+    {
+      "path": "ORG-004.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/ORG-004.md",
+      "sha256": "2c0c9829828e81cba9afc3941630760f9935c3da55bd6351a7be9a1dfcd17754",
+      "bytes": 6096
+    },
+    {
+      "path": "WILDE-HABITATE-STANDARD.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/WILDE-HABITATE-STANDARD.md",
+      "sha256": "166cb46bfc23670e588c19346875b8fceb583936e8e910fed342199bc1cc66d1",
+      "bytes": 8443
+    },
+    {
+      "path": "reifegrad-standard.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/reifegrad-standard.md",
+      "sha256": "3e5e3b8363ecb5f08705579e87ba1a65497459166010d40c5acb8e9f8cacbc3a",
+      "bytes": 6024
+    },
+    {
+      "path": "BAUSTEIN-ZUGANG-GOOGLE-DOMAENEN-ROLLEN.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/BAUSTEIN-ZUGANG-GOOGLE-DOMAENEN-ROLLEN.md",
+      "sha256": "2cd55e9600710f245a425b5aa451274ac2af7aa69c4fda9afb96602d093fb6f2",
+      "bytes": 5268
+    },
+    {
+      "path": "PROMPT-STANDARDS-ENTDECKEN.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/PROMPT-STANDARDS-ENTDECKEN.md",
+      "sha256": "790b5136683d48f6d6fd8b08c15055b8d524aaff1ec7da900305b0d254d7d863",
+      "bytes": 4948
+    },
+    {
+      "path": "WEBAPP-PILOT-0.2.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/WEBAPP-PILOT-0.2.md",
+      "sha256": "8a9b28efc3828b285b5272e56ec9fe2c0749cdd7c9a8882e24d342bf1f8aca8d",
+      "bytes": 61736
+    },
+    {
+      "path": "WEBAPP-PILOT-UMSETZUNGSPROMPT.md",
+      "url": "https://organisationswerkstatt.netlify.app/standards/downloads/WEBAPP-PILOT-UMSETZUNGSPROMPT.md",
+      "sha256": "a8904e1bdf4c4f2090e0e564fd95f16ce49ec4110fd396142aec94086be4ac2d",
+      "bytes": 5305
+    }
+  ],
+  "status": "mixed",
+  "standards": [
+    {
+      "id": "ORG-001",
+      "title": "Prozesse und Verantwortung vor Neubau",
+      "version": "0.2.0",
+      "status": "draft",
+      "url": "https://organisationswerkstatt.netlify.app/standards/#ORG-001",
+      "markdown": "https://organisationswerkstatt.netlify.app/standards/downloads/ORG-001.md"
+    },
+    {
+      "id": "ORG-002",
+      "title": "Eindeutige Datenführung und nachvollziehbare Übergaben",
+      "version": "0.2.0",
+      "status": "draft",
+      "url": "https://organisationswerkstatt.netlify.app/standards/#ORG-002",
+      "markdown": "https://organisationswerkstatt.netlify.app/standards/downloads/ORG-002.md"
+    },
+    {
+      "id": "ORG-003",
+      "title": "Nutzerprüfung, fachliche Abnahme und Lernen",
+      "version": "0.2.0",
+      "status": "draft",
+      "url": "https://organisationswerkstatt.netlify.app/standards/#ORG-003",
+      "markdown": "https://organisationswerkstatt.netlify.app/standards/downloads/ORG-003.md"
+    },
+    {
+      "id": "ORG-004",
+      "title": "Erkenntnisse fortlaufend in den gemeinsamen Stand übernehmen",
+      "version": "1.0.0",
+      "status": "decided_for_project",
+      "url": "https://organisationswerkstatt.netlify.app/standards/#ORG-004",
+      "markdown": "https://organisationswerkstatt.netlify.app/standards/downloads/ORG-004.md"
+    }
+  ],
+  "supplements": [
+    {
+      "id": "WILDE-HABITATE-STANDARD",
+      "file": "WILDE-HABITATE-STANDARD.md",
+      "title": "Digitale Werkzeuge",
+      "kind": "Standardkatalog",
+      "version": "1.0",
+      "source_version": "0.2",
+      "source_date": "2026-10-09",
+      "status": "Dokumentierter Katalog, Geltung je Projekt prüfen",
+      "teaser": "Vierzehn Anforderungen an Zugang, Daten, Betrieb und Gestaltung. Firmen bleiben getrennt.",
+      "url": "https://organisationswerkstatt.netlify.app/standards/#WILDE-HABITATE-STANDARD",
+      "markdown": "https://organisationswerkstatt.netlify.app/standards/downloads/WILDE-HABITATE-STANDARD.md"
+    },
+    {
+      "id": "REIFEGRAD",
+      "file": "reifegrad-standard.md",
+      "title": "Reifegrad interner Anwendungen",
+      "kind": "Anwendungsstandard",
+      "version": "1.0",
+      "source_version": null,
+      "source_date": "2026-10-12",
+      "status": "Dokumentierter Standard, Übernahme je Anwendung offen",
+      "teaser": "Stabil, Beta, Vorschau oder Experiment: Nutzbarkeit sichtbar und nachvollziehbar kennzeichnen.",
+      "url": "https://organisationswerkstatt.netlify.app/standards/#REIFEGRAD",
+      "markdown": "https://organisationswerkstatt.netlify.app/standards/downloads/reifegrad-standard.md"
+    },
+    {
+      "id": "BAUSTEIN-ZUGANG",
+      "file": "BAUSTEIN-ZUGANG-GOOGLE-DOMAENEN-ROLLEN.md",
+      "title": "Zugang mit Google und Rollen",
+      "kind": "Technischer Baustein",
+      "version": "1.0",
+      "source_version": null,
+      "source_date": "2026-10-07",
+      "status": "Referenz mit gekennzeichnetem Prüfbedarf",
+      "teaser": "Anmeldung, Zulassung und Rechte getrennt prüfen. Ergänzt den Katalog für digitale Werkzeuge.",
+      "url": "https://organisationswerkstatt.netlify.app/standards/#BAUSTEIN-ZUGANG",
+      "markdown": "https://organisationswerkstatt.netlify.app/standards/downloads/BAUSTEIN-ZUGANG-GOOGLE-DOMAENEN-ROLLEN.md"
+    },
+    {
+      "id": "STANDARDS-ENTDECKEN",
+      "file": "PROMPT-STANDARDS-ENTDECKEN.md",
+      "title": "Standards entdecken",
+      "kind": "Arbeitsvorlage",
+      "version": "1.0",
+      "source_version": null,
+      "source_date": "2026-10-07",
+      "status": "Vorlage für einen gesonderten Untersuchungsauftrag",
+      "teaser": "Belegte Muster und wiederkehrende Fehler finden und daraus prüfbare Vorschläge entwickeln.",
+      "url": "https://organisationswerkstatt.netlify.app/standards/#STANDARDS-ENTDECKEN",
+      "markdown": "https://organisationswerkstatt.netlify.app/standards/downloads/PROMPT-STANDARDS-ENTDECKEN.md"
+    }
+  ],
+  "pilots": [
+    {
+      "id": "WEBAPP-PILOT",
+      "file": "WEBAPP-PILOT-0.2.md",
+      "prompt_id": "WEBAPP-PILOT-PROMPT",
+      "prompt_file": "WEBAPP-PILOT-UMSETZUNGSPROMPT.md",
+      "title": "Webapps gemeinsam gestalten und bedienen",
+      "kind": "Pilot",
+      "version": "0.2",
+      "source_date": "2026-10-20",
+      "status": "Pilot zur Erprobung. Keine allgemein beschlossene Regel.",
+      "teaser": "34 Regeln für Gestaltung, Bedienung und Daten sowie 22 Testfälle. Mit vollständigem Umsetzungsprompt für eine ausgewählte Seite.",
+      "url": "https://organisationswerkstatt.netlify.app/standards/#WEBAPP-PILOT",
+      "prompt_url": "https://organisationswerkstatt.netlify.app/standards/#WEBAPP-PILOT-PROMPT",
+      "markdown": "https://organisationswerkstatt.netlify.app/standards/downloads/WEBAPP-PILOT-0.2.md",
+      "prompt_markdown": "https://organisationswerkstatt.netlify.app/standards/downloads/WEBAPP-PILOT-UMSETZUNGSPROMPT.md"
+    }
+  ],
+  "catalog_url": "https://organisationswerkstatt.netlify.app/standards/catalog.json",
+  "reading_url": "https://organisationswerkstatt.netlify.app/standards/downloads/LESEFASSUNG.md",
+  "package_url": "https://organisationswerkstatt.netlify.app/standards/downloads/organisationsstandards-0.5.0.zip",
+  "history": [
+    {
+      "version": "0.1.0",
+      "date": "2026-10-14",
+      "change": "Drei erste Standardentwürfe als lokales Paket vorbereitet."
+    },
+    {
+      "version": "0.2.0",
+      "date": "2026-10-14",
+      "change": "Öffentliche Bibliothek, Erklärung des Nutzens und Quellenherleitung ergänzt."
+    },
+    {
+      "version": "0.2.1",
+      "date": "2026-10-14",
+      "change": "Startprompt für Onlineabruf und lokale Ablage ergänzt."
+    },
+    {
+      "version": "0.3.0",
+      "date": "2026-10-15",
+      "change": "ORG-004 als entschiedene Projektregel ergänzt; die drei bisherigen Standards bleiben Entwürfe."
+    },
+    {
+      "version": "0.4.0",
+      "date": "2026-10-17",
+      "change": "Vier öffentlich aufbereitete Ergänzungen: Werkzeugkatalog, Reifegrad, Zugangsbaustein und Suchvorlage. ORG-001 bis ORG-004 bleiben unverändert."
+    },
+    {
+      "version": "0.5.0",
+      "date": "2026-10-21",
+      "change": "Webapp Pilot 0.2 mit vollständigem Standard und öffentlichem Umsetzungsprompt aufgenommen. Pilotstatus bleibt offen, bisherige Regeln unverändert."
+    }
+  ]
+}
