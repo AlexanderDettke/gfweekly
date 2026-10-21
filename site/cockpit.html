@@ -51,7 +51,7 @@
   <div class="section">
     <div class="sec-h"><h2>Themen</h2><span class="line"></span></div>
     <div class="toolbar">
-      <div class="search"><input id="search" placeholder="Themen &amp; Beschreibungen durchsuchen …" /></div>
+      <div class="search" role="search"><label class="ws-vh" for="search">Themen und Beschreibungen durchsuchen</label><input id="search" type="search" placeholder="Themen &amp; Beschreibungen durchsuchen …" /></div>
       <div class="segs" id="statusSegs">
         <button class="seg on" data-v="alle">Alle</button>
         <button class="seg" data-v="offen">Offen</button>
@@ -64,7 +64,7 @@
     </div>
     <div class="add">
       <div class="row">
-        <input class="title" id="newTitle" placeholder="Neues Thema eintragen …" />
+        <input class="title" id="newTitle" aria-label="Titel des neuen Themas" placeholder="Neues Thema eintragen …" />
         <div class="fchips" role="group" aria-label="Priorität"><input type="hidden" id="newPrio" value="mittel"><button type="button" class="chip" data-v="hoch" aria-pressed="false">Hoch</button><button type="button" class="chip on" data-v="mittel" aria-pressed="true">Mittel</button><button type="button" class="chip" data-v="niedrig" aria-pressed="false">Niedrig</button></div>
         <button class="btn btn-brand" id="addBtn">＋ Hinzufügen</button>
       </div>
@@ -116,7 +116,7 @@ function renderDash(){
   $("#dash").innerHTML=`
     <div class="stat accent"><div class="k">Fortschritt</div>
       <div class="ring-wrap"><div class="ring" style="--p:${pct};--c:#7ec98f"><b>${pct}%</b></div>
-      <div><div class="v" style="font-size:24px">${c.erledigt}/${total}</div><div class="cap">Themen erledigt</div></div></div></div>
+      <div><div class="v" style="font-size:var(--stufe-5)">${c.erledigt}/${total}</div><div class="cap">Themen erledigt</div></div></div></div>
     <div class="stat"><div class="k"><span class="dot-led led-offen"></span>Offen</div><div class="v">${c.offen}</div><div class="cap">warten</div></div>
     <div class="stat"><div class="k"><span class="dot-led led-klaerung"></span>In Klärung</div><div class="v">${c.in_klaerung}</div><div class="cap">in Arbeit</div></div>
     <div class="stat"><div class="k"> Wiederkehrend</div><div class="v">${topics.filter(t=>t.kind==="recurring").length}</div><div class="cap">Check-in-Themen</div></div>`;
@@ -177,7 +177,7 @@ function renderRecurring(){
   $("#recGrid").innerHTML=rec.map(t=>{ const open=openIds.has(t.id);
     return `<div class="rec-card ${open?'open':''}" data-id="${t.id}">
       <div class="rec-head">
-        <div class="rec-main js-toggle">
+        <div class="rec-main js-toggle" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">
           <div class="rec-title">${gfEsc(t.title)}</div>
           ${t.short_description?`<div class="rec-q">${gfEsc(t.short_description)}</div>`:""}
           <div class="rec-chips">${relChip(t)}${timeChip(t)}${delegTags(t)||(t.owner?`<span class="mchip"> ${gfEsc(t.owner)}</span>`:"")}</div>
@@ -197,7 +197,7 @@ function renderRecurring(){
 function renderNext(){
   const open=topics.filter(t=>t.kind!=="recurring"&&t.status!=="erledigt").sort((a,b)=>(GF_PRANK[a.priority]-GF_PRANK[b.priority])||(new Date(a.created_at)-new Date(b.created_at))).slice(0,3);
   const sec=$("#nextSection"); if(!open.length){sec.style.display="none";return;} sec.style.display="block";
-  $("#nextGrid").innerHTML=open.map(t=>`<div class="next p-${t.priority}" data-go="${t.id}">
+  $("#nextGrid").innerHTML=open.map(t=>`<div class="next p-${t.priority}" data-go="${t.id}" role="button" tabindex="0" aria-label="${gfEsc(t.title)}: in der Liste öffnen">
     <div class="t">${gfEsc(t.title)}</div><div class="m"><span class="pill p-${t.priority}">${t.priority}</span>${relChip(t)}${delegTags(t)}</div></div>`).join("");
   document.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>{ const id=el.dataset.go; openIds.add(id); render(); setTimeout(()=>{const c=document.querySelector('.card[data-id="'+id+'"]'); if(c)c.scrollIntoView({behavior:"smooth",block:"center"});},60); });
 }
@@ -216,21 +216,21 @@ function cardHtml(t){
   const sub=t.short_description||((t.context||"").split("\n")[0]||"").slice(0,150);
   return `<div class="card ${done?'done':''} ${open?'open':''}" data-id="${t.id}">
     <div class="card-top">
-      <input type="checkbox" class="check" ${done?'checked':''} title="Als erledigt markieren" aria-label="erledigt">
+      <input type="checkbox" class="check" ${done?'checked':''} title="Als erledigt markieren" aria-label="„${gfEsc(t.title)}“ als erledigt markieren">
       <div class="card-main">
-        <div class="ttl js-toggle">${gfEsc(t.title)}</div>
-        ${sub?`<div class="subline js-toggle">${gfEsc(sub)}</div>`:""}
+        <div class="ttl js-toggle" data-ws-zusatz>${gfEsc(t.title)}</div>
+        ${sub?`<div class="subline js-toggle" data-ws-zusatz>${gfEsc(sub)}</div>`:""}
         <div class="card-meta">
-          <span class="pill prio p-${t.priority}" title="Priorität ändern">${t.priority}</span>
+          <span class="pill prio p-${t.priority}" title="Priorität ändern" role="button" tabindex="0" aria-label="Priorität ${t.priority}, ändern auf ${({hoch:"mittel",mittel:"niedrig",niedrig:"hoch"})[t.priority]||"hoch"}">${t.priority}</span>
           ${relChip(t)}${timeChip(t)}
           <span class="pill s-${t.status}">${ST[t.status]}</span>
           ${delegTags(t)}
           <span class="by">· ${date}</span>
           ${t.source==="claude"?`<span class="src-claude"> vorbereitet</span>`:""}
         </div>
-        <span class="expand-btn js-toggle">${open?'▾ weniger':'▸ Details'}</span>
+        <button type="button" class="expand-btn js-toggle" aria-expanded="${open?"true":"false"}">${open?'▾ weniger':'▸ Details'}</button>
       </div>
-      <div class="chev js-toggle"></div>
+      <div class="chev js-toggle" data-ws-zusatz aria-hidden="true"></div>
     </div>
     <div class="detail ${open?'open':''}">${detailHtml(t)}</div>
   </div>`;
@@ -254,7 +254,7 @@ function topicById(id){ return topics.find(t=>t.id===id)||{}; }
 function bindCards(scope){
   document.querySelectorAll(scope+" .card, "+scope+" .rec-card").forEach(card=>{
     const id=card.dataset.id, saved=card.querySelector(".saved");
-    card.querySelectorAll(".js-toggle").forEach(el=>el.onclick=(ev)=>{ ev.stopPropagation(); if(openIds.has(id))openIds.delete(id); else openIds.add(id); card.classList.toggle("open"); const d=card.querySelector(".detail"); if(d)d.classList.toggle("open"); const eb=card.querySelector(".expand-btn"); if(eb)eb.textContent=card.classList.contains("open")?'▾ weniger':'▸ Details'; });
+    card.querySelectorAll(".js-toggle").forEach(el=>el.onclick=(ev)=>{ ev.stopPropagation(); if(openIds.has(id))openIds.delete(id); else openIds.add(id); const offen=card.classList.toggle("open"); card.querySelectorAll(".js-toggle[aria-expanded]").forEach(x=>x.setAttribute("aria-expanded",offen?"true":"false")); const d=card.querySelector(".detail"); if(d)d.classList.toggle("open"); const eb=card.querySelector(".expand-btn"); if(eb)eb.textContent=card.classList.contains("open")?'▾ weniger':'▸ Details'; });
     const chk=card.querySelector(".check"); if(chk) chk.onchange=e=>doUpdate(id,{status:e.target.checked?"erledigt":"offen"},saved,true);
     const ss=card.querySelector(".status-sel"); if(ss) ss.onchange=e=>doUpdate(id,{status:e.target.value},saved,true);
     const pr=card.querySelector(".prio"); if(pr) pr.onclick=(ev)=>{ ev.stopPropagation(); const cur=topicById(id).priority,nx={hoch:"mittel",mittel:"niedrig",niedrig:"hoch"}[cur]; doUpdate(id,{priority:nx},saved,true); };
@@ -283,7 +283,7 @@ $("#addBtn").onclick=addTopic; $("#newTitle").addEventListener("keydown",e=>{if(
 document.querySelectorAll("#statusSegs .seg").forEach(s=>s.onclick=()=>{document.querySelectorAll("#statusSegs .seg").forEach(x=>x.classList.remove("on"));s.classList.add("on");filter.status=s.dataset.v;render();});
 $("#fPrio").onchange=e=>{filter.prio=e.target.value;render();};
 $("#search").addEventListener("input",e=>{filter.q=e.target.value.trim();render();});
-$("#reload").onclick=async()=>{ try{ await loadAll(); gfToast("Aktualisiert"); }catch(e){ gfToast("Fehler"); } };
+$("#reload").onclick=async()=>{ try{ await loadAll(); gfToast("Aktualisiert"); }catch(e){ gfToast("Fehlgeschlagen: "+((e&&e.message)||"unbekannter Fehler"),{fehler:true}); } };
 $("#finishBtn").onclick=()=>{ const d=new Date().toISOString().slice(0,10);
   const disc=topics.filter(t=>t.last_discussed===d);
   if(!disc.length){ gfTextModal("Protokoll heute", "Heute wurde noch kein Thema als besprochen markiert.\n\nTipp: Im Board „Besprechung starten“ führt Thema für Thema durch die Agenda und erzeugt am Ende das Protokoll automatisch.", {intro:"Kein Protokoll ohne besprochene Themen.", extra:`<a class="btn btn-brand" href="board.html?meeting=1">Besprechung im Board starten</a>`}); return; }

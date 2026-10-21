@@ -32,24 +32,26 @@
   <div id="hero"></div>
 
   <div class="add cform" id="form" style="border-radius:var(--r-xl);box-shadow:var(--shadow-2);padding:20px">
-    <label class="first">Worum geht's?</label>
-    <textarea id="raw" placeholder="Einfach lostippen oder diktieren … z.B. „Angebotspaket für Kommunen bauen“ oder „Wer übernimmt das Follow-up mit den Kulturorten?“"></textarea>
+    <label class="first" for="raw">Worum geht's?</label>
+    <textarea id="raw" aria-describedby="rawErr" placeholder="Einfach lostippen oder diktieren … z.B. „Angebotspaket für Kommunen bauen“ oder „Wer übernimmt das Follow-up mit den Kulturorten?“"></textarea>
+    <div class="ws-feldfehler" id="rawErr" role="alert" hidden>Bitte schreib kurz, worum es geht. Ohne Text kann nichts ins Board.</div>
     <div class="tip"> Tipp: Am Handy aufs Mikrofon der Tastatur tippen und einsprechen.</div>
-    <label>Von wem?</label>
-    <div class="chips" id="who"><button class="chip" data-v="Alex">Alex</button><button class="chip" data-v="Lea">Lea</button></div>
-    <label>Dringlichkeit <span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted)">(optional)</span></label>
-    <div class="chips" id="urg"><button class="chip u-hoch" data-v="hoch">hoch</button><button class="chip u-mittel" data-v="mittel">mittel</button><button class="chip u-niedrig" data-v="niedrig">niedrig</button></div>
-    <label>Art <span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted)">(optional)</span></label>
-    <div class="chips" id="typ">
+    <label id="lblWho">Von wem?</label>
+    <div class="chips" id="who" role="group" aria-labelledby="lblWho"><button class="chip" data-v="Alex">Alex</button><button class="chip" data-v="Lea">Lea</button></div>
+    <label id="lblUrg">Dringlichkeit <span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted)">(optional)</span></label>
+    <div class="chips" id="urg" role="group" aria-labelledby="lblUrg"><button class="chip u-hoch" data-v="hoch">hoch</button><button class="chip u-mittel" data-v="mittel">mittel</button><button class="chip u-niedrig" data-v="niedrig">niedrig</button></div>
+    <label id="lblTyp">Art <span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted)">(optional)</span></label>
+    <div class="chips" id="typ" role="group" aria-labelledby="lblTyp">
       <button class="chip" data-v="Aufgabe">Aufgabe</button><button class="chip" data-v="Idee">Idee</button><button class="chip" data-v="Frage">Frage</button>
       <button class="chip" data-v="Risiko">Risiko</button><button class="chip" data-v="Entscheidung">Entscheidung</button><button class="chip" data-v="Erinnerung">Erinnerung</button>
     </div>
-    <button class="more" id="moreBtn">+ Mehr Details (optional)</button>
+    <button class="more" id="moreBtn" aria-expanded="false" aria-controls="extra">+ Mehr Details (optional)</button>
     <div class="extra" id="extra">
-      <div class="row2"><div><label>Projekt / Bereich</label><input class="txt" id="related" placeholder="z.B. Kommunen, Website"></div><div><label>Stakeholder</label><input class="txt" id="stake" placeholder="z.B. Kulturorte"></div></div>
-      <div class="row2"><div><label>Verantwortlich</label><input class="txt" id="owner" placeholder="Name (optional)"></div><div><label>Fällig bis</label><input class="txt" id="due" type="date"></div></div>
+      <div class="row2"><div><label for="related">Projekt / Bereich</label><input class="txt" id="related" placeholder="z.B. Kommunen, Website"></div><div><label for="stake">Stakeholder</label><input class="txt" id="stake" placeholder="z.B. Kulturorte"></div></div>
+      <div class="row2"><div><label for="owner">Verantwortlich</label><input class="txt" id="owner" placeholder="Name (optional)"></div><div><label for="due">Fällig bis</label><input class="txt" id="due" type="date"></div></div>
     </div>
-    <button class="btn btn-primary" id="sendBtn" style="width:100%;justify-content:center;margin-top:20px;padding:15px;font-size:16px">Ins Board schicken →</button>
+    <button class="btn btn-primary" id="sendBtn" style="width:100%;justify-content:center;margin-top:20px;padding:15px;font-size:var(--stufe-3)">Ins Board schicken →</button>
+    <div class="ws-feldfehler" id="sendErr" role="alert" hidden></div>
   </div>
 
   <div class="add okcard" id="ok" style="display:none;border-radius:var(--r-xl)">
@@ -66,14 +68,20 @@
 <script>
 const $=s=>document.querySelector(s); let pick={who:gfWho(),urg:"",typ:""};
 gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("capture"); gfMountHero("kiste","Eingabe","Einfach lostippen oder diktieren. Alles landet als Thema im Board unter „Zu besprechen“.",{compact:true}); initPicks(); });
-function chipGroup(id,key){ document.querySelectorAll("#"+id+" .chip").forEach(c=>{ if(pick[key]===c.dataset.v)c.classList.add("on");
-  c.onclick=()=>{ const same=pick[key]===c.dataset.v; document.querySelectorAll("#"+id+" .chip").forEach(x=>x.classList.remove("on")); pick[key]=same?"":c.dataset.v; if(!same)c.classList.add("on"); if(key==="who"){gfSetWho(pick.who);} }; }); }
+/* Webapp Standard B-08, P-04: der gewählte Chip ist auch für Vorlesesoftware als gedrückt erkennbar. */
+function chipGroup(id,key){ const alle=()=>document.querySelectorAll("#"+id+" .chip"); const zeige=()=>alle().forEach(x=>{ const on=pick[key]===x.dataset.v; x.classList.toggle("on",on); x.setAttribute("aria-pressed",on?"true":"false"); });
+  alle().forEach(c=>{ c.type="button"; c.onclick=()=>{ const same=pick[key]===c.dataset.v; pick[key]=same?"":c.dataset.v; zeige(); if(key==="who"){gfSetWho(pick.who);} }; }); zeige(); }
 function initPicks(){ pick.who=gfWho(); chipGroup("who","who"); chipGroup("urg","urg"); chipGroup("typ","typ"); }
-$("#moreBtn").onclick=()=>{ const e=$("#extra"); const o=e.style.display==="block"; e.style.display=o?"none":"block"; $("#moreBtn").textContent=o?"+ Mehr Details (optional)":"Details ausblenden"; };
-$("#sendBtn").onclick=async()=>{ const raw=$("#raw").value.trim(); if(!raw){$("#raw").focus();return;}
+$("#moreBtn").onclick=()=>{ const e=$("#extra"); const o=e.style.display==="block"; e.style.display=o?"none":"block"; $("#moreBtn").textContent=o?"+ Mehr Details (optional)":"Details ausblenden"; $("#moreBtn").setAttribute("aria-expanded",o?"false":"true"); };
+$("#raw").addEventListener("input",()=>{ if($("#raw").value.trim()) $("#rawErr").hidden=true; });
+/* B-03, B-04, P-04: Pflichtfeld mit Fehler am Feld; während des Sendens gesperrt (kein doppeltes Thema); bei Fehler bleibt der Hinweis
+   am Knopf stehen und die Eingaben bleiben erhalten. */
+$("#sendBtn").onclick=async()=>{ const raw=$("#raw").value.trim(); if(!raw){ $("#rawErr").hidden=false; $("#raw").setAttribute("aria-invalid","true"); $("#raw").focus(); return; }
+  $("#raw").removeAttribute("aria-invalid"); const btn=$("#sendBtn"); if(btn.disabled) return; const txt=btn.textContent; btn.disabled=true; btn.textContent="Wird gesendet …"; $("#sendErr").hidden=true;
   try{ await gfApi("capture",{raw_text:raw,created_by:pick.who||gfWho(),source:"form",urgency:pick.urg,type_hint:pick.typ,related_hint:$("#related").value.trim(),stakeholder_hint:$("#stake").value.trim(),owner_hint:$("#owner").value.trim(),due_hint:$("#due").value});
-    $("#form").style.display="none"; $("#ok").style.display="block";
-  }catch(e){ gfToast("Konnte nicht senden, bitte nochmal versuchen"); } };
+    $("#form").style.display="none"; $("#ok").style.display="block"; $("#ok h2").setAttribute("tabindex","-1"); $("#ok h2").focus();
+  }catch(e){ $("#sendErr").textContent="Senden fehlgeschlagen: "+(e.message||"unbekannter Fehler")+". Deine Eingaben sind erhalten, bitte nochmal versuchen."; $("#sendErr").hidden=false; gfToast("Senden fehlgeschlagen",{fehler:true}); }
+  finally{ btn.disabled=false; btn.textContent=txt; } };
 $("#again").onclick=()=>{ ["raw","related","stake","owner","due"].forEach(i=>$("#"+i).value=""); pick.urg="";pick.typ=""; document.querySelectorAll("#urg .chip,#typ .chip").forEach(x=>x.classList.remove("on")); $("#ok").style.display="none"; $("#form").style.display="block"; $("#raw").focus(); };
 </script>
 </body>

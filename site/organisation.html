@@ -87,7 +87,7 @@
 .og-rk .n i{flex:none;margin-top:5px;width:8px;height:8px;border-radius:50%}
 .og-slots{display:grid;grid-template-columns:18px minmax(0,1fr) 18px minmax(0,1fr);gap:6px;align-items:center;font-size:var(--stufe-1);color:var(--text-2)}
 .og-slots span:nth-child(even){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.og-slot{width:18px;height:18px;border-radius:50%;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;border:1px dashed var(--text-3);color:var(--text-3)}
+.og-slot{width:1.5rem;height:1.5rem;border-radius:50%;font-size:var(--stufe-1);font-weight:700;display:inline-flex;align-items:center;justify-content:center;border:1px dashed var(--text-3);color:var(--text-3)}
 .og-slot.voll{border:0;color:var(--bg)}
 .og-segs{display:flex;gap:3px}
 .og-segs i{flex:1;height:4px;border-radius:2px;background:var(--fill)}
@@ -150,7 +150,9 @@
 .og-app{flex:1;display:flex;align-items:center;gap:8px;min-height:52px;padding:6px 10px;border-radius:var(--radius-m);font-size:var(--stufe-2);text-align:left;cursor:pointer;background:transparent;color:var(--text-2);border:1px dashed var(--border-strong)}
 .og-app img{width:24px;height:24px;border-radius:50%;object-fit:cover}
 .og-app span{display:flex;flex-direction:column;line-height:1.2}
-.og-app small{font-size:11.5px}
+.og-app small{font-size:var(--stufe-1)}
+/* G-05: bei großer Schrift untereinander statt seitlich hinaus */
+.og-apps{flex-wrap:wrap} .og-app{min-width:min(100%,12rem)}
 .og-app.mein{background:var(--action);color:var(--on-action);border:1px solid var(--action)}
 .og-app.frei{background:var(--accent-soft);color:var(--text);border:1px solid var(--accent)}
 .og-app.fest{cursor:default}
@@ -169,7 +171,7 @@
 .og-step.naechst{border-color:var(--action)}
 .og-step.lock{color:var(--text-3);cursor:not-allowed}
 .og-step.spaeter{opacity:.6}
-.og-step b{flex:none;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;border:1px solid var(--text-3);color:var(--text-2)}
+.og-step b{flex:none;width:1.75rem;height:1.75rem;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:var(--stufe-1);font-weight:700;border:1px solid var(--text-3);color:var(--text-2)}
 .og-step.done b{background:var(--accent);border-color:var(--accent);color:var(--bg)}
 .og-dl{margin:0;display:grid;grid-template-columns:112px 1fr;gap:6px 10px;font-size:var(--stufe-2);border-top:1px solid var(--border);padding-top:10px}
 .og-dl dt{color:var(--text-3)}.og-dl dd{margin:0}
@@ -261,7 +263,7 @@ async function ogApi(action,payload){
 }
 
 /* ---------- Inhalt (Quelle: Organisationsarchitektur; Rollen und Abhängigkeiten gespiegelt in der Edge Function) ---------- */
-const HEUTE="2026-10-05";
+const HEUTE=gfIsoTag();   /* D-03: „eilt“ misst ab dem heutigen Tag; vorher fest 05.10.2026 */
 const D=[
   {id:1,t:"Zielarchitektur als Leitbild",bis:"15.11.2026",due:"2026-11-15",opts:["bestätigen","ändern","anderen Weg wählen"],why:"Jede Besetzung danach folgt diesem Bild."},
   {id:2,t:"Eure eigenen Rollen im Haus",bis:"15.11.2026",due:"2026-11-15",opts:["Geschäftsführung zu zweit","eine Person Geschäftsführung, eine Person Beirat oder Hauspartner"],why:"Bestimmt, welche Rollen extern besetzt werden müssen."},

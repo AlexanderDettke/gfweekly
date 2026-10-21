@@ -42,7 +42,7 @@
       <summary><h2>Protokoll</h2><span class="hint" id="protN"></span><span class="chev" aria-hidden="true"></span></summary>
       <div style="padding:10px 14px">
         <div id="protList"></div>
-        <div class="zeile"><input class="txt" id="protText" placeholder="Notiz zum Protokoll, zum Beispiel was du wem gesagt hast"><button class="btn btn-sm btn-brand" id="protAdd">Notieren</button></div>
+        <div class="zeile"><input class="txt" id="protText" aria-label="Notiz zum Protokoll" placeholder="Notiz zum Protokoll, zum Beispiel was du wem gesagt hast"><button class="btn btn-sm btn-brand" id="protAdd">Notieren</button></div>
       </div>
     </details>
   </section>
@@ -154,7 +154,7 @@ function zeile(x){
       <span class="fd-muted">Vertretung</span>
       <div class="fchips compact" role="group" aria-label="Vertretung">${vertChips}</div>
       <label>Frist <input type="date" data-set="frist" value="${x.frist||""}" ${sperre?"disabled":""}></label>
-      <input class="txt" data-set="regel_note" value="${gfEsc(x.regel_note||"")}" placeholder="Regel oder Notiz für die Vertretung">
+      <input class="txt" data-set="regel_note" aria-label="Regel oder Notiz für die Vertretung" value="${gfEsc(x.regel_note||"")}" placeholder="Regel oder Notiz für die Vertretung">
     </div>
     <div class="ub-doss" hidden></div>
   </article>`;

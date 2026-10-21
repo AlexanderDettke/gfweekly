@@ -34,7 +34,7 @@
   <div id="hero"></div>
 
   <div class="board-bar">
-    <div class="search"><input id="q" placeholder="Themen durchsuchen … (Taste /)" /></div>
+    <div class="search" role="search"><label class="ws-vh" for="q">Themen durchsuchen</label><input id="q" type="search" placeholder="Themen durchsuchen … (Taste /)" /></div>
     <div class="segs" id="groupSegs" title="Wonach sollen die Spalten gebildet werden?">
       <button class="seg on" data-g="ablauf">Ablauf</button>
       <button class="seg" data-g="prio">Prio</button>
@@ -99,7 +99,7 @@ function gehoert(t, name){
 
 /* ---- Datum-Helfer ---- */
 const NOW=new Date(); const today=new Date(NOW.getFullYear(),NOW.getMonth(),NOW.getDate());
-function iso(d){ return d.toISOString().slice(0,10); }
+function iso(d){ return gfIsoTag(d); }   /* D-03: Ortszeit statt UTC, vorher Vortag in Berlin */
 function endOfWeek(){ const d=new Date(today); const dow=(d.getDay()+6)%7; d.setDate(d.getDate()+(6-dow)); return d; }
 function endOfMonth(){ return new Date(today.getFullYear(),today.getMonth()+1,0); }
 function zeitOf(t){ if(!t.next_suggested) return "ohne"; const d=new Date(t.next_suggested+"T00:00:00"); if(d<=endOfWeek()) return "woche"; if(d<=endOfMonth()) return "monat"; return "spaeter"; }
@@ -130,7 +130,7 @@ function card(t){
     ${t.short_description?`<div class="bn">${gfClamp(t.short_description,"b"+t.id+"s",120)}</div>`:""}
     ${t.next_action&&t.board_lane!=="erledigt"?`<div class="bn"><b>Nächster Schritt:</b> ${gfClamp(t.next_action,"b"+t.id+"n",120)}</div>`:""}
     ${t.decision&&t.board_lane==="entschieden"?`<div class="bn"><b>Entscheidung:</b> ${gfClamp(t.decision,"b"+t.id+"d",120)}</div>`:""}
-    <div class="bf"><span>${who?gfEsc(who):""}${t.next_suggested?` · ${new Date(t.next_suggested+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}`:""}</span><span class="bf-r"><button class="mv" data-mv="${t.id}" title="Verschieben nach …" aria-label="Verschieben">⇄</button><span class="age" title="Alter des Themas">${age} T</span></span></div>
+    <div class="bf"><span>${who?gfEsc(who):""}${t.next_suggested?` · ${new Date(t.next_suggested+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}`:""}</span><span class="bf-r"><button class="mv" data-mv="${t.id}" title="Verschieben nach …" aria-label="„${gfEsc(t.title)}“ verschieben oder umsortieren" aria-haspopup="true" aria-expanded="false">⇄</button><span class="age" title="Alter des Themas">${age} T</span></span></div>
   </article>`;
 }
 
@@ -350,8 +350,19 @@ function openMovePop(id, anchor){
   const cols=columns(TOPICS).map(c=>({key:c.key,label:c.label}));
   const cur = GROUP==="ablauf"?t.board_lane:GROUP==="prio"?t.priority:GROUP==="zeitraum"?zeitOf(t):personKey(t);
   const pop=$("#movePop");
-  pop.innerHTML=`<div class="pop-h">Verschieben nach …</div>${cols.map(c=>`<button class="pop-i ${c.key===cur?"on":""}" data-col="${gfEsc(c.key)}">${gfEsc(c.label.split(" ·")[0])}</button>`).join("")}<button class="pop-i" data-details>Details öffnen</button>`;
-  pop.hidden=false;
+  /* Webapp Standard B-02, B-05: Reihenfolge innerhalb der Spalte auch ohne Ziehen ändern (wirkt wie das Ablegen an dieser Stelle). */
+  const lane=GROUP==="ablauf"?TOPICS.filter(x=>x.board_lane===t.board_lane).sort((a,b)=>a.lane_order-b.lane_order):[];
+  const pos=lane.findIndex(x=>x.id===id);
+  const reihe=GROUP==="ablauf"&&lane.length>1?`<div class="pop-h">Reihenfolge in „${gfEsc((cols.find(c=>c.key===cur)||{label:""}).label.split(" ·")[0])}“ (Platz ${pos+1} von ${lane.length})</div>`+
+    (pos>0?`<button class="pop-i" data-ord="${gfEsc(lane[0].id)}">Ganz nach oben</button><button class="pop-i" data-ord="${gfEsc(lane[pos-1].id)}">Eine Stelle nach oben</button>`:"")+
+    (pos<lane.length-1?`<button class="pop-i" data-ord="${gfEsc(lane[pos+2]?lane[pos+2].id:"")}">Eine Stelle nach unten</button>`:""):"";
+  pop.innerHTML=`<div class="pop-h">Verschieben nach …</div>${cols.map(c=>`<button class="pop-i ${c.key===cur?"on":""}" data-col="${gfEsc(c.key)}"${c.key===cur?' aria-current="true"':""}>${gfEsc(c.label.split(" ·")[0])}${c.key===cur?" (aktuell)":""}</button>`).join("")}${reihe}<button class="pop-i" data-details>Details öffnen</button>`;
+  pop.hidden=false; anchor.setAttribute("aria-expanded","true");
+  pop.querySelectorAll("[data-ord]").forEach(b=>b.onclick=()=>{ pop.hidden=true; anchor.setAttribute("aria-expanded","false"); move(id,cur,b.dataset.ord||null); });
+  /* B-08: Fokus ins Menü, Escape schließt und gibt den Fokus an ⇄ zurück */
+  setTimeout(()=>{ const f=pop.querySelector(".pop-i:not(.on)")||pop.querySelector(".pop-i"); if(f) f.focus(); },0);
+  const esc=e=>{ if(e.key==="Escape"&&!pop.hidden){ e.preventDefault(); pop.hidden=true; anchor.setAttribute("aria-expanded","false"); document.removeEventListener("keydown",esc); if(anchor.isConnected) anchor.focus(); } };
+  document.addEventListener("keydown",esc);
   const r=anchor.getBoundingClientRect(); const w=Math.min(260, window.innerWidth-24);
   pop.style.left=Math.max(12, Math.min(r.left, window.innerWidth-w-12))+"px"; pop.style.top=(r.bottom+window.scrollY+6)+"px"; pop.style.width=w+"px";
   pop.querySelectorAll("[data-col]").forEach(b=>b.onclick=()=>{ pop.hidden=true; if(b.dataset.col!==cur) move(id,b.dataset.col,null); });
@@ -474,7 +485,7 @@ gfGate(async()=>{
   gfMountHero(VIEW==="board"?"lagerfeuer":"karten", VIEW==="board"?"Board":"Kacheln", "lädt …", {compact:true, aside:`<a class="btn btn-sm" href="capture.html">Thema erfassen</a><a class="btn btn-sm" href="besprechung.html">Zur Besprechung</a>`});
   $("#view").innerHTML=`<div class="board">${LANES.map(()=>`<section class="lane">${gfSkeleton(2,"")}</section>`).join("")}</div>`;
   try{ const [d,p]=await Promise.all([gfApi("list"), gfLoadPeople()]); TOPICS=d.topics||[]; PEOPLE=p||[]; render(); renderMeet(); const tid=params.get("topic"); if(tid) openPanel(tid); if(params.get("meeting")==="1" && !MEET) location.href="besprechung.html"; }
-  catch(e){ $("#view").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+  catch(e){ gfLadefehler($("#view"), e);   /* B-07: Ursache, nächster Schritt, Kopfzeile nicht mehr „lädt …“ */ }
 });
 </script>
 </body>

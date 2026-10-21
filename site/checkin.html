@@ -59,7 +59,7 @@ const $=s=>document.querySelector(s);
 const LANE_LABEL={zu_besprechen:"Zu besprechen",in_klaerung:"In Klärung",entschieden:"Entschieden",erledigt:"Erledigt"};
 let TOPICS=[], SESSIONS=[], SHOW_REC=localStorage.getItem("gf_board_rec")==="1";
 const NOW=new Date(), today=new Date(NOW.getFullYear(),NOW.getMonth(),NOW.getDate());
-const iso=d=>d.toISOString().slice(0,10);
+const iso=d=>gfIsoTag(d);   /* D-03: Ortszeit statt UTC, vorher Vortag in Berlin */
 function endOfWeek(){ const d=new Date(today); const dow=(d.getDay()+6)%7; d.setDate(d.getDate()+(6-dow)); return d; }
 const ageDays=t=>Math.floor((NOW-new Date(t.created_at))/86400000);
 const who=t=>t.owner||t.delegate_to||"";
@@ -134,7 +134,7 @@ gfGate(async()=>{
   try{
     const [d,s]=await Promise.all([gfApi("list"), gfApi("sessions_list",{limit:5}).catch(()=>({sessions:[]}))]);
     TOPICS=d.topics||[]; SESSIONS=s.sessions||[]; render();
-  }catch(e){ $("#agenda").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+  }catch(e){ gfLadefehler($("#agenda"), e);   /* B-07 */ }
 });
 </script>
 </body>

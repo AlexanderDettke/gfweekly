@@ -32,7 +32,7 @@
   <div class="empty soft" style="margin-bottom:14px">Die Inbox ist seit dem 13.09.2026 kein Zwischenschritt mehr: Eingaben landen direkt im <a href="board.html">Board</a> unter „Zu besprechen". Diese Seite zeigt nur noch alte Einträge.</div>
   <div class="toolbar">
     <button class="btn btn-ghost" id="reload">↻ Aktualisieren</button>
-    <span class="hint" id="count" style="color:var(--muted);font-size:13px"></span>
+    <span class="hint" id="count" style="color:var(--muted);font-size:var(--stufe-2)"></span>
   </div>
   <div id="list"><div class="loading">lädt …</div></div>
 </div>
@@ -45,7 +45,7 @@
 let items=[]; const $=s=>document.querySelector(s);
 gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("themen"); await load(); });
 async function load(){ const d=await gfApi("inbox_list",{}); items=d.items||[]; render(); }
-$("#reload").onclick=async()=>{ try{ await load(); gfToast("Aktualisiert"); }catch(e){ gfToast("Fehler"); } };
+$("#reload").onclick=async()=>{ try{ await load(); gfToast("Aktualisiert"); }catch(e){ gfToast("Fehlgeschlagen: "+((e&&e.message)||"unbekannter Fehler"),{fehler:true}); } };
 function fmt(s){ return new Date(s).toLocaleDateString("de-DE",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}); }
 function chip(l,v){ return v?`<span class="ch"><b>${l}:</b> ${gfEsc(v)}</span>`:""; }
 function render(){
@@ -65,14 +65,14 @@ function card(it){
     <div class="raw">${gfEsc(it.raw_text)}</div>
     <div class="imeta"><span class="src">${gfEsc(it.source)}</span> ${gfEsc(it.created_by||"")} · ${fmt(it.created_at)} ${hints}</div>
     ${ai}
-    <div class="iedit"><input class="ititle" value="${gfEsc(title)}" placeholder="Titel fürs Cockpit">
-      <select class="select iprio"><option value="hoch" ${prio==="hoch"?"selected":""}>Priorität: hoch</option><option value="mittel" ${prio==="mittel"?"selected":""}>Priorität: mittel</option><option value="niedrig" ${prio==="niedrig"?"selected":""}>Priorität: niedrig</option></select></div>
+    <div class="iedit"><input class="ititle" aria-label="Titel fürs Cockpit" value="${gfEsc(title)}" placeholder="Titel fürs Cockpit">
+      <select class="select iprio" aria-label="Priorität"><option value="hoch" ${prio==="hoch"?"selected":""}>Priorität: hoch</option><option value="mittel" ${prio==="mittel"?"selected":""}>Priorität: mittel</option><option value="niedrig" ${prio==="niedrig"?"selected":""}>Priorität: niedrig</option></select></div>
     <div class="actions-row" style="margin-top:12px"><button class="btn btn-primary ok">✓ Ins Cockpit übernehmen</button><button class="btn btn-brand rej">Verwerfen</button></div>
   </div>`;
 }
 function bind(it){ const el=document.querySelector('.inbox-item[data-id="'+it.id+'"]'); if(!el)return;
   el.querySelector(".ok").onclick=async()=>{ const title=el.querySelector(".ititle").value.trim(),priority=el.querySelector(".iprio").value; try{ await gfApi("inbox_promote",{id:it.id,title,priority}); items=items.filter(x=>x.id!==it.id); render(); gfToast("Ins Cockpit übernommen ✓"); }catch(e){ gfToast("Übernehmen fehlgeschlagen"); } };
-  el.querySelector(".rej").onclick=async()=>{ if(!confirm("Diesen Eingang verwerfen?"))return; try{ await gfApi("inbox_reject",{id:it.id}); items=items.filter(x=>x.id!==it.id); render(); gfToast("Verworfen"); }catch(e){ gfToast("Fehler"); } };
+  el.querySelector(".rej").onclick=async()=>{ if(!confirm("Diesen Eingang verwerfen?"))return; try{ await gfApi("inbox_reject",{id:it.id}); items=items.filter(x=>x.id!==it.id); render(); gfToast("Verworfen"); }catch(e){ gfToast("Fehlgeschlagen: "+((e&&e.message)||"unbekannter Fehler"),{fehler:true}); } };
 }
 </script>
 </body>

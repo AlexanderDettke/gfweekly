@@ -1238,7 +1238,7 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 .kk .kk-l{font-size:var(--stufe-1);color:var(--muted);line-height:1.25}
 .kk.warn .kk-v{color:var(--warn)} .kk.crit .kk-v{color:var(--crit)} .kk.pos .kk-v{color:var(--pos)}
 .kk.link{cursor:pointer} .kk.link:hover{border-color:var(--border-strong);background:var(--surface)}
-.kk-trend{font-size:16px;line-height:1;font-weight:600;color:var(--text-2)}
+.kk-trend{font-size:var(--stufe-3);line-height:1;font-weight:600;color:var(--text-2)}
 /* Chip-Reihe als Auswahl (ersetzt <select>): genau ein Chip gewählt; Wert liegt im versteckten Feld */
 .fchips{display:flex;flex-wrap:wrap;gap:6px}
 .fchips .chip{min-height:32px;padding:5px 11px;font-size:var(--stufe-2);font-weight:500;color:var(--text-2);background:var(--surface);border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-s)}
@@ -1790,3 +1790,39 @@ select,input:not([type]),input[type=text],input[type=search],input[type=email],i
 .mini::after{inset:-9px}
 /* P-04: Kurzmeldung bei Fehlern hervorgehoben, Text nicht nur über Farbe (der Wortlaut nennt den Fehler) */
 .toast.fehler{border-color:var(--crit);color:var(--crit-text);max-width:min(560px,calc(100vw - 32px));white-space:normal;text-align:left}
+/* B-07: Ladefehler mit Ursache und nächstem Schritt */
+.ws-fehler{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:16px 0;padding:12px 16px;border:var(--rahmen) solid var(--crit);border-radius:var(--radius-m);background:var(--crit-bg);color:var(--text)}
+.ws-fehler p{margin:0;flex:1 1 260px}
+.ws-fehler b{color:var(--crit-text)}
+
+/* G-01: <small> fällt nie unter die kleinste Rolle (12 px) */
+small{font-size:max(var(--stufe-1),.83em)}
+/* B-03: Fehlermeldung direkt am Feld, mit Wortlaut statt nur Farbe */
+.ws-feldfehler{margin:6px 0 0;padding:8px 12px;border-left:3px solid var(--crit);background:var(--crit-bg);color:var(--text);font-size:var(--stufe-2);border-radius:var(--radius-s)}
+.ws-feldfehler[hidden]{display:none}
+[aria-invalid="true"]{border-color:var(--crit)!important}
+button.more{display:flex;align-items:center;justify-content:center;min-height:var(--ziel-min);margin:14px auto 0}
+.ws-gate-l{display:block;margin:0 0 6px;font-size:var(--stufe-2);font-weight:600;color:var(--text)}
+/* G-03, B-02: kleine Aktionen behalten ihr Bild, bekommen aber 44 px Trefferfläche; Verschieben ist nicht nur bei Hover sichtbar */
+.mv,.btn-discussed{position:relative}
+.mv::after{content:"";position:absolute;inset:-11px -10px}
+.btn-discussed::after{content:"";position:absolute;inset:-11px 0}
+.mv{opacity:1}
+.og-zug-rest{min-height:var(--ziel-min);display:inline-flex;align-items:center}
+button.del{min-height:var(--ziel-min);display:inline-flex;align-items:center}
+.expand-btn{min-height:var(--ziel-min)}
+/* G-02: Erledigte Karten werden nicht mehr per Deckkraft gedämpft (Text fiel auf 3:1). Erledigt bleibt erkennbar am Status „erledigt“,
+   am Haken und am durchgestrichenen Titel; der Text behält 4,5:1. */
+.card.done{opacity:1}
+.card.done .ttl,.card.done .subline{color:var(--text-2)}
+.rec-head{cursor:auto} .rec-main{cursor:pointer}
+/* G-05: Umbruch statt seitlichem Überlauf bei 320 px und bei 200 % Text */
+.fd-h{flex-wrap:wrap}
+@media(max-width:359px){ .dash{grid-template-columns:minmax(0,1fr)} }
+@media(max-width:600px){ .fd-row{grid-template-columns:minmax(0,1fr)} .fd-side{flex-wrap:wrap;white-space:normal} }
+.tm-legend{flex-wrap:wrap}
+.cycle-legend{min-width:0} .cycle-legend span{flex-wrap:wrap;min-width:0}
+@media(min-width:881px){ .cycle-head{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr)} }
+/* G-05, T-02: lange deutsche Wörter brechen in schmalen Kästchen um, statt hinauszuragen */
+.badgebar .bl,.badgebar .bl span{min-width:0;overflow-wrap:anywhere;hyphens:auto}
+.hab .steps{flex-wrap:wrap;gap:4px 12px}

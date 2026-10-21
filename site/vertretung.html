@@ -125,7 +125,7 @@ function depZeile(d, personen, bereiche){
   return `<tr data-id="${d.id}">
     <td data-sp="Bereich">${ber}</td>
     <td data-sp="Vertretung">${vert}</td>
-    <td data-sp="Vollmacht"><input class="txt" data-f="vollmacht" data-id="${d.id}" value="${gfEsc(d.vollmacht||"")}" placeholder="Vollmacht, zum Beispiel Ausgaben bis 2.000 € aus freigegebenen Budgets"></td>
+    <td data-sp="Vollmacht"><input class="txt" data-f="vollmacht" data-id="${d.id}" aria-label="Vollmacht" value="${gfEsc(d.vollmacht||"")}" placeholder="Vollmacht, zum Beispiel Ausgaben bis 2.000 € aus freigegebenen Budgets"></td>
     <td>${d.neu?"":`<button class="icon-btn" data-act="depdel" data-id="${d.id}" title="Zeile abschalten">✕</button>`}</td>
   </tr>`;
 }

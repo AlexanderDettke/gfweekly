@@ -101,7 +101,7 @@ async function load(){
     const [n,t,c]=await Promise.all([gfApi("news_list",{limit:2000}), gfApi("list"), gfApi("cycle_get",{year:NOW.getFullYear()})]);
     ITEMS=n.items||[]; TOPICS=t.topics||[]; STRANDS=c.strands||[];
     render();
-  }catch(e){ $("#feed").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+  }catch(e){ gfLadefehler($("#feed"), e, {auch:["#kand"]});   /* B-07: Ursache, nächster Schritt, Kopfzeile nicht mehr „lädt …“ */ }
 }
 
 function render(){

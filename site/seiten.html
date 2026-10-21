@@ -37,7 +37,7 @@
   <section class="start-hero"><div class="start-stats" id="startStats"></div></section>
 
   <div class="toolbar">
-    <div class="search"><input id="search" placeholder="Seiten durchsuchen … (Taste /)" /></div>
+    <div class="search" role="search"><label class="ws-vh" for="search">Seiten durchsuchen</label><input id="search" type="search" placeholder="Seiten durchsuchen … (Taste /)" /></div>
     <div class="segs" id="modeSegs" role="group" aria-label="Ansicht">
       <button class="seg" data-m="kacheln" title="Vorschaubild, Zweck und Zugang je Seite">Kacheln</button>
       <button class="seg" data-m="liste" title="Eine Zeile je Seite, Zugang direkt kopierbar">Liste</button>
@@ -79,7 +79,7 @@ function matches(s){
 
 async function load(){
   try{ const d=await gfApi("sites_list"); CATS=d.categories||[]; SITES=d.sites||[]; render(); }
-  catch(e){ $("#groups").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+  catch(e){ gfLadefehler($("#groups"), e);   /* B-07 */ }
 }
 
 function render(){

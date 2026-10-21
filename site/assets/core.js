@@ -69,7 +69,7 @@ function gfChipsSet(input, value, fire=false){
 }
 function gfStepper(name, cur, opts={}){
   const attr=opts.attr||`name="${name}"`, min=opts.min??0, max=opts.max??9999, step=opts.step??1, v=(cur===""||cur==null)?"":Number(cur);
-  return `<div class="stepper" data-min="${min}" data-max="${max}" data-step="${step}"${opts.label?` aria-label="${gfEsc(opts.label)}"`:""}><button type="button" data-d="-1" aria-label="Weniger" ${v!==""&&v<=min?`disabled title="Kleinster Wert ist ${min}"`:""}>−</button><input type="text" inputmode="numeric" ${attr} value="${v===""?"":v}" placeholder="${opts.placeholder||""}"><button type="button" data-d="1" aria-label="Mehr" ${v!==""&&v>=max?`disabled title="Größter Wert ist ${max}"`:""}>+</button></div>`;
+  return `<div class="stepper" role="group" data-min="${min}" data-max="${max}" data-step="${step}"${opts.label?` aria-label="${gfEsc(opts.label)}"`:""}><button type="button" data-d="-1" aria-label="Weniger" ${v!==""&&v<=min?`disabled title="Kleinster Wert ist ${min}"`:""}>−</button><input type="text" inputmode="numeric" ${attr} value="${v===""?"":v}" placeholder="${opts.placeholder||""}"${opts.label?` aria-label="${gfEsc(opts.label)}"`:""}><button type="button" data-d="1" aria-label="Mehr" ${v!==""&&v>=max?`disabled title="Größter Wert ist ${max}"`:""}>+</button></div>`;
 }
 function gfStepperSync(st){
   const inp=st.querySelector("input"), min=Number(st.dataset.min), max=Number(st.dataset.max), v=inp.value===""?null:Number(inp.value);
@@ -117,12 +117,23 @@ const GF_KK_ICON={
   meilenstein:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4M6 4h11l-2 4 2 4H6"/></svg>',
   zahl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16M8 15l4-5 3 3 5-6"/></svg>'
 };
+/* Webapp Standard D-03: Kalendertag in Ortszeit (Europe/Berlin im Browser) als JJJJ-MM-TT. toISOString() verschöbe
+   die lokale Mitternacht in Berlin auf den Vortag. */
+function gfIsoTag(d){ d=d?new Date(d):new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function gfFmtInt(n){ return (Number(n)||0).toLocaleString("de-DE"); }
 function gfKachel(o){
   const tag=o.href?"a":"div", href=o.href?` href="${gfEsc(o.href)}"${/^https?:/.test(o.href)?' target="_blank" rel="noopener"':""}`:"";
   const trend=o.trend?`<span class="kk-trend ${o.trend}" aria-label="${o.trend==="up"?"steigt":o.trend==="down"?"fällt":"gleich"}">${GF_ZST[o.trend]}</span>`:"";
   return `<${tag} class="kk${o.tone?" "+o.tone:""}${o.href?" link":""}"${href}${o.title?` title="${gfEsc(o.title)}"`:""}><span class="kk-i" aria-hidden="true">${GF_KK_ICON[o.icon]||GF_KK_ICON.zahl}</span><span class="kk-v"><span class="ht-num">${typeof o.value==="number"?gfFmtInt(o.value):gfEsc(o.value??"keine")}</span>${o.unit?`<small>${gfEsc(o.unit)}</small>`:""}${trend}</span><span class="kk-l">${gfEsc(o.label)}</span></${tag}>`;
 }
+
+/* Webapp Standard G-06: Bei „Bewegung reduzieren“ springt auch das per Skript ausgelöste Scrollen sofort ans Ziel.
+   Das CSS schaltet nur Animationen und scroll-behavior ab, nicht scrollIntoView({behavior:"smooth"}) und scrollTo. */
+(function(){ const mq=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)"); if(!mq) return;
+  const ruhig=o=>(o&&typeof o==="object"&&o.behavior==="smooth"&&mq.matches)?{...o,behavior:"auto"}:o;
+  const siv=Element.prototype.scrollIntoView; Element.prototype.scrollIntoView=function(o){ return siv.call(this, ruhig(o)); };
+  for(const [obj,n] of [[window,"scrollTo"],[window,"scrollBy"],[Element.prototype,"scrollTo"],[Element.prototype,"scrollBy"]]){ const f=obj[n]; if(f) obj[n]=function(a,...r){ return f.call(this, ruhig(a), ...r); }; }
+})();
 
 /* ---- Theme (dark Standard / light), persistiert in localStorage ---- */
 function gfTheme(){ const t=localStorage.getItem("gf_theme"); return (t==="light"||t==="dark") ? t : (t==="colorful" ? "light" : "dark"); }
@@ -131,16 +142,39 @@ function gfApplyTheme(n){ document.documentElement.dataset.theme = n; localStora
 gfApplyTheme(gfTheme());
 
 /* ---- Login-Gate (validiert das Passwort über people_list) ---- */
+/* Webapp Standard B-07: Passwortprüfung und Seitenaufbau sind getrennt. Ein Fehler beim Aufbau erscheint sichtbar auf der Seite
+   (mit „Erneut laden“) statt in der verdeckten Zeile des Tors, und er löscht das Passwort nicht. Nur ein abgelehntes Passwort
+   (401) führt zurück zum Tor. Ohne Verbindung bleibt das gespeicherte Passwort erhalten; „Öffnen“ versucht es erneut. */
 function gfGate(onReady){
   const gate=document.getElementById("gate"), inp=document.getElementById("pw"), btn=document.getElementById("unlock"), err=document.getElementById("gateErr");
   async function attempt(pw){
     sessionStorage.setItem("gf_pw", pw);
-    try{ await gfApi("people_list"); if(gate) gate.style.display="none"; await onReady(); }
-    catch(e){ if(err) err.textContent = e.auth ? "Falsches Passwort." : ("Fehler: "+(e.message||"Verbindung")); sessionStorage.removeItem("gf_pw"); }
+    try{ await gfApi("people_list"); }
+    catch(e){ if(gate) gate.style.display=""; if(err) err.textContent = e.auth ? "Falsches Passwort." : (e.offline ? e.message : ("Anmeldung nicht möglich: "+(e.message||"Verbindung"))); if(e.auth||!e.offline) sessionStorage.removeItem("gf_pw"); return; }
+    if(gate) gate.style.display="none";
+    try{ await onReady(); }
+    catch(e){
+      if(e&&e.auth){ sessionStorage.removeItem("gf_pw"); if(gate) gate.style.display=""; if(err) err.textContent="Die Anmeldung gilt nicht mehr. Bitte gib das Passwort erneut ein."; if(inp) inp.focus(); return; }
+      const app=document.getElementById("app"); if(app){ app.style.display="block"; let b=document.getElementById("wsLadefehler"); if(!b){ b=document.createElement("div"); b.id="wsLadefehler"; app.prepend(b); } gfLadefehler(b, e); }
+    }
   }
-  if(btn) btn.onclick=()=>attempt(inp.value.trim());
+  /* B-03: sichtbare Bezeichnung statt nur Platzhalter; Fehler werden angesagt. */
+  if(inp&&!(inp.labels&&inp.labels.length)){ const l=document.createElement("label"); l.htmlFor=inp.id||"pw"; l.className="ws-gate-l"; l.textContent="Passwort"; inp.before(l); }
+  if(err){ err.setAttribute("role","alert"); if(inp) inp.setAttribute("aria-describedby",err.id||"gateErr"); }
+  if(btn) btn.onclick=()=>attempt(inp.value.trim()||gfPW());
   if(inp) inp.addEventListener("keydown",e=>{ if(e.key==="Enter") btn.click(); });
   if(gfPW()) attempt(gfPW()); else if(inp) inp.focus();
+}
+
+/* Webapp Standard B-07, P-04: einheitlicher Ladefehler mit Ursache und nächstem Schritt. el bekommt die Meldung;
+   eine im Kopf stehen gebliebene „lädt …“-Zeile wird auf „Nicht geladen“ gesetzt. */
+function gfLadefehler(el, e, opts={}){
+  const grund=e&&e.offline?e.message:("Laden fehlgeschlagen: "+((e&&e.message)||"unbekannter Fehler")+".");
+  if(el){ el.innerHTML=`<div class="ws-fehler" role="alert"><p><b>${gfEsc(opts.titel||"Nicht geladen.")}</b> ${gfEsc(grund)} Deine bisherigen Daten sind dadurch nicht verändert.</p><button type="button" class="btn btn-sm" data-ws-neu>Erneut laden</button></div>`;
+    el.querySelector("[data-ws-neu]").onclick=()=>location.reload(); }
+  const sub=document.getElementById("heroSub"); if(sub&&/lädt/.test(sub.textContent)) sub.textContent="Nicht geladen";
+  /* opts.auch: weitere Bereiche, die aus demselben Abruf gefüllt worden wären */
+  (opts.auch||[]).forEach(sel=>{ const x=document.querySelector(sel); if(x) x.innerHTML=`<div class="empty">Nicht geladen, siehe Hinweis oben.</div>`; });
 }
 
 /* ---- Seitenleiste (V18): links, einklappbar zur Symbolleiste, am Handy als Schublade hinter einer schmalen Kopfzeile.
@@ -777,6 +811,19 @@ function gfDialogAuf(m, sel){
   const ziel=(sel&&m.querySelector(sel))||m.querySelector('button:not([disabled]),[href],input:not([type=hidden]),textarea,select');
   if(ziel) setTimeout(()=>{ if(m.classList.contains("open")) ziel.focus(); },30);
 }
+/* Webapp Standard B-03, Q-02: Viele Formulare setzen <label> direkt vor ihr Feld, ohne beide zu verknüpfen. Hier wird die Verknüpfung
+   nachgetragen (for und id), auch für später gerenderte Inhalte. Eine Chip-Reihe oder ein Stepper als Nachbar erhält aria-labelledby.
+   Ein Label, das sein Feld umschließt oder schon verknüpft ist, bleibt unverändert. */
+let _gfBzN=0, _gfBzRaf=0;
+function gfBezeichnungen(root){
+  (root||document).querySelectorAll("label:not([for])").forEach(l=>{
+    if(l.querySelector("input,select,textarea")) return;
+    const c=l.nextElementSibling; if(!c) return;
+    if(c.matches("input:not([type=hidden]),select,textarea")){ if(c.labels&&c.labels.length) return; if(!c.id) c.id="wsf"+(++_gfBzN); l.htmlFor=c.id; return; }
+    if(c.matches(".fchips,.stepper,.chips")&&!c.getAttribute("aria-label")&&!c.getAttribute("aria-labelledby")){ if(!l.id) l.id="wsl"+(++_gfBzN); c.setAttribute("aria-labelledby",l.id); if(!c.getAttribute("role")) c.setAttribute("role","group"); }
+  });
+}
+if(window.MutationObserver) document.addEventListener("DOMContentLoaded",()=>{ gfBezeichnungen(); new MutationObserver(()=>{ cancelAnimationFrame(_gfBzRaf); _gfBzRaf=requestAnimationFrame(()=>gfBezeichnungen()); }).observe(document.body,{childList:true,subtree:true}); });
 /* B-08: Elemente mit role="button", die kein echter Knopf sind, reagieren auf Enter und Leertaste wie auf einen Klick. */
 document.addEventListener("keydown",e=>{
   const el=e.target; if(!el||!el.getAttribute||el.getAttribute("role")!=="button"||/^(BUTTON|A|INPUT|SELECT|TEXTAREA|SUMMARY)$/.test(el.tagName)) return;

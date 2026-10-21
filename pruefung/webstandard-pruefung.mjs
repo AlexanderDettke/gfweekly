@@ -33,6 +33,9 @@ const BASE = 'http://127.0.0.1:' + server.address().port;
 /* Alle Seiten der Webapp, auch die, die schirme.mjs nicht aufnimmt. */
 const SEITEN = fs.readdirSync(ROOT).filter(f => f.endsWith('.html')).sort()
   .concat(['vorhaben.html?view=board&v=xceed', 'board.html?view=kacheln', 'arbeiten.html?person=alex&start=1']);
+/* WS_SEITEN=a.html,b.html prüft nur diese Seiten (zum Nachprüfen einzelner Befunde; die Abnahme läuft immer über alle). */
+const NUR = process.env.WS_SEITEN ? process.env.WS_SEITEN.split(',') : null;
+if (NUR) SEITEN.splice(0, SEITEN.length, ...SEITEN.filter(x => NUR.includes(x)));
 
 async function kontext(browser, o = {}) {
   const ctx = await browser.newContext({ viewport:{ width:o.w || 1440, height:o.h || 900 }, deviceScaleFactor:1, locale:'de-DE',
@@ -79,14 +82,22 @@ const UEBERLAUF = () => {
     if (getComputedStyle(el).position === 'fixed' || scrollt(el)) continue;
     if (r.right > grenze) { raus.push(el.tagName.toLowerCase() + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/)[0] : '') + ' bis ' + Math.round(r.right)); if (raus.length >= 3) break; }
   }
+  /* Kein Element ragt hinaus? Dann ist es oft Text, der über sein Kästchen läuft (lange Wörter). */
+  if (!raus.length && document.documentElement.scrollWidth > grenze) {
+    const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n;
+    while ((n = w.nextNode()) && raus.length < 3) { if (!n.textContent.trim() || scrollt(n.parentElement)) continue; const r = document.createRange(); r.selectNodeContents(n);
+      if ([...r.getClientRects()].some(q => q.right > grenze)) raus.push('Text „' + n.textContent.trim().slice(0, 24) + '“ in ' + n.parentElement.tagName.toLowerCase() + (typeof n.parentElement.className === 'string' && n.parentElement.className.trim() ? '.' + n.parentElement.className.trim().split(/\s+/)[0] : '')); }
+  }
   return { breite: document.documentElement.scrollWidth, raus };
 };
 
 /* Prüfungen in der Normalansicht 1440. */
 const MESSUNG = () => {
-  const sichtbar = (el) => { const st = getComputedStyle(el); if (st.display === 'none' || st.visibility === 'hidden') return false; const r = el.getBoundingClientRect(); return r.width > 1 && r.height > 1 && !el.closest('[hidden],[inert],[aria-hidden="true"]'); };
+  const sichtbar = (el) => { const st = getComputedStyle(el); if (st.display === 'none' || st.visibility === 'hidden') return false; const r = el.getBoundingClientRect(); if (r.width <= 1 || r.height <= 1 || el.closest('[hidden],[inert],[aria-hidden="true"]')) return false;
+    /* Inhalt eines geschlossenen <details> wird nicht dargestellt (nur die summary) */
+    const zu = el.closest('details:not([open])'); if (zu && !el.closest('summary')) return false; return true; };
   const name = (el) => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : '');
-  const zugName = (el) => (el.getAttribute('aria-label') || '').trim() || (el.getAttribute('aria-labelledby') ? 'x' : '') || (el.innerText || '').trim() || (el.getAttribute('title') || '').trim() || ([...el.querySelectorAll('img[alt]')].map(i => i.alt).join('').trim());
+  const zugName = (el) => (el.getAttribute('aria-label') || '').trim() || (el.getAttribute('aria-labelledby') ? 'x' : '') || (el.innerText || el.textContent || '').trim() || (el.getAttribute('title') || '').trim() || ([...el.querySelectorAll('img[alt]')].map(i => i.alt).join('').trim());
   const out = { kleinschrift: [], ziele_unter24: [], ziele_unter44: 0, ziele44: [], ohneName: [], ohneBezeichnung: [], nurPlatzhalter: [], klickOhneFokus: [] };
   // G-01: kleinste Schrift 12 px
   for (const el of document.querySelectorAll('body *')) {
@@ -123,6 +134,8 @@ const MESSUNG = () => {
     }
     const st = getComputedStyle(el); if (st.cursor !== 'pointer') continue;
     if (el.closest('a,button,label,summary,[role=button],[role=tab],[role=link],[tabindex]')) continue;
+    /* data-ws-zusatz: zusätzlicher Zeigerweg; derselbe Vorgang hat ein eigenes Bedienelement mit Tastaturzugang (im Code benannt) */
+    if (el.closest('[data-ws-zusatz]')) continue;
     if (el.parentElement && getComputedStyle(el.parentElement).cursor === 'pointer' && !el.hasAttribute('onclick')) continue;
     out.klickOhneFokus.push(name(el));
   }

@@ -210,7 +210,7 @@ $("#ritNew").addEventListener("keydown",e=>{ if(e.key==="Enter") $("#ritNewBtn")
 /* ---- Meilensteine ---- */
 async function loadMilestones(){
   try{ const d=await gfApi("milestones_list",{all:MS_ALL}); MS=d.milestones||[]; renderMilestones(); if(CYCLE) renderCycle(); }
-  catch(e){ $("#msGrid").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+  catch(e){ gfLadefehler($("#msGrid"), e);   /* B-07 */ }
 }
 function msCard(m){
   if(OPEN_MS && OPEN_MS.id===m.id) return msForm(m);
@@ -304,7 +304,7 @@ async function loadTopics(){
     $("#dash").querySelectorAll(".v").forEach(v=>gfCountUp(v, v.textContent));
     $("#topGrid").innerHTML= top.length ? top.slice(0,8).map(topicCard).join("") : `<div class="empty soft">Keine Themen mit Priorität hoch offen.</div>`;
     gfStagger($("#topGrid"),".tcard");
-  }catch(e){ $("#topGrid").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+  }catch(e){ gfLadefehler($("#topGrid"), e);   /* B-07 */ }
 }
 
 /* ---- Habitat (V17): Kopfbild nach Stufe, vier Karten unter dem Kopf ---- */

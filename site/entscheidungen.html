@@ -36,7 +36,7 @@
   <section class="start-hero"><div class="start-stats" id="stats"></div></section>
 
   <div class="toolbar">
-    <div class="search"><input id="q" placeholder="Entscheidungen durchsuchen … (Taste /)" /></div>
+    <div class="search" role="search"><label class="ws-vh" for="q">Entscheidungen durchsuchen</label><input id="q" type="search" placeholder="Entscheidungen durchsuchen … (Taste /)" /></div>
     <div class="segs" id="rangeSegs">
       <button class="seg" data-r="30">30 Tage</button>
       <button class="seg on" data-r="90">Quartal</button>
@@ -64,7 +64,7 @@
 const $=(s,r=document)=>r.querySelector(s);
 let DEC=[], SESS=[], TOPICS=[], MS=[], CYC=null, Q="", RANGE=90, EDITING=null;
 const today=new Date(); today.setHours(0,0,0,0);
-function iso(d){ return d.toISOString().slice(0,10); }
+function iso(d){ return gfIsoTag(d); }   /* D-03: Ortszeit statt UTC, vorher Vortag in Berlin */
 function daysAgo(n){ const d=new Date(today); d.setDate(d.getDate()-n); return d; }
 function monthKey(d){ return d.slice(0,7); }
 function monthLabel(k){ const [y,m]=k.split("-"); return new Date(+y,+m-1,1).toLocaleDateString("de-DE",{month:"long",year:"numeric"}); }
@@ -74,7 +74,7 @@ async function load(){
     const [d,s,t]=await Promise.all([gfApi("decisions_list",{limit:1000}), gfApi("sessions_list",{limit:60}), gfApi("list")]);
     DEC=d.decisions||[]; SESS=s.sessions||[]; TOPICS=t.topics||[];
     render(); renderSessions();
-  }catch(e){ $("#log").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+  }catch(e){ gfLadefehler($("#log"), e, {auch:["#sessions"]});   /* B-07: Ursache, nächster Schritt, Kopfzeile nicht mehr „lädt …“ */ }
 }
 
 /* ---- Abzeichenleiste (V17): alle 19, erreichte in Farbe ---- */

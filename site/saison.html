@@ -26,7 +26,7 @@
 .sa-satz{margin:0;font-size:var(--stufe-3);line-height:var(--leading-text);max-width:76ch}
 .sa-note{background:var(--warn-bg);color:var(--text);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:var(--leading-text)}
 .sa-note b{color:var(--text)}
-.sa-mark{display:inline-block;font-size:.66rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:var(--radius-s);padding:0 5px;margin-left:6px;vertical-align:1px;white-space:nowrap;color:var(--text);border:var(--rahmen) solid var(--border-strong)}
+.sa-mark{display:inline-block;font-size:var(--stufe-1);font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:var(--radius-s);padding:0 5px;margin-left:6px;vertical-align:1px;white-space:nowrap;color:var(--text);border:var(--rahmen) solid var(--border-strong)}
 .sa-mark.leer{color:var(--text-2);border-style:dashed}
 .sa-rahmen{border:2px solid var(--text);border-radius:var(--radius-m);padding:6px 10px;display:inline-block;font-weight:700;font-variant-numeric:tabular-nums}
 
@@ -504,7 +504,7 @@ async function load(){
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("saison");
   gfMountHero("karten","Saison 2026/27","Vier Fragen, eine Reihenfolge: Phase und Herausforderung, wen wir haben, was sich geändert hat, wann was wie passieren kann.",{slim:true});
-  try{ await load(); }catch(e){ $("#saLage").innerHTML=`<p class="sa-satz">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</p>`; }
+  try{ await load(); }catch(e){ gfLadefehler($("#saLage"), e);   /* B-07 */ }
 });
 </script>
 </body>

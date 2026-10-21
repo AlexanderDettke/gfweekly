@@ -25,7 +25,7 @@
 .km-muted{color:var(--text-2);font-size:var(--stufe-2);line-height:var(--leading-text);margin:0}
 .km-satz{margin:0;font-size:var(--stufe-3);line-height:var(--leading-text);max-width:76ch}
 .km-note{background:var(--warn-bg);color:var(--text);border-radius:var(--radius-m);padding:10px 12px;font-size:var(--stufe-2);line-height:var(--leading-text)}
-.km-mark{display:inline-block;font-size:.66rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:var(--radius-s);padding:0 5px;margin-left:6px;vertical-align:1px;white-space:nowrap;color:var(--text);border:var(--rahmen) solid var(--border-strong)}
+.km-mark{display:inline-block;font-size:var(--stufe-1);font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:var(--radius-s);padding:0 5px;margin-left:6px;vertical-align:1px;white-space:nowrap;color:var(--text);border:var(--rahmen) solid var(--border-strong)}
 .km-mark.leer{color:var(--text-2);border-style:dashed}
 .km-mark.stark{border:2px solid var(--text)}
 
@@ -51,11 +51,11 @@
 /* Wochenlast */
 .km-last{position:relative;min-width:0}
 .km-last svg{display:block;width:100%;height:auto;overflow:visible}
-.km-last .ach text{font-size:11px;fill:var(--text-2)}
+.km-last .ach text{font-size:var(--stufe-1);fill:var(--text-2)}
 .km-last .linie{stroke:var(--text-2);stroke-width:1;stroke-dasharray:3 4}
-.km-last .linie-t{font-size:11px;fill:var(--text-2)}
+.km-last .linie-t{font-size:var(--stufe-1);fill:var(--text-2)}
 .km-last .band{fill:var(--surface-2)}
-.km-last .band-t{font-size:11px;fill:var(--text-2);font-weight:600}
+.km-last .band-t{font-size:var(--stufe-1);fill:var(--text-2);font-weight:600}
 .km-last .heute{stroke:var(--text);stroke-width:1.5}
 .km-last .ziel{fill:transparent;cursor:crosshair}
 .km-last .ziel:focus{outline:none}
@@ -111,9 +111,9 @@ details[open]>summary .chev{transform:rotate(90deg)}
 .km-band .zeile{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px;align-items:center}
 .km-band .zeile b{font-size:var(--stufe-2)}
 .km-band .spur{position:relative;height:34px;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-s);overflow:hidden}
-.km-band .ph{position:absolute;top:0;bottom:12px;border-right:var(--rahmen) solid var(--border);font-size:10px;color:var(--text-2);padding:1px 3px;white-space:nowrap;overflow:hidden;box-sizing:border-box}
+.km-band .ph{position:absolute;top:0;bottom:12px;border-right:var(--rahmen) solid var(--border);font-size:var(--stufe-1);color:var(--text-2);padding:1px 3px;white-space:nowrap;overflow:hidden;box-sizing:border-box}
 .km-band .ph.f{background:var(--surface-2);border:2px solid var(--text)}
-.km-band .mk{position:absolute;bottom:1px;transform:translateX(-50%);font-size:10px;line-height:10px;font-weight:700;color:var(--text)}
+.km-band .mk{position:absolute;bottom:1px;transform:translateX(-50%);font-size:var(--stufe-1);line-height:1;font-weight:700;color:var(--text)}
 .km-band .heute{position:absolute;top:0;bottom:0;border-left:2px solid var(--text)}
 .km-band .monate{position:relative;height:14px;margin-left:118px}
 .km-nurleser{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -121,7 +121,7 @@ details[open]>summary .chev{transform:rotate(90deg)}
 .km-meldung{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
 .km-meldung[hidden],#kmVeraltet[hidden]{display:none}
 .km-meldung:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-.km-band .monate span{position:absolute;font-size:10px;color:var(--text-2);transform:translateX(-2px)}
+.km-band .monate span{position:absolute;font-size:var(--stufe-1);color:var(--text-2);transform:translateX(-2px)}
 @media (max-width:520px){ .km-band .zeile{grid-template-columns:1fr} .km-band .monate{margin-left:0} }
 </style>
 </head>
