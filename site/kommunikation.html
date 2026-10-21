@@ -487,7 +487,7 @@ async function neuLaden(erfolg, o={}){
 }
 async function load(still){
   const d=await gfApi("komm_list",{});
-  D=d; HEUTE=d.heute||new Date().toISOString().slice(0,10);
+  D=d; HEUTE=d.heute||gfIsoTag();
   renderAll();
   if(!still && (D.festivals||[]).every(f=>!f.anzahl)) $("#kmLastSatz").textContent="Noch nichts berechnet. Die Berechnung läuft täglich mit dem Tick oder über komm_berechnen.";
 }

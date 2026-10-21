@@ -71,7 +71,7 @@ function fmtD(d){ return d?new Date(d+"T00:00:00").toLocaleDateString("de-DE",{d
 
 function renderKopf(){
   const a=ABSENCE; if(!a) return;
-  const heute=new Date().toISOString().slice(0,10);
+  const heute=gfIsoTag();
   const tage=Math.round((new Date(a.von+"T00:00:00")-new Date(heute+"T00:00:00"))/86400000);
   const ende=a.bis||a.bis_geschaetzt;
   const gesamt=ende?Math.round((new Date(ende+"T00:00:00")-new Date(a.von+"T00:00:00"))/86400000)+1:null;

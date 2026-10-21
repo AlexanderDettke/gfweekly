@@ -27,6 +27,10 @@ Abschnitt 0 nennt jede Fähigkeit, die der Pilot verändert hat, mit neuer Umset
 | W-17 | Asana senden (Launch) | Rückfrage ohne Anzahl | Rückfrage nennt Festival und Anzahl aus dem Knopf | B-06 | Codeprüfung |
 | W-18 | Skript-Scrollen (Organisation, Besprechung, Neuigkeiten, Liste) | Weich trotz „Bewegung reduzieren“ | Springt sofort, wenn reduzierte Bewegung gewünscht ist | G-06 | Messung |
 | W-19 | Darstellung aller Seiten | Schrift unter 12 px, Ziele unter 44 px, Überlauf bei 320 px und 200 %, gedämpfte erledigte Karten und Abzeichen | Rollen 12/14 px, 44-px-Ziele, Umbruch, Kontrast ohne Deckkraft | G-01 bis G-05 | Messung, Schirme |
+| W-21 | Besprechung beenden (Besprechung, Board) | Bei Speicherfehler trotzdem beendet und „Gespeichert unter …“ angezeigt | Besprechung bleibt offen, Text zur Sicherung im Dialog, erneutes Beenden möglich (Server aktualisiert dieselbe Sitzung) | B-04, B-07 | Codeprüfung |
+| W-22 | Saison-Rad: Bereich schließen mit ungespeicherten Änderungen | Schloss sofort, Fehler im geschlossenen Bereich, Eingaben weg | Erst speichern, bei Fehler bleibt der Bereich mit Eingaben offen | B-04 | Codeprüfung |
+| W-23 | Liste: „heute besprochen“, Status, Priorität, Delegation | Erfolgsmeldung vor der Antwort; Fehler ohne Ursache | Erfolg erst nach Antwort, Fehler mit Ursache, Ansicht zeigt wieder den gespeicherten Stand | B-04 | Probe 11 |
+| W-24 | Spielkarten (Abzeichen, Stufe) | Schlossen nach 7 bis 9 s selbst, auch bei reduzierter Bewegung; Escape-Listener blieb nach Klick | Kein Selbstschließen bei reduzierter Bewegung oder Fokus; Listener entfernt; Fokus zurück | G-06, B-08 | Codeprüfung |
 | W-20 | Navigation | Kein Sprunglink, Dunkel/Hell und Person ohne Zustand für Vorlesesoftware | „Zum Inhalt springen“, `aria-pressed`, Fokus zurück zum Menüknopf beim Schließen der Schublade | B-01, B-08 | Messung Tastatur |
 
 Hinweis zum Umfang: Im Ordner `site/` liegen **25** HTML-Seiten, nicht 26. Alle 25 sind unten aufgenommen.

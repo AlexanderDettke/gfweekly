@@ -346,8 +346,13 @@ $("#lueckeOn").onchange=e=>{ LUECKE=e.target.checked; render(); };
 $("#newTopic").onclick=async()=>{ const title=prompt("Neues Thema (Titel):"); if(!title) return; try{ const d=await gfApi("add",{title,priority:"mittel",created_by:gfWho(),board_lane:"zu_besprechen"}); TOPICS.push(d.topic); render(); openPanel(d.topic.id); }catch(e){ gfToast("Fehler: "+e.message); } };
 
 /* ---- Verschieben per Menü (Touch, Tastatur) ---- */
+/* B-08: Genau ein Escape-Listener je geöffnetem Menü; jeder Schließweg läuft über mvZu und setzt Zustand und Fokus am aktuellen Auslöser. */
+let MV_ESC=null, MV_AUSL=null;
+function mvZu(fokus){ const pop=$("#movePop"); pop.hidden=true; if(MV_ESC){ document.removeEventListener("keydown",MV_ESC); MV_ESC=null; }
+  const a=MV_AUSL; MV_AUSL=null; if(a){ a.setAttribute("aria-expanded","false"); if(fokus&&a.isConnected) a.focus(); } }
 function openMovePop(id, anchor){
   const t=TOPICS.find(x=>x.id===id); if(!t) return;
+  mvZu(false); MV_AUSL=anchor;
   const cols=columns(TOPICS).map(c=>({key:c.key,label:c.label}));
   const cur = GROUP==="ablauf"?t.board_lane:GROUP==="prio"?t.priority:GROUP==="zeitraum"?zeitOf(t):personKey(t);
   const pop=$("#movePop");
@@ -362,18 +367,18 @@ function openMovePop(id, anchor){
     (pos<lane.length-1?`<button class="pop-i" data-ord="${gfEsc(lane[pos+2]?lane[pos+2].id:"")}">Eine Stelle nach unten</button>`:""):"";
   pop.innerHTML=`<div class="pop-h">Verschieben nach …</div>${cols.map(c=>`<button class="pop-i ${c.key===cur?"on":""}" data-col="${gfEsc(c.key)}"${c.key===cur?' aria-current="true"':""}>${gfEsc(c.label.split(" ·")[0])}${c.key===cur?" (aktuell)":""}</button>`).join("")}${reihe}<button class="pop-i" data-details>Details öffnen</button>`;
   pop.hidden=false; anchor.setAttribute("aria-expanded","true");
-  pop.querySelectorAll("[data-ord]").forEach(b=>b.onclick=()=>{ pop.hidden=true; anchor.setAttribute("aria-expanded","false"); move(id,cur,b.dataset.ord||null); });
+  pop.querySelectorAll("[data-ord]").forEach(b=>b.onclick=()=>{ mvZu(false); move(id,cur,b.dataset.ord||null); });
   /* B-08: Fokus ins Menü, Escape schließt und gibt den Fokus an ⇄ zurück */
   setTimeout(()=>{ const f=pop.querySelector(".pop-i:not(.on)")||pop.querySelector(".pop-i"); if(f) f.focus(); },0);
-  const esc=e=>{ if(e.key==="Escape"&&!pop.hidden){ e.preventDefault(); pop.hidden=true; anchor.setAttribute("aria-expanded","false"); document.removeEventListener("keydown",esc); if(anchor.isConnected) anchor.focus(); } };
-  document.addEventListener("keydown",esc);
+  MV_ESC=e=>{ if(e.key==="Escape"&&!pop.hidden){ e.preventDefault(); mvZu(true); } };
+  document.addEventListener("keydown",MV_ESC);
   const r=anchor.getBoundingClientRect(); const w=Math.min(260, window.innerWidth-24);
   pop.style.left=Math.max(12, Math.min(r.left, window.innerWidth-w-12))+"px"; pop.style.top=(r.bottom+window.scrollY+6)+"px"; pop.style.width=w+"px";
-  pop.querySelectorAll("[data-col]").forEach(b=>b.onclick=()=>{ pop.hidden=true; if(b.dataset.col!==cur) move(id,b.dataset.col,null); });
-  pop.querySelector("[data-details]").onclick=()=>{ pop.hidden=true; openPanel(id); };
+  pop.querySelectorAll("[data-col]").forEach(b=>b.onclick=()=>{ mvZu(false); if(b.dataset.col!==cur) move(id,b.dataset.col,null); });
+  pop.querySelector("[data-details]").onclick=()=>{ mvZu(false); openPanel(id); };
   setTimeout(()=>document.addEventListener("click",closePop,{once:true}),0);
 }
-function closePop(e){ const pop=$("#movePop"); if(e && pop.contains(e.target)){ document.addEventListener("click",closePop,{once:true}); return; } pop.hidden=true; }
+function closePop(e){ const pop=$("#movePop"); if(e && pop.contains(e.target)){ document.addEventListener("click",closePop,{once:true}); return; } if(!pop.hidden) mvZu(false); }
 
 /* ---- Besprechungsmodus (Sprint C) ---- */
 let MEET=null, MEET_T=null;
@@ -478,7 +483,11 @@ async function endMeet(){
   const openTopics=TOPICS.filter(t=>t.board_lane==="zu_besprechen" && t.kind!=="recurring" && !MEET.log.some(l=>l.id===t.id));
   const text=gfProtocolText({started:MEET.started, ended, participants:MEET.participants}, MEET.log, openTopics);
   try{ await gfApi("session_end",{ id:MEET.sessionId, protocol:text, summary:MEET.log, title:`Besprechung ${gfFmtShort(MEET.started)}` }); }
-  catch(e){ gfToast("Speichern des Protokolls fehlgeschlagen: "+e.message); }
+  catch(e){ gfToast("Speichern des Protokolls fehlgeschlagen: "+e.message,{fehler:true});
+    /* Webapp Standard B-04, B-07: ohne bestätigtes Speichern bleibt die Besprechung offen; der Text ist zur Sicherung kopierbar,
+       „Besprechung beenden“ versucht es erneut. Vorher wurde die Sitzung trotzdem beendet und „Gespeichert“ angezeigt. */
+    gfTextModal("Protokoll nicht gespeichert", text, { subject:`GF-Besprechung ${gfFmtShort(ended)} · Protokoll`, intro:"Speichern fehlgeschlagen: "+gfEsc(e.message||"unbekannter Fehler")+". Die Besprechung läuft weiter und nichts ist verloren. Kopiere den Text zur Sicherheit und beende die Besprechung erneut, sobald die Verbindung wieder steht." });
+    return; }
   MEET=null; saveMeet(); renderMeet(); render();
   gfTextModal("Protokoll der Besprechung", text, { subject:`GF-Besprechung ${gfFmtShort(ended)} · Protokoll`, intro:"Gespeichert unter Themen › Entscheidungen. Hier kopieren oder per Mail verschicken.", extra:`<a class="btn btn-ghost" href="entscheidungen.html">Entscheidungslog</a>` });
 }

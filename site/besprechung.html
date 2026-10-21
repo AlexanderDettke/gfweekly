@@ -223,7 +223,11 @@ async function endMeet(){
   const open=agenda().filter(x=>!MEET.log.some(l=>l.key===key(x)));
   const text=gfProtocolText({started:MEET.started, ended, participants:MEET.participants}, log, open);
   try{ await gfApi("session_end",{ id:MEET.sessionId, protocol:text, summary:MEET.log, title:`Besprechung ${gfFmtShort(MEET.started)}`, agenda_leer: !open.length }); }
-  catch(e){ gfToast("Speichern des Protokolls fehlgeschlagen: "+e.message); }
+  catch(e){ gfToast("Speichern des Protokolls fehlgeschlagen: "+e.message,{fehler:true});
+    /* Webapp Standard B-04, B-07: ohne bestätigtes Speichern bleibt die Besprechung offen; der Text ist zur Sicherung kopierbar,
+       „Besprechung beenden“ versucht es erneut. Vorher wurde die Sitzung trotzdem beendet und „Gespeichert“ angezeigt. */
+    gfTextModal("Protokoll nicht gespeichert", text, { subject:`GF-Besprechung ${gfFmtShort(ended)} · Protokoll`, intro:"Speichern fehlgeschlagen: "+gfEsc(e.message||"unbekannter Fehler")+". Die Besprechung läuft weiter und nichts ist verloren. Kopiere den Text zur Sicherheit und beende die Besprechung erneut, sobald die Verbindung wieder steht." });
+    return; }
   MEET=null; saveMeet(); await loadLast(); renderAll();
   gfTextModal("Protokoll der Besprechung", text, { subject:`GF-Besprechung ${gfFmtShort(ended)} · Protokoll`, intro:"Gespeichert unter Themen › Entscheidungen. Hier kopieren oder per Mail verschicken.", extra:`<a class="btn btn-ghost" href="entscheidungen.html">Entscheidungslog</a>` });
 }

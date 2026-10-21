@@ -468,7 +468,7 @@ document.addEventListener("change", async e=>{
 
 async function load(erstes){
   const d=await gfApi("launch_list",{});
-  D=d; HEUTE=d.heute||new Date().toISOString().slice(0,10);
+  D=d; HEUTE=d.heute||gfIsoTag();
   if(!D.festivals||!D.festivals.length){ $("#lnSatz").textContent="Im Cockpit liegen keine Launch-Pläne für 2027."; $("#lnAufgaben").innerHTML=""; return; }
   /* V28: saison.html öffnet die Seite mit ?festival=<short_name>&weg=1..4 (1 Vorschlag übernehmen, 2 Umverteilen,
      3 VVK-Start verschieben, 4 Hilfe dazuholen); ?event= aus V27 gilt weiter. Der Weg wird aufgeklappt, die anderen zu. */

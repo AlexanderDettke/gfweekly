@@ -342,7 +342,7 @@ function gfRelLabel(r){ return r ? (r.charAt(0).toUpperCase()+r.slice(1)) : ""; 
 function gfDefaultTime(t){ if(t.time_minutes) return t.time_minutes; return t.priority==="hoch"?15:(t.priority==="niedrig"?5:10); }
 function gfSrcBadge(src){ return ({ki:"KI-Vorschlag",manuell:"manuell",pruefen:"prüfen",bestaetigt:"bestätigt"})[src]||src||""; }
 function gfNames(s){ return (s||"").split(",").map(x=>x.trim()).filter(Boolean); }
-function gfTomorrow(){ const d=new Date(Date.now()+86400000); return d.toISOString().slice(0,10); }
+function gfTomorrow(){ const d=new Date(); return gfIsoTag(new Date(d.getFullYear(), d.getMonth(), d.getDate()+1)); }   /* D-03: nächster Kalendertag in Ortszeit, nicht „jetzt plus 24 Stunden in UTC“ */
 
 /* Delegations-Nachricht (kopierbar – es wird KEINE Mail automatisch versendet) */
 function gfDelegationMsg(t){
@@ -385,7 +385,7 @@ function gfTextModal(title, text, opts={}){
 function gfFmtDay(d){ return new Date(d).toLocaleDateString("de-DE",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"}); }
 /* Datum plus n Tage, als ISO-Tag. Wird beim Anlegen einer Abwesenheit für die Schätzung gebraucht. */
 /* Durchgehend in UTC gerechnet: mit lokaler Mitternacht und toISOString verlöre Berlin einen Tag. */
-function gfAddDays(d, n){ const x=new Date((d||new Date().toISOString().slice(0,10))+"T00:00:00Z"); x.setUTCDate(x.getUTCDate()+n); return x.toISOString().slice(0,10); }
+function gfAddDays(d, n){ const x=new Date((d||gfIsoTag())+"T00:00:00Z"); x.setUTCDate(x.getUTCDate()+n); return x.toISOString().slice(0,10); }
 function gfFmtShort(d){ return d?new Date(d.length===10?d+"T00:00:00":d).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}):""; }
 function gfFmtTime(d){ return new Date(d).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}); }
 

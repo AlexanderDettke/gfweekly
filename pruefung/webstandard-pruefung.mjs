@@ -146,7 +146,7 @@ const MESSUNG = () => {
 };
 
 /* B-08: mit Tab durch die Seite; jedes erreichte Element muss einen sichtbaren Fokus zeigen. */
-async function tastatur(page, schritte = 45) {
+async function tastatur(page, schritte = 150) {
   const ohne = [], gesehen = new Set(); let erreicht = 0;
   await page.evaluate(() => { document.activeElement && document.activeElement.blur && document.activeElement.blur(); window.scrollTo(0, 0); });
   for (let i = 0; i < schritte; i++) {
@@ -320,16 +320,35 @@ try {
     await page.waitForTimeout(300);
     const nach = await page.evaluate((col) => [...document.querySelector(`.lane[data-col="${col}"]`).querySelectorAll('.bcard')].map(c => c.dataset.id), lane.col);
     const upd = log.slice(vorher).filter(x => x.action === 'update' && x.nutzlast.lane_order != null);
-    probe('Board: „Eine Stelle nach unten“ speichert die Reihenfolge und zeigt sie', upd.length > 0 && nach.indexOf(lane.ids[0]) === 1, 'Reihenfolge ' + nach.join(',') + ' · Speicheraufrufe ' + upd.length);
+    probe('Board: „Eine Stelle nach unten“ löst den Speicheraufruf mit lane_order aus und zeigt die neue Reihenfolge (Simulation, kein Neuladen)', upd.length > 0 && nach.indexOf(lane.ids[0]) === 1, 'Reihenfolge ' + nach.join(',') + ' · Speicheraufrufe ' + upd.length);
     const karte = `.bcard[data-id="${lane.ids[1]}"]`;
     await page.focus(karte); await page.keyboard.press('Enter'); await page.waitForTimeout(200);
     const p = await page.evaluate(() => ({ offen: document.getElementById('panel').classList.contains('open'), drin: document.getElementById('panel').contains(document.activeElement), name: !!document.getElementById('panel').getAttribute('aria-labelledby') }));
     await page.keyboard.press('Escape'); await page.waitForTimeout(300);
     const pz = await page.evaluate((k) => ({ zu: !document.getElementById('panel').classList.contains('open'), fokus: document.activeElement === document.querySelector(k) }), karte);
     probe('Board: Detailbereich öffnet per Enter mit Namen und Fokus, Escape schließt mit Fokus auf der Karte', p.offen && p.drin && p.name && pz.zu && pz.fokus, JSON.stringify({ p, pz }));
+    /* Menü an Karte A per Außenklick schließen, an Karte B öffnen, Escape: Fokus und Zustand gehören zu B, A bleibt zu */
+    const a = `.bcard[data-id="${lane.ids[0]}"] .mv`, bSel = `.bcard[data-id="${lane.ids[1]}"] .mv`;
+    await page.click(a); await page.waitForTimeout(60); await page.mouse.click(5, 300); await page.waitForTimeout(60);
+    await page.click(bSel); await page.waitForTimeout(60); await page.keyboard.press('Escape'); await page.waitForTimeout(60);
+    const m = await page.evaluate(([a, b]) => ({ zu: document.getElementById('movePop').hidden, fokusB: document.activeElement === document.querySelector(b), aZu: document.querySelector(a).getAttribute('aria-expanded'), bZu: document.querySelector(b).getAttribute('aria-expanded') }), [a, bSel]);
+    probe('Board: nach Außenklick und Öffnen an einer anderen Karte schließt Escape das richtige Menü mit Fokus auf dessen Auslöser', m.zu && m.fokusB && m.aZu === 'false' && m.bZu === 'false', JSON.stringify(m));
   }
   await ctx.close();
 } catch (e) { probe('Board: Ablauf ohne Ausnahme', false, e.message.split('\n')[0]); }
+// Liste: „heute besprochen“ meldet bei abgelehntem Speichern keinen Erfolg (B-04)
+try {
+  const ctx = await kontext(browser, { fehler: a => a === 'update' });
+  const { page } = await oeffne(ctx, 'cockpit.html');
+  const knopf = await page.$('.js-discussed');
+  if (!knopf) probe('Liste: wiederkehrendes Thema mit „heute besprochen“ in den Testdaten', false);
+  else {
+    await knopf.click(); await page.waitForTimeout(300);
+    const t = await page.evaluate(() => ({ text: document.getElementById('toast').textContent, fehler: document.getElementById('toast').classList.contains('fehler') }));
+    probe('Liste: „heute besprochen“ zeigt bei Serverfehler den Fehler statt einer Erfolgsmeldung', t.fehler && !/markiert/.test(t.text), JSON.stringify(t));
+  }
+  await ctx.close();
+} catch (e) { probe('Liste: Ablauf ohne Ausnahme', false, e.message.split('\n')[0]); }
 // Tor und Ladefehler: falsches Passwort sichtbar und angesagt; Ladefehler nach der Anmeldung auf der Seite, Passwort bleibt
 try {
   const ctx = await kontext(browser, { ohnePw:true });

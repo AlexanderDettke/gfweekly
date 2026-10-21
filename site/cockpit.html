@@ -86,7 +86,7 @@ const ST={offen:"Offen",in_klaerung:"In Klärung",erledigt:"Erledigt"};
 let topics=[], linksByItem={}, openIds=new Set();
 let filter={status:"alle",person:"",prio:"",q:""};
 const $=s=>document.querySelector(s);
-const todayStr=()=>new Date().toISOString().slice(0,10);
+const todayStr=()=>gfIsoTag();   /* D-03: Ortszeit; vorher UTC, kurz nach Mitternacht der Vortag */
 
 gfGate(boot);
 async function boot(){
@@ -258,7 +258,7 @@ function bindCards(scope){
     const chk=card.querySelector(".check"); if(chk) chk.onchange=e=>doUpdate(id,{status:e.target.checked?"erledigt":"offen"},saved,true);
     const ss=card.querySelector(".status-sel"); if(ss) ss.onchange=e=>doUpdate(id,{status:e.target.value},saved,true);
     const pr=card.querySelector(".prio"); if(pr) pr.onclick=(ev)=>{ ev.stopPropagation(); const cur=topicById(id).priority,nx={hoch:"mittel",mittel:"niedrig",niedrig:"hoch"}[cur]; doUpdate(id,{priority:nx},saved,true); };
-    const disc=card.querySelector(".js-discussed"); if(disc) disc.onclick=(ev)=>{ ev.stopPropagation(); doUpdate(id,{last_discussed:todayStr()},saved,false); gfToast("Als heute besprochen markiert ✓"); };
+    const disc=card.querySelector(".js-discussed"); if(disc) disc.onclick=async(ev)=>{ ev.stopPropagation(); if(await doUpdate(id,{last_discussed:todayStr()},saved,false)) gfToast("Als heute besprochen markiert ✓"); };   /* B-04: Erfolg erst nach bestätigter Antwort */
     // delegation dropdown
     const ddBtn=card.querySelector(".js-dd"); if(ddBtn){ const pop=card.querySelector(".dd-pop");
       ddBtn.onclick=(ev)=>{ ev.stopPropagation(); document.querySelectorAll(".dd-pop.open").forEach(p=>{if(p!==pop)p.classList.remove("open");}); pop.classList.toggle("open"); };
@@ -273,7 +273,8 @@ document.addEventListener("click",()=>document.querySelectorAll(".dd-pop.open").
 async function doUpdate(id,patch,savedEl,rerender){
   try{ const d=await gfApi("update",{id,...patch}); const i=topics.findIndex(t=>t.id===id); if(i>=0&&d.topic) topics[i]=d.topic;
     if(savedEl){savedEl.classList.add("show");setTimeout(()=>savedEl.classList.remove("show"),1300);} if(rerender) render();
-  }catch(e){ gfToast("Speichern fehlgeschlagen"); }
+    return true;
+  }catch(e){ gfToast("Speichern fehlgeschlagen: "+(e.message||"unbekannter Fehler"),{fehler:true}); if(rerender) render(); return false; }   /* B-04: Ansicht zeigt wieder den gespeicherten Stand */
 }
 
 /* ---------- add / filters / protocol ---------- */
@@ -284,7 +285,7 @@ document.querySelectorAll("#statusSegs .seg").forEach(s=>s.onclick=()=>{document
 $("#fPrio").onchange=e=>{filter.prio=e.target.value;render();};
 $("#search").addEventListener("input",e=>{filter.q=e.target.value.trim();render();});
 $("#reload").onclick=async()=>{ try{ await loadAll(); gfToast("Aktualisiert"); }catch(e){ gfToast("Fehlgeschlagen: "+((e&&e.message)||"unbekannter Fehler"),{fehler:true}); } };
-$("#finishBtn").onclick=()=>{ const d=new Date().toISOString().slice(0,10);
+$("#finishBtn").onclick=()=>{ const d=todayStr();
   const disc=topics.filter(t=>t.last_discussed===d);
   if(!disc.length){ gfTextModal("Protokoll heute", "Heute wurde noch kein Thema als besprochen markiert.\n\nTipp: Im Board „Besprechung starten“ führt Thema für Thema durch die Agenda und erzeugt am Ende das Protokoll automatisch.", {intro:"Kein Protokoll ohne besprochene Themen.", extra:`<a class="btn btn-brand" href="board.html?meeting=1">Besprechung im Board starten</a>`}); return; }
   const log=disc.map(t=>({ id:t.id, title:t.title, outcome: t.board_lane==="entschieden"?"entschieden":t.board_lane==="erledigt"?"erledigt":t.board_lane==="in_klaerung"?"in_klaerung":"besprochen", decision:t.decision||"", next_action:t.next_action||"", owner:t.owner||"" }));

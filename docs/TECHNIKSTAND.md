@@ -4,7 +4,7 @@ Auftrag Alexander vom 21.10.2026: Organisationsstandards 0.5.0 übernehmen und d
 
 Branch `paket/webstandard-pilot` auf `05af97b`, nicht gepusht, nicht deployt. Keine Änderung an Edge Functions oder Datenbank. Neu in `site/assets/core.js`: `gfDialogAuf`, `gfBereichAuf`/`gfBereichZu`, `gfLadefehler`, `gfIsoTag`, `gfBezeichnungen`; `gfGate` trennt Passwortprüfung und Seitenaufbau. Neu in `site/assets/styles.css`: Block „Webapp Standard“ am Ende; `--stufe-1` 0,75 rem und `--stufe-2` 0,875 rem.
 
-Prüfung: `pruefung/webstandard-pruefung.mjs` (Oberflächentest, in `pruefung/abnahme.sh` eingebunden) von 70 harten Befunden am Ausgangsstand auf 0; neun Bedienproben bestanden; `pruefung/kontrast-ausnahmen.json` von 64 auf 4 Einträge neu erzeugt (verbleibend Messgrenzen). Vorschau mit Testdaten: `pruefung/vorschau.mjs`. Offene Lücken L1 bis L8 in `docs/webapp-standard/REGELZUORDNUNG.md`.
+Prüfung: `pruefung/webstandard-pruefung.mjs` (Oberflächentest, in `pruefung/abnahme.sh` eingebunden) von 70 harten Befunden am Ausgangsstand auf 0; elf Bedienproben bestanden; `pruefung/kontrast-ausnahmen.json` von 64 auf 4 Einträge neu erzeugt (verbleibend Messgrenzen). Vorschau mit Testdaten: `pruefung/vorschau.mjs`. Offene Lücken L1 bis L8 in `docs/webapp-standard/REGELZUORDNUNG.md`.
 
 ## Vorhaben abschließen (21.10.2026)
 

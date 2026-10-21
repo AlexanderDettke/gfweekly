@@ -125,7 +125,7 @@ function cyc(iso){ const m=+iso.slice(5,7), d=+iso.slice(8,10); return Math.min(
 function realDays(a,b){ return Math.round((Date.parse(b)-Date.parse(a))/864e5)+1; }
 function spans(it){ const len=Math.min(365,realDays(it.starts_on,it.ends_on)); const e=cyc(it.ends_on)+1; let a=len>=365?e-364:cyc(it.starts_on); if(a<0) a+=365; const b=a+len; return b<=365?[[a,b]]:[[a,365],[0,b-365]]; }
 const fmt=iso=>{ if(!iso) return ""; const[y,m,d]=iso.split("-"); return `${+d}.${+m}.${y.slice(2)}`; };
-const TODAY=new Date().toISOString().slice(0,10);
+const TODAY=gfIsoTag();
 
 /* ---- Filter ---- */
 function levels(){ return $$("[data-lvl]").filter(c=>c.checked).map(c=>+c.dataset.lvl); }
@@ -227,7 +227,9 @@ function renderAll(){ draw(); renderStats(); renderLegend(); renderOpen(); rende
 
 /* ---- Bearbeiten: Element ---- */
 function panelOpen(title){ $("#pTitle").textContent=title; $("#panel").classList.add("open"); $("#pBack").classList.add("open"); $("#panel").setAttribute("aria-hidden","false"); gfBereichAuf($("#panel")); }
-function panelClose(){ if(OPEN&&OPEN.dirty&&OPEN.id) saveItem(true); OPEN=null; $("#panel").classList.remove("open"); $("#pBack").classList.remove("open"); $("#panel").setAttribute("aria-hidden","true"); gfBereichZu($("#panel")); }
+/* Webapp Standard B-04, B-07: Mit ungespeicherten Änderungen wird erst gespeichert; scheitert das (Fehler, Ende vor Anfang),
+   bleibt der Bereich mit den Eingaben offen. Vorher schloss er sofort und die Eingaben gingen beim erneuten Öffnen verloren. */
+async function panelClose(){ if(OPEN&&OPEN.dirty&&OPEN.id){ const ok=await saveItem(true); if(!ok){ const s=$("#pState"); if(s){ s.textContent=(s.textContent&&s.textContent!=="Gespeichert"?s.textContent+". ":"")+"Nicht gespeichert, der Bereich bleibt offen."; s.setAttribute("role","alert"); } return; } } OPEN=null; $("#panel").classList.remove("open"); $("#pBack").classList.remove("open"); $("#panel").setAttribute("aria-hidden","true"); gfBereichZu($("#panel")); }
 $("#pClose").onclick=panelClose; $("#pBack").onclick=panelClose;
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#panel").classList.contains("open")) panelClose(); });
 
@@ -264,9 +266,9 @@ function openItem(id, preset){
 }
 function readForm(){ const o={}; $$("#pBody [name]").forEach(f=>{ o[f.name]=f.value; }); return o; }
 async function saveItem(silent){
-  if(!OPEN||OPEN.kind!=="item") return; clearTimeout(TIMER);
+  if(!OPEN||OPEN.kind!=="item") return true; clearTimeout(TIMER);
   const f=readForm(); if(!f.ends_on) f.ends_on=f.starts_on;
-  if(f.ends_on<f.starts_on){ const s=$("#pState"); if(s) s.textContent="Ende liegt vor dem Anfang"; else gfToast("Ende liegt vor dem Anfang"); return; }
+  if(f.ends_on<f.starts_on){ const s=$("#pState"); if(s) s.textContent="Ende liegt vor dem Anfang"; else gfToast("Ende liegt vor dem Anfang"); return false; }
   const payload=Object.assign({},f,{id:OPEN.id||undefined,who:gfWho()});
   try{
     const d=await szApi("item_save",payload);
@@ -276,7 +278,8 @@ async function saveItem(silent){
     loadLog().then(renderLog);
     draw(); renderStats(); renderOpen();
     if(!payload.id){ OPEN=null; panelClose(); gfToast("Angelegt"); openItem(d.item.id); }
-  }catch(e){ const s=$("#pState"); if(s) s.textContent="Fehler: "+e.message; else gfToast("Fehler: "+e.message); }
+    return true;
+  }catch(e){ const s=$("#pState"); if(s) s.textContent="Fehler: "+e.message; else gfToast("Fehler: "+e.message); return false; }
 }
 
 /* ---- Bearbeiten: Zeile ---- */

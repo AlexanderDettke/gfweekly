@@ -86,10 +86,14 @@
     const el=document.createElement("div"); el.id="gameCard"; el.className="gcard-back"; el.setAttribute("role","dialog"); el.setAttribute("aria-label",o.title||"");
     el.innerHTML=`<div class="gcard ${o.kind||""}">${o.img?`<div class="gc-pic ${o.wide?"wide":""}"><img src="${o.img}" alt=""></div>`:""}<div class="gc-body">${o.eyebrow?`<div class="gc-eye">${esc(o.eyebrow)}</div>`:""}<h3>${esc(o.title||"")}</h3>${o.sub?`<p>${o.sub}</p>`:""}${o.rows?`<div class="gc-rows">${o.rows}</div>`:""}<div class="gc-f">${o.actions||""}<button class="btn btn-sm btn-primary" data-close>Weiter</button></div></div></div>`;
     document.body.appendChild(el);
-    const close=()=>{ el.remove(); const n=QUEUE.shift(); if(n) setTimeout(()=>showCard(n),250); };
+    /* Webapp Standard G-06, B-08: Die Karte schließt sich nicht mehr von selbst, wenn „Bewegung reduzieren“ gewünscht ist
+       oder der Fokus in ihr liegt; Escape-Listener wird auf jedem Schließweg entfernt; Fokus kehrt zurück, wenn er in der Karte lag. */
+    const vorher=document.activeElement;
+    const k=e=>{ if(e.key==="Escape") close(); };
+    const close=()=>{ if(!el.isConnected) return; const drin=el.contains(document.activeElement); el.remove(); document.removeEventListener("keydown",k); if(drin&&vorher&&vorher.isConnected&&vorher.focus) vorher.focus(); const n=QUEUE.shift(); if(n) setTimeout(()=>showCard(n),250); };
     el.addEventListener("click",e=>{ if(e.target===el || e.target.closest("[data-close]")) close(); });
-    document.addEventListener("keydown",function k(e){ if(e.key==="Escape"){ close(); document.removeEventListener("keydown",k); } });
-    if(o.auto) setTimeout(()=>{ if(el.isConnected && !el.matches(":hover")) close(); }, o.auto);
+    document.addEventListener("keydown",k);
+    if(o.auto && !REDUCED) setTimeout(()=>{ if(el.isConnected && !el.matches(":hover") && !el.contains(document.activeElement)) close(); }, o.auto);
     return el;
   }
   function celebrate(){ document.dispatchEvent(new CustomEvent("gf-egg-konfetti")); }

@@ -496,7 +496,7 @@ document.addEventListener("change", async e=>{
 
 async function load(){
   const d=await gfApi("launch_list",{});
-  D=d; HEUTE=d.heute||new Date().toISOString().slice(0,10);
+  D=d; HEUTE=d.heute||gfIsoTag();
   saBereicheAusDaten();
   if(!D.festivals||!D.festivals.length){ $("#saLage").innerHTML=`<p class="sa-satz">Im Cockpit liegen keine Launch-Pläne für 2027.</p>`; return; }
   renderAll();

@@ -17,6 +17,8 @@ Die Bibliothek liegt geprüft unter `organisationsstandards/` (Fassung `0.5.0-55
 ## Lokal ansehen und prüfen
 
 ```sh
+# Sichtbare Vorschau in Chrome mit Testdaten, Speichern nur simuliert
+PLAYWRIGHT_MODUL=<pfad>/node_modules/playwright/index.mjs node pruefung/vorschau.mjs
 # Vorschau ohne Backend-Wirkung: dieselbe Testumgebung wie die Prüfungen (abgefangene Edge Function, synthetische Daten)
 PLAYWRIGHT_MODUL=<pfad>/node_modules/playwright/index.mjs node pruefung/webstandard-pruefung.mjs /tmp/ws.json
 # Gesamte Abnahme einschließlich Webstandard-Prüfung
@@ -31,6 +33,6 @@ Die Seite selbst ist statisch (`site/`, kein Build). Mit echtem Passwort zeigt j
 | --- | --- |
 | Umgesetzt | Ja, auf Branch `paket/webstandard-pilot` (siehe ARBEITSSTAND.md) |
 | Technisch geprüft | Ja, an der Oberfläche mit abgefangener Edge Function; Werte und Grenzen in PRUEFMATRIX.md |
-| Unabhängig geprüft | Codex-Review, Runden und Ergebnis in ARBEITSSTAND.md |
+| Unabhängig geprüft | Gegenprüfung durch Codex läuft in Runden; Stand, geprüfter Commit und Ergebnis in ARBEITSSTAND.md, Abschnitt Review. Erst ein dort dokumentierter Lauf ohne offene Befunde zählt als unabhängig geprüft |
 | Veröffentlicht | Nein. Kein Push nach `main`, kein Deploy |
 | Fachlich angenommen | Nein. Steht aus (Testaufgaben in ARBEITSSTAND.md) |

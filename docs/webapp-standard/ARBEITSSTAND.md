@@ -14,7 +14,7 @@ Gemeinsame Grundlagen in `site/assets/core.js` und `site/assets/styles.css`, dan
 
 ## Geprüft
 
-Siehe `PRUEFMATRIX.md`. Kurz: alle bestehenden Prüfungen grün, Webstandard-Prüfung von 70 harten Befunden auf 0, neun Bedienproben bestanden, Rückweg ausprobiert. Alles Oberflächenprüfungen mit abgefangener Edge Function und synthetischen Daten; keine Wirkung in der Datenbank belegt.
+Siehe `PRUEFMATRIX.md`. Kurz: alle bestehenden Prüfungen grün, Webstandard-Prüfung von 70 harten Befunden auf 0, elf Bedienproben bestanden, Rückweg ausprobiert. Alles Oberflächenprüfungen mit abgefangener Edge Function und synthetischen Daten; keine Wirkung in der Datenbank belegt.
 
 ## Unabhängige Prüfung
 
@@ -60,4 +60,8 @@ PLAYWRIGHT_MODUL=~/Documents/GitHub/habitat-hub/node_modules/playwright/index.mj
 
 ## Review
 
-Wird nach der unabhängigen Prüfung ergänzt.
+Unabhängige Gegenprüfung durch Codex (`codex exec -m gpt-6-sol --sandbox read-only`), je Runde eigener Worktree am eingefrorenen Commit, Auftragstext wörtlich im Prompt, keine rekursiven Prüfungen.
+
+| Runde | Geprüfter Stand | Befunde | Bewertung und Folge |
+| --- | --- | --- | --- |
+| 1 | `871965c` | 9 (4 hoch, 5 mittel) | Alle 9 bestätigt und behoben: Besprechung beenden ohne bestätigtes Speichern (Besprechung, Board), Saison-Rad schloss vor dem Speichern, „heute besprochen“ meldete Erfolg vor der Antwort (alle drei schon im Bestand), Spielkarten aus dem Umfang genommen und selbstschließend, weitere Vortag-Fehler (Liste, Saison-Rad, Übergabe, `gfTomorrow`, Rückfallwerte), Escape-Listener im ⇄-Menü, Tabweg zu kurz und T-05 zu weit bewertet, T-11 „gespeichert“ zu weit formuliert, Review-Status vorweggenommen. Zwei neue Bedienproben. |

@@ -178,7 +178,7 @@ const TYP={ gf:"Geschäftsführung", team:"Team", extern:"Extern", minijob:"Mini
 let D=null, CUR=null, JAHR=null, ZIEL=null;
 const UI={ form:null, pers:{}, asana:null, such:"" };   // form = zuordnung_id mit offenem Übernahme-Formular, pers[aufgabe_id] = Personenwahl offen
 
-function heute(){ return (D&&D.heute)||new Date().toISOString().slice(0,10); }
+function heute(){ return (D&&D.heute)||gfIsoTag(); }
 function datumDE(s){ if(!s) return ""; const d=new Date(s.length>10?s:s+"T00:00:00"); return d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric",timeZone:"Europe/Berlin"}); }
 function person(id){ return (D.personen||[]).find(p=>p.id===id)||null; }
 function pname(id){ const p=person(id); return p?p.name:(id?"nicht mehr im Pool":""); }
