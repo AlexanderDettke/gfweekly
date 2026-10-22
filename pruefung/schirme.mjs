@@ -54,7 +54,7 @@ const istBekannt = (text, seite, thema) => AUSNAHMEN.some(a => {
 let bekannteSchuld = 0;
 
 const SEITEN = [
-  ['index.html', '#fdEntL'], ['neuigkeiten.html', '#feed'], ['besprechung.html', '#bsAgL'], ['board.html', '#lanes,#grid,.board'],
+  ['index.html', '#fdEntL'], ['neuigkeiten.html', '#fokusList .kd'], ['besprechung.html', '#bsAgL'], ['board.html', '#lanes,#grid,.board'],
   ['cockpit.html', '#list'], ['entscheidungen.html', '#log'], ['jahr.html', '#cycle'], ['capture.html', '#form'],
   ['seiten.html', '#groups'], ['bearbeiten.html', '#itemsView'], ['aufraeumen.html', '#list'], ['checkin.html', '#agenda'],
   ['inbox.html', '#list'],

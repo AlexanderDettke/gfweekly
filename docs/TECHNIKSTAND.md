@@ -1,3 +1,25 @@
+## Neuigkeiten aufräumen (22.10.2026)
+
+Auftrag und Annahmen: `docs/PAKET-NEUIGKEITEN-AUFRAEUMEN.md` (Variante A „Nur was Handeln braucht“). Vorher lagen 712 Ticker und 320 offene Kandidaten auf der Seite.
+
+Datenbank:
+- Migration `20261022014451_hh_news_archiv` (angewendet am 22.10.2026): Status `archiviert` in `gfweekly_news`, Spalten `archiv_grund` und `archiviert_at`. `hh_news_verfall(p_tage)` legt Ticker und Kandidaten mit Status `neu` oder `gesehen` ins Archiv, wenn `happened_at`, `created_at` und `gate_at` alle älter als `p_tage` sind und keine Pförtner-Frist in der Zukunft liegt; `decided_by` bleibt leer. Nur für `service_role`.
+- Migration `20261022015719_hh_news_aufraeumen` (läuft nach dem Ausrollen der Seite): alle offenen Kandidaten außer „hoch“ der letzten 7 Tage ins Archiv (Grund `aufraeumen-20261022`), danach einmal `hh_news_verfall(14)` und der tägliche Zeitplan `hh_news_verfall` um 04:50 UTC. Probelauf vom 22.10.2026: 310 Kandidaten beim Aufräumen, 500 Ticker beim Verfall. Rückweg im Kopf der Migration.
+
+Edge Function `gfweekly` (deployt am 22.10.2026):
+- `news_list` lässt Archiviertes weg, außer `statuses` nennt `archiviert`. Mit `archiv: true` und `q` (mindestens zwei Zeichen) sucht sie nur im Archiv in Titel, Text und Zitat, höchstens 100 Treffer.
+- `news_update` kennt `archiviert` (von Hand: Grund `hand`); jeder andere Status hebt Grund und Zeitpunkt auf, so holt „Zurück in den Korb“ Archiviertes zurück.
+- Abzeichen, Laufband, Für dich, Pförtner, Besprechung und Übergabekorb lesen Kandidaten mit Status `neu` oder Ticker der letzten 14 Tage; Archiviertes fällt dort ohne Änderung heraus. Der tägliche Lauf schreibt über `news_add_many`; der eindeutige `source_ref` verhindert, dass ein archivierter Eintrag als neuer wiederkommt (Einträge ohne `source_ref` könnten doppelt kommen).
+
+Oberfläche `site/neuigkeiten.html`, Assets `?v=36`:
+- Oben „Braucht dich“: offene Kandidaten der letzten 7 Tage, „hoch“ oder zu einem Vorhaben mit Ball bei der Person (wie „Bei mir“), höchstens 10; Vorhaben mit Ball bei mir zuerst, dann zugeteilt an mich oder GF, dann neueste. Die Zeilen sind die Korbzeilen mit Übernehmen, Verknüpfen, Verwerfen und „Zum Vorhaben“.
+- „Zu deinen Vorhaben“: je Vorhaben mit Ball bei mir die Zahl der Neuigkeiten der letzten 7 Tage; ein Tipp filtert Ticker und Korb auf das Vorhaben, mit Link zur Akte.
+- „Alles andere“: Ticker, Sichtungskorb und Themenlage, zu Beginn zugeklappt (gemerkter Zustand jetzt unter `gf_nw2_`). Darunter „Archiv durchsuchen“.
+
+Prüfungen am 22.10.2026: `pruefung/neuigkeiten-probe.mjs` gegen das echte Backend 11 von 11 (Testeinträge `probe:nw:1` und `probe:nw:2`, danach entfernt); Bedienung um 14 Proben erweitert (abgefangene API), Schirme mit „Braucht dich“ als Kernbereich; `pruefung/abnahme.sh` bestanden.
+
+Grenze: Der Branch `paket/webstandard-pilot` (nicht gepusht) ändert `core.js`, `styles.css` und eine Zeile in `neuigkeiten.html` und muss vor seinem Push auf `?v=37`.
+
 ## Vorhaben abschließen (21.10.2026)
 
 Auftrag: `docs/PAKET-VORHABEN-ABSCHLIESSEN.md`. Vorhaben lassen sich jetzt in der Oberfläche schließen, als erledigt ansehen und wieder öffnen.

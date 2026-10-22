@@ -51,7 +51,7 @@ const SITE_STATUSES = ['aktiv','entwurf','archiv'];
    Befüllt vom täglichen Cowork-Auftrag (news_add_many, Dedup über source_ref), gelesen von site/neuigkeiten.html. */
 const NEWS_KINDS = ['ticker','kandidat','lage'];
 const NEWS_SOURCES = ['notiz','asana','kalender','mail','protokoll','entscheidung','manuell','plattform']; // v27: plattform (Wilde Habitate, Wild Wild Partner)
-const NEWS_STATUS = ['neu','gesehen','uebernommen','verworfen'];
+const NEWS_STATUS = ['neu','gesehen','uebernommen','verworfen','archiviert'];   // archiviert seit 22.10.2026
 const GATES = ['gf','alex','lea','team','plattform','warten']; // v28 Pförtner
 const NEWS_FIELDS = ['who','source','strand','title','body','quote','source_title','source_url','source_ref','relevance','topic_id','status','run_id'];
 function newsRow(n: any){
@@ -1753,11 +1753,22 @@ Deno.serve(async (req: Request) => {
       if(loose.length){ const { data, error } = await admin.from('gfweekly_news').insert(loose).select('id'); if(error) throw error; added+=data.length; }
       return json({ ok:true, added, updated, skipped: keyed.length-(added-loose.length) });
     }
+    if (action === 'news_list' && t.archiv === true) {
+      /* 22.10.2026: Archiv durchsuchen. Nur archivierte Einträge, Suchbegriff in Titel, Text oder Zitat, höchstens 100. */
+      const such = (t.q ?? '').toString().replace(/[,()*%\\"]/g, ' ').trim().slice(0, 80);
+      if (such.length < 2) return json({ error:'Suchbegriff mit mindestens zwei Zeichen' },400);
+      const { data, error } = await admin.from('gfweekly_news').select('*').eq('status', 'archiviert')
+        .or(`title.ilike."*${such}*",body.ilike."*${such}*",quote.ilike."*${such}*"`).order('happened_at',{ascending:false}).limit(100);
+      if(error) throw error;
+      return json({ items:data, gekuerzt:(data||[]).length >= 100 });
+    }
     if (action === 'news_list') {
       const limit = Math.min(parseInt(t.limit)||400, 2000);
       let q = admin.from('gfweekly_news').select('*').order('happened_at',{ascending:false}).limit(limit);
       if(Array.isArray(t.kinds)&&t.kinds.length) q = q.in('kind', t.kinds.filter((k: string)=>NEWS_KINDS.includes(k)));
+      /* Archiviertes nur, wenn es ausdrücklich im Statusfilter steht (22.10.2026). */
       if(Array.isArray(t.statuses)&&t.statuses.length) q = q.in('status', t.statuses.filter((k: string)=>NEWS_STATUS.includes(k)));
+      else q = q.neq('status', 'archiviert');
       if(t.since) q = q.gte('happened_at', t.since);
       if(t.strand) q = q.eq('strand', t.strand);
       const { data, error } = await q; if(error) throw error;
@@ -1769,7 +1780,9 @@ Deno.serve(async (req: Request) => {
       for(const f of ['title','body','quote','strand','who','source_title','source_url']) if(t[f]!==undefined) patch[f]=(t[f]??'').toString().slice(0, f==='body'?6000:500);
       if(t.relevance!==undefined && PRIOS.includes(t.relevance)) patch.relevance=t.relevance;
       if(t.topic_id!==undefined) patch.topic_id=t.topic_id||null;
-      if(t.status!==undefined){ if(!NEWS_STATUS.includes(t.status)) return json({ error:'status' },400); patch.status=t.status; patch.decided_by=(t.decided_by??'').toString().slice(0,120); patch.decided_at=new Date().toISOString(); }
+      if(t.status!==undefined){ if(!NEWS_STATUS.includes(t.status)) return json({ error:'status' },400); patch.status=t.status; patch.decided_by=(t.decided_by??'').toString().slice(0,120); patch.decided_at=new Date().toISOString();
+        /* Archiv (22.10.2026): von Hand archiviert trägt den Grund „hand“; jeder andere Status hebt Grund und Zeitpunkt auf. */
+        if(t.status==='archiviert'){ patch.archiv_grund='hand'; patch.archiviert_at=new Date().toISOString(); } else { patch.archiv_grund=null; patch.archiviert_at=null; } }
       if(!Object.keys(patch).length) return json({ error:'nichts' },400);
       const { data, error } = await admin.from('gfweekly_news').update(patch).eq('id',t.id).select().single(); if(error) throw error; return json({ item:data });
     }

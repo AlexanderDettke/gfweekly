@@ -1757,3 +1757,27 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
   .vh-erl-z{grid-template-columns:minmax(0,1fr);gap:4px}
   .vh-erl-b{display:none}
 }
+
+/* ===========================================================
+   22.10.2026 · Neuigkeiten aufräumen: „Braucht dich“ oben, „Zu deinen Vorhaben“ als Filter, „Alles andere“ und Archiv.
+   Nur vorhandene Tokens; Zeilen im Block „Braucht dich“ sind die Korbzeilen (.kd).
+   =========================================================== */
+.nw-fokus,.nw-vh{margin:0 0 14px;padding:12px 14px 14px;border:var(--rahmen) solid var(--line);border-radius:var(--radius-l);background:var(--surface)}
+.nw-fokus{border-color:var(--action-border,var(--action))}
+.nw-fokus-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+.nw-fokus-h h2{margin:0;font-size:var(--stufe-4);font-weight:600;letter-spacing:-.01em}
+.nw-vh .nw-fokus-h h2{font-size:var(--stufe-3)}
+.nw-fokus-h .hint{font-size:var(--stufe-2);color:var(--text-2);flex:1;min-width:200px}
+.nw-fokus-h .n{font-size:var(--stufe-2);font-weight:600;font-variant-numeric:tabular-nums}
+.nw-mehr{margin:8px 0 0;font-size:var(--stufe-2);color:var(--text-2)}
+.nw-vhc{display:flex;flex-wrap:wrap;gap:6px}
+.nw-vhc .chip{min-height:var(--ziel-min);padding:6px 12px;font-size:var(--stufe-2)}
+.nw-vhf{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px;font-size:var(--stufe-2)}
+.nw-vhf a{color:var(--link);font-weight:600}
+.nw-rest-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:18px 0 8px}
+.nw-rest-h h2{margin:0;font-size:var(--stufe-3);font-weight:600;color:var(--text-2)}
+.nw-rest-h .hint{font-size:var(--stufe-2);color:var(--text-2)}
+.nw-archiv-f{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.nw-archiv-f input{flex:1 1 220px;min-height:var(--ziel-min);padding:8px 10px;border-radius:var(--radius-s);border:var(--rahmen) solid var(--border-strong);background:var(--surface-2);color:var(--text);font:inherit;font-size:var(--stufe-3)}
+.nw-archiv-f input::placeholder{color:var(--text-2);opacity:1}
+@media(max-width:760px){ .nw-fokus,.nw-vh{padding:10px 12px 12px} .nw-fokus-h .hint{min-width:0;flex-basis:100%} }

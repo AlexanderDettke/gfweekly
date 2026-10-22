@@ -358,6 +358,47 @@ console.log('\n== Vorhaben (V31b): Ansichten, Akte, Punkt, Ball ==');
   await r.close();
 }
 
+console.log('\n== Neuigkeiten: Braucht dich, Vorhaben-Filter, Archiv (22.10.2026) ==');
+{
+  frisch();
+  const n = await seite('/neuigkeiten.html');
+  await n.waitForTimeout(300);
+  const fokus = await n.locator('#fokusList').innerText();
+  pruefe('Braucht dich zeigt „hoch“ und den Kandidaten zum eigenen Vorhaben', /Pressefrage zur Zeltwiese/.test(fokus) && /Ticketing für Lusatia anlegen/.test(fokus) && !/Helferplanung/.test(fokus), fokus.slice(0, 200));
+  pruefe('Vorhaben mit Ball bei mir steht zuerst', (await n.locator('#fokusList .kd .kd-title').first().innerText()).includes('Lusatia'));
+  pruefe('Archiviertes steht nirgends auf der Seite', !(await n.locator('#app').innerText()).includes('Alte Anfrage zur Zeltwiese'));
+  pruefe('Ticker, Korb und Lage starten zugeklappt', await n.evaluate(() => ['ticker','korb','lage','archiv'].every(id => !document.getElementById(id).open)));
+  pruefe('Chip „Lusatia · Vorverkauf · 2“ unter Zu deinen Vorhaben', /Lusatia · Vorverkauf · 2/.test(await n.locator('#vhChips').innerText()));
+  await n.locator('#vhChips [data-vhf="vh-lusatia"]').click(); await n.waitForTimeout(300);
+  const tk = await n.locator('#feed').textContent(), kb = await n.locator('#kand').textContent();
+  pruefe('Chip filtert Ticker und Korb auf das Vorhaben und klappt sie auf', await n.evaluate(() => document.getElementById('ticker').open && document.getElementById('korb').open)
+    && /Amt meldet sich/.test(tk) && !/Shuttle/.test(tk) && /Ticketing für Lusatia/.test(kb) && !/Pressefrage/.test(kb), tk.slice(0, 120) + ' | ' + kb.slice(0, 120));
+  pruefe('aktiver Filter mit Link zur Akte', (await n.locator('.nw-vhf a').getAttribute('href')) === 'vorhaben.html?v=lusatia');
+  await n.locator('.nw-vhf [data-vhf=""]').click(); await n.waitForTimeout(200);
+  pruefe('Filter aufheben zeigt wieder alles', /Shuttle/.test(await n.locator('#feed').textContent()));
+  /* Verwerfen direkt in „Braucht dich“ */
+  const z = n.locator('#fokusList .kd[data-id="n9"]');
+  pruefe('Kandidat zum Vorhaben hat „Zum Vorhaben“ mit Link zur Akte', await z.locator('a[href="vorhaben.html?v=lusatia"]').count() === 1);
+  await z.locator('.kd-row').click(); await z.locator('[data-act="dismiss"]').click(); await n.waitForTimeout(300);
+  const vw = letzte('news_update');
+  pruefe('Verwerfen schickt news_update verworfen, Zeile verlässt „Braucht dich“', vw && vw.nutzlast.id === 'n9' && vw.nutzlast.status === 'verworfen'
+    && await n.locator('#fokusList .kd[data-id="n9"]').count() === 0, JSON.stringify(vw && vw.nutzlast));
+  /* Archiv durchsuchen und zurückholen */
+  await n.locator('#archiv > summary').click(); await n.locator('#archivQ').fill('Zeltwiese'); await n.locator('#archivForm button[type=submit]').click(); await n.waitForTimeout(300);
+  const as = letzte('news_list');
+  pruefe('Archivsuche fragt das Backend mit archiv und Suchbegriff', as && as.nutzlast.archiv === true && as.nutzlast.q === 'Zeltwiese', JSON.stringify(as && as.nutzlast));
+  pruefe('Archivtreffer erscheint mit Status archiviert', /Alte Anfrage zur Zeltwiese/.test(await n.locator('#archivList').innerText()) && /archiviert/.test(await n.locator('#archivList').innerText()));
+  await n.locator('#archivList .kd[data-id="n8"] .kd-row').click(); await n.locator('#archivList .kd[data-id="n8"] [data-act="reopen"]').click(); await n.waitForTimeout(300);
+  const ru = letzte('news_update');
+  pruefe('Zurück in den Korb holt den Archivtreffer zurück', ru && ru.nutzlast.id === 'n8' && ru.nutzlast.status === 'neu' && await n.locator('#archivList .kd[data-id="n8"]').count() === 0
+    && await n.locator('#kand .kd[data-id="n8"]').count() === 1, JSON.stringify(ru && ru.nutzlast));
+  await n.close();
+  const h = await ctx.newPage(); await h.setViewportSize({ width:390, height:844 }); h.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
+  await h.goto(BASE + '/neuigkeiten.html'); await h.waitForTimeout(800);
+  pruefe('Neuigkeiten bei 390 px ohne waagrechte Rollleiste, Braucht dich sichtbar', await h.evaluate(() => document.documentElement.scrollWidth <= 390) && await h.locator('#fokus').isVisible());
+  await h.close();
+}
+
 console.log('\n== Vorhaben abschließen, Erledigt, Wieder öffnen (21.10.2026) ==');
 {
   frisch();

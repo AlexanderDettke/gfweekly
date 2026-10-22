@@ -15,13 +15,16 @@ export const THEMEN = [
   { id:'t4', title:'Gastro-Partner für 2027 bestätigen', context:'Zusage mündlich da.', priority:'hoch', status:'erledigt', kind:'einmalig', board_lane:'entschieden', lane_order:1, owner:'Lea', decision:'Wir machen mit dem bisherigen Partner weiter.', next_action:'Vertrag schicken', relevance:'hoch', created_by:'Lea', created_at:zeit(-60), updated_at:zeit(-5), archived:false },
 ];
 export const NEWS = [
-  { id:'n1', kind:'ticker', title:'Amt meldet sich zum Vertrag', body:'Kurzer Anruf, Termin folgt.', source:'mail', source_title:'Mail vom Amt', source_url:'https://example.org/1', who:'Alex', strand:'habitate', happened_at:zeit(0), created_at:zeit(0), status:'neu' },
+  { id:'n1', kind:'ticker', title:'Amt meldet sich zum Vertrag', body:'Kurzer Anruf, Termin folgt.', source:'mail', source_title:'Mail vom Amt', source_url:'https://example.org/1', who:'Alex', strand:'habitate', happened_at:zeit(0), created_at:zeit(0), status:'neu', vorhaben_id:'vh-lusatia' },
   { id:'n2', kind:'ticker', title:'Shuttle-Angebot eingegangen', body:'Drittes Angebot liegt vor.', source:'asana', who:'Lea', strand:'wwp', happened_at:zeit(-1), created_at:zeit(-1), status:'neu' },
   { id:'n3', kind:'kandidat', title:'Pressefrage zur Zeltwiese', body:'Lokalzeitung fragt nach der Fläche.', quote:'Wie viele Menschen passen auf die Wiese?', relevance:'hoch', source:'mail', source_title:'Mail der Redaktion', source_url:'https://example.org/2', who:'Alex', strand:'habitate', happened_at:zeit(-2), created_at:zeit(-2), status:'neu', gate:'gf', gate_by:'lauf', gate_frist:tag(3) },
   { id:'n4', kind:'kandidat', title:'Helferplanung beginnt', body:'Erste Anmeldungen liegen vor.', relevance:'mittel', source:'notiz', who:'Lea', strand:'habitate', happened_at:zeit(-3), created_at:zeit(-3), status:'neu' },
   { id:'n5', kind:'lage', strand:'habitate', title:'Lage Wilde Habitate', body:'Ruhige Woche, zwei Entscheidungen offen.', source:'plattform', happened_at:zeit(0), created_at:zeit(0), status:'neu' },
   { id:'n6', kind:'lage', strand:'wwp', title:'Lage Wild Wild Partner', body:'Zwei Partner haben sich bewegt.', source:'plattform', happened_at:zeit(0), created_at:zeit(0), status:'neu' },
   { id:'n7', kind:'ticker', title:'Besprechung mit dem Büro', body:'Termin am Donnerstag.', source:'kalender', who:'Alex,Lea', happened_at:zeit(2), created_at:zeit(-1), status:'neu' },
+  /* 22.10.2026: Kandidat zu einem Vorhaben mit Ball bei Alex (mittel, steht trotzdem unter „Braucht dich“) und ein archivierter. */
+  { id:'n9', kind:'kandidat', title:'Ticketing für Lusatia anlegen', body:'XCeed wartet auf die Kategorien.', relevance:'mittel', source:'mail', who:'Alex', strand:'habitate', happened_at:zeit(-1), created_at:zeit(-1), status:'neu', vorhaben_id:'vh-lusatia' },
+  { id:'n8', kind:'kandidat', title:'Alte Anfrage zur Zeltwiese', body:'Aus dem Sommer.', relevance:'mittel', source:'mail', who:'Lea', strand:'habitate', happened_at:zeit(-40), created_at:zeit(-40), status:'archiviert', archiv_grund:'aufraeumen-20261022', archiviert_at:zeit(0) },
 ];
 export const PHASEN = [
   { id:'p1', key:'planung', label:'Planung', months:[1,2,3], color_token:'accent', sort_order:1, hint:'Ziele setzen' },
@@ -258,7 +261,11 @@ export const ANTWORT = {
   decisions_list: { decisions:[
     { id:'d1', decision:'Wir bleiben beim bisherigen Gastro-Partner.', topic_id:'t4', topic_title:'Gastro-Partner für 2027 bestätigen', next_action:'Vertrag schicken', owner:'Lea', strand:'habitate', decided_by:'Alex', decided_at:tag(-5), created_at:zeit(-5) },
     { id:'d2', decision:'Der Wochenbrief geht freitags raus.', topic_id:'t3', topic_title:'Wochenbrief an das Team', next_action:'Vorlage schreiben', owner:'Alex', strand:'habitate', decided_by:'Lea', decided_at:tag(-12), created_at:zeit(-12) } ] },
-  news_list: { items: NEWS },
+  /* 22.10.2026: Archiviertes nur mit archiv und Suchbegriff (wie das Backend). */
+  news_list: (p) => p && p.archiv ? { items: NEWS.filter(x => x.status === 'archiviert' && (x.title + ' ' + x.body).toLowerCase().includes(String(p.q || '').toLowerCase())), gekuerzt:false }
+    : { items: NEWS.filter(x => (p && Array.isArray(p.statuses) && p.statuses.length) ? p.statuses.includes(x.status) : x.status !== 'archiviert') },
+  news_update: (p) => { const x = NEWS.find(n => n.id === p.id); return { item: { ...(x || {}), id:p.id, status:p.status, archiv_grund:null, archiviert_at:null } }; },
+  news_accept: (p) => { const x = NEWS.find(n => n.id === p.id); return { item: { ...(x || {}), status:'uebernommen', topic_id:'t-neu' }, topic: { id:'t-neu', title:(x && x.title) || 'Thema', board_lane:'zu_besprechen' } }; },
   gate_list: { items:[ { kind:'thema', ...THEMEN[0] }, { kind:'kandidat', ...NEWS[2] }, { kind:'thema', ...THEMEN[1] } ],
     counts:{ gf:2, Lea:1 }, themen:2, kandidaten:1 },
   absence_list: (p) => { const alle=[...NEUE, A1, A2, A3].filter(a=>p.include_test||!a.test);
