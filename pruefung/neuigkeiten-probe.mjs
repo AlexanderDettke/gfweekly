@@ -4,6 +4,7 @@
    news_list, die Archivsuche und „Zurück in den Korb“ und den Verfall in einer zurückgerollten Transaktion, und räumt die
    Testeinträge am Ende (auch nach einem Abbruch) wieder ab. Echte Neuigkeiten werden nur gelesen. */
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
 const FN = process.env.GF_FN || 'https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/gfweekly';
 const PW = process.env.GF_PW || '';
 if (!PW) { console.error('GF_PW fehlt (Passwort des Hohen Hauses in der Umgebung).'); process.exit(2); }
@@ -16,7 +17,7 @@ async function api(action, payload = {}, erwartet = 200) {
   return d;
 }
 const sql = (q) => JSON.parse(execFileSync('npx', ['--yes', 'supabase', 'db', 'query', '--linked', '--project-ref', 'bnfmupnmqyrcltrphfak', q], { stdio: ['ignore', 'pipe', 'ignore'] }).toString()).rows;
-const aufraeumen = () => sql("delete from public.gfweekly_news where source_ref in ('probe:nw:1','probe:nw:2')");
+const aufraeumen = () => sql("delete from public.gfweekly_news where source_ref in ('probe:nw:1','probe:nw:2','probe:nw:3','probe:nw:4','probe:nw:5')");
 
 try {
   aufraeumen();
@@ -54,6 +55,19 @@ try {
   ok(w[0]?.status === 'archiviert' && w[0]?.archiv_grund === 'verfall-14', 'Verfall nimmt den 20 Tage alten offenen Kandidaten (Grund verfall-14)', w);
   const g = sql("begin; select public.hh_news_verfall(14, 'aufraeumen-20261022-verfall'); select archiv_grund from public.gfweekly_news where source_ref = 'probe:nw:2'; rollback;");
   ok(g[0]?.archiv_grund === 'aufraeumen-20261022-verfall', 'erster Verfall beim Aufräumen trägt den eigenen Grund', g);
+  console.log('\n== Aufräum-Migration (zurückgerollt) ==');
+  /* Die ganze Migration in einer Transaktion mit drei Testzeilen, danach rollback: alt und unberührt wird archiviert,
+     alt aber gestern zugeteilt bleibt, frisch bleibt. */
+  const datei = fs.readdirSync(new URL('../supabase/migrations/', import.meta.url)).filter(f => /_hh_news_aufraeumen\.sql$/.test(f)).sort().pop();
+  const mig = fs.readFileSync(new URL('../supabase/migrations/' + datei, import.meta.url), 'utf8');
+  const testzeilen = `insert into public.gfweekly_news (kind, title, source, relevance, status, source_ref, happened_at, created_at, gate, gate_by, gate_at) values
+    ('kandidat','Probe alt','manuell','mittel','neu','probe:nw:3', now()-interval '30 days', now()-interval '30 days', null, null, null),
+    ('kandidat','Probe alt, gestern zugeteilt','manuell','mittel','neu','probe:nw:4', now()-interval '30 days', now()-interval '30 days', 'lea', 'Alex', now()-interval '1 day'),
+    ('kandidat','Probe frisch','manuell','mittel','neu','probe:nw:5', now()-interval '2 days', now()-interval '2 days', null, null, null);`;
+  const m = sql(`begin; ${testzeilen} ${mig} select source_ref, status, archiv_grund from public.gfweekly_news where source_ref in ('probe:nw:3','probe:nw:4','probe:nw:5') order by source_ref; rollback;`);
+  const st = Object.fromEntries(m.map(r => [r.source_ref, r.archiv_grund || r.status]));
+  ok(st['probe:nw:3'] === 'aufraeumen-20261022' && st['probe:nw:4'] === 'neu' && st['probe:nw:5'] === 'neu', `${datei}: alt archiviert, kürzlich zugeteilt und frisch bleiben`, st);
+  ok(sql("select count(*)::int n from public.gfweekly_news where source_ref in ('probe:nw:3','probe:nw:4','probe:nw:5')")[0].n === 0 && sql("select count(*)::int n from public.gfweekly_news where status='archiviert' and coalesce(source_ref,'') not like 'probe:nw:%'")[0].n === 0, 'nach dem Rollback nichts archiviert, keine Testzeilen');
 } catch (e) { ok(false, 'Probe abgebrochen', e.message); }
 finally {
   try { aufraeumen(); console.log('  · Testeinträge abgeräumt'); } catch (e) { ok(false, 'Testeinträge nicht abgeräumt (source_ref probe:nw:1 und probe:nw:2)'); }

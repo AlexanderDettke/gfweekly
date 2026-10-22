@@ -5,7 +5,7 @@ Auftrag und Annahmen: `docs/PAKET-NEUIGKEITEN-AUFRAEUMEN.md` (Variante A „Nur 
 Datenbank:
 - Migration `20261022014451_hh_news_archiv` (angewendet am 22.10.2026): Status `archiviert` in `gfweekly_news`, Spalten `archiv_grund` und `archiviert_at`. `hh_news_verfall(p_tage)` legt Ticker und Kandidaten mit Status `neu` oder `gesehen` ins Archiv, wenn `happened_at`, `created_at` und `gate_at` alle älter als `p_tage` sind und keine Pförtner-Frist in der Zukunft liegt; `decided_by` bleibt leer. Nur für `service_role`.
 - Migration `20261022020506_hh_news_archiv_r1` (angewendet, Nacharbeit aus Review-Runde 1): Spalte `aktiv_ab` (Zeitpunkt des Zurückholens aus dem Archiv, zählt beim Verfall mit), `hh_news_verfall(p_tage, p_grund)` mit eigenem Grund.
-- Migration `20261022015719_hh_news_aufraeumen` (läuft nach dem Ausrollen der Seite): offene Kandidaten, die vor mehr als 7 Tagen eingetragen wurden, ins Archiv (Grund `aufraeumen-20261022`), danach ein erster Verfall mit Grund `aufraeumen-20261022-verfall` und der tägliche Zeitplan `hh_news_verfall` um 04:50 UTC (Grund `verfall-14`). Probelauf vom 22.10.2026: 293 Kandidaten beim Aufräumen, 500 Ticker beim Verfall. Rückweg für beide Schritte im Kopf der Migration.
+- Migration `20261022021626_hh_news_aufraeumen` (läuft nach dem Ausrollen der Seite): offene Kandidaten, deren Eintragung, letzte Zuteilung und letztes Zurückholen mehr als 7 Tage zurückliegen, ins Archiv (Grund `aufraeumen-20261022`), danach ein erster Verfall mit Grund `aufraeumen-20261022-verfall` und der tägliche Zeitplan `hh_news_verfall` um 04:50 UTC (Grund `verfall-14`). Probelauf vom 22.10.2026: 293 Kandidaten beim Aufräumen, 500 Ticker beim Verfall. Rückweg für beide Schritte (mit `aktiv_ab`, damit der nächste Verfall sie nicht sofort wieder nimmt) und das Abschalten des täglichen Laufs im Kopf der Migration.
 
 Edge Function `gfweekly` (deployt am 22.10.2026):
 - `news_list` lässt Archiviertes weg, außer `statuses` nennt `archiviert`. Mit `archiv: true` und `q` (mindestens zwei Zeichen) sucht sie nur im Archiv in Titel, Text und Zitat, höchstens 100 Treffer.
@@ -18,7 +18,7 @@ Oberfläche `site/neuigkeiten.html`, Assets `?v=36`:
 - „Zu deinen Vorhaben“: je Vorhaben mit Ball bei mir die Zahl der Neuigkeiten der letzten 7 Tage; ein Tipp filtert Ticker und Korb auf das Vorhaben, mit Link zur Akte. Lassen sich die Vorhaben nicht laden, sagen beide Bereiche das; „hoch“ steht trotzdem oben.
 - „Alles andere“: Ticker, Sichtungskorb und Themenlage, zu Beginn zugeklappt (gemerkter Zustand jetzt unter `gf_nw2_`). Darunter „Archiv durchsuchen“.
 
-Prüfungen am 22.10.2026: `pruefung/neuigkeiten-probe.mjs` gegen das echte Backend 14 von 14 (Testeinträge `probe:nw:1` und `probe:nw:2`, danach entfernt); Bedienung um 15 Proben erweitert (abgefangene API), Schirme mit „Braucht dich“ als Kernbereich; `pruefung/abnahme.sh` bestanden.
+Prüfungen am 22.10.2026: `pruefung/neuigkeiten-probe.mjs` gegen das echte Backend 16 von 16, darunter die ganze Aufräum-Migration in einer zurückgerollten Transaktion mit Testzeilen (Testeinträge `probe:nw:1` und `probe:nw:2`, danach entfernt); Bedienung um 15 Proben erweitert (abgefangene API), Schirme mit „Braucht dich“ als Kernbereich; `pruefung/abnahme.sh` bestanden.
 
 Grenze: Der Branch `paket/webstandard-pilot` (nicht gepusht) ändert `core.js`, `styles.css` und eine Zeile in `neuigkeiten.html` und muss vor seinem Push auf `?v=37`.
 
