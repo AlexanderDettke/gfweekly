@@ -4,7 +4,7 @@ Auftrag und Annahmen: `docs/PAKET-KOMPASS-RUHE.md`. Der Kompass-Commit vom 21.10
 
 Für dich (`site/index.html`): oben „Deine 5 Minuten heute“ mit drei Dingen aus Vorhaben mit Ball bei mir, Entscheidungen an mich oder die GF und Kandidaten „hoch“ der letzten 7 Tage; Auswahl je Person und Tag in `localStorage` `gf_5min_<Person>_<Tag>`, Fortschritt als Punkte und „n von 3 abgeräumt“, danach „Noch drei?“. Ließ sich eine Quelle nicht laden, gilt ihr Eintrag als offen. Ruhigerer Ton auf Für dich und der Rückkehrseite, Zähler der Seitenleiste neutral (`.nbadge` auf `--fill`/`--text-2`).
 
-Quell-SVGs der Bildmarke unter `docs/marke/` (nicht ausgeliefert). Prüfungen: `pruefung/abnahme.sh` bestanden, Bedienung um eine Gruppe „Kompass, Deine 5 Minuten heute“ erweitert.
+Quell-SVGs der Bildmarke unter `docs/marke/` (nicht ausgeliefert). Vorschaubild `site/assets/previews/gfweekly.webp` neu aus der Seite mit Testdaten (öffentlich erreichbar, deshalb keine echten Daten). Nacharbeit aus Review-Runde 1: Tagesauswahl wird nur aus vollständig geladenen Quellen gespeichert (sonst „vorläufig“), ein Kandidat gilt erst als abgeräumt, wenn er nicht mehr offen ist, Personenwechsel leert die Karte sofort, Leertexte sagen „für dich nichts offen“ statt „alles entschieden“. Prüfungen: `pruefung/abnahme.sh` bestanden, Bedienung um eine Gruppe „Kompass, Deine 5 Minuten heute“ erweitert.
 
 Nächste Pakete: „Hier lohnt sich ein Blick“ und Mehrfachauswahl (`docs/PAKET-BLICK-UND-AUFRAEUMEN.md`), danach die technische Umbenennung mit Übergangsbrücken.
 

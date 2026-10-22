@@ -373,8 +373,29 @@ console.log('\n== Kompass, Deine 5 Minuten heute (22.10.2026) ==');
   await s.reload(); await s.waitForTimeout(500);
   pruefe('Ball weitergegeben: Zeile abgeräumt, Fortschritt „1 von 3“', !!vh && await s.locator('#fd5L .fd5-row.ab').count() === 1 && /1 von 3 abgeräumt/.test(await s.locator('#fd5Stand').innerText()), await s.locator('#fd5Stand').innerText());
   pruefe('Auswahl bleibt dieselbe (nicht neu gezogen)', await s.evaluate((k) => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(x => x.startsWith('gf_5min_Alex_')))).length === 3 && document.body.innerText.includes(k), vh ? vh.t : ''));
-  pruefe('Zähler in der Seitenleiste sind neutral (keine Warnfarbe)', await s.evaluate(() => { const b = document.querySelector('.sb-nav .nbadge'); if (!b) return true; const c = getComputedStyle(b).backgroundColor; const w = getComputedStyle(document.documentElement).getPropertyValue('--warn').trim(); const t = document.createElement('i'); t.style.color = w; document.body.appendChild(t); const wc = getComputedStyle(t).color; t.remove(); return c !== wc; }));
+  pruefe('Zähler in der Seitenleiste sind neutral (keine Warnfarbe)', await s.evaluate(() => { const b = [...document.querySelectorAll('.sb-nav .nbadge')].find(x => x.offsetParent); if (!b) return false; const c = getComputedStyle(b).backgroundColor; const w = getComputedStyle(document.documentElement).getPropertyValue('--warn').trim(); const t = document.createElement('i'); t.style.color = w; document.body.appendChild(t); const wc = getComputedStyle(t).color; t.remove(); return c !== wc; }));
+  /* Alle drei abräumen: „Noch drei?“ holt die nächsten. */
+  for (const x of auswahl || []) { if (x.k.startsWith('vh:')) { const v = VORHABEN.find(y => 'vh:' + y.id === x.k); if (v) v.ball = 'lea'; } }
+  await s.evaluate(() => { const k = Object.keys(localStorage).find(x => x.startsWith('gf_5min_Alex_')); const l = JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(l.map(x => x.k.startsWith('vh:') ? x : { ...x, k: x.k + '-weg' }))); });
+  await s.reload(); await s.waitForTimeout(500);
+  pruefe('alle drei abgeräumt: Lob und „Noch drei?“', /Alles abgeräumt/.test(await s.locator('#fd5Stand').innerText()) && await s.locator('#fd5Mehr').count() === 1, await s.locator('#fd5Stand').innerText());
+  if (await s.locator('#fd5Mehr').count()) { await s.locator('#fd5Mehr').click(); await s.waitForTimeout(200); }
+  pruefe('„Noch drei?“ zeigt neue Einträge der nächsten Runde', await s.locator('#fd5L .fd5-row:not(.ab)').count() >= 1);
+  /* Personenwechsel: Leas Runde, nicht Alex' Einträge stehen lassen. */
+  await s.locator('#whoSw button[data-w="Lea"]').click(); await s.waitForTimeout(600);
+  pruefe('Personenwechsel: eigene Tagesauswahl für Lea', await s.evaluate(() => Object.keys(localStorage).some(x => x.startsWith('gf_5min_Lea_'))));
   await s.close();
+  /* Quelle fällt aus: vorläufige Auswahl mit Hinweis, nichts gespeichert. */
+  frisch(); SCHALTER.vhListeFehler = true; erwarteterFehler = true;
+  const q = await seite('/index.html'); await q.waitForTimeout(300);
+  await q.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith('gf_5min_')) localStorage.removeItem(k); }); await q.reload(); await q.waitForTimeout(500);
+  pruefe('Vorhaben nicht geladen: Hinweis „vorläufig“, keine gespeicherte Tagesauswahl', /vorläufig/.test(await q.locator('#fd5L').innerText())
+    && await q.evaluate(() => !Object.keys(localStorage).some(x => x.startsWith('gf_5min_Alex_'))));
+  await q.close(); SCHALTER.vhListeFehler = false; erwarteterFehler = false;
+  const h = await ctx.newPage(); await h.setViewportSize({ width:390, height:844 }); h.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
+  await h.goto(BASE + '/index.html'); await h.waitForTimeout(800);
+  pruefe('Für dich bei 390 px: 5-Minuten-Karte sichtbar, keine waagrechte Rollleiste', await h.locator('#fd5').isVisible() && await h.evaluate(() => document.documentElement.scrollWidth <= 390));
+  await h.close();
 }
 
 console.log('\n== Neuigkeiten: Braucht dich, Vorhaben-Filter, Archiv (22.10.2026) ==');

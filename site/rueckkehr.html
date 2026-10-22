@@ -116,7 +116,7 @@ function renderWartet(){
       <button class="btn btn-sm btn-brand" data-act="back">Übernehmen</button>
       <span class="m">${gfEsc(x.begruendung||"")}</span>
     </article>`).join("")
-    : `<div class="empty soft">Alles übernommen. Der Korb ist leer. ✓</div>`;
+    : `<div class="empty soft">Für dich ist hier nichts mehr offen. ✓</div>`;
 }
 $("#warList").addEventListener("click",async e=>{
   const b=e.target.closest('[data-act="back"]'); if(!b) return;
@@ -175,7 +175,7 @@ async function ladeVorhaben(){
 function whoGleich(p){ return (p||"").toLowerCase()===gfWho().toLowerCase(); }
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("rueckkehr");
-  gfMountHero("ankunft","Rückkehr","Was in deiner Abwesenheit entschieden wurde, was weitergegeben wurde und was auf dich wartet.",{compact:true});
+  gfMountHero("ankunft","Rückkehr","Was in deiner Abwesenheit entschieden wurde, was weitergegeben wurde und was für dich bereitliegt.",{compact:true});
   await load();
 });
 </script>

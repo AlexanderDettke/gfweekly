@@ -158,7 +158,7 @@ function renderEnt(){
   $("#fdMeet").hidden=!gf;
   if(!items.length){
     const last=(CAL.concat(LAGE)).sort((a,b)=>(b.happened_at||"").localeCompare(a.happened_at||""))[0];
-    $("#fdEntL").innerHTML=`<p class="fd-empty">Alles entschieden, nichts offen. ✓${last?` Zuletzt bewegt: ${gfEsc(last.title)} (${gfNewsWhen(last.happened_at)}).`:""}</p>`; return;
+    $("#fdEntL").innerHTML=`<p class="fd-empty">Für dich ist hier gerade nichts offen. ✓${last?` Zuletzt bewegt: ${gfEsc(last.title)} (${gfNewsWhen(last.happened_at)}).`:""}</p>`; return;
   }
   const show=items.slice(0,5), rest=items.length-show.length;
   $("#fdEntL").innerHTML=show.map(x=>{
@@ -279,20 +279,28 @@ function render5(){
   const L=$("#fd5L"); if(!L) return;
   if(!VH && !GL){ L.innerHTML=`<p class="fd-empty">Gerade nicht geladen. Später noch einmal.</p>`; return; }
   const jetzt=fd5Anstehend(), offenK=new Set(jetzt.map(x=>x.k));
+  /* Noch offen ist auch, was nicht mehr zu den Top-Kriterien passt, aber weiter ansteht: ein Kandidat mit Status neu
+     (auch nach Herabstufung auf „mittel“), ein Thema oder Vorhaben, das noch bei mir liegt. */
+  for(const x of KAND||[]) offenK.add("kd:"+x.id);
+  for(const x of (GL?.items||[])) offenK.add((x.kind==="thema"?"th:":"kd:")+x.id);
   /* Ließ sich eine Quelle nicht laden, gilt ihr Eintrag als offen, nicht als abgeräumt. */
   const offen=k=>offenK.has(k) || (k.startsWith("vh:")&&!VH) || (k.startsWith("th:")&&!GL) || (k.startsWith("kd:")&&(!KAND||!GL));
+  const vollstaendig=!!(VH&&GL&&KAND);
   let auswahl=fd5Lies();
-  if(!auswahl){ auswahl=jetzt.slice(0,FD5_N).map(({k,t,note,href,art})=>({k,t,note,href,art})); fd5Schreib(auswahl); }
+  /* Gespeichert wird die Tagesauswahl nur aus vollständig geladenen Quellen; sonst gilt sie vorläufig und wird beim
+     nächsten Laden neu gezogen. */
+  if(!auswahl){ auswahl=jetzt.slice(0,FD5_N).map(({k,t,note,href,art})=>({k,t,note,href,art})); if(vollstaendig) fd5Schreib(auswahl); }
   const runde=auswahl.slice(-FD5_N);
   const fertig=runde.filter(x=>!offen(x.k)).length, gesamtFertig=auswahl.filter(x=>!offen(x.k)).length;
   $("#fd5Dots").innerHTML=runde.map(x=>offen(x.k)?"○":"●").join("");
-  if(!auswahl.length){ L.innerHTML=`<p class="fd-empty">Heute liegt nichts Dringendes bei dir. Schönen Tag! ☀</p>`; $("#fd5Stand").textContent=""; return; }
+  const teilweise=vollstaendig?"":`<p class="fd-empty">Nicht alles ließ sich laden${!VH?" (Vorhaben)":""}${!KAND?" (Neuigkeiten)":""}. Die Auswahl ist vorläufig.</p>`;
+  if(!auswahl.length){ L.innerHTML=teilweise||`<p class="fd-empty">Heute liegt nichts Dringendes bei dir. Schönen Tag! ☀</p>`; $("#fd5Stand").textContent=""; return; }
   L.innerHTML=runde.map(x=>{ const ab=!offen(x.k);
     return `<a class="fd-row fd5-row${ab?" ab":""}" href="${x.href}">
       <span class="fd5-c" aria-hidden="true">${ab?"✓":"○"}</span>
       <div class="fd-main"><div class="fd-title">${gfEsc(x.t)}</div><div class="fd-note">${gfEsc(x.art)} · ${gfEsc(x.note)}</div></div>
       <div class="fd-side">${ab?`<span class="fd-who">abgeräumt</span>`:`<span class="fd-who">ansehen →</span>`}</div>
-    </a>`; }).join("");
+    </a>`; }).join("")+teilweise;
   const naechste=jetzt.filter(x=>!auswahl.some(a=>a.k===x.k));
   if(fertig===runde.length){
     $("#fd5Stand").innerHTML=`Alles abgeräumt${gesamtFertig>runde.length?` (${gesamtFertig} heute)`:""}. Stark! ${naechste.length?`<button type="button" class="btn btn-sm btn-ghost" id="fd5Mehr">Noch drei?</button>`:"Schönen Tag! ☀"}`;
@@ -338,7 +346,10 @@ gfGate(async()=>{
   const einwurf=()=>gfEinwurf({ onDone:()=>{ load().catch(()=>{}); } });
   $("#fdEinwurf").onclick=einwurf; $("#fdFab").onclick=einwurf;
   /* „Seit du zuletzt da warst“ gehört der Person: beim Wechsel neu laden, nicht nur neu zeichnen. */
-  document.addEventListener("gf-who",e=>{ gfHeroText(`${gfAvatarTag(e.detail,"hero-av")}Guten Tag, ${gfEsc(e.detail)}`,null); load().catch(()=>{}); });
+  document.addEventListener("gf-who",e=>{ gfHeroText(`${gfAvatarTag(e.detail,"hero-av")}Guten Tag, ${gfEsc(e.detail)}`,null);
+    /* Die Tagesrunde gehört der Person: sofort leeren, nicht die der anderen stehen lassen. */
+    $("#fd5L").innerHTML=`<div class="loading">lädt …</div>`; $("#fd5Dots").innerHTML=""; $("#fd5Stand").textContent="";
+    load().catch(()=>{ $("#fd5L").innerHTML=`<p class="fd-empty">Gerade nicht geladen. Später noch einmal.</p>`; }); });
   try{ await load(); }catch(e){ $("#fdEntL").innerHTML=`<div class="empty">Konnte nicht laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
 });
 </script>
