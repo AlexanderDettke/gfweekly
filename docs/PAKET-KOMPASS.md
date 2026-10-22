@@ -12,7 +12,7 @@ Umgesetzt und live (ohne Deploy, 21.10.):
 - Domain, HTTPS, Netlify-Hauptdomain und Rücksprungziel für die Anmeldung: Codex, 18.10.2026 (Arbeitsradar habitat-subdomains-20261018-01a14ba4).
 
 Vorbereitet auf dem Branch (nicht deployt):
-- Neue Bildmarke Kompass (Low-Poly-Kompassrose, Gold, Rot, Creme): `site/assets/img/kompass.svg` (groß) und `kompass-klein.svg` (für 16 und 32 px vereinfacht), daraus favicon-32.png, favicon-512.png, favicon.ico (16/32), icon-192.png, icon-180.png (deckend auf --bg), img/kompass-144.png und kompass-288.png. og-image.png neu (zeigte noch „GF Weekly“). Die Strohburg (burg-*.png) bleibt als Datei liegen.
+- Neue Bildmarke Kompass (Low-Poly-Kompassrose, Gold, Rot, Creme): `docs/marke/kompass.svg` (groß) und `docs/marke/kompass-klein.svg` (für 16 und 32 px vereinfacht), daraus favicon-32.png, favicon-512.png, favicon.ico (16/32), icon-192.png, icon-180.png (deckend auf --bg), img/kompass-144.png und kompass-288.png. og-image.png neu (zeigte noch „GF Weekly“). Die Strohburg (burg-*.png) bleibt als Datei liegen.
 - Name in allen 25 Seiten: `<title>Kompass · …`, og:title, Login-Karte, `GF_APP_NAME="Kompass"` (Seitenleiste und Kopfzeile), Manifest (name, short_name „Kompass“), Fußzeilen von Agenda, Protokoll und Wochenmail mit kompass.wildehabitate.de.
 - Marke in Seitenleiste und Login: kompass-144/288.png statt burg-*.png.
 - Texte: „im Hohen Haus“ → „im Kompass“, „ins Hohe Haus“ → „in den Kompass“, „im Haus“ (gemeint: das Werkzeug) → „im Kompass“; „Eure eigenen Rollen im Haus“ (Organisation, gemeint ist das Unternehmen) bleibt.

@@ -40,8 +40,8 @@
     <div class="rk-list" id="entList"></div>
   </section>
 
-  <section class="rk-sec" aria-label="Wartet auf dich">
-    <div class="sec-h"><h2>Wartet auf dich</h2><span class="fd-n" id="warN"></span></div>
+  <section class="rk-sec" aria-label="Für dich bereit">
+    <div class="sec-h"><h2>Für dich bereit</h2><span class="fd-n" id="warN"></span></div>
     <div class="rk-list" id="warList"></div>
   </section>
 
@@ -91,7 +91,7 @@ function renderKpis(){
   $("#kpis").innerHTML=[
     gfKachel({icon:"entscheidung",value:ent,label:"in Vertretung entschieden"}),
     gfKachel({icon:"partner",value:weiter,label:"weitergegeben"}),
-    gfKachel({icon:"frist",value:wartet,label:"wartet auf dich",tone:wartet?"warn":"pos"}),
+    gfKachel({icon:"frist",value:wartet,label:"für dich bereit",tone:wartet?"":"pos"}),
     mitAsana.length?gfKachel({icon:"release",value:asanaOffen,unit:`${asanaFertig} erledigt`,label:"Asana offen",
       title:"Aufgaben, die in Asana aus dieser Vertretung entstanden sind"}):"",
   ].join("");
@@ -116,7 +116,7 @@ function renderWartet(){
       <button class="btn btn-sm btn-brand" data-act="back">Übernehmen</button>
       <span class="m">${gfEsc(x.begruendung||"")}</span>
     </article>`).join("")
-    : `<div class="empty soft">Nichts wartet. Der Korb ist leer.</div>`;
+    : `<div class="empty soft">Alles übernommen. Der Korb ist leer. ✓</div>`;
 }
 $("#warList").addEventListener("click",async e=>{
   const b=e.target.closest('[data-act="back"]'); if(!b) return;

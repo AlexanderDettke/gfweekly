@@ -1,3 +1,13 @@
+## Kompass sichtbar und „Deine 5 Minuten heute“ (22.10.2026)
+
+Auftrag und Annahmen: `docs/PAKET-KOMPASS-RUHE.md`. Der Kompass-Commit vom 21.10.2026 (Abschnitt „Kompass“ weiter unten) ist auf den aktuellen main übertragen, Assets `?v=37`; Edge Functions `gfweekly`, `besetzung`, `saison`, `organisation` aus diesem Stand deployt (vorher live gleich main 3a20378).
+
+Für dich (`site/index.html`): oben „Deine 5 Minuten heute“ mit drei Dingen aus Vorhaben mit Ball bei mir, Entscheidungen an mich oder die GF und Kandidaten „hoch“ der letzten 7 Tage; Auswahl je Person und Tag in `localStorage` `gf_5min_<Person>_<Tag>`, Fortschritt als Punkte und „n von 3 abgeräumt“, danach „Noch drei?“. Ließ sich eine Quelle nicht laden, gilt ihr Eintrag als offen. Ruhigerer Ton auf Für dich und der Rückkehrseite, Zähler der Seitenleiste neutral (`.nbadge` auf `--fill`/`--text-2`).
+
+Quell-SVGs der Bildmarke unter `docs/marke/` (nicht ausgeliefert). Prüfungen: `pruefung/abnahme.sh` bestanden, Bedienung um eine Gruppe „Kompass, Deine 5 Minuten heute“ erweitert.
+
+Nächste Pakete: „Hier lohnt sich ein Blick“ und Mehrfachauswahl (`docs/PAKET-BLICK-UND-AUFRAEUMEN.md`), danach die technische Umbenennung mit Übergangsbrücken.
+
 ## Neuigkeiten aufräumen (22.10.2026)
 
 Auftrag und Annahmen: `docs/PAKET-NEUIGKEITEN-AUFRAEUMEN.md` (Variante A „Nur was Handeln braucht“). Vorher lagen 712 Ticker und 320 offene Kandidaten auf der Seite.
@@ -56,7 +66,7 @@ Grenzen: Wer abschließt, wählt der Browser („als Alex“ oder „als Lea“)
 
 ## Kompass (21.10.2026)
 
-Das Hohe Haus heißt seit 20.10.2026 Kompass, Adresse https://kompass.wildehabitate.de/ (Netlify-Hauptdomain seit 18.10.2026, hohes-haus.netlify.app leitet weiter). Name in Seitentiteln, Login, Seitenleiste (`GF_APP_NAME`), Manifest und Fußzeilen; neue Bildmarke `site/assets/img/kompass.svg` und `kompass-klein.svg` mit allen Favicon-Größen und og-image.png; `HH_BASIS` in gfweekly und besetzung auf die neue Domain; Assets `?v=35`. Einzelheiten und Offenes: `docs/PAKET-KOMPASS.md`.
+Das Hohe Haus heißt seit 20.10.2026 Kompass, Adresse https://kompass.wildehabitate.de/ (Netlify-Hauptdomain seit 18.10.2026, hohes-haus.netlify.app leitet weiter). Name in Seitentiteln, Login, Seitenleiste (`GF_APP_NAME`), Manifest und Fußzeilen; neue Bildmarke `docs/marke/kompass.svg` und `docs/marke/kompass-klein.svg` mit allen Favicon-Größen und og-image.png; `HH_BASIS` in gfweekly und besetzung auf die neue Domain; Assets `?v=35`. Einzelheiten und Offenes: `docs/PAKET-KOMPASS.md`.
 
 ## Technische Gesamtabnahme vom 15.10.2026
 

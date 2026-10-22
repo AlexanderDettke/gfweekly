@@ -9,7 +9,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODUL || 'playwright');
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ANTWORT, FALLBACK, SCHREIBEND, TPA, zuruecksetzen, SCHALTER } from './testdaten.mjs';
+import { ANTWORT, FALLBACK, SCHREIBEND, TPA, zuruecksetzen, SCHALTER, VORHABEN } from './testdaten.mjs';
 
 const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'site');
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8',
@@ -358,6 +358,25 @@ console.log('\n== Vorhaben (V31b): Ansichten, Akte, Punkt, Ball ==');
   await r.close();
 }
 
+console.log('\n== Kompass, Deine 5 Minuten heute (22.10.2026) ==');
+{
+  frisch();
+  const s = await seite('/index.html'); await s.waitForTimeout(500);
+  pruefe('Login und Seitenleiste heißen Kompass', (await s.title()).startsWith('Kompass') && !/Hohe/.test(await s.locator('body').innerText()));
+  const zeilen = s.locator('#fd5L .fd5-row');
+  pruefe('„Deine 5 Minuten heute“ steht oben mit drei Dingen', await zeilen.count() === 3 && await s.evaluate(() => document.querySelector('#app section.fd')?.id) === 'fd5');
+  pruefe('ohne Mahnung: kein „wartet auf dich“, kein „überfällig“ auf Für dich', !/wartet auf dich|überfällig/i.test(await s.locator('#app').innerText()));
+  const auswahl = await s.evaluate(() => { const k = Object.keys(localStorage).find(x => x.startsWith('gf_5min_Alex_')); return k ? JSON.parse(localStorage.getItem(k)) : null; });
+  pruefe('Auswahl des Tages steht im Browser', Array.isArray(auswahl) && auswahl.length === 3, JSON.stringify(auswahl));
+  const vh = (auswahl || []).find(x => x.k.startsWith('vh:'));
+  if (vh) { const v = VORHABEN.find(x => 'vh:' + x.id === vh.k); v.ball = 'lea'; }
+  await s.reload(); await s.waitForTimeout(500);
+  pruefe('Ball weitergegeben: Zeile abgeräumt, Fortschritt „1 von 3“', !!vh && await s.locator('#fd5L .fd5-row.ab').count() === 1 && /1 von 3 abgeräumt/.test(await s.locator('#fd5Stand').innerText()), await s.locator('#fd5Stand').innerText());
+  pruefe('Auswahl bleibt dieselbe (nicht neu gezogen)', await s.evaluate((k) => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(x => x.startsWith('gf_5min_Alex_')))).length === 3 && document.body.innerText.includes(k), vh ? vh.t : ''));
+  pruefe('Zähler in der Seitenleiste sind neutral (keine Warnfarbe)', await s.evaluate(() => { const b = document.querySelector('.sb-nav .nbadge'); if (!b) return true; const c = getComputedStyle(b).backgroundColor; const w = getComputedStyle(document.documentElement).getPropertyValue('--warn').trim(); const t = document.createElement('i'); t.style.color = w; document.body.appendChild(t); const wc = getComputedStyle(t).color; t.remove(); return c !== wc; }));
+  await s.close();
+}
+
 console.log('\n== Neuigkeiten: Braucht dich, Vorhaben-Filter, Archiv (22.10.2026) ==');
 {
   frisch();
@@ -520,12 +539,12 @@ console.log('\n== Für dich, Übergabe, Rückkehr (V31d) ==');
 {
   frisch();
   const f = await seite('/index.html');
-  pruefe('„Deine Vorhaben“ steht als erster Block', await f.evaluate(() => document.querySelector('#app section.fd')?.id) === 'fdVh');
+  pruefe('„Deine Vorhaben“ steht direkt unter „Deine 5 Minuten heute“', await f.evaluate(() => [...document.querySelectorAll('#app section.fd')].slice(0, 2).map(x => x.id).join()) === 'fd5,fdVh');
   const zeilen = await f.locator('#fdVhL .fd-row').count();
   pruefe('Deine Vorhaben: Ball bei Alex oder GF, höchstens fünf', zeilen === 3, `${zeilen} Zeilen`);
   pruefe('sortiert nach Frist', (await f.locator('#fdVhL .fd-row .fd-title').first().innerText()).includes('Lusatia'));
   pruefe('Seit du zuletzt da warst: je Vorhaben eine Zeile', await f.locator('#fdSeitL .fd-row').count() === 2);
-  pruefe('Ball seitdem zu mir gewechselt: Marke „wartet auf dich“', (await f.locator('#fdSeitL .fd-row').first().innerText()).includes('wartet auf dich'));
+  pruefe('Ball seitdem zu mir gewechselt: Marke „für dich bereit“', (await f.locator('#fdSeitL .fd-row').first().innerText()).includes('für dich bereit'));
   await f.locator('#fdSeitOk').click(); await f.waitForTimeout(150);
   pruefe('Alles gesehen setzt den Zeitpunkt und leert den Block', !!(await f.evaluate(() => localStorage.getItem('gf_vh_seen_Alex'))) && await f.locator('#fdSeitL .fd-row').count() === 0);
   await f.close();
