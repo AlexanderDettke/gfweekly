@@ -37,10 +37,13 @@ try {
   ok(such.items.length === 1 && such.items[0].source_ref === 'probe:nw:1', 'Suche findet nur den archivierten Testeintrag', such.items.map(x => x.source_ref));
   const komisch = await api('news_list', { archiv: true, q: 'Quokka,(x)*%' });
   ok(Array.isArray(komisch.items), 'Sonderzeichen im Suchbegriff brechen die Suche nicht', komisch);
+  await api('news_list', { archiv: true, q: '__' }, 400).then(d => ok(/zwei Zeichen/.test(d.error), '„__“ ist kein Suchmuster (400 statt Treffer für alles)'));
   console.log('\n== Zurück in den Korb ==');
   const id = such.items[0].id;
   const r = await api('news_update', { id, status: 'neu', decided_by: 'Alex' });
   ok(r.item.status === 'neu' && r.item.archiv_grund === null && r.item.archiviert_at === null, 'Zurück in den Korb hebt Grund und Zeitpunkt auf', r.item);
+  const zurueck = sql(`begin; select public.hh_news_verfall(14); select status, aktiv_ab is not null as aktiv from public.gfweekly_news where id = '${id}'; rollback;`);
+  ok(zurueck[0]?.status === 'neu' && zurueck[0]?.aktiv === true, 'zurückgeholter 40 Tage alter Eintrag übersteht den nächsten Verfall (aktiv_ab)', zurueck);
   const h = await api('news_update', { id, status: 'archiviert', decided_by: 'Alex' });
   ok(h.item.status === 'archiviert' && h.item.archiv_grund === 'hand' && !!h.item.archiviert_at, 'Von Hand archivieren trägt den Grund „hand“', h.item);
   console.log('\n== Verfall (zurückgerollt) ==');
@@ -49,6 +52,8 @@ try {
   ok(nachher[0]?.status === 'neu', 'Probelauf des Verfalls ändert nichts (Transaktion zurückgerollt)', v);
   const w = sql("begin; select public.hh_news_verfall(14); select status, archiv_grund from public.gfweekly_news where source_ref = 'probe:nw:2'; rollback;");
   ok(w[0]?.status === 'archiviert' && w[0]?.archiv_grund === 'verfall-14', 'Verfall nimmt den 20 Tage alten offenen Kandidaten (Grund verfall-14)', w);
+  const g = sql("begin; select public.hh_news_verfall(14, 'aufraeumen-20261022-verfall'); select archiv_grund from public.gfweekly_news where source_ref = 'probe:nw:2'; rollback;");
+  ok(g[0]?.archiv_grund === 'aufraeumen-20261022-verfall', 'erster Verfall beim Aufräumen trägt den eigenen Grund', g);
 } catch (e) { ok(false, 'Probe abgebrochen', e.message); }
 finally {
   try { aufraeumen(); console.log('  · Testeinträge abgeräumt'); } catch (e) { ok(false, 'Testeinträge nicht abgeräumt (source_ref probe:nw:1 und probe:nw:2)'); }

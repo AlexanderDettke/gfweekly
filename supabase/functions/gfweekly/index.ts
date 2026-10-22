@@ -607,10 +607,10 @@ async function handoverItems(absence: any){
      Termine am Rand ab oder nehmen fremde mit. */
   const { data: termine, error: e5 } = await admin.from('gfweekly_news')
     .select('id,title,body,who,happened_at,source_url,source_title,strand,source_ref')
-    .eq('source','kalender').gte('happened_at', addDays(von,-1)+'T00:00:00Z').lte('happened_at', addDays(ende,1)+'T23:59:59Z').limit(HO_GRENZE);
+    .eq('source','kalender').neq('status','archiviert').gte('happened_at', addDays(von,-1)+'T00:00:00Z').lte('happened_at', addDays(ende,1)+'T23:59:59Z').limit(HO_GRENZE);
   if (e5) throw new Error('Termine konnten nicht gelesen werden: '+e5.message);
   await zaehle('Termine', admin.from('gfweekly_news').select('id', { count:'exact', head:true })
-    .eq('source','kalender').gte('happened_at', addDays(von,-1)+'T00:00:00Z').lte('happened_at', addDays(ende,1)+'T23:59:59Z'),
+    .eq('source','kalender').neq('status','archiviert').gte('happened_at', addDays(von,-1)+'T00:00:00Z').lte('happened_at', addDays(ende,1)+'T23:59:59Z'),
     (termine || []).length);
   for (const x of (termine || [])) {
     const tag = new Date(x.happened_at).toLocaleDateString('sv-SE', { timeZone:'Europe/Berlin' });
@@ -1755,7 +1755,8 @@ Deno.serve(async (req: Request) => {
     }
     if (action === 'news_list' && t.archiv === true) {
       /* 22.10.2026: Archiv durchsuchen. Nur archivierte Einträge, Suchbegriff in Titel, Text oder Zitat, höchstens 100. */
-      const such = (t.q ?? '').toString().replace(/[,()*%\\"]/g, ' ').trim().slice(0, 80);
+      /* Zeichen, die im or-Filter oder als ILIKE-Muster (%, _) wirken würden, werden zu Leerzeichen. */
+      const such = (t.q ?? '').toString().replace(/[,()*%_\\"]/g, ' ').trim().slice(0, 80);
       if (such.length < 2) return json({ error:'Suchbegriff mit mindestens zwei Zeichen' },400);
       const { data, error } = await admin.from('gfweekly_news').select('*').eq('status', 'archiviert')
         .or(`title.ilike."*${such}*",body.ilike."*${such}*",quote.ilike."*${such}*"`).order('happened_at',{ascending:false}).limit(100);
@@ -1782,7 +1783,12 @@ Deno.serve(async (req: Request) => {
       if(t.topic_id!==undefined) patch.topic_id=t.topic_id||null;
       if(t.status!==undefined){ if(!NEWS_STATUS.includes(t.status)) return json({ error:'status' },400); patch.status=t.status; patch.decided_by=(t.decided_by??'').toString().slice(0,120); patch.decided_at=new Date().toISOString();
         /* Archiv (22.10.2026): von Hand archiviert trägt den Grund „hand“; jeder andere Status hebt Grund und Zeitpunkt auf. */
-        if(t.status==='archiviert'){ patch.archiv_grund='hand'; patch.archiviert_at=new Date().toISOString(); } else { patch.archiv_grund=null; patch.archiviert_at=null; } }
+        if(t.status==='archiviert'){ patch.archiv_grund='hand'; patch.archiviert_at=new Date().toISOString(); }
+        else {
+          /* Aus dem Archiv zurückgeholt: aktiv_ab gibt dem Eintrag neue 14 Tage bis zum nächsten Verfall. */
+          const { data: alt } = await admin.from('gfweekly_news').select('status').eq('id', t.id).maybeSingle();
+          if(alt?.status==='archiviert') patch.aktiv_ab=new Date().toISOString();
+          patch.archiv_grund=null; patch.archiviert_at=null; } }
       if(!Object.keys(patch).length) return json({ error:'nichts' },400);
       const { data, error } = await admin.from('gfweekly_news').update(patch).eq('id',t.id).select().single(); if(error) throw error; return json({ item:data });
     }

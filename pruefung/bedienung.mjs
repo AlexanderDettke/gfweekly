@@ -393,6 +393,12 @@ console.log('\n== Neuigkeiten: Braucht dich, Vorhaben-Filter, Archiv (22.10.2026
   pruefe('Zurück in den Korb holt den Archivtreffer zurück', ru && ru.nutzlast.id === 'n8' && ru.nutzlast.status === 'neu' && await n.locator('#archivList .kd[data-id="n8"]').count() === 0
     && await n.locator('#kand .kd[data-id="n8"]').count() === 1, JSON.stringify(ru && ru.nutzlast));
   await n.close();
+  /* Vorhaben lassen sich nicht laden: der Ausfall wird gesagt, „hoch“ bleibt sichtbar. */
+  frisch(); SCHALTER.vhListeFehler = true; erwarteterFehler = true;
+  const f = await seite('/neuigkeiten.html'); await f.waitForTimeout(400);
+  pruefe('Ladefehler der Vorhaben: Hinweis in beiden Bereichen, „hoch“ bleibt', /Vorhaben nicht geladen/.test(await f.locator('#fokusList').innerText())
+    && /ließen sich nicht laden/.test(await f.locator('#vhChips').innerText()) && /Pressefrage/.test(await f.locator('#fokusList').innerText()));
+  await f.close(); SCHALTER.vhListeFehler = false; erwarteterFehler = false;
   const h = await ctx.newPage(); await h.setViewportSize({ width:390, height:844 }); h.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
   await h.goto(BASE + '/neuigkeiten.html'); await h.waitForTimeout(800);
   pruefe('Neuigkeiten bei 390 px ohne waagrechte Rollleiste, Braucht dich sichtbar', await h.evaluate(() => document.documentElement.scrollWidth <= 390) && await h.locator('#fokus').isVisible());

@@ -101,7 +101,7 @@ const SRC_ALL=["notiz","mail","asana","kalender","entscheidung","plattform"];
 let ITEMS=[], TOPICS=[], STRANDS=[], Q="", WHO="", RANGE=14, REL="", SRC=new Set([...SRC_ALL,"protokoll","manuell"]), SHOWDONE=false;
 /* 22.10.2026: Vorhaben (aktiv, pausiert) für „Braucht dich“ und die Vorhaben-Chips, VHF filtert Ticker und Korb auf ein
    Vorhaben, ARCHIV hält die Treffer der Archivsuche. */
-let VH=[], VHF="", ARCHIV=null, ARCHIV_Q="", ARCHIV_GEKUERZT=false;
+let VH=[], VH_FEHLER="", VHF="", ARCHIV=null, ARCHIV_Q="", ARCHIV_GEKUERZT=false;
 const FOKUS_MAX=10, FOKUS_TAGE=7;
 const NOW=new Date();
 const REL_RANK={hoch:0,mittel:1,niedrig:2};
@@ -126,8 +126,8 @@ function bindDetails(root){
 
 async function load(){
   try{
-    const [n,t,c,v]=await Promise.all([gfApi("news_list",{limit:2000}), gfApi("list"), gfApi("cycle_get",{year:NOW.getFullYear()}), gfApi("vorhaben_list").catch(()=>({vorhaben:[]}))]);
-    ITEMS=n.items||[]; TOPICS=t.topics||[]; STRANDS=c.strands||[]; VH=v.vorhaben||[];
+    const [n,t,c,v]=await Promise.all([gfApi("news_list",{limit:2000}), gfApi("list"), gfApi("cycle_get",{year:NOW.getFullYear()}), gfApi("vorhaben_list").catch(e=>{ if(e&&e.auth) throw e; return { fehler:e.message||"Verbindung" }; })]);
+    ITEMS=n.items||[]; TOPICS=t.topics||[]; STRANDS=c.strands||[]; VH=v.vorhaben||[]; VH_FEHLER=v.fehler||"";
     render();
   }catch(e){ $("#feed").innerHTML=`<div class="empty">Fehler beim Laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
 }
@@ -153,8 +153,10 @@ function fokusListe(){
 function renderFokus(){
   const alle=fokusListe(), zeigen=alle.slice(0,FOKUS_MAX);
   $("#fokusN").textContent=alle.length>FOKUS_MAX?`${FOKUS_MAX} von ${alle.length}`:String(alle.length);
-  if(!zeigen.length){ $("#fokusList").innerHTML=`<div class="empty soft">Gerade braucht dich hier nichts. Neue Kandidaten bringt der tägliche Lauf.</div>`; return; }
-  $("#fokusList").innerHTML=`<div class="kd-list">${zeigen.map(kandRow).join("")}</div>${alle.length>FOKUS_MAX?`<p class="nw-mehr">${alle.length-FOKUS_MAX} weitere stehen im Sichtungskorb unter „Alles andere“.</p>`:""}`;
+  /* Ohne Vorhaben (Ladefehler) fehlen die Kandidaten zu deinen Vorhaben; das wird gesagt, „hoch“ steht trotzdem da. */
+  const warn=VH_FEHLER?`<p class="nw-mehr" role="status"><b>⚠ Vorhaben nicht geladen.</b> Kandidaten zu deinen Vorhaben fehlen hier (${gfEsc(VH_FEHLER)}). Seite neu laden.</p>`:"";
+  if(!zeigen.length){ $("#fokusList").innerHTML=warn+`<div class="empty soft">Gerade braucht dich hier nichts. Neue Kandidaten bringt der tägliche Lauf.</div>`; return; }
+  $("#fokusList").innerHTML=warn+`<div class="kd-list">${zeigen.map(kandRow).join("")}</div>${alle.length>FOKUS_MAX?`<p class="nw-mehr">${alle.length-FOKUS_MAX} weitere stehen im Sichtungskorb unter „Alles andere“.</p>`:""}`;
 }
 
 /* ---- Zu deinen Vorhaben: je Vorhaben mit Ball bei mir die Zahl des Neuen, Tippen filtert Ticker und Korb ---- */
@@ -162,6 +164,7 @@ function renderVh(){
   const grenze=new Date(+NOW-FOKUS_TAGE*86400000).toISOString();
   const zahl=id=>ITEMS.filter(x=>x.vorhaben_id===id&&x.kind!=="lage"&&x.created_at>=grenze).length;
   const mein=VH.filter(v=>gfVhMir(v)).map(v=>({ v, n:zahl(v.id) })).filter(z=>z.n>0).sort((a,b)=>b.n-a.n);
+  if(VH_FEHLER){ $("#vhChips").innerHTML=`<div class="empty soft">Die Vorhaben ließen sich nicht laden: ${gfEsc(VH_FEHLER)}. Seite neu laden.</div>`; return; }
   const aktiv=VHF?vhOf(VHF):null;
   $("#vhChips").innerHTML=(aktiv?`<div class="nw-vhf" role="status">Gefiltert auf <b>${gfEsc(aktiv.title)}</b>. <a href="vorhaben.html?v=${encodeURIComponent(aktiv.slug)}">Akte öffnen</a> <button type="button" class="btn btn-sm btn-ghost" data-vhf="">Filter aufheben</button></div>`:"")
     +(mein.length?`<div class="chips nw-vhc">${mein.map(z=>`<button type="button" class="chip${VHF===z.v.id?" on":""}" aria-pressed="${VHF===z.v.id}" data-vhf="${gfEsc(z.v.id)}">${gfEsc(z.v.title)} · ${z.n}</button>`).join("")}</div>`

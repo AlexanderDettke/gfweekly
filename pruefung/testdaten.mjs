@@ -402,9 +402,9 @@ const vhVerlauf = [
   { id:'e4', vorhaben_id:'vh-xceed', happened_at:zeit(-9), art:'entscheidung', wer:'Alex und Lea', text:'XCeed wird Ticketanbieter.', tag:'Entscheidung', status:'bestaetigt', source_ref:'seed:2', source_url:null, created_at:zeit(-9) },
 ];
 /* Schalter für Fehlerwege in den Bedienproben. */
-export const SCHALTER = { rueckkehrFehler:false, wiederFehler:false, abschlussKonflikt:false };
+export const SCHALTER = { rueckkehrFehler:false, wiederFehler:false, abschlussKonflikt:false, vhListeFehler:false };
 export const VH_ANTWORT = {
-  vorhaben_list: (p) => p && p.status === 'erledigt'
+  vorhaben_list: (p) => SCHALTER.vhListeFehler && !(p && p.status) ? { __status:500, error:'Verbindung unterbrochen' } : p && p.status === 'erledigt'
     ? ({ stand:zeit(0), heute, vorhaben:VORHABEN.filter(v => v.status === 'erledigt').map(v => ({ ...v, erledigt_am:zeit(-2), ergebnis:v.slug === 'saal-alt' ? 'Rechnung bezahlt, Schlüssel zurück' : null })) })
     : ({ stand:zeit(0), heute, vorhaben:VORHABEN.filter(v => ['aktiv','pausiert'].includes(v.status)), metaphase:{ title:'Analyse und Retro', starts_on:tag(-12), ends_on:tag(12) },
     abwesenheiten:[A1].map(a=>({ id:a.id, person:a.person, von:a.von, bis:a.bis, bis_geschaetzt:a.bis_geschaetzt, status:a.status, vertretung_standard:a.vertretung_standard, test:a.test })),
