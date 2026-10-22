@@ -384,7 +384,8 @@ console.log('\n== Kompass, Deine 5 Minuten heute (22.10.2026) ==');
   await s.reload(); await s.waitForTimeout(500);
   pruefe('alle drei abgeräumt: Lob und „Noch drei?“', /Alles abgeräumt/.test(await s.locator('#fd5Stand').innerText()) && await s.locator('#fd5Mehr').count() === 1, await s.locator('#fd5Stand').innerText() + ' ' + JSON.stringify(auswahl.map(x => x.k)) + ' offen: ' + JSON.stringify(await s.locator('#fd5L .fd5-row:not(.ab) .fd-title').allTextContents()));
   if (await s.locator('#fd5Mehr').count()) { await s.locator('#fd5Mehr').click(); await s.waitForTimeout(200); }
-  pruefe('„Noch drei?“ zeigt neue Einträge der nächsten Runde', await s.locator('#fd5L .fd5-row:not(.ab)').count() >= 1);
+  pruefe('„Noch drei?“ zeigt nur die neue Runde, keine abgeräumten aus der ersten', await s.locator('#fd5L .fd5-row').count() >= 1 && await s.locator('#fd5L .fd5-row.ab').count() === 0
+    && !/abgeräumt ·/.test(await s.locator('#fd5Stand').innerText()), await s.locator('#fd5Stand').innerText());
   /* Personenwechsel: Leas Runde, nicht Alex' Einträge stehen lassen. */
   await s.locator('#whoSw button[data-w="Lea"]').click(); await s.waitForTimeout(600);
   const lea = await s.evaluate(() => { const k = Object.keys(localStorage).find(x => x.startsWith('gf_5min_Lea_')); return k ? JSON.parse(localStorage.getItem(k)).slice(-3).map(x => x.t) : null; });

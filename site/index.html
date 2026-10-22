@@ -274,7 +274,8 @@ function fd5Anstehend(){
   const grenze=new Date(Date.now()-7*86400000).toISOString();
   /* Per Pförtner an jemand anderen gegeben: nicht mehr meins. */
   const woanders=new Set((GL?.items||[]).filter(x=>x.kind!=="thema"&&x.gate&&x.gate!==me&&x.gate!=="gf").map(x=>x.id));
-  for(const x of (KAND||[]).filter(x=>x.relevance==="hoch"&&x.created_at>=grenze&&!woanders.has(x.id))){
+  const fremd=x=>woanders.has(x.id) || (x.gate&&x.gate!==me&&x.gate!=="gf");   // auch ohne Pförtnerliste am Kandidaten selbst erkennbar
+  for(const x of (KAND||[]).filter(x=>x.relevance==="hoch"&&x.created_at>=grenze&&!fremd(x))){
     if(out.some(o=>o.k==="kd:"+x.id)) continue;
     out.push({ k:"kd:"+x.id, t:x.title||"", note:"Kandidat „hoch“ in den Neuigkeiten", href:"neuigkeiten.html#fokus", art:"Neuigkeit", rang:5 }); }
   return out.sort((a,b)=>a.rang-b.rang||a.t.localeCompare(b.t,"de"));
@@ -288,16 +289,17 @@ function render5(){
   const me=meWho();
   /* Per Pförtner an jemand anderen gegeben (Lea, Team, Plattform, warten): für mich abgeräumt, auch wenn noch neu. */
   const woanders=new Set((GL?.items||[]).filter(x=>x.gate&&x.gate!==me&&x.gate!=="gf").map(x=>(x.kind==="thema"?"th:":"kd:")+x.id));
-  for(const x of KAND||[]) if(!woanders.has("kd:"+x.id)) offenK.add("kd:"+x.id);
+  for(const x of KAND||[]) if(!woanders.has("kd:"+x.id) && !(x.gate&&x.gate!==me&&x.gate!=="gf")) offenK.add("kd:"+x.id);
   for(const x of (GL?.items||[]).filter(x=>x.gate===me||x.gate==="gf")) offenK.add((x.kind==="thema"?"th:":"kd:")+x.id);
   /* Ließ sich eine Quelle nicht laden, gilt ihr Eintrag als offen, nicht als abgeräumt. */
-  const offen=k=>offenK.has(k) || (k.startsWith("vh:")&&!VH) || (k.startsWith("th:")&&!GL) || (k.startsWith("kd:")&&(!KAND||!GL));
+  const offen=k=>offenK.has(k) || (k.startsWith("vh:")&&!VH) || (k.startsWith("th:")&&!GL) || (k.startsWith("kd:")&&(!KAND||!GL||!KAND_VOLL));
   const vollstaendig=!!(VH&&GL&&KAND&&KAND_VOLL);
   let auswahl=fd5Lies();
   /* Gespeichert wird die Tagesauswahl nur aus vollständig geladenen Quellen; sonst gilt sie vorläufig und wird beim
      nächsten Laden neu gezogen. */
-  if(!auswahl){ auswahl=jetzt.slice(0,FD5_N).map(({k,t,note,href,art})=>({k,t,note,href,art})); if(vollstaendig) fd5Schreib(auswahl); }
-  const runde=auswahl.slice(-FD5_N);
+  if(!auswahl){ auswahl=jetzt.slice(0,FD5_N).map(({k,t,note,href,art})=>({k,t,note,href,art,r:0})); if(vollstaendig) fd5Schreib(auswahl); }
+  /* Jede Runde trägt ihre Nummer r; gezeigt wird nur die jüngste, auch wenn sie weniger als drei Einträge hat. */
+  const rNeu=Math.max(...auswahl.map(x=>x.r||0)), runde=auswahl.filter(x=>(x.r||0)===rNeu);
   const fertig=runde.filter(x=>!offen(x.k)).length, gesamtFertig=auswahl.filter(x=>!offen(x.k)).length;
   $("#fd5Dots").innerHTML=runde.map(x=>offen(x.k)?"○":"●").join("");
   const teilweise=vollstaendig?"":`<p class="fd-empty">Nicht alles ließ sich laden${!VH?" (Vorhaben)":""}${!KAND?" (Neuigkeiten)":""}. Die Auswahl ist vorläufig.</p>`;
@@ -311,7 +313,7 @@ function render5(){
   const naechste=jetzt.filter(x=>!auswahl.some(a=>a.k===x.k));
   if(fertig===runde.length){
     $("#fd5Stand").innerHTML=`Alles abgeräumt${gesamtFertig>runde.length?` (${gesamtFertig} heute)`:""}. Stark! ${naechste.length?`<button type="button" class="btn btn-sm btn-ghost" id="fd5Mehr">Noch drei?</button>`:"Schönen Tag! ☀"}`;
-    const m=$("#fd5Mehr"); if(m) m.onclick=()=>{ fd5Schreib(auswahl.concat(naechste.slice(0,FD5_N).map(({k,t,note,href,art})=>({k,t,note,href,art})))); render5(); };
+    const m=$("#fd5Mehr"); if(m) m.onclick=()=>{ fd5Schreib(auswahl.concat(naechste.slice(0,FD5_N).map(({k,t,note,href,art})=>({k,t,note,href,art,r:rNeu+1})))); render5(); };
   } else $("#fd5Stand").textContent=fertig?`${fertig} von ${runde.length} abgeräumt · gut dabei`:`${runde.length} Dinge, etwa fünf Minuten`;
 }
 function renderAll(){ render5(); renderVh(); renderSeit(); renderEnt(); renderVt(); renderNeu(); renderFr(); }
@@ -361,6 +363,8 @@ gfGate(async()=>{
     /* Die Tagesrunde gehört der Person: sofort leeren, nicht die der anderen stehen lassen. */
     $("#fd5L").innerHTML=`<div class="loading">lädt …</div>`; $("#fd5Dots").innerHTML=""; $("#fd5Stand").textContent="";
     load().catch(()=>{ $("#fd5L").innerHTML=`<p class="fd-empty">Gerade nicht geladen. Später noch einmal.</p>`; }); });
+  /* Tab über Mitternacht offen gelassen: beim Zurückkommen gilt der neue Tag (neue Runde). */
+  document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && new Date().toLocaleDateString("sv-SE")!==TODAY) location.reload(); });
   try{ await load(); }catch(e){ $("#fdEntL").innerHTML=`<div class="empty">Konnte nicht laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
 });
 </script>
