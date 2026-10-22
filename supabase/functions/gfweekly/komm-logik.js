@@ -387,7 +387,7 @@
         einzeln.push({ art: 'pruefpunkt', vid: p.id, name: `Prüfpunkt ${p.nr} · ${festival.name}: Verkauf gegen Zielpfad`, due_on: p.t, abschnitt,
           notes: [`Prüfpunkt ${p.nr} am ${kurz(p.t)}: Verkauf laut Ticketsystem gegen Zielpfad, Kaufabbrüche, wiederkehrende Fragen, Reichweite, Klicks auf den Kaufweg.`,
             'Stufe festlegen (grün, gelb, rot, knapp) und Extras auswählen. Stufe Rot und Extras mit Budget entscheidet die Geschäftsführung.',
-            `Stufe eintragen im Hohen Haus: ${link}`, '', 'Vorschlag aus dem Regelwerk, Verteilung durch dich:', schrittListe(p)].join('\n') });
+            `Stufe eintragen im Kompass: ${link}`, '', 'Vorschlag aus dem Regelwerk, Verteilung durch dich:', schrittListe(p)].join('\n') });
         continue;
       }
       if (asanaEinzeln(p)) {
@@ -466,7 +466,7 @@
     }
     return !r.length && !n.trim();
   }
-  function zellNotiz(x) { return `${x.notiz}\nInhalt: ${x.text}\nAus dem Hohen Haus (Fixtermine), wird täglich abgeglichen.`; }
+  function zellNotiz(x) { return `${x.notiz}\nInhalt: ${x.text}\nAus dem Kompass (Fixtermine), wird täglich abgeglichen.`; }
 
   /* ---------- Partner-Slots (32e) ---------- */
   function slotOffen(p, heute) {

@@ -1,0 +1,42 @@
+/* Vorstandsbüro übernimmt die vorhandenen Kompass Tokens. */
+.vb-card-meta{color:var(--text-2);font-size:var(--stufe-2);margin:0 0 var(--s-8)}
+#vb{display:grid;gap:var(--s-16);max-width:1120px;margin-top:var(--s-16)}
+#vb [hidden]{display:none!important}
+.vb-head,.vb-tools,.vb-row{display:flex;flex-wrap:wrap;gap:var(--s-8);align-items:center}
+.vb-head{justify-content:space-between;align-items:flex-start}
+.vb-head h1,.vb-head h2,.vb-case-head h2{margin:0;font-size:var(--stufe-5)}
+.vb-head p,.vb-muted{color:var(--text-2);font-size:var(--stufe-2);line-height:var(--leading-text);margin:0}
+.vb-head>div{display:grid;gap:var(--s-8)}
+.vb-filters{display:flex;flex-wrap:wrap;gap:var(--s-8)}
+.vb-filters button[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--text)}
+.vb-work{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:var(--s-16);align-items:start}
+.vb-list{display:grid;gap:var(--s-8);max-height:70vh;overflow-y:auto;padding:2px}
+.vb-mail{display:grid;gap:var(--s-8);width:100%;text-align:left;background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);padding:var(--s-12);color:var(--text);font:inherit;cursor:pointer;overflow-wrap:anywhere}
+.vb-mail.active{border-color:var(--accent);background:var(--accent-soft)}
+.vb-mail strong{font-size:var(--stufe-3);font-weight:600}
+.vb-mail>span{font-size:var(--stufe-2);color:var(--text-2)}
+.vb-mail .vb-mail-meta{color:var(--accent-strong)}
+.vb-detail,.vb-new{display:grid;gap:var(--s-16);padding:var(--s-16);background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-l);min-width:0}
+.vb-case-head{display:grid;gap:var(--s-8)}
+.vb-case-head h2{font-size:var(--stufe-4)}
+.vb-finding{display:grid;gap:var(--s-8);border-left:3px solid var(--accent);padding-left:var(--s-12)}
+.vb-finding p{margin:0;line-height:var(--leading-text);font-size:var(--stufe-2);white-space:pre-wrap;overflow-wrap:anywhere}
+.vb-tabs{display:flex;flex-wrap:wrap;gap:var(--s-8);border-bottom:var(--rahmen) solid var(--border);padding-bottom:var(--s-8)}
+.vb-tabs button[aria-selected=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--text)}
+.vb-panel{display:grid;gap:var(--s-16)}
+.vb-field{display:grid;gap:var(--s-8);font-size:var(--stufe-2);min-width:0}
+.vb-field input,.vb-field select,.vb-field textarea{width:100%;min-width:0;min-height:var(--ziel-min);border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);background:var(--bg);color:var(--text);padding:var(--s-8) var(--s-12);font:inherit;font-size:var(--stufe-3)}
+.vb-field input::placeholder,.vb-field textarea::placeholder{color:var(--text-2);opacity:1}
+.vb-field textarea{min-height:120px;resize:vertical;line-height:var(--leading-text)}
+.vb-field textarea.vb-draft{min-height:280px}
+.vb-field :disabled{background:var(--disabled);color:var(--disabled-fg)}
+.vb-cols{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-16);min-width:0}
+.vb-notice{font-size:var(--stufe-2);line-height:var(--leading-text);white-space:pre-wrap;overflow-wrap:anywhere;min-height:var(--s-24)}
+.vb-notice.vb-error{color:var(--crit-text)}
+.vb-changed{padding:var(--s-12);background:var(--warn-bg);color:var(--text);border-radius:var(--radius-m);font-size:var(--stufe-2)}
+.vb-save{display:flex;flex-wrap:wrap;gap:var(--s-12);align-items:center;border-top:var(--rahmen) solid var(--border);padding-top:var(--s-16)}
+.vb-save span{flex:1 1 180px}
+.vb-note{padding:var(--s-12);background:var(--surface-2);border-radius:var(--radius-m);color:var(--text-2);font-size:var(--stufe-2);line-height:var(--leading-text)}
+#vb a{overflow-wrap:anywhere}
+@media(max-width:850px){.vb-work{grid-template-columns:1fr}.vb-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.vb-list{max-height:260px}.vb-list,.vb-cols{grid-template-columns:1fr}.vb-detail{padding:var(--s-12)}.vb-field input,.vb-field select,.vb-field textarea{font-size:16px}}

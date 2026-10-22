@@ -1,5 +1,5 @@
 /* ===========================================================
-   Das Hohe Haus · Easter Eggs (V14)
+   Kompass · Easter Eggs (V14)
    Sechs kleine Überraschungen. Alle harmlos, alle ohne Ton,
    alle respektieren prefers-reduced-motion. Zum Testen:
    ?egg=fest | ?egg=nacht | ?egg=bus | ?egg=konfetti | ?egg=moehre

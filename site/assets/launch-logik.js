@@ -651,7 +651,7 @@
       s.push(v.neu && v.aktualisiert ? `${v.neu} neu, ${v.aktualisiert} werden aktualisiert.` : v.aktualisiert ? `Alle ${v.aktualisiert} stehen schon in Asana und werden aktualisiert.` : `Alle ${v.neu} sind neu.`);
     }
     if (v.ohnePerson.length) s.push(`${anzahlWort(v.ohnePerson.length, 'Aufgabe hat', 'Aufgaben haben')} noch keine Person und ${v.ohnePerson.length === 1 ? 'wird' : 'werden'} nicht gesendet: ${listeWorte(v.ohnePerson.map(m => m.title))}.`);
-    if (v.ohneKonto.length) s.push(`Ohne Asana-Konto, ${v.ohneKonto.length === 1 ? 'bleibt' : 'bleiben'} als Notiz im Haus: ${listeWorte([...new Set(v.ohneKonto.map(m => m.name))])} (${anzahlWort(v.ohneKonto.length, 'Aufgabe', 'Aufgaben')}).`);
+    if (v.ohneKonto.length) s.push(`Ohne Asana-Konto, ${v.ohneKonto.length === 1 ? 'bleibt' : 'bleiben'} als Notiz im Kompass: ${listeWorte([...new Set(v.ohneKonto.map(m => m.name))])} (${anzahlWort(v.ohneKonto.length, 'Aufgabe', 'Aufgaben')}).`);
     if (v.angebot.length) {
       /* Empfänger je Angebot: Hauptaufgaben beim Übergebenden, Generator-Unteraufgaben beim Zuständigen. */
       const bei = new Map(); for (const a of v.angebot) { const k = a.bei || 'niemandem mit Konto'; bei.set(k, (bei.get(k) || 0) + 1); }

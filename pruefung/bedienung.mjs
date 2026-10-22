@@ -9,7 +9,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODUL || 'playwright');
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ANTWORT, FALLBACK, SCHREIBEND, TPA, zuruecksetzen, SCHALTER } from './testdaten.mjs';
+import { ANTWORT, FALLBACK, SCHREIBEND, TPA, zuruecksetzen, SCHALTER, VORHABEN } from './testdaten.mjs';
 
 const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'site');
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8',
@@ -358,6 +358,108 @@ console.log('\n== Vorhaben (V31b): Ansichten, Akte, Punkt, Ball ==');
   await r.close();
 }
 
+console.log('\n== Kompass, Deine 5 Minuten heute (22.10.2026) ==');
+{
+  frisch();
+  const s = await seite('/index.html'); await s.waitForTimeout(500);
+  pruefe('Login und Seitenleiste heißen Kompass', (await s.title()).startsWith('Kompass') && !/Hohe/.test(await s.locator('body').innerText()));
+  const zeilen = s.locator('#fd5L .fd5-row');
+  pruefe('„Deine 5 Minuten heute“ steht oben mit drei Dingen', await zeilen.count() === 3 && await s.evaluate(() => document.querySelector('#app section.fd')?.id) === 'fd5');
+  pruefe('ohne Mahnung: kein „wartet auf dich“, kein „überfällig“ auf Für dich', !/wartet auf dich|überfällig/i.test(await s.locator('#app').innerText()));
+  const auswahl = await s.evaluate(() => { const k = Object.keys(localStorage).find(x => x.startsWith('gf_5min_Alex_')); return k ? JSON.parse(localStorage.getItem(k)) : null; });
+  pruefe('Auswahl des Tages steht im Browser', Array.isArray(auswahl) && auswahl.length === 3, JSON.stringify(auswahl));
+  const vh = (auswahl || []).find(x => x.k.startsWith('vh:'));
+  if (vh) { const v = VORHABEN.find(x => 'vh:' + x.id === vh.k); v.ball = 'lea'; }
+  await s.reload(); await s.waitForTimeout(500);
+  pruefe('Ball weitergegeben: Zeile abgeräumt, Fortschritt „1 von 3“', !!vh && await s.locator('#fd5L .fd5-row.ab').count() === 1 && /1 von 3 abgeräumt/.test(await s.locator('#fd5Stand').innerText()), await s.locator('#fd5Stand').innerText());
+  pruefe('Auswahl bleibt dieselbe (nicht neu gezogen)', await s.evaluate((k) => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(x => x.startsWith('gf_5min_Alex_')))).length === 3 && document.body.innerText.includes(k), vh ? vh.t : ''));
+  pruefe('Zähler in der Seitenleiste sind neutral (keine Warnfarbe)', await s.evaluate(() => { const b = [...document.querySelectorAll('.sb-nav .nbadge')].find(x => x.offsetParent); if (!b) return false; const c = getComputedStyle(b).backgroundColor; const w = getComputedStyle(document.documentElement).getPropertyValue('--warn').trim(); const t = document.createElement('i'); t.style.color = w; document.body.appendChild(t); const wc = getComputedStyle(t).color; t.remove(); return c !== wc; }));
+  /* Alle drei abräumen: „Noch drei?“ holt die nächsten. */
+  /* Wirklich weitergeben: Vorhaben-Ball an Lea, Entscheidungen im Pförtner an Lea (Testdaten), keine Speicherschlüssel fälschen. */
+  const gates = ANTWORT.gate_list.items.map(x => x.gate);
+  for (const x of auswahl || []) {
+    if (x.k.startsWith('vh:')) { const v = VORHABEN.find(y => 'vh:' + y.id === x.k); if (v) v.ball = 'lea'; }
+    else { const g = ANTWORT.gate_list.items.find(y => (y.kind === 'thema' ? 'th:' : 'kd:') + y.id === x.k); if (g) g.gate = 'lea'; }
+  }
+  await s.reload(); await s.waitForTimeout(500);
+  pruefe('alle drei abgeräumt: Lob und „Noch drei?“', /Alles abgeräumt/.test(await s.locator('#fd5Stand').innerText()) && await s.locator('#fd5Mehr').count() === 1, await s.locator('#fd5Stand').innerText() + ' ' + JSON.stringify(auswahl.map(x => x.k)) + ' offen: ' + JSON.stringify(await s.locator('#fd5L .fd5-row:not(.ab) .fd-title').allTextContents()));
+  if (await s.locator('#fd5Mehr').count()) { await s.locator('#fd5Mehr').click(); await s.waitForTimeout(200); }
+  pruefe('„Noch drei?“ zeigt nur die neue Runde, keine abgeräumten aus der ersten', await s.locator('#fd5L .fd5-row').count() >= 1 && await s.locator('#fd5L .fd5-row.ab').count() === 0
+    && !/abgeräumt ·/.test(await s.locator('#fd5Stand').innerText()), await s.locator('#fd5Stand').innerText());
+  /* Personenwechsel: Leas Runde, nicht Alex' Einträge stehen lassen. */
+  await s.locator('#whoSw button[data-w="Lea"]').click(); await s.waitForTimeout(600);
+  const lea = await s.evaluate(() => { const k = Object.keys(localStorage).find(x => x.startsWith('gf_5min_Lea_')); return k ? JSON.parse(localStorage.getItem(k)).slice(-3).map(x => x.t) : null; });
+  const sicht = await s.locator('#fd5L .fd-title').allTextContents();
+  pruefe('Personenwechsel: Karte zeigt Leas eigene Tagesauswahl', !!lea && lea.length > 0 && JSON.stringify(sicht) === JSON.stringify(lea), JSON.stringify({ lea, sicht }));
+  await s.close();
+  ANTWORT.gate_list.items.forEach((x, i) => { x.gate = gates[i]; });
+  /* Quelle fällt aus: vorläufige Auswahl mit Hinweis, nichts gespeichert. */
+  frisch(); SCHALTER.vhListeFehler = true; erwarteterFehler = true;
+  const q = await seite('/index.html'); await q.waitForTimeout(300);
+  await q.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith('gf_5min_')) localStorage.removeItem(k); }); await q.reload(); await q.waitForTimeout(500);
+  pruefe('Vorhaben nicht geladen: Hinweis „vorläufig“, keine gespeicherte Tagesauswahl', /vorläufig/.test(await q.locator('#fd5L').innerText())
+    && await q.evaluate(() => !Object.keys(localStorage).some(x => x.startsWith('gf_5min_Alex_'))));
+  await q.close(); SCHALTER.vhListeFehler = false; erwarteterFehler = false;
+  const h = await ctx.newPage(); await h.setViewportSize({ width:390, height:844 }); h.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
+  await h.goto(BASE + '/index.html'); await h.waitForTimeout(800);
+  pruefe('Für dich bei 390 px: 5-Minuten-Karte sichtbar, keine waagrechte Rollleiste', await h.locator('#fd5').isVisible() && await h.evaluate(() => document.documentElement.scrollWidth <= 390));
+  await h.close();
+}
+
+console.log('\n== Neuigkeiten: Braucht dich, Vorhaben-Filter, Archiv (22.10.2026) ==');
+{
+  frisch();
+  const n = await seite('/neuigkeiten.html');
+  await n.waitForTimeout(300);
+  const fokus = await n.locator('#fokusList').innerText();
+  pruefe('Braucht dich zeigt „hoch“ und den Kandidaten zum eigenen Vorhaben', /Pressefrage zur Zeltwiese/.test(fokus) && /Ticketing für Lusatia anlegen/.test(fokus) && !/Helferplanung/.test(fokus), fokus.slice(0, 200));
+  pruefe('Vorhaben mit Ball bei mir steht zuerst', (await n.locator('#fokusList .kd .kd-title').first().innerText()).includes('Lusatia'));
+  pruefe('Archiviertes steht nirgends auf der Seite', !(await n.locator('#app').innerText()).includes('Alte Anfrage zur Zeltwiese'));
+  pruefe('Ticker, Korb und Lage starten zugeklappt', await n.evaluate(() => ['ticker','korb','lage','archiv'].every(id => !document.getElementById(id).open)));
+  pruefe('Chip „Lusatia · Vorverkauf · 2“ unter Zu deinen Vorhaben', /Lusatia · Vorverkauf · 2/.test(await n.locator('#vhChips').innerText()));
+  await n.locator('#vhChips [data-vhf="vh-lusatia"]').click(); await n.waitForTimeout(300);
+  const tk = await n.locator('#feed').textContent(), kb = await n.locator('#kand').textContent();
+  pruefe('Chip filtert Ticker und Korb auf das Vorhaben und klappt sie auf', await n.evaluate(() => document.getElementById('ticker').open && document.getElementById('korb').open)
+    && /Amt meldet sich/.test(tk) && !/Shuttle/.test(tk) && /Ticketing für Lusatia/.test(kb) && !/Pressefrage/.test(kb), tk.slice(0, 120) + ' | ' + kb.slice(0, 120));
+  pruefe('aktiver Filter mit Link zur Akte', (await n.locator('.nw-vhf a').getAttribute('href')) === 'vorhaben.html?v=lusatia');
+  await n.locator('.nw-vhf [data-vhf=""]').click(); await n.waitForTimeout(200);
+  pruefe('Filter aufheben zeigt wieder alles', /Shuttle/.test(await n.locator('#feed').textContent()));
+  /* Verwerfen direkt in „Braucht dich“ */
+  const z = n.locator('#fokusList .kd[data-id="n9"]');
+  pruefe('Kandidat zum Vorhaben hat „Zum Vorhaben“ mit Link zur Akte', await z.locator('a[href="vorhaben.html?v=lusatia"]').count() === 1);
+  await z.locator('.kd-row').click(); await z.locator('[data-act="dismiss"]').click(); await n.waitForTimeout(300);
+  const vw = letzte('news_update');
+  pruefe('Verwerfen schickt news_update verworfen, Zeile verlässt „Braucht dich“', vw && vw.nutzlast.id === 'n9' && vw.nutzlast.status === 'verworfen'
+    && await n.locator('#fokusList .kd[data-id="n9"]').count() === 0, JSON.stringify(vw && vw.nutzlast));
+  /* Archiv durchsuchen und zurückholen */
+  await n.locator('#archiv > summary').click(); await n.locator('#archivQ').fill('Zeltwiese'); await n.locator('#archivForm button[type=submit]').click(); await n.waitForTimeout(300);
+  const as = letzte('news_list');
+  pruefe('Archivsuche fragt das Backend mit archiv und Suchbegriff', as && as.nutzlast.archiv === true && as.nutzlast.q === 'Zeltwiese', JSON.stringify(as && as.nutzlast));
+  pruefe('Archivtreffer erscheint mit Status archiviert', /Alte Anfrage zur Zeltwiese/.test(await n.locator('#archivList').innerText()) && /archiviert/.test(await n.locator('#archivList').innerText()));
+  await n.locator('#archivList .kd[data-id="n8"] .kd-row').click(); await n.locator('#archivList .kd[data-id="n8"] [data-act="reopen"]').click(); await n.waitForTimeout(300);
+  const ru = letzte('news_update');
+  pruefe('Zurück in den Korb holt den Archivtreffer zurück', ru && ru.nutzlast.id === 'n8' && ru.nutzlast.status === 'neu' && await n.locator('#archivList .kd[data-id="n8"]').count() === 0
+    && await n.locator('#kand .kd[data-id="n8"]').count() === 1, JSON.stringify(ru && ru.nutzlast));
+  await n.close();
+  /* Vorhaben lassen sich nicht laden: der Ausfall wird gesagt, „hoch“ bleibt sichtbar. */
+  frisch(); SCHALTER.vhListeFehler = true; erwarteterFehler = true;
+  const f = await seite('/neuigkeiten.html'); await f.waitForTimeout(400);
+  pruefe('Ladefehler der Vorhaben: Hinweis in beiden Bereichen, „hoch“ bleibt', /Vorhaben nicht geladen/.test(await f.locator('#fokusList').innerText())
+    && /ließen sich nicht laden/.test(await f.locator('#vhChips').innerText()) && /Pressefrage/.test(await f.locator('#fokusList').innerText()));
+  await f.close(); SCHALTER.vhListeFehler = false;
+  /* Neuigkeiten lassen sich nicht laden: der Fehler steht oben und bleibt auch nach einer Filterbedienung. */
+  SCHALTER.newsFehler = true;
+  const g = await seite('/neuigkeiten.html'); await g.waitForTimeout(400);
+  await g.locator('#whoSegs .seg[data-w="Lea"]').click(); await g.waitForTimeout(200);
+  /* Wortlaut seit dem Webapp Standard (gfLadefehler): „Nicht geladen. Laden fehlgeschlagen: …“ mit „Erneut laden“. */
+  pruefe('Ladefehler bleibt nach Filterbedienung oben sichtbar', /Fehler beim Laden|Nicht geladen/.test(await g.locator('#fokusList').innerText()));
+  await g.close(); SCHALTER.newsFehler = false; erwarteterFehler = false;
+  const h = await ctx.newPage(); await h.setViewportSize({ width:390, height:844 }); h.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
+  await h.goto(BASE + '/neuigkeiten.html'); await h.waitForTimeout(800);
+  pruefe('Neuigkeiten bei 390 px ohne waagrechte Rollleiste, Braucht dich sichtbar', await h.evaluate(() => document.documentElement.scrollWidth <= 390) && await h.locator('#fokus').isVisible());
+  await h.close();
+}
+
 console.log('\n== Vorhaben abschließen, Erledigt, Wieder öffnen (21.10.2026) ==');
 {
   frisch();
@@ -467,12 +569,12 @@ console.log('\n== Für dich, Übergabe, Rückkehr (V31d) ==');
 {
   frisch();
   const f = await seite('/index.html');
-  pruefe('„Deine Vorhaben“ steht als erster Block', await f.evaluate(() => document.querySelector('#app section.fd')?.id) === 'fdVh');
+  pruefe('„Deine Vorhaben“ steht direkt unter „Deine 5 Minuten heute“', await f.evaluate(() => [...document.querySelectorAll('#app section.fd')].slice(0, 2).map(x => x.id).join()) === 'fd5,fdVh');
   const zeilen = await f.locator('#fdVhL .fd-row').count();
   pruefe('Deine Vorhaben: Ball bei Alex oder GF, höchstens fünf', zeilen === 3, `${zeilen} Zeilen`);
   pruefe('sortiert nach Frist', (await f.locator('#fdVhL .fd-row .fd-title').first().innerText()).includes('Lusatia'));
   pruefe('Seit du zuletzt da warst: je Vorhaben eine Zeile', await f.locator('#fdSeitL .fd-row').count() === 2);
-  pruefe('Ball seitdem zu mir gewechselt: Marke „wartet auf dich“', (await f.locator('#fdSeitL .fd-row').first().innerText()).includes('wartet auf dich'));
+  pruefe('Ball seitdem zu mir gewechselt: Marke „für dich bereit“', (await f.locator('#fdSeitL .fd-row').first().innerText()).includes('für dich bereit'));
   await f.locator('#fdSeitOk').click(); await f.waitForTimeout(150);
   pruefe('Alles gesehen setzt den Zeitpunkt und leert den Block', !!(await f.evaluate(() => localStorage.getItem('gf_vh_seen_Alex'))) && await f.locator('#fdSeitL .fd-row').count() === 0);
   await f.close();

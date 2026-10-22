@@ -443,7 +443,7 @@ console.log('\n== 9. Verteilen und starten (V29): Vorschau und Kalibrierung ==')
   gleich('Vorschau-Sätze: Personen, neu/aktualisiert, ohne Person, ohne Konto, Externe, Besetzung', saetze.length, 6);
   gleich('Erster Satz beginnt mit der Zählung', saetze[0].startsWith('Lusatia: 21 Aufgaben gehen an 4 Personen: '), true);
   gleich('Satz ohne Person nennt den Titel', saetze[2], '1 Aufgabe hat noch keine Person und wird nicht gesendet: Zielgruppen definiert.');
-  gleich('Satz ohne Konto', saetze[3], 'Ohne Asana-Konto, bleiben als Notiz im Haus: Nina (2 Aufgaben).');
+  gleich('Satz ohne Konto', saetze[3], 'Ohne Asana-Konto, bleiben als Notiz im Kompass: Nina (2 Aufgaben).');
   gleich('Satz Externe', saetze[4], 'Externe ohne Konto: Agentur. Dafür entsteht eine Angebotsaufgabe bei Jessica.');
   gleich('Satz Besetzung', saetze[5], 'Die Besetzung ist noch nicht bestätigt; der Start bestätigt sie mit (22 Zuordnungen).');
   const WM = festival('wm', '2026-09-01', wer).map(m => Object.assign(m, { festival: 'WMRD27', event_id: 'e-wm', zuordnung_status: 'bestaetigt' }));

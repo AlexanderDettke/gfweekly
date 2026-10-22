@@ -6,6 +6,42 @@ Branch `paket/webstandard-pilot` auf `05af97b`, nicht gepusht, nicht deployt. Ke
 
 Prüfung: `pruefung/webstandard-pruefung.mjs` (Oberflächentest, in `pruefung/abnahme.sh` eingebunden) von 70 harten Befunden am Ausgangsstand auf 0; siebzehn Bedienproben bestanden; `pruefung/kontrast-ausnahmen.json` von 64 auf 4 Einträge neu erzeugt (verbleibend Messgrenzen). Vorschau mit Testdaten: `pruefung/vorschau.mjs`. Offene Lücken L1 bis L8 in `docs/webapp-standard/REGELZUORDNUNG.md`.
 
+## Kompass sichtbar und „Deine 5 Minuten heute“ (22.10.2026)
+
+Auftrag und Annahmen: `docs/PAKET-KOMPASS-RUHE.md`. Der Kompass-Commit vom 21.10.2026 (Abschnitt „Kompass“ weiter unten) ist auf den aktuellen main übertragen, Assets `?v=37`; Edge Functions `gfweekly`, `besetzung`, `saison`, `organisation` aus diesem Stand deployt (vorher live gleich main 3a20378).
+
+Für dich (`site/index.html`): oben „Deine 5 Minuten heute“ mit drei Dingen aus Vorhaben mit Ball bei mir, Entscheidungen an mich oder die GF und Kandidaten „hoch“ der letzten 7 Tage; Auswahl je Person und Tag in `localStorage` `gf_5min_<Person>_<Tag>`, Fortschritt als Punkte und „n von 3 abgeräumt“, danach „Noch drei?“. Ließ sich eine Quelle nicht laden, gilt ihr Eintrag als offen. Ruhigerer Ton auf Für dich und der Rückkehrseite, Zähler der Seitenleiste neutral (`.nbadge` auf `--fill`/`--text-2`).
+
+Quell-SVGs der Bildmarke unter `docs/marke/` (nicht ausgeliefert). Vorschaubild `site/assets/previews/gfweekly.webp` neu aus der Seite mit Testdaten (öffentlich erreichbar, deshalb keine echten Daten). Nacharbeit aus Review-Runde 1: Tagesauswahl wird nur aus vollständig geladenen Quellen gespeichert (sonst „vorläufig“), ein Kandidat gilt erst als abgeräumt, wenn er nicht mehr offen ist, Personenwechsel leert die Karte sofort, Leertexte sagen „für dich nichts offen“ statt „alles entschieden“. Nacharbeit aus Runde 2: eine per Pförtner an jemand anderen gegebene Entscheidung oder ein so weitergegebener Kandidat gilt als abgeräumt; Kandidaten werden bis 2.000 geladen, eine volle Seite gilt als gekürzt (Auswahl vorläufig); ein Fehler im Pförtner zeigt einen Hinweis statt „lädt …“; nach einem Personenwechsel werden ältere Antworten weder übernommen noch gezeichnet. „das Haus“ für das Werkzeug heißt jetzt Kompass (Übergabe, Vertretung, Einwurf, Besetzung); in Organisation meint „Haus“ das Unternehmen und bleibt. Nacharbeit aus Runde 3: „Noch drei?“ zeigt nur die neue Runde (Rundennummer je Eintrag), Kandidaten mit eigenem Pförtner an andere bleiben auch ohne Pförtnerliste außen vor, bei gekürzter Kandidatenliste gilt kein Kandidat als abgeräumt, ein über Mitternacht offener Tab lädt beim Zurückkommen neu. Diese letzten Korrekturen sind getestet, aber nach der dritten und letzten Review-Runde nicht erneut von Codex geprüft. Prüfungen: `pruefung/abnahme.sh` bestanden, Bedienung um eine Gruppe „Kompass, Deine 5 Minuten heute“ erweitert.
+
+Nächste Pakete: „Hier lohnt sich ein Blick“ und Mehrfachauswahl (`docs/PAKET-BLICK-UND-AUFRAEUMEN.md`), danach die technische Umbenennung mit Übergangsbrücken.
+
+## Neuigkeiten aufräumen (22.10.2026)
+
+Auftrag und Annahmen: `docs/PAKET-NEUIGKEITEN-AUFRAEUMEN.md` (Variante A „Nur was Handeln braucht“). Vorher lagen 712 Ticker und 320 offene Kandidaten auf der Seite.
+
+Datenbank:
+- Migration `20261022014451_hh_news_archiv` (angewendet am 22.10.2026): Status `archiviert` in `gfweekly_news`, Spalten `archiv_grund` und `archiviert_at`. `hh_news_verfall(p_tage)` legt Ticker und Kandidaten mit Status `neu` oder `gesehen` ins Archiv, wenn `happened_at`, `created_at` und `gate_at` alle älter als `p_tage` sind und keine Pförtner-Frist in der Zukunft liegt; `decided_by` bleibt leer. Nur für `service_role`.
+- Migration `20261022020506_hh_news_archiv_r1` (angewendet, Nacharbeit aus Review-Runde 1): Spalte `aktiv_ab` (Zeitpunkt des Zurückholens aus dem Archiv, zählt beim Verfall mit), `hh_news_verfall(p_tage, p_grund)` mit eigenem Grund.
+- Migration `20261022021626_hh_news_aufraeumen` (läuft nach dem Ausrollen der Seite): offene Kandidaten, deren Eintragung, letzte Zuteilung und letztes Zurückholen mehr als 7 Tage zurückliegen, ins Archiv (Grund `aufraeumen-20261022`), danach ein erster Verfall mit Grund `aufraeumen-20261022-verfall` und der tägliche Zeitplan `hh_news_verfall` um 04:50 UTC (Grund `verfall-14`). Probelauf vom 22.10.2026: 293 Kandidaten beim Aufräumen, 500 Ticker beim Verfall. Rückweg für beide Schritte (mit `aktiv_ab`, damit der nächste Verfall sie nicht sofort wieder nimmt) und das Abschalten des täglichen Laufs im Kopf der Migration.
+
+Edge Function `gfweekly` (deployt am 22.10.2026):
+- `news_list` lässt Archiviertes weg, außer `statuses` nennt `archiviert`. Mit `archiv: true` und `q` (mindestens zwei Zeichen) sucht sie nur im Archiv in Titel, Text und Zitat, höchstens 100 Treffer.
+- `news_update` kennt `archiviert` (von Hand: Grund `hand`); jeder andere Status hebt Grund und Zeitpunkt auf, so holt „Zurück in den Korb“ Archiviertes zurück und setzt `aktiv_ab`. Die Archivsuche behandelt `%` und `_` nicht als Muster.
+- Übergabekorb: Termine (`source` kalender) ohne archivierte.
+- `news_accept` übernimmt keinen archivierten Kandidaten (409); wird er zwischen Lesen und Schreiben archiviert, entfernt die Aktion ein dabei neu angelegtes Thema wieder. Grenze: beim Anhängen an ein bestehendes Thema bleibt die angehängte Notiz in diesem Fall stehen.
+- Nacharbeit aus Review-Runde 3 (Seite): eine ältere Archivsuche überschreibt keine neuere, ein Ladefehler bleibt bis zum erfolgreichen Neuladen sichtbar. Diese letzten Korrekturen sind getestet, aber nach der dritten und letzten Review-Runde nicht erneut von Codex geprüft.
+- Abzeichen, Laufband, Für dich, Pförtner, Besprechung und der Kandidatenteil des Übergabekorbs lesen Kandidaten mit Status `neu` oder Ticker der letzten 14 Tage; Archiviertes fällt dort ohne Änderung heraus. Der tägliche Lauf schreibt über `news_add_many`; der eindeutige `source_ref` verhindert, dass ein archivierter Eintrag als neuer wiederkommt (Einträge ohne `source_ref` könnten doppelt kommen).
+
+Oberfläche `site/neuigkeiten.html`, Assets `?v=36`:
+- Oben „Braucht dich“: offene Kandidaten der letzten 7 Tage, „hoch“ oder zu einem Vorhaben mit Ball bei der Person (wie „Bei mir“), höchstens 10; Vorhaben mit Ball bei mir zuerst, dann zugeteilt an mich oder GF, dann neueste. Die Zeilen sind die Korbzeilen mit Übernehmen, Verknüpfen, Verwerfen und „Zum Vorhaben“.
+- „Zu deinen Vorhaben“: je Vorhaben mit Ball bei mir die Zahl der Neuigkeiten der letzten 7 Tage; ein Tipp filtert Ticker und Korb auf das Vorhaben, mit Link zur Akte. Lassen sich die Vorhaben nicht laden, sagen beide Bereiche das; „hoch“ steht trotzdem oben.
+- „Alles andere“: Ticker, Sichtungskorb und Themenlage, zu Beginn zugeklappt (gemerkter Zustand jetzt unter `gf_nw2_`). Darunter „Archiv durchsuchen“.
+
+Prüfungen am 22.10.2026: `pruefung/neuigkeiten-probe.mjs` gegen das echte Backend 18 von 18, darunter die ganze Aufräum-Migration in einer zurückgerollten Transaktion mit Testzeilen (Testeinträge `probe:nw:1` und `probe:nw:2`, danach entfernt); Bedienung um 16 Proben erweitert (abgefangene API), Schirme mit „Braucht dich“ als Kernbereich; `pruefung/abnahme.sh` bestanden.
+
+Grenze: Der Branch `paket/webstandard-pilot` (nicht gepusht) ändert `core.js`, `styles.css` und eine Zeile in `neuigkeiten.html` und muss vor seinem Push auf `?v=37`.
+
 ## Vorhaben abschließen (21.10.2026)
 
 Auftrag: `docs/PAKET-VORHABEN-ABSCHLIESSEN.md`. Vorhaben lassen sich jetzt in der Oberfläche schließen, als erledigt ansehen und wieder öffnen.
@@ -35,6 +71,10 @@ Prüfungen am 21.10.2026:
 - `pruefung/abnahme.sh`: alle Prüfungen bestanden; Bedienung um 29 Proben zum Abschließen erweitert (abgefangene API), Schirme um Filter „Erledigt“ und eine erledigte Akte (100 Bilder, 0 Meldungen).
 
 Grenzen: Wer abschließt, wählt der Browser („als Alex“ oder „als Lea“); die Edge Function prüft nur das gemeinsame Passwort. Der Rückgängig-Hinweis lebt nur auf der Seite, die abgeschlossen hat; danach geht es über „Wieder öffnen“, das abgehakte Punkte und archivierte Themen nicht zurücksetzt. Die XCeed-Proben haben im Verlauf von XCeed Einträge „Wieder geöffnet“ und „Erledigt: …“ hinterlassen.
+
+## Kompass (21.10.2026)
+
+Das Hohe Haus heißt seit 20.10.2026 Kompass, Adresse https://kompass.wildehabitate.de/ (Netlify-Hauptdomain seit 18.10.2026, hohes-haus.netlify.app leitet weiter). Name in Seitentiteln, Login, Seitenleiste (`GF_APP_NAME`), Manifest und Fußzeilen; neue Bildmarke `docs/marke/kompass.svg` und `docs/marke/kompass-klein.svg` mit allen Favicon-Größen und og-image.png; `HH_BASIS` in gfweekly und besetzung auf die neue Domain; Assets `?v=35`. Einzelheiten und Offenes: `docs/PAKET-KOMPASS.md`.
 
 ## Technische Gesamtabnahme vom 15.10.2026
 

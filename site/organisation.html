@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
-<title>Das Hohe Haus · Organisation</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=35" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=35" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=35" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=35" />
-<link rel="stylesheet" href="/assets/styles.css?v=35" />
+<title>Kompass · Organisation</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=38" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=38" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=38" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=38" />
+<link rel="stylesheet" href="/assets/styles.css?v=38" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 <style>
 /* V32 · Organisation. Farben nur über Tokens; Ebenen: Haus Ocker, Operations Akzent, Formate Koralle. */
@@ -194,9 +194,9 @@
 
 <div id="gate">
   <div class="gate-card">
-    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <div class="mark pic"><img src="/assets/img/kompass-288.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
-    <h1>Das Hohe Haus</h1>
+    <h1>Kompass</h1>
     <div class="sub">Organisation · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
@@ -242,9 +242,9 @@
 
 <div class="og-meldung" id="ogMeldung" role="status"><img id="ogMeldungImg" src="/assets/game/habitat-2-lagerplatz.webp" alt="" width="64" height="36"><span id="ogMeldungTxt"></span></div>
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=35"></script>
-<script src="/assets/game.js?v=35"></script>
-<script src="/assets/eggs.js?v=35" defer></script>
+<script src="/assets/core.js?v=38"></script>
+<script src="/assets/game.js?v=38"></script>
+<script src="/assets/eggs.js?v=38" defer></script>
 <script>
 /* V32 · Organisation: acht Entscheidungen (Wahl von Alex, optionale Rückmeldung Lea, Begründung), daraus Teamaufbau je Rolle
    (sechs Schritte, Leitung, Stellvertretung) und die Tore der vier Aufbaustufen. Grundlage: Claude-Dokument
@@ -444,7 +444,7 @@ function satz(l){
 const wann=at=>new Date(at).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
 function verlaufHtml(){
   const L=(ST.log||[]).slice(0,10);
-  return `<section class="og-verlauf" aria-label="Verlauf"><h3>Zuletzt im Haus</h3>${L.length?`<ol>${L.map(l=>`<li><time datetime="${gfEsc(l.at)}">${wann(l.at)}</time>${AV[l.who]?`<img src="${AV[l.who]}" alt="${gfEsc(l.who)}" width="22" height="22">`:"<span></span>"}<span><b>${gfEsc(l.who||"")}</b> ${gfEsc(satz(l))}</span></li>`).join("")}</ol>`:`<div class="leer">Noch nichts eingetragen. Der erste Eintrag entsteht mit der ersten Wahl.</div>`}</section>`;
+  return `<section class="og-verlauf" aria-label="Verlauf"><h3>Zuletzt im Kompass</h3>${L.length?`<ol>${L.map(l=>`<li><time datetime="${gfEsc(l.at)}">${wann(l.at)}</time>${AV[l.who]?`<img src="${AV[l.who]}" alt="${gfEsc(l.who)}" width="22" height="22">`:"<span></span>"}<span><b>${gfEsc(l.who||"")}</b> ${gfEsc(satz(l))}</span></li>`).join("")}</ol>`:`<div class="leer">Noch nichts eingetragen. Der erste Eintrag entsteht mit der ersten Wahl.</div>`}</section>`;
 }
 function zeitHtml(){
   const grp=e=>e==="Haus"?"Haus · besitzt · Hauspartner":e==="Operations"?"Operations · stellt her · Operations Partner":"Formate · prägen · Formatpartner";

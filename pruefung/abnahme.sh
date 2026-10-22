@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Abnahme des Hohen Hauses: Tokens, Farben, Kontrast, Matrix, Schirme, Bedienung. Bricht beim ersten Fehler ab.
+# Abnahme des Kompasses: Tokens, Farben, Kontrast, Matrix, Schirme, Bedienung. Bricht beim ersten Fehler ab.
 # Aufruf aus dem Repo:  PLAYWRIGHT_MODUL=<pfad>/node_modules/playwright/index.mjs TS_BASIS=file://<pfad>/x.mjs ./pruefung/abnahme.sh [zielordner]
 set -e
 set -o pipefail

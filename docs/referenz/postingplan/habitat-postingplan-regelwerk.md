@@ -165,7 +165,7 @@ Plantermin = Ereignisdatum plus Abstand in Kalendertagen. Zeitzone Europe/Berlin
 
 8. Liegt ein Schritt vor dem Berechnungstag, wird er als überfällig markiert und nicht als erledigt eingetragen. Priorität: Sicherheit und Betrieb, dann Fristen und Gästeinformationen, dann Kampagne, dann Geschichten.
 
-9. Kapazität prüfen: Die verantwortliche Person gleicht Stunden je Rolle und Woche mit ihrer Besetzung ab. Bei Überlast zuerst vorziehen, dann bündeln, dann Slots streichen; Pflichtregeln nie streichen. Reicht das nicht, meldet sie es an die Geschäftsführung (Hohes Haus), die über zusätzliche Leute, Agentur oder Verschiebung entscheidet.
+9. Kapazität prüfen: Die verantwortliche Person gleicht Stunden je Rolle und Woche mit ihrer Besetzung ab. Bei Überlast zuerst vorziehen, dann bündeln, dann Slots streichen; Pflichtregeln nie streichen. Reicht das nicht, meldet sie es an die Geschäftsführung (Kompass), die über zusätzliche Leute, Agentur oder Verschiebung entscheidet.
 
 10. Stabile ID je Aufgabe: {festival}-{ausgabe}-{regel}-{bezug}{nr}-{kanal}; Schritte mit Suffix -{schritt}. Neuberechnung aktualisiert vorhandene Datensätze und erzeugt keine Kopien.
 
@@ -175,7 +175,7 @@ Plantermin = Ereignisdatum plus Abstand in Kalendertagen. Zeitzone Europe/Berlin
 
 ## 7 Rollen
 
-Zuständigkeit in zwei Ebenen: Die Geschäftsführung legt im Hohen Haus je Festival nur die verantwortliche Person für die Kommunikation fest (Rolle KOM) und entscheidet über Budget und Extras der Stufe Rot. Die verantwortliche Person verteilt alle übrigen Rollen und Schritte selbst, in ihrer Redaktionstabelle oder in Asana (Feld besetzung: E-Mail, Vertretung, Wochenstunden). Die Rollen und Schritte des Regelwerks sind dabei ein Vorschlag, keine Vorgabe. Eine Person kann mehrere Rollen haben. Externe Beteiligte (Artists, Crews, Kollektive) sind keine Rolle, sondern stehen im Feld beteiligte.
+Zuständigkeit in zwei Ebenen: Die Geschäftsführung legt im Kompass je Festival nur die verantwortliche Person für die Kommunikation fest (Rolle KOM) und entscheidet über Budget und Extras der Stufe Rot. Die verantwortliche Person verteilt alle übrigen Rollen und Schritte selbst, in ihrer Redaktionstabelle oder in Asana (Feld besetzung: E-Mail, Vertretung, Wochenstunden). Die Rollen und Schritte des Regelwerks sind dabei ein Vorschlag, keine Vorgabe. Eine Person kann mehrere Rollen haben. Externe Beteiligte (Artists, Crews, Kollektive) sind keine Rolle, sondern stehen im Feld beteiligte.
 
 | Rolle | Name | Aufgaben | Person je Festival | Vertretung |
 | --- | --- | --- | --- | --- |
@@ -596,15 +596,15 @@ Extras sind Bausteine, die das Werkzeug erst nach einer Stufenentscheidung einpl
 | --- | --- |
 | Asana Projekt | je Festival und Ausgabe ein Projekt (z. B. Kommunikation Lusatia 2027) oder ein gemeinsames Projekt mit Feld Festival |
 | Asana Abschnitt | Monat des Veröffentlichungstermins |
-| Asana Hauptaufgabe | Name {titel} · {kanal} · {festival}, fällig an T, zuständig verantwortliche Person des Festivals aus dem Hohen Haus; Beschreibung: Briefing: Zielgruppe, Zweck, Inhalt, Faktenquelle, Bezugsereignis und Abstand, Link zum Entwurf im Werkzeugkasten |
+| Asana Hauptaufgabe | Name {titel} · {kanal} · {festival}, fällig an T, zuständig verantwortliche Person des Festivals aus dem Kompass; Beschreibung: Briefing: Zielgruppe, Zweck, Inhalt, Faktenquelle, Bezugsereignis und Abstand, Link zum Entwurf im Werkzeugkasten |
 | Asana Unteraufgabe | je Schritt: Start = von, fällig = bis, zuständig = Person der Rolle; Werkzeug-Link, wenn ein Generator zugeordnet ist |
 | Asana Abhängigkeiten | planung vor erstellung vor abstimmung vor freigabe vor posting |
 | Asana Felder | Festival, Klasse, Kanal, Bezugsereignis, Abstand, Status Bearbeitung, Status Fakten, Werkzeug, Regel-ID |
 | Kalender | gemeinsamer Google-Kalender je Festival oder Verbund: ein Termin je Veröffentlichung an T (Uhrzeit, falls festgelegt), Titel {festival}: {titel} ({kanal}) |
 | Kalender Fristen | Freigabetermine (F2) und Drehtermine (L-E1) als Termine bei den zuständigen Personen |
-| Redaktionstabelle | Die bestehende Redaktionstabelle Social Media - Wilde Habitate (Google Sheets, Christian) bleibt das Arbeitswerkzeug der Redaktion. Das Hohe Haus liefert ihr Pflichttermine und Meilensteine (Zeile Fixtermine & Meilensteine); die Aufteilung nach Kanal, Format und Person macht die Redaktion dort selbst. |
+| Redaktionstabelle | Die bestehende Redaktionstabelle Social Media - Wilde Habitate (Google Sheets, Christian) bleibt das Arbeitswerkzeug der Redaktion. Der Kompass liefert ihr Pflichttermine und Meilensteine (Zeile Fixtermine & Meilensteine); die Aufteilung nach Kanal, Format und Person macht die Redaktion dort selbst. |
 
-Das Hohe Haus übergibt je Festival den Rahmen an die verantwortliche Person: Pflichtveröffentlichungen, Fristen, Prüfpunkte und Stunden. Eine Hauptaufgabe je Veröffentlichung; die Unteraufgaben je Schritt sind ein Vorschlag, den die verantwortliche Person in Asana oder in ihrer Redaktionstabelle selbst verteilt und anpasst. Die Geschäftsführung verteilt keine Einzelschritte. Wochenaufgaben als wiederkehrende Aufgabe, nicht als Einzelaufgaben. Interne Aufgaben ohne Veröffentlichung als Hauptaufgabe ohne Kanal. Arbeitsschritte laufen über Asana-Fälligkeiten. Der Kalender zeigt nur Veröffentlichungen, Freigaben und Drehs, damit nichts doppelt auftaucht.
+Der Kompass übergibt je Festival den Rahmen an die verantwortliche Person: Pflichtveröffentlichungen, Fristen, Prüfpunkte und Stunden. Eine Hauptaufgabe je Veröffentlichung; die Unteraufgaben je Schritt sind ein Vorschlag, den die verantwortliche Person in Asana oder in ihrer Redaktionstabelle selbst verteilt und anpasst. Die Geschäftsführung verteilt keine Einzelschritte. Wochenaufgaben als wiederkehrende Aufgabe, nicht als Einzelaufgaben. Interne Aufgaben ohne Veröffentlichung als Hauptaufgabe ohne Kanal. Arbeitsschritte laufen über Asana-Fälligkeiten. Der Kalender zeigt nur Veröffentlichungen, Freigaben und Drehs, damit nichts doppelt auftaucht.
 
 CSV-Spalten für Import und Prüfung: `aufgabe_id`, `eltern_id`, `festival`, `ausgabe`, `regel_id`, `titel`, `schritt`, `phase`, `rolle`, `person`, `werkzeug`, `start`, `faellig`, `stunden`, `kanal`, `klasse`, `bezug`, `abstand`, `veroeffentlichung`, `status`, `hinweis`. Zeilen mit leerer `eltern_id` sind Hauptaufgaben.
 
@@ -697,7 +697,7 @@ Die Vorproduktion senkt den Juli, verschiebt die Spitze aber in den Mai. Ohne Vo
 
 > Berechne für das gewählte Festival und die Ausgabe den Postingplan nach dem Regelwerk `habitat-postingplan-regelwerk.json`. Lies Termine, Vorverkauf, Preisphasen und Zielgrößen aus der Prognoseplattform und die Zielgruppenanalyse aus dem Festivalprofil.
 >
-> Erzeuge die Veröffentlichungen aus den Mindestregeln, ergänze Redaktionsslots nach Phasenmenge und rechne für jede Veröffentlichung die Schritte ihrer Klasse rückwärts. Wende Werktagsregel, Verbund-Stichtag und Überfälligkeitsregel an. Übernimm aus dem Hohen Haus die verantwortliche Person des Festivals. Sie verteilt Rollen und Schritte selbst; schlage ihr eine Verteilung vor und zeige die Stunden je Woche, damit sie Überlast früh an die Geschäftsführung melden kann.
+> Erzeuge die Veröffentlichungen aus den Mindestregeln, ergänze Redaktionsslots nach Phasenmenge und rechne für jede Veröffentlichung die Schritte ihrer Klasse rückwärts. Wende Werktagsregel, Verbund-Stichtag und Überfälligkeitsregel an. Übernimm aus dem Kompass die verantwortliche Person des Festivals. Sie verteilt Rollen und Schritte selbst; schlage ihr eine Verteilung vor und zeige die Stunden je Woche, damit sie Überlast früh an die Geschäftsführung melden kann.
 >
 > Rufe für jeden Schritt mit Werkzeug den passenden Generator mit dem Briefing auf (Zielgruppe, Zweck, Kernbotschaft, belegtes Detail, Kanal, Format, nächster Schritt, Faktenquelle). Für Videos und wichtige Kampagnen liefert der Skriptschreiber zwei bis drei deutlich unterschiedliche Einstiege aus realen Motiven oder Einwänden. Alle Ergebnisse haben den Status Entwurf. Erfinde keine Preise, Namen, Zusagen, Bestände, Gästestimmen oder Care-Maßnahmen.
 >
@@ -707,7 +707,7 @@ Die Vorproduktion senkt den Juli, verschiebt die Spitze aber in den Mai. Ohne Vo
 
 | Angabe | Wer | Auswirkung |
 | --- | --- | --- |
-| Verantwortliche Person Kommunikation je Festival | Geschäftsführung im Hohen Haus | ohne sie keine Übergabe an Asana |
+| Verantwortliche Person Kommunikation je Festival | Geschäftsführung im Kompass | ohne sie keine Übergabe an Asana |
 | Verteilung der übrigen Rollen mit Wochenstunden | verantwortliche Person des Festivals | ohne sie keine Kapazitätsprüfung |
 | Verkaufsplan je Festival als Zielpfad | Ticketing mit Prognoseplattform | Prüfpunkte laufen sonst mit Platzhaltern |
 | Preiswechsel, Buchungsschlüsse, Ticketumschreibung | Ticketing | Fristbeiträge und Mails fehlen im Plan |

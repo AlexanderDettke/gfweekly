@@ -1,5 +1,5 @@
 /* ===========================================================
-   Das Hohe Haus (vormals GF Weekly) · V21 · gemeinsamer Kern
+   Kompass (vormals Das Hohe Haus, davor GF Weekly) · V21 · gemeinsamer Kern
    API-Zugriff, Login-Gate, Navigation, Theme-Umschaltung, Helfer.
    V21: Element-Bausteine des Design-Systems (Chip-Reihe statt <select>, Stepper statt <input type=number>,
    Zustand als Symbol plus Wort, KPI-Kachel) und der Plattform-Block (Wilde Habitate, Wild Wild Partner).
@@ -190,7 +190,7 @@ function gfLadefehler(el, e, opts={}){
 /* ---- Seitenleiste (V18): links, einklappbar zur Symbolleiste, am Handy als Schublade hinter einer schmalen Kopfzeile.
    Gruppen: Heute (Für dich, Neuigkeiten, Besprechung) · Arbeiten (Themen mit Board/Kacheln/Liste/Entscheidungen, Eingabe) · Verwalten (Wichtige Seiten, Bearbeiten).
    Unten: Habitat-Taler (game.js hängt sich an .tb-ctl), Dunkel/Hell, Person. Zustand offen/schmal in localStorage gf_nav. ---- */
-const GF_APP_NAME="Das Hohe Haus";
+const GF_APP_NAME="Kompass";
 const GF_APP_SUB="Geschäftsführung der Wilden Habitate";
 const GF_APP_MOTTO="Große Fragen. Klare Entscheidungen. Gelegentlich Kaffee oder besser Wein?";
 const GF_AVATAR={ Alex:"/assets/img/avatar-alex.webp", Lea:"/assets/img/avatar-lea.webp" };
@@ -220,8 +220,8 @@ const GF_ICONS={
 };
 const GF_NAV=[
   ["Heute",[["start","index.html","Für dich","home",null,"Deine Entscheidungen, seit gestern, nächste Fristen"],["vorhaben","vorhaben.html","Vorhaben","wegweiser","vorhabenBadge","Woche, Board, Liste, Akte je Vorhaben"],["neuigkeiten","neuigkeiten.html","Neuigkeiten","bell","newsBadge","Ticker, Sichtungskorb, Themenlage"],["besprechung","besprechung.html","Besprechung","check",null,"Agenda der GF, abarbeiten, Protokoll"]]],
-  ["Arbeiten",[["themen","board.html","Themen","board","themenBadge","Board, Kacheln, Liste, Entscheidungen"],["jahr","jahr.html","Jahr","cal",null,"Zyklus, Meilensteine, Rituale, Team, Plattformen, Habitat"],["saison","saison.html","Saison","rad",null,"Saison in vier Fragen: Phase und Herausforderung, wen wir haben, was sich geändert hat, wann was wie passieren kann"],["kommunikation","kommunikation.html","Kommunikation","megafon",null,"Postingplan-Standard: wer zuständig ist, wo es eng wird, was die GF entscheidet"],["launch","launch.html","Launch","fahne",null,"Launch verteilen: wer macht was bis wann für alle fünf Festivals, bestätigen und nach Asana senden"],["organisation","organisation.html","Organisation","haus","orgBadge","Haus, Operations, Formate: acht Entscheidungen, Teamaufbau, Tore der vier Stufen"],["besetzung","besetzung.html","Besetzung","leute",null,"Aus Gesprächen der Besetzungswerkstatt Aufgaben mit Person machen, je Festival und Bereich"],["arbeiten","arbeiten.html","So arbeiten wir","zwei",null,"Ist-Aufnahme, Umfrage und Systeme: wie wir heute arbeiten und was davon bleibt"],["capture","capture.html","Eingabe","pen",null,"Thema erfassen"]]],
-  ["Vertretung",[["vertretung","vertretung.html","Abwesenheiten","schild",null,"Wer ist wann weg, wer vertritt, mit welcher Vollmacht"],["uebergabe","uebergabe.html","Übergabe","tausch","uebergabeBadge","Der Korb einer Abwesenheit: was vorher, was an die Vertretung, was ruht"],["rueckkehr","rueckkehr.html","Rückkehr","tuer",null,"Was in deiner Abwesenheit entschieden wurde und was auf dich wartet"]]],
+  ["Arbeiten",[["vorstand","vorstand.html","Vorstand","pen",null,"Gemeinsame Vorstandspost der mit Freude eG: Stand, Antwortentwürfe und Asana Aufgaben"],["themen","board.html","Themen","board","themenBadge","Board, Kacheln, Liste, Entscheidungen"],["jahr","jahr.html","Jahr","cal",null,"Zyklus, Meilensteine, Rituale, Team, Plattformen, Habitat"],["saison","saison.html","Saison","rad",null,"Saison in vier Fragen: Phase und Herausforderung, wen wir haben, was sich geändert hat, wann was wie passieren kann"],["kommunikation","kommunikation.html","Kommunikation","megafon",null,"Postingplan-Standard: wer zuständig ist, wo es eng wird, was die GF entscheidet"],["launch","launch.html","Launch","fahne",null,"Launch verteilen: wer macht was bis wann für alle fünf Festivals, bestätigen und nach Asana senden"],["organisation","organisation.html","Organisation","haus","orgBadge","Haus, Operations, Formate: acht Entscheidungen, Teamaufbau, Tore der vier Stufen"],["besetzung","besetzung.html","Besetzung","leute",null,"Aus Gesprächen der Besetzungswerkstatt Aufgaben mit Person machen, je Festival und Bereich"],["arbeiten","arbeiten.html","So arbeiten wir","zwei",null,"Ist-Aufnahme, Umfrage und Systeme: wie wir heute arbeiten und was davon bleibt"],["capture","capture.html","Eingabe","pen",null,"Thema erfassen"]]],
+  ["Vertretung",[["vertretung","vertretung.html","Abwesenheiten","schild",null,"Wer ist wann weg, wer vertritt, mit welcher Vollmacht"],["uebergabe","uebergabe.html","Übergabe","tausch","uebergabeBadge","Der Korb einer Abwesenheit: was vorher, was an die Vertretung, was ruht"],["rueckkehr","rueckkehr.html","Rückkehr","tuer",null,"Was in deiner Abwesenheit entschieden wurde und was für dich bereitliegt"]]],
   ["Verwalten",[["seiten","seiten.html","Wichtige Seiten","grid",null,"Arbeitsseiten mit Zugang"],["edit","bearbeiten.html","Bearbeiten","sliders",null,"Themen, Personen, Links pflegen"],["aufraeumen","aufraeumen.html","Aufräumen","check",null,"Jedem Eintrag einen Ausgang geben"]]]
 ];
 const GF_SUBNAV=[["board","board.html?view=board","Board","Spalten nach Ablauf, Prio, Zeitraum oder Person, verschiebbar"],["kacheln","board.html?view=kacheln","Kacheln","Gruppen als Kachelraster"],["liste","cockpit.html","Liste","Ausführliche Liste mit Details und Protokoll"],["entscheidungen","entscheidungen.html","Entscheidungen","Entscheidungslog, Protokolle der Besprechungen, Wochenmail"]];
@@ -257,7 +257,7 @@ function gfMountTopbar(active){
     <div class="sb-backdrop" id="navBackdrop"></div>
     <aside class="sidebar" id="sidebar" aria-label="Navigation">
       <div class="sb-head">
-        <a class="brand" href="index.html"><div class="mark pic"><img src="/assets/img/burg-144.png" srcset="/assets/img/burg-288.png 2x" alt="" width="36" height="36"></div><div class="brand-txt"><h1>${GF_APP_NAME}</h1><div class="meta">${GF_APP_SUB}</div></div></a>
+        <a class="brand" href="index.html"><div class="mark pic"><img src="/assets/img/kompass-144.png" srcset="/assets/img/kompass-288.png 2x" alt="" width="36" height="36"></div><div class="brand-txt"><h1>${GF_APP_NAME}</h1><div class="meta">${GF_APP_SUB}</div></div></a>
         <button class="sb-toggle" id="navToggle" aria-label="Menü einklappen" title="Menü einklappen">${GF_ICONS.chev}</button>
         <button class="sb-close" id="navClose" aria-label="Menü schließen">${GF_ICONS.x}</button>
       </div>
@@ -368,7 +368,7 @@ function gfAsanaText(t){
          `Kontext: ${t.short_description||(t.context||"").split("\n")[0]||"offen"}\n`+
          `Empfehlung: ${t.recommendation||"offen"}\n`+
          `Nächster Schritt: ${t.next_action||"offen"}\n`+
-         `Quelle: Das Hohe Haus`;
+         `Quelle: Kompass`;
 }
 
 /* ---- V13: Modal mit Text (Protokoll, Wochenmail): kopieren, per Mail, schließen ---- */
@@ -413,7 +413,7 @@ function gfProtocolText(meta, log, openTopics){
   grp("vertagt","Vertagt",(e)=>`- ${e.title}${e.until?` → ${gfFmtShort(e.until)}`:""}`);
   grp("besprochen","Besprochen ohne Beschluss",(e)=>`- ${e.title}${e.next_action?`: ${e.next_action}`:""}`);
   if(openTopics&&openTopics.length){ L.push(`Offen geblieben (zu besprechen): ${openTopics.length}`); openTopics.slice(0,12).forEach(t=>L.push(`- ${t.title}${t.priority==="hoch"?" (hoch)":""}`)); if(openTopics.length>12) L.push(`- … und ${openTopics.length-12} weitere`); L.push(""); }
-  L.push(`Erstellt mit Das Hohe Haus · hohes-haus.netlify.app`);
+  L.push(`Erstellt mit Kompass · kompass.wildehabitate.de`);
   return L.join("\n");
 }
 
@@ -673,7 +673,7 @@ async function gfLoadTeam(el){
 
 /* ===== V21 (20.09.2026) · Plattformen, letzte 7 Tage (Startseite): Wilde Habitate und Wild Wild Partner.
    Fakten live aus platform_digest (Views hh_feed_*), Briefing-Text aus gfweekly_news (kind lage, Strang habitate bzw. wwp),
-   geschrieben vom täglichen Lauf. Das Hohe Haus liest nur. ===== */
+   geschrieben vom täglichen Lauf. Der Kompass liest nur. ===== */
 const GF_PLATFORMS=[
   { key:"habitate", strand:"habitate", name:"Wilde Habitate", sub:"Plattform · Planung, Entscheidungen, Changelog", url:"https://wilde-habitate.netlify.app" },
   { key:"wwp", strand:"wwp", name:"Wild Wild Partner", sub:"Plattform · Partnergespräche", url:"https://wild-wild-partner.netlify.app" },
@@ -896,7 +896,7 @@ async function gfEinwurf(o={}){
     if(S.schritt===1){
       body=`<label class="vh-fld">Was ist passiert?<textarea id="gfEwText" rows="5" maxlength="4000" placeholder="Telefonat mit …, vereinbart ist …">${gfEsc(S.text)}</textarea></label>
         <p class="vh-ew-hint">Am Handy: Mikrofon der Tastatur antippen und sprechen.</p>
-        <div class="vh-fld"><span>Vorhaben (optional, sonst erkennt es das Haus)</span>${chipsVorhaben("gfEwZiel1", true)}</div>`;
+        <div class="vh-fld"><span>Vorhaben (optional, sonst erkennt es der Kompass)</span>${chipsVorhaben("gfEwZiel1", true)}</div>`;
     } else {
       const vl=v&&v.verlauf||{}; const vert=(v&&v.vertraulich)||[];
       const zeigeText=S.bearbeiten || !istPassend || vert.includes("verlauf") || !v || !vl.text;
@@ -930,7 +930,7 @@ async function gfEinwurf(o={}){
     }
     m.innerHTML=`<div class="modal vh-dlg vh-ew" role="dialog" aria-modal="true" aria-labelledby="gfEwH">
       <div class="modal-h"><h3 id="gfEwH">Einwurf${o.kopf?` <small>${gfEsc(o.kopf)}</small>`:""}</h3><button type="button" class="icon-btn" data-ew-x aria-label="Schließen">✕</button></div>
-      <div class="vh-dlg-b">${body}${S.fehler?`<div class="vh-ew-fehler" role="alert">${gfEsc(S.fehler)}</div>`:""}${S.laedt?`<div class="loading" role="status">${S.schritt===1?"Das Haus ordnet zu …":"Einen Augenblick …"}</div>`:""}</div>
+      <div class="vh-dlg-b">${body}${S.fehler?`<div class="vh-ew-fehler" role="alert">${gfEsc(S.fehler)}</div>`:""}${S.laedt?`<div class="loading" role="status">${S.schritt===1?"Der Kompass ordnet zu …":"Einen Augenblick …"}</div>`:""}</div>
       <div class="modal-f">${S.schritt===1
         ?`<button type="button" class="btn btn-brand" data-ew-x>Abbrechen</button><button type="button" class="btn btn-primary" id="gfEwWeiter" style="margin-left:auto" ${S.laedt?"disabled":""}>Weiter</button>`
         :`${o.weiter?`<button type="button" class="btn btn-brand" id="gfEwSpaeter">Später</button>`:""}<button type="button" class="btn btn-ghost" id="gfEwVerwerfen">Verwerfen</button>${vs()&&passt()?`<button type="button" class="btn btn-brand" id="gfEwBearb" aria-pressed="${S.bearbeiten}">Bearbeiten</button>`:""}<button type="button" class="btn btn-primary" id="gfEwOk" style="margin-left:auto" ${S.laedt||!S.ziel?"disabled":""}>Übernehmen</button>`}</div>

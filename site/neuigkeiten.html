@@ -5,22 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
-<title>Das Hohe Haus · Neuigkeiten</title>
+<title>Kompass · Neuigkeiten</title>
 <meta name="description" content="Neuigkeiten der Geschäftsleitung Wilde Möhre: Laufband, Ticker, Sichtungskorb, Themenlage. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=35" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=35" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=35" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=35" />
-<link rel="stylesheet" href="/assets/styles.css?v=35" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=38" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=38" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=38" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=38" />
+<link rel="stylesheet" href="/assets/styles.css?v=38" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
 
 <div id="gate">
   <div class="gate-card">
-    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <div class="mark pic"><img src="/assets/img/kompass-288.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
-    <h1>Das Hohe Haus</h1>
+    <h1>Kompass</h1>
     <div class="sub">Neuigkeiten · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
@@ -53,32 +53,56 @@
     <div class="nf-row"><span class="nf-l">Suche</span><div class="search"><input id="q" placeholder="Neuigkeiten durchsuchen … (Taste /)" /></div><button type="button" class="btn btn-sm btn-ghost" id="filterReset">Zurücksetzen</button></div>
   </div>
 
-  <!-- Drei Abschnitte, jeder auf- und zuklappbar, Zustand gemerkt -->
-  <details class="nw-sec" id="ticker" data-sec="ticker" open>
+  <!-- 22.10.2026 · Nur was Handeln braucht: oben höchstens zehn Kandidaten für dich, darunter deine Vorhaben als Filter,
+       dann alles andere (zugeklappt) und das Archiv. Auftrag: docs/PAKET-NEUIGKEITEN-AUFRAEUMEN.md -->
+  <section class="nw-fokus" id="fokus" aria-labelledby="fokusH">
+    <div class="nw-fokus-h"><h2 id="fokusH">Braucht dich</h2><span class="n" id="fokusN"></span><span class="hint" id="fokusHint">Kandidaten „hoch“ der letzten 7 Tage und Neues zu deinen Vorhaben, höchstens zehn.</span></div>
+    <div id="fokusList"><div class="loading">lädt …</div></div>
+  </section>
+  <section class="nw-vh" id="vhBlock" aria-labelledby="vhH">
+    <div class="nw-fokus-h"><h2 id="vhH">Zu deinen Vorhaben</h2><span class="hint">Neues der letzten 7 Tage. Tippen filtert Ticker und Korb auf das Vorhaben.</span></div>
+    <div id="vhChips"></div>
+  </section>
+  <div class="nw-rest-h"><h2>Alles andere</h2><span class="hint">Die letzten 14 Tage. Was länger unbearbeitet liegt, kommt ins Archiv und bleibt dort auffindbar.</span></div>
+
+  <!-- Drei Abschnitte, jeder auf- und zuklappbar, Zustand gemerkt (seit 22.10.2026 zu Beginn zu) -->
+  <details class="nw-sec" id="ticker" data-sec="ticker" data-def="0">
     <summary><h2>Ticker</h2><span class="n" id="tickerN"></span><span class="hint">Eine Zeile je Ereignis, heute und gestern offen, ältere Tage zugeklappt. Klick öffnet Details.</span><span class="chev"></span></summary>
     <div class="nw-body"><div id="soon"></div><div id="feed"><div class="loading">lädt …</div></div></div>
   </details>
 
-  <details class="nw-sec" id="korb" data-sec="korb" open>
+  <details class="nw-sec" id="korb" data-sec="korb" data-def="0">
     <summary><h2>Sichtungskorb</h2><span class="n" id="korbN"></span><span class="hint">GF-relevante Punkte aus Notizen und Mails. Nur „Braucht bald eine Entscheidung“ ist offen.</span><span class="chev"></span></summary>
     <div class="nw-body" id="kand"><div class="loading">lädt …</div></div>
   </details>
 
-  <details class="nw-sec" id="lage" data-sec="lage" open>
+  <details class="nw-sec" id="lage" data-sec="lage" data-def="0">
     <summary><h2>Themenlage</h2><span class="n" id="lageN"></span><span class="hint">Je Strang eine Zeile, vom täglichen Lauf nachgeführt. Klick zeigt den ganzen Stand.</span><span class="chev"></span></summary>
     <div class="nw-body" id="lageList"></div>
+  </details>
+
+  <details class="nw-sec" id="archiv" data-sec="archiv" data-def="0">
+    <summary><h2>Archiv durchsuchen</h2><span class="hint">Ticker und Kandidaten, die nach 14 Tagen ohne Bearbeitung ins Archiv gegangen sind.</span><span class="chev" aria-hidden="true"></span></summary>
+    <div class="nw-body">
+      <form class="nw-archiv-f" id="archivForm" role="search"><input id="archivQ" type="search" aria-label="Im Archiv suchen" minlength="2" maxlength="80" placeholder="Im Archiv suchen, zum Beispiel XCeed" /><button type="submit" class="btn btn-sm btn-primary">Suchen</button></form>
+      <div id="archivList"></div>
+    </div>
   </details>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=35"></script>
-<script src="/assets/game.js?v=35"></script>
-<script src="/assets/eggs.js?v=35" defer></script>
+<script src="/assets/core.js?v=38"></script>
+<script src="/assets/game.js?v=38"></script>
+<script src="/assets/eggs.js?v=38" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const SRC_ALL=["notiz","mail","asana","kalender","entscheidung","plattform"];
 let ITEMS=[], TOPICS=[], STRANDS=[], Q="", WHO="", RANGE=14, REL="", SRC=new Set([...SRC_ALL,"protokoll","manuell"]), SHOWDONE=false;
+/* 22.10.2026: Vorhaben (aktiv, pausiert) für „Braucht dich“ und die Vorhaben-Chips, VHF filtert Ticker und Korb auf ein
+   Vorhaben, ARCHIV hält die Treffer der Archivsuche. */
+let VH=[], VH_FEHLER="", LADE_FEHLER="", VHF="", ARCHIV=null, ARCHIV_Q="", ARCHIV_GEKUERZT=false, ARCHIV_LAUF=0;
+const FOKUS_MAX=10, FOKUS_TAGE=7;
 const NOW=new Date();
 const REL_RANK={hoch:0,mittel:1,niedrig:2};
 const REL_LABEL={hoch:"Braucht bald eine Entscheidung",mittel:"In die nächste GF-Runde",niedrig:"Zur Kenntnis"};
@@ -90,28 +114,86 @@ function whoMatch(x){ if(!WHO) return true; return (x.who||"").includes(WHO); }
 function textMatch(x){ if(!Q) return true; return [x.title,x.body,x.quote,x.who,x.source_title,strandLabel(x.strand)].join(" ").toLowerCase().includes(Q); }
 function chev(){ return `<span class="chev" aria-hidden="true"></span>`; }
 /* gemerkter Auf/Zu-Zustand */
-function remembered(key, def){ try{ const v=localStorage.getItem("gf_nw_"+key); return v===null?def:v==="1"; }catch(e){ return def; } }
-function remember(key, open){ try{ localStorage.setItem("gf_nw_"+key, open?"1":"0"); }catch(e){} }
+/* Schlüssel gf_nw2_ seit 22.10.2026: alle starten einmal mit dem neuen Standard (Abschnitte zu). */
+function remembered(key, def){ try{ const v=localStorage.getItem("gf_nw2_"+key); return v===null?def:v==="1"; }catch(e){ return def; } }
+function remember(key, open){ try{ localStorage.setItem("gf_nw2_"+key, open?"1":"0"); }catch(e){} }
+function findItem(id){ return ITEMS.find(i=>i.id===id) || (ARCHIV||[]).find(i=>i.id===id); }
+function vhOf(id){ return id?VH.find(v=>v.id===id):null; }
+function vhMatch(x){ return !VHF || x.vorhaben_id===VHF; }
 function bindDetails(root){
   (root||document).querySelectorAll("details[data-sec]").forEach(d=>{ if(d.__bound) return; d.__bound=true; const k=d.dataset.sec; d.open=remembered(k, d.hasAttribute("data-def")?d.dataset.def==="1":d.open); d.addEventListener("toggle",()=>remember(k,d.open)); });
 }
 
 async function load(){
   try{
-    const [n,t,c]=await Promise.all([gfApi("news_list",{limit:2000}), gfApi("list"), gfApi("cycle_get",{year:NOW.getFullYear()})]);
-    ITEMS=n.items||[]; TOPICS=t.topics||[]; STRANDS=c.strands||[];
+    const [n,t,c,v]=await Promise.all([gfApi("news_list",{limit:2000}), gfApi("list"), gfApi("cycle_get",{year:NOW.getFullYear()}), gfApi("vorhaben_list").catch(e=>{ if(e&&e.auth) throw e; return { fehler:e.message||"Verbindung" }; })]);
+    ITEMS=n.items||[]; TOPICS=t.topics||[]; STRANDS=c.strands||[]; VH=v.vorhaben||[]; VH_FEHLER=v.fehler||""; LADE_FEHLER="";
     render();
-  }catch(e){ gfLadefehler($("#feed"), e, {auch:["#kand"]});   /* B-07: Ursache, nächster Schritt, Kopfzeile nicht mehr „lädt …“ */ }
+  }catch(e){ if(e&&e.auth) throw e; LADE_FEHLER=e.message||"Verbindung"; ladeFehlerZeigen(); }
+}
+/* Ladefehler bleibt stehen, bis ein Neuladen gelingt; auch eine Filterbedienung (render) zeigt ihn weiter, oben wie im Ticker. */
+function ladeFehlerZeigen(){
+  /* Webapp Standard B-07: einheitlicher Ladefehler mit „Erneut laden“ im obersten Block, Verweis in den Blöcken darunter. */
+  gfLadefehler($("#fokusList"), {message:LADE_FEHLER}, {auch:["#feed","#kand"]}); $("#vhChips").innerHTML=""; $("#fokusN").textContent="";
 }
 
 function render(){
+  if(LADE_FEHLER){ ladeFehlerZeigen(); return; }
   document.querySelectorAll("#whoSegs .seg").forEach(b=>b.classList.toggle("on",b.dataset.w===WHO));
   document.querySelectorAll("#rangeSegs .seg").forEach(b=>b.classList.toggle("on",+b.dataset.r===RANGE));
   document.querySelectorAll("#relSegs .seg").forEach(b=>b.classList.toggle("on",b.dataset.rel===REL));
   document.querySelectorAll("#srcChips .chip").forEach(b=>b.classList.toggle("on",SRC.has(b.dataset.s)));
-  renderFilterN(); renderStats(); renderBand(); renderTicker(); renderKorb(); renderLage();
+  renderFilterN(); renderStats(); renderBand(); renderFokus(); renderVh(); renderTicker(); renderKorb(); renderLage(); renderArchiv(); bindKorb();
 }
-function activeFilters(){ let n=0; if(RANGE!==14) n++; if(SRC_ALL.some(s=>!SRC.has(s))) n++; if(Q) n++; if(REL) n++; if(SHOWDONE) n++; return n; }
+function activeFilters(){ let n=0; if(RANGE!==14) n++; if(SRC_ALL.some(s=>!SRC.has(s))) n++; if(Q) n++; if(REL) n++; if(SHOWDONE) n++; if(VHF) n++; return n; }
+
+/* ---- Braucht dich: höchstens zehn offene Kandidaten, „hoch“ der letzten 7 Tage oder zu Vorhaben mit Ball bei mir ---- */
+function fokusListe(){
+  const ich=gfVhIch(), grenze=new Date(+NOW-FOKUS_TAGE*86400000).toISOString();
+  const mein=new Set(VH.filter(v=>gfVhMir(v,ich)).map(v=>v.id));
+  const alle=ITEMS.filter(x=>x.kind==="kandidat"&&x.status==="neu"&&x.created_at>=grenze&&(x.relevance==="hoch"||(x.vorhaben_id&&mein.has(x.vorhaben_id))));
+  const rang=x=>(x.vorhaben_id&&mein.has(x.vorhaben_id)?0:2)+([ich,"gf"].includes(x.gate)?0:1);
+  alle.sort((a,b)=>rang(a)-rang(b)||(a.created_at<b.created_at?1:-1));
+  return alle;
+}
+function renderFokus(){
+  const alle=fokusListe(), zeigen=alle.slice(0,FOKUS_MAX);
+  $("#fokusN").textContent=alle.length>FOKUS_MAX?`${FOKUS_MAX} von ${alle.length}`:String(alle.length);
+  /* Ohne Vorhaben (Ladefehler) fehlen die Kandidaten zu deinen Vorhaben; das wird gesagt, „hoch“ steht trotzdem da. */
+  const warn=VH_FEHLER?`<p class="nw-mehr" role="status"><b>⚠ Vorhaben nicht geladen.</b> Kandidaten zu deinen Vorhaben fehlen hier (${gfEsc(VH_FEHLER)}). Seite neu laden.</p>`:"";
+  if(!zeigen.length){ $("#fokusList").innerHTML=warn+`<div class="empty soft">Gerade braucht dich hier nichts. Neue Kandidaten bringt der tägliche Lauf.</div>`; return; }
+  $("#fokusList").innerHTML=warn+`<div class="kd-list">${zeigen.map(kandRow).join("")}</div>${alle.length>FOKUS_MAX?`<p class="nw-mehr">${alle.length-FOKUS_MAX} weitere stehen im Sichtungskorb unter „Alles andere“.</p>`:""}`;
+}
+
+/* ---- Zu deinen Vorhaben: je Vorhaben mit Ball bei mir die Zahl des Neuen, Tippen filtert Ticker und Korb ---- */
+function renderVh(){
+  const grenze=new Date(+NOW-FOKUS_TAGE*86400000).toISOString();
+  const zahl=id=>ITEMS.filter(x=>x.vorhaben_id===id&&x.kind!=="lage"&&x.created_at>=grenze).length;
+  const mein=VH.filter(v=>gfVhMir(v)).map(v=>({ v, n:zahl(v.id) })).filter(z=>z.n>0).sort((a,b)=>b.n-a.n);
+  if(VH_FEHLER){ $("#vhChips").innerHTML=`<div class="empty soft">Die Vorhaben ließen sich nicht laden: ${gfEsc(VH_FEHLER)}. Seite neu laden.</div>`; return; }
+  const aktiv=VHF?vhOf(VHF):null;
+  $("#vhChips").innerHTML=(aktiv?`<div class="nw-vhf" role="status">Gefiltert auf <b>${gfEsc(aktiv.title)}</b>. <a href="vorhaben.html?v=${encodeURIComponent(aktiv.slug)}">Akte öffnen</a> <button type="button" class="btn btn-sm btn-ghost" data-vhf="">Filter aufheben</button></div>`:"")
+    +(mein.length?`<div class="chips nw-vhc">${mein.map(z=>`<button type="button" class="chip${VHF===z.v.id?" on":""}" aria-pressed="${VHF===z.v.id}" data-vhf="${gfEsc(z.v.id)}">${gfEsc(z.v.title)} · ${z.n}</button>`).join("")}</div>`
+      :`<div class="empty soft">Nichts Neues zu Vorhaben mit Ball bei dir in den letzten 7 Tagen.</div>`);
+}
+$("#vhChips").addEventListener("click",e=>{ const b=e.target.closest("[data-vhf]"); if(!b) return; VHF=(b.dataset.vhf===VHF)?"":b.dataset.vhf;
+  if(VHF){ for(const id of ["ticker","korb"]){ const d=document.getElementById(id); if(d) d.open=true; } }
+  render(); if(VHF) $("#ticker").scrollIntoView({behavior:"smooth",block:"start"}); });
+
+/* ---- Archiv durchsuchen: Suche im Backend (news_list archiv), Treffer wie im Ticker und im Korb ---- */
+function renderArchiv(){
+  if(ARCHIV===null){ $("#archivList").innerHTML=""; return; }
+  if(!ARCHIV.length){ $("#archivList").innerHTML=`<div class="empty soft">Im Archiv nichts zu „${gfEsc(ARCHIV_Q)}“ gefunden.</div>`; return; }
+  $("#archivList").innerHTML=`<p class="nw-mehr">${ARCHIV.length} Treffer${ARCHIV_GEKUERZT?" (die neuesten 100)":""}. „Zurück in den Korb“ holt einen Kandidaten wieder nach oben.</p>
+    <div class="kd-list">${ARCHIV.map(x=>x.kind==="kandidat"?kandRow(x):tickerRow(x)).join("")}</div>`;
+  bindTicker();
+}
+$("#archivForm").addEventListener("submit",async e=>{ e.preventDefault(); const q=$("#archivQ").value.trim(); if(q.length<2){ gfToast("Bitte mindestens zwei Zeichen"); return; }
+  $("#archivList").innerHTML=`<div class="loading">sucht …</div>`;
+  /* Nur die jüngste Suche zählt: antwortet eine ältere später, überschreibt sie die neuere nicht. */
+  const lauf=++ARCHIV_LAUF;
+  try{ const d=await gfApi("news_list",{ archiv:true, q }); if(lauf!==ARCHIV_LAUF) return; ARCHIV=d.items||[]; ARCHIV_Q=q; ARCHIV_GEKUERZT=!!d.gekuerzt; renderArchiv(); bindKorb(); }
+  catch(err){ if(lauf!==ARCHIV_LAUF) return; $("#archivList").innerHTML=`<div class="empty soft">Die Suche ging nicht: ${gfEsc(err.message||"Verbindung")}.</div>`; } });
 function renderFilterN(){ const n=activeFilters(); const b=$("#filterN"); b.textContent=n; b.hidden=!n; $("#filterBtn").classList.toggle("on",!!n); }
 
 function renderStats(){
@@ -148,7 +230,7 @@ function dayGroup(d, rows, open, extra=""){
 function renderTicker(){
   const nowIso=NOW.toISOString();
   const since=RANGE?new Date(NOW-RANGE*86400000).toISOString():"0000";
-  const base=ITEMS.filter(x=>x.kind==="ticker"&&SRC.has(x.source)&&whoMatch(x)&&textMatch(x));
+  const base=ITEMS.filter(x=>x.kind==="ticker"&&SRC.has(x.source)&&whoMatch(x)&&textMatch(x)&&vhMatch(x));
   const soon=base.filter(x=>x.happened_at>nowIso).sort((a,b)=>a.happened_at<b.happened_at?-1:1);
   const past=base.filter(x=>x.happened_at<=nowIso&&x.happened_at>=since).sort((a,b)=>a.happened_at<b.happened_at?1:-1);
   $("#tickerN").textContent=past.length+(soon.length?` + ${soon.length} demnächst`:"");
@@ -165,7 +247,7 @@ function renderTicker(){
 function bindTicker(){
   document.querySelectorAll(".tk").forEach(el=>{
     const row=el.querySelector(".tk-row"); row.onclick=()=>{ const o=el.classList.toggle("open"); row.setAttribute("aria-expanded",o?"true":"false"); };
-    const mk=el.querySelector("[data-mk]"); if(mk) mk.onclick=()=>acceptAsTopic(ITEMS.find(i=>i.id===el.dataset.id));
+    const mk=el.querySelector("[data-mk]"); if(mk) mk.onclick=()=>acceptAsTopic(findItem(el.dataset.id));
   });
 }
 
@@ -173,15 +255,16 @@ function bindTicker(){
 function kandRow(x){
   const t=topicOf(x.topic_id); const done=x.status!=="neu";
   const options=TOPICS.filter(t=>t.board_lane!=="erledigt").sort((a,b)=>a.title.localeCompare(b.title,"de")).map(t=>`<option value="${t.id}" ${t.id===x.topic_id?"selected":""}>${gfEsc(t.title.slice(0,90))}</option>`).join("");
-  const meta=[x.strand?strandLabel(x.strand):"", gfFmtShort(x.happened_at).slice(0,6), x.who||""].filter(Boolean);
+  const vh=vhOf(x.vorhaben_id);
+  const meta=[vh?vh.title:"", x.strand?strandLabel(x.strand):"", gfFmtShort(x.happened_at).slice(0,6), x.who||""].filter(Boolean);
   return `<article class="kd rel-${x.relevance} ${done?"done":""} ${isNew(x)?"is-new":""}" data-id="${x.id}">
     <button type="button" class="kd-row" aria-expanded="false" title="${gfEsc(GF_NEWS_SRC[x.source]||x.source)} · ${gfEsc(x.relevance)}">
-      <span class="kd-rel" aria-hidden="true"></span><span class="kd-title">${gfEsc(x.title)}</span><span class="kd-meta">${meta.map(gfEsc).join(" · ")}</span>${done?`<span class="nw-st st-${x.status}">${x.status==="uebernommen"?"übernommen":x.status}</span>`:""}${chev()}
+      <span class="kd-rel" aria-hidden="true"></span><span class="kd-title">${gfEsc(x.title)}</span><span class="kd-meta">${meta.map(gfEsc).join(" · ")}</span>${done?`<span class="nw-st st-${x.status}">${x.status==="uebernommen"?"übernommen":x.status}${x.status==="archiviert"&&x.archiviert_at?" "+gfEsc(gfFmtShort(x.archiviert_at).slice(0,6)):""}</span>`:""}${chev()}
     </button>
     <div class="kd-more">
       ${x.body?`<p>${gfEsc(x.body)}</p>`:""}
       ${x.quote?`<blockquote>„${gfEsc(x.quote)}“</blockquote>`:""}
-      <div class="tk-links">${x.source_url?`<a href="${gfEsc(x.source_url)}" target="_blank" rel="noopener">${gfEsc(x.source_title||"Quelle")} ↗</a>`:(x.source_title?`<span class="nw-srct">${gfEsc(x.source_title)}</span>`:"")}${t?`<a href="board.html?topic=${t.id}">betrifft: ${gfEsc(t.title.slice(0,70))}</a>`:""}</div>
+      <div class="tk-links">${x.source_url?`<a href="${gfEsc(x.source_url)}" target="_blank" rel="noopener">${gfEsc(x.source_title||"Quelle")} ↗</a>`:(x.source_title?`<span class="nw-srct">${gfEsc(x.source_title)}</span>`:"")}${t?`<a href="board.html?topic=${t.id}">betrifft: ${gfEsc(t.title.slice(0,70))}</a>`:""}${x.vorhaben_id?`<a href="vorhaben.html?v=${encodeURIComponent(vh?vh.slug:x.vorhaben_id)}">Zum Vorhaben${vh?": "+gfEsc(vh.title.slice(0,60)):""}</a>`:""}</div>
       ${done?`<div class="kd-f"><span class="nw-srct">${x.decided_by?gfEsc(x.decided_by)+" · ":""}${x.decided_at?gfFmtShort(x.decided_at):""}</span>${x.topic_id?`<a class="btn btn-sm btn-ghost" href="board.html?topic=${x.topic_id}">Thema öffnen</a>`:""}<button class="btn btn-sm btn-ghost" data-act="reopen">Zurück in den Korb</button></div>`
       :`<div class="kd-f">
         ${t?`<button class="btn btn-sm btn-primary" data-act="append">An Thema anhängen</button><button class="btn btn-sm btn-brand" data-act="new">Als neues Thema</button>`:`<button class="btn btn-sm btn-primary" data-act="new">Als Thema übernehmen</button>`}
@@ -192,23 +275,25 @@ function kandRow(x){
   </article>`;
 }
 function renderKorb(){
-  let k=ITEMS.filter(x=>x.kind==="kandidat"&&whoMatch(x)&&textMatch(x)&&(SHOWDONE||x.status==="neu")&&(!REL||x.relevance===REL));
+  let k=ITEMS.filter(x=>x.kind==="kandidat"&&whoMatch(x)&&textMatch(x)&&vhMatch(x)&&(SHOWDONE||x.status==="neu")&&(!REL||x.relevance===REL));
   k.sort((a,b)=>(a.status==="neu"?0:1)-(b.status==="neu"?0:1)||REL_RANK[a.relevance]-REL_RANK[b.relevance]||(a.happened_at<b.happened_at?1:-1));
   $("#korbN").textContent=k.length;
   if(!k.length){ $("#kand").innerHTML=`<div class="empty soft">${Q||REL?"Nichts gefunden.":"Der Sichtungskorb ist leer. Neue Kandidaten kommen mit dem täglichen Lauf."}</div>`; return; }
   $("#kand").innerHTML=["hoch","mittel","niedrig"].map(r=>{ const items=k.filter(x=>x.relevance===r); if(!items.length) return ""; const nn=items.filter(isNew).length; return `<details class="kgroup rel-${r}" data-sec="korb-${r}" data-def="${r==="hoch"?1:0}"><summary class="group-h">${REL_LABEL[r]}<span class="n">${items.length}</span>${nn?`<span class="n hot">${nn} neu</span>`:""}${chev()}</summary><div class="kd-list">${items.map(kandRow).join("")}</div></details>`; }).join("");
-  bindDetails($("#kand")); gfStagger($("#kand"),".kd"); bindKorb();
+  bindDetails($("#kand")); gfStagger($("#kand"),".kd");
 }
 function bindKorb(){
   document.querySelectorAll(".kd").forEach(el=>{
-    const x=ITEMS.find(i=>i.id===el.dataset.id);
+    const x=findItem(el.dataset.id); if(!x) return;
     const row=el.querySelector(".kd-row"); row.onclick=()=>{ const o=el.classList.toggle("open"); row.setAttribute("aria-expanded",o?"true":"false"); };
     el.querySelectorAll("[data-act]").forEach(b=>b.onclick=async()=>{
       try{
         if(b.dataset.act==="new"){ const d=await gfApi("news_accept",{id:x.id,decided_by:gfWho()}); Object.assign(x,d.item); TOPICS.push(d.topic); gfToast("Thema angelegt: "+d.topic.title.slice(0,50)); }
         if(b.dataset.act==="append"){ const d=await gfApi("news_accept",{id:x.id,topic_id:x.topic_id,decided_by:gfWho()}); Object.assign(x,d.item); const i=TOPICS.findIndex(t=>t.id===d.topic.id); if(i>=0) TOPICS[i]=d.topic; gfToast("Hinweis am Thema notiert"); }
         if(b.dataset.act==="dismiss"){ const d=await gfApi("news_update",{id:x.id,status:"verworfen",decided_by:gfWho()}); Object.assign(x,d.item); gfToast("Verworfen"); }
-        if(b.dataset.act==="reopen"){ const d=await gfApi("news_update",{id:x.id,status:"neu",decided_by:gfWho()}); Object.assign(x,d.item); gfToast("Zurück im Korb"); }
+        if(b.dataset.act==="reopen"){ const d=await gfApi("news_update",{id:x.id,status:"neu",decided_by:gfWho()}); Object.assign(x,d.item); gfToast("Zurück im Korb");
+          /* Aus dem Archiv geholt: gehört jetzt wieder zu den offenen Einträgen. */
+          if(ARCHIV&&ARCHIV.includes(x)){ ARCHIV=ARCHIV.filter(i=>i!==x); if(!ITEMS.includes(x)) ITEMS.unshift(x); } }
         render();
       }catch(e){ gfToast("Fehler: "+e.message); }
     });
@@ -234,7 +319,7 @@ function renderLage(){
 /* ---- Steuerung ---- */
 function setFilter(open){ const p=$("#filterPanel"); p.hidden=!open; $("#filterBtn").setAttribute("aria-expanded",open?"true":"false"); try{ sessionStorage.setItem("gf_nw_filter",open?"1":"0"); }catch(e){} }
 $("#filterBtn").onclick=()=>setFilter($("#filterPanel").hidden);
-$("#filterReset").onclick=()=>{ RANGE=14; SRC=new Set([...SRC_ALL,"protokoll","manuell"]); Q=""; $("#q").value=""; REL=""; SHOWDONE=false; $("#showDone").checked=false; render(); };
+$("#filterReset").onclick=()=>{ VHF=""; RANGE=14; SRC=new Set([...SRC_ALL,"protokoll","manuell"]); Q=""; $("#q").value=""; REL=""; SHOWDONE=false; $("#showDone").checked=false; render(); };
 $("#q").oninput=e=>{ Q=e.target.value.trim().toLowerCase(); render(); };
 document.addEventListener("keydown",e=>{ if(e.key==="/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); setFilter(true); $("#q").focus(); } });
 $("#whoSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; WHO=b.dataset.w; render(); };
@@ -247,7 +332,7 @@ document.addEventListener("gf-who",()=>render());
 
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("neuigkeiten");
-  gfMountHero("ankunft","Neuigkeiten","Was bei Lea und Alex gerade passiert. Das Laufband für den kurzen Blick, der Ticker nach Tagen, der Sichtungskorb für die GF-Runde, die Themenlage zum Einlesen.",{compact:true, slim:true, aside:`<a class="btn btn-sm" href="board.html">Zum Board</a>`});
+  gfMountHero("ankunft","Neuigkeiten","Oben, was dich braucht. Darunter deine Vorhaben und alles andere der letzten 14 Tage; Älteres liegt im Archiv.",{compact:true, slim:true, aside:`<a class="btn btn-sm" href="board.html">Zum Board</a>`});
   bindDetails(document);
   let f=false; try{ f=sessionStorage.getItem("gf_nw_filter")==="1"; }catch(e){} if(f) setFilter(true);
   await load();

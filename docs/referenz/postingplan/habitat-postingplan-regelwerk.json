@@ -76,7 +76,7 @@
    "aufgaben": "Budgets, Rabatte, Extras der Stufe Rot"
   }
  ],
- "rollen_hinweis": "Zuständigkeit in zwei Ebenen: Die Geschäftsführung legt im Hohen Haus je Festival nur die verantwortliche Person für die Kommunikation fest (Rolle KOM) und entscheidet über Budget und Extras der Stufe Rot. Die verantwortliche Person verteilt alle übrigen Rollen und Schritte selbst, in ihrer Redaktionstabelle oder in Asana (Feld besetzung: E-Mail, Vertretung, Wochenstunden). Die Rollen und Schritte des Regelwerks sind dabei ein Vorschlag, keine Vorgabe. Eine Person kann mehrere Rollen haben. Externe Beteiligte (Artists, Crews, Kollektive) sind keine Rolle, sondern stehen im Feld beteiligte.",
+ "rollen_hinweis": "Zuständigkeit in zwei Ebenen: Die Geschäftsführung legt im Kompass je Festival nur die verantwortliche Person für die Kommunikation fest (Rolle KOM) und entscheidet über Budget und Extras der Stufe Rot. Die verantwortliche Person verteilt alle übrigen Rollen und Schritte selbst, in ihrer Redaktionstabelle oder in Asana (Feld besetzung: E-Mail, Vertretung, Wochenstunden). Die Rollen und Schritte des Regelwerks sind dabei ein Vorschlag, keine Vorgabe. Eine Person kann mehrere Rollen haben. Externe Beteiligte (Artists, Crews, Kollektive) sind keine Rolle, sondern stehen im Feld beteiligte.",
  "werkzeuge": [
   {
    "id": "GEN-TEXT",
@@ -3214,7 +3214,7 @@
   "6. Werktagsregel: Schritte mit werktag=true rücken von Samstag, Sonntag oder Feiertag (Brandenburg und Berlin) auf den Werktag davor. Veröffentlichungen am Wochenende sind erlaubt, wenn CM besetzt ist.",
   "7. Verbund-Stichtag: Für Veröffentlichungen ab dem Tag F-21 des ersten Festivals der Saison bis zum Ende der Saison enden alle Schritte der Phasen planung, erstellung und abstimmung der Klassen M, P und L spätestens am Stichtag Vorproduktion. Die vorgezogenen Aufgaben werden gleichmäßig über das Vorproduktionsfenster (84 Tage vor dem Stichtag) verteilt, früheste Veröffentlichung zuerst. Dafür wird ein Schritt E9 Fakten aktualisieren und Fassung finalisieren (RED, T-7 bis T-6, 0,5 h), danach folgen Faktencheck und Freigabe wie gewohnt ergänzt.",
   "8. Liegt ein Schritt vor dem Berechnungstag, wird er als überfällig markiert und nicht als erledigt eingetragen. Priorität: Sicherheit und Betrieb, dann Fristen und Gästeinformationen, dann Kampagne, dann Geschichten.",
-  "9. Kapazität prüfen: Die verantwortliche Person gleicht Stunden je Rolle und Woche mit ihrer Besetzung ab. Bei Überlast zuerst vorziehen, dann bündeln, dann Slots streichen; Pflichtregeln nie streichen. Reicht das nicht, meldet sie es an die Geschäftsführung (Hohes Haus), die über zusätzliche Leute, Agentur oder Verschiebung entscheidet.",
+  "9. Kapazität prüfen: Die verantwortliche Person gleicht Stunden je Rolle und Woche mit ihrer Besetzung ab. Bei Überlast zuerst vorziehen, dann bündeln, dann Slots streichen; Pflichtregeln nie streichen. Reicht das nicht, meldet sie es an die Geschäftsführung (Kompass), die über zusätzliche Leute, Agentur oder Verschiebung entscheidet.",
   "10. Stabile ID je Aufgabe: {festival}-{ausgabe}-{regel}-{bezug}{nr}-{kanal}; Schritte mit Suffix -{schritt}. Neuberechnung aktualisiert vorhandene Datensätze und erzeugt keine Kopien.",
   "11. Ändert sich ein Ereignis, werden offene Aufgaben neu berechnet. Bereits extern terminierte Veröffentlichungen werden als zu prüfen markiert. Erledigte Schritte behalten ihr Datum.",
   "12. Generatoren erzeugen Entwürfe. Veröffentlichung, Versand und Anzeigenstart erst nach den Freigabeschritten."
@@ -3246,7 +3246,7 @@
    "hauptaufgabe": {
     "name": "{titel} · {kanal} · {festival}",
     "faellig": "T",
-    "zustaendig": "verantwortliche Person des Festivals aus dem Hohen Haus",
+    "zustaendig": "verantwortliche Person des Festivals aus dem Kompass",
     "beschreibung": "Briefing: Zielgruppe, Zweck, Inhalt, Faktenquelle, Bezugsereignis und Abstand, Link zum Entwurf im Werkzeugkasten"
    },
    "unteraufgaben": {
@@ -3268,12 +3268,12 @@
     "Werkzeug",
     "Regel-ID"
    ],
-   "regel": "Das Hohe Haus übergibt je Festival den Rahmen an die verantwortliche Person: Pflichtveröffentlichungen, Fristen, Prüfpunkte und Stunden. Eine Hauptaufgabe je Veröffentlichung; die Unteraufgaben je Schritt sind ein Vorschlag, den die verantwortliche Person in Asana oder in ihrer Redaktionstabelle selbst verteilt und anpasst. Die Geschäftsführung verteilt keine Einzelschritte. Wochenaufgaben als wiederkehrende Aufgabe, nicht als Einzelaufgaben. Interne Aufgaben ohne Veröffentlichung als Hauptaufgabe ohne Kanal."
+   "regel": "Der Kompass übergibt je Festival den Rahmen an die verantwortliche Person: Pflichtveröffentlichungen, Fristen, Prüfpunkte und Stunden. Eine Hauptaufgabe je Veröffentlichung; die Unteraufgaben je Schritt sind ein Vorschlag, den die verantwortliche Person in Asana oder in ihrer Redaktionstabelle selbst verteilt und anpasst. Die Geschäftsführung verteilt keine Einzelschritte. Wochenaufgaben als wiederkehrende Aufgabe, nicht als Einzelaufgaben. Interne Aufgaben ohne Veröffentlichung als Hauptaufgabe ohne Kanal."
   },
   "kalender": {
    "redaktionskalender": "gemeinsamer Google-Kalender je Festival oder Verbund: ein Termin je Veröffentlichung an T (Uhrzeit, falls festgelegt), Titel {festival}: {titel} ({kanal})",
    "fristen": "Freigabetermine (F2) und Drehtermine (L-E1) als Termine bei den zuständigen Personen",
-   "redaktionstabelle": "Die bestehende Redaktionstabelle Social Media - Wilde Habitate (Google Sheets, Christian) bleibt das Arbeitswerkzeug der Redaktion. Das Hohe Haus liefert ihr Pflichttermine und Meilensteine (Zeile Fixtermine & Meilensteine); die Aufteilung nach Kanal, Format und Person macht die Redaktion dort selbst.",
+   "redaktionstabelle": "Die bestehende Redaktionstabelle Social Media - Wilde Habitate (Google Sheets, Christian) bleibt das Arbeitswerkzeug der Redaktion. Der Kompass liefert ihr Pflichttermine und Meilensteine (Zeile Fixtermine & Meilensteine); die Aufteilung nach Kanal, Format und Person macht die Redaktion dort selbst.",
    "regel": "Arbeitsschritte laufen über Asana-Fälligkeiten. Der Kalender zeigt nur Veröffentlichungen, Freigaben und Drehs, damit nichts doppelt auftaucht."
   },
   "csv_spalten": [

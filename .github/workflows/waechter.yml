@@ -19,6 +19,8 @@ jobs:
           node-version: '22'
       - name: Wächter
         run: node pruefung/waechter.mjs
+      - name: Vorstand Aktionen
+        run: node --test pruefung/vorstand-handler.test.mjs
       - name: Farbvorlage
         run: python3 pruefung/tokens.py
       - name: Farbscan

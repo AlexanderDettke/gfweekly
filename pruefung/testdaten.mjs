@@ -15,13 +15,16 @@ export const THEMEN = [
   { id:'t4', title:'Gastro-Partner für 2027 bestätigen', context:'Zusage mündlich da.', priority:'hoch', status:'erledigt', kind:'einmalig', board_lane:'entschieden', lane_order:1, owner:'Lea', decision:'Wir machen mit dem bisherigen Partner weiter.', next_action:'Vertrag schicken', relevance:'hoch', created_by:'Lea', created_at:zeit(-60), updated_at:zeit(-5), archived:false },
 ];
 export const NEWS = [
-  { id:'n1', kind:'ticker', title:'Amt meldet sich zum Vertrag', body:'Kurzer Anruf, Termin folgt.', source:'mail', source_title:'Mail vom Amt', source_url:'https://example.org/1', who:'Alex', strand:'habitate', happened_at:zeit(0), created_at:zeit(0), status:'neu' },
+  { id:'n1', kind:'ticker', title:'Amt meldet sich zum Vertrag', body:'Kurzer Anruf, Termin folgt.', source:'mail', source_title:'Mail vom Amt', source_url:'https://example.org/1', who:'Alex', strand:'habitate', happened_at:zeit(0), created_at:zeit(0), status:'neu', vorhaben_id:'vh-lusatia' },
   { id:'n2', kind:'ticker', title:'Shuttle-Angebot eingegangen', body:'Drittes Angebot liegt vor.', source:'asana', who:'Lea', strand:'wwp', happened_at:zeit(-1), created_at:zeit(-1), status:'neu' },
   { id:'n3', kind:'kandidat', title:'Pressefrage zur Zeltwiese', body:'Lokalzeitung fragt nach der Fläche.', quote:'Wie viele Menschen passen auf die Wiese?', relevance:'hoch', source:'mail', source_title:'Mail der Redaktion', source_url:'https://example.org/2', who:'Alex', strand:'habitate', happened_at:zeit(-2), created_at:zeit(-2), status:'neu', gate:'gf', gate_by:'lauf', gate_frist:tag(3) },
   { id:'n4', kind:'kandidat', title:'Helferplanung beginnt', body:'Erste Anmeldungen liegen vor.', relevance:'mittel', source:'notiz', who:'Lea', strand:'habitate', happened_at:zeit(-3), created_at:zeit(-3), status:'neu' },
   { id:'n5', kind:'lage', strand:'habitate', title:'Lage Wilde Habitate', body:'Ruhige Woche, zwei Entscheidungen offen.', source:'plattform', happened_at:zeit(0), created_at:zeit(0), status:'neu' },
   { id:'n6', kind:'lage', strand:'wwp', title:'Lage Wild Wild Partner', body:'Zwei Partner haben sich bewegt.', source:'plattform', happened_at:zeit(0), created_at:zeit(0), status:'neu' },
   { id:'n7', kind:'ticker', title:'Besprechung mit dem Büro', body:'Termin am Donnerstag.', source:'kalender', who:'Alex,Lea', happened_at:zeit(2), created_at:zeit(-1), status:'neu' },
+  /* 22.10.2026: Kandidat zu einem Vorhaben mit Ball bei Alex (mittel, steht trotzdem unter „Braucht dich“) und ein archivierter. */
+  { id:'n9', kind:'kandidat', title:'Ticketing für Lusatia anlegen', body:'XCeed wartet auf die Kategorien.', relevance:'mittel', source:'mail', who:'Alex', strand:'habitate', happened_at:zeit(-1), created_at:zeit(-1), status:'neu', vorhaben_id:'vh-lusatia' },
+  { id:'n8', kind:'kandidat', title:'Alte Anfrage zur Zeltwiese', body:'Aus dem Sommer.', relevance:'mittel', source:'mail', who:'Lea', strand:'habitate', happened_at:zeit(-40), created_at:zeit(-40), status:'archiviert', archiv_grund:'aufraeumen-20261022', archiviert_at:zeit(0) },
 ];
 export const PHASEN = [
   { id:'p1', key:'planung', label:'Planung', months:[1,2,3], color_token:'accent', sort_order:1, hint:'Ziele setzen' },
@@ -238,7 +241,7 @@ export const ANTWORT = {
   list: { topics: THEMEN },
   links_all: { links:[ { id:'l1', item_id:'t1', title:'Vertragsentwurf', type:'drive', url:'https://example.org/v', description:'', added_by:'Alex', created_at:zeit(-10) } ] },
   sites_list: { categories:[ { id:'c1', key:'arbeit', label:'Arbeiten', sort_order:1 }, { id:'c2', key:'technik', label:'Technik', sort_order:2 } ],
-    sites:[ { id:'s1', name:'Das Hohe Haus', url:'https://hohes-haus.netlify.app', category:'arbeit', purpose:'Cockpit der GF', notes:'', login_user:'', login_password:'', login_note:'', status:'aktiv', preview:'', sort_order:1 },
+    sites:[ { id:'s1', name:'Kompass', url:'https://kompass.wildehabitate.de', category:'arbeit', purpose:'Cockpit der GF', notes:'', login_user:'', login_password:'', login_note:'', status:'aktiv', preview:'', sort_order:1 },
             { id:'s2', name:'Team- und Partneranalyse', url:'https://team-partner-analyse.netlify.app', category:'technik', purpose:'Einschätzungen', notes:'', login_user:'alex', login_password:'geheim', login_note:'', status:'aktiv', preview:'', sort_order:2 } ] },
   cycle_get: { year:new Date().getFullYear(), phases:PHASEN,
     transitions:[ { id:'x1', key:'planungsauftakt', label:'Planungsauftakt', month:1, day:15, description:'Jahresstart', sort_order:1 },
@@ -258,8 +261,12 @@ export const ANTWORT = {
   decisions_list: { decisions:[
     { id:'d1', decision:'Wir bleiben beim bisherigen Gastro-Partner.', topic_id:'t4', topic_title:'Gastro-Partner für 2027 bestätigen', next_action:'Vertrag schicken', owner:'Lea', strand:'habitate', decided_by:'Alex', decided_at:tag(-5), created_at:zeit(-5) },
     { id:'d2', decision:'Der Wochenbrief geht freitags raus.', topic_id:'t3', topic_title:'Wochenbrief an das Team', next_action:'Vorlage schreiben', owner:'Alex', strand:'habitate', decided_by:'Lea', decided_at:tag(-12), created_at:zeit(-12) } ] },
-  news_list: { items: NEWS },
-  gate_list: { items:[ { kind:'thema', ...THEMEN[0] }, { kind:'kandidat', ...NEWS[2] }, { kind:'thema', ...THEMEN[1] } ],
+  /* 22.10.2026: Archiviertes nur mit archiv und Suchbegriff (wie das Backend). */
+  news_list: (p) => SCHALTER.newsFehler ? { __status:500, error:'Verbindung unterbrochen' } : p && p.archiv ? { items: NEWS.filter(x => x.status === 'archiviert' && (x.title + ' ' + x.body).toLowerCase().includes(String(p.q || '').toLowerCase())), gekuerzt:false }
+    : { items: NEWS.filter(x => (p && Array.isArray(p.statuses) && p.statuses.length) ? p.statuses.includes(x.status) : x.status !== 'archiviert') },
+  news_update: (p) => { const x = NEWS.find(n => n.id === p.id); return { item: { ...(x || {}), id:p.id, status:p.status, archiv_grund:null, archiviert_at:null } }; },
+  news_accept: (p) => { const x = NEWS.find(n => n.id === p.id); return { item: { ...(x || {}), status:'uebernommen', topic_id:'t-neu' }, topic: { id:'t-neu', title:(x && x.title) || 'Thema', board_lane:'zu_besprechen' } }; },
+  gate_list: { items:[ { ...THEMEN[0], kind:'thema' }, { ...NEWS[2], kind:'kandidat' }, { ...THEMEN[1], kind:'thema' } ],
     counts:{ gf:2, Lea:1 }, themen:2, kandidaten:1 },
   absence_list: (p) => { const alle=[...NEUE, A1, A2, A3].filter(a=>p.include_test||!a.test);
     return { absences:alle, zaehler:Object.fromEntries(alle.map(a=>[a.id, zaehleKorb(KORB[a.id]||[])])) }; },
@@ -395,9 +402,9 @@ const vhVerlauf = [
   { id:'e4', vorhaben_id:'vh-xceed', happened_at:zeit(-9), art:'entscheidung', wer:'Alex und Lea', text:'XCeed wird Ticketanbieter.', tag:'Entscheidung', status:'bestaetigt', source_ref:'seed:2', source_url:null, created_at:zeit(-9) },
 ];
 /* Schalter für Fehlerwege in den Bedienproben. */
-export const SCHALTER = { rueckkehrFehler:false, wiederFehler:false, abschlussKonflikt:false };
+export const SCHALTER = { rueckkehrFehler:false, wiederFehler:false, abschlussKonflikt:false, vhListeFehler:false, newsFehler:false };
 export const VH_ANTWORT = {
-  vorhaben_list: (p) => p && p.status === 'erledigt'
+  vorhaben_list: (p) => SCHALTER.vhListeFehler && !(p && p.status) ? { __status:500, error:'Verbindung unterbrochen' } : p && p.status === 'erledigt'
     ? ({ stand:zeit(0), heute, vorhaben:VORHABEN.filter(v => v.status === 'erledigt').map(v => ({ ...v, erledigt_am:zeit(-2), ergebnis:v.slug === 'saal-alt' ? 'Rechnung bezahlt, Schlüssel zurück' : null })) })
     : ({ stand:zeit(0), heute, vorhaben:VORHABEN.filter(v => ['aktiv','pausiert'].includes(v.status)), metaphase:{ title:'Analyse und Retro', starts_on:tag(-12), ends_on:tag(12) },
     abwesenheiten:[A1].map(a=>({ id:a.id, person:a.person, von:a.von, bis:a.bis, bis_geschaetzt:a.bis_geschaetzt, status:a.status, vertretung_standard:a.vertretung_standard, test:a.test })),
@@ -542,3 +549,6 @@ Object.assign(ANTWORT, {
   komm_berechnen: () => ({ ok: true, ergebnis: [] }),
 });
 SCHREIBEND.add('komm_pruefpunkt_set'); SCHREIBEND.add('komm_berechnen');
+
+/* Vorstandsbüro: erfundene Mailvorgänge, keine Originalpost. */
+ANTWORT.lage = { ok:true, asanaConfigured:true, items:[{ id:'TEST-oberflaeche',title:'Rückfrage zur nächsten Sitzung',finding:'Eine Antwort steht noch aus. Erfunden für die Oberflächenprüfung.',next_action:'Termin prüfen und Antwort vorbereiten.',basis_at:zeit(0),status:'pruefen',owner:'',priority:true,source_url:'https://groups.google.com/a/freude-eg.de/g/vorstand',reply_to:'test@example.org',reply_subject:'Rückfrage zur nächsten Sitzung',reply_body:'Guten Tag,\n\nvielen Dank für Ihre Nachricht.',task_title:'Termin prüfen und Antwort vorbereiten',task_notes:'Termin prüfen. Originalverlauf ist verlinkt.',task_assignee:'Alex',task_state:'none',version:1,last_by:'Testprüfung',updated_at:zeit(0)}] };

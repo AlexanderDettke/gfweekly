@@ -1,11 +1,11 @@
-/* Das Hohe Haus · Edge Function „besetzung“ (Paket Besetzung B1, 02.10.2026)
+/* Kompass · Edge Function „besetzung“ (Paket Besetzung B1, 02.10.2026)
    Aufgaben aus der Besetzungswerkstatt des Habitat Hubs verteilen.
 
    Führende Quellen
    - Habitat Hub (Schema hub, Tabellen besetzung_*): Partner, Angebote, Formate, Zuordnungen mit Gesprächsstand,
      Gesprächszuständigkeit (Text) und nächstem Schritt. Diese Funktion liest dort nur über zwei Lesefunktionen
      (hh_besetzung_lage, hh_besetzung_zuordnung) und schreibt nie in den Hub.
-   - Das Hohe Haus (gfweekly_besetzung_aufgaben): konkrete Aufgaben mit eindeutiger Person aus gfweekly_people,
+   - Der Kompass (gfweekly_besetzung_aufgaben): konkrete Aufgaben mit eindeutiger Person aus gfweekly_people,
      Aufgabenstand offen / in_arbeit / erledigt / verworfen, Termin. Der Aufgabenstand ist vom Gesprächsstand getrennt.
    - Asana: erst nach ausdrücklichem Senden; danach führt Asana für „erledigt“ und den Termin (Rückweg asana_sync).
 
@@ -18,7 +18,7 @@ const PASSWORD = Deno.env.get('GFWEEKLY_PASSWORD') ?? '';
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 const ASANA_TOKEN = Deno.env.get('ASANA_TOKEN') ?? '';
 const ASANA_WORKSPACE = Deno.env.get('ASANA_WORKSPACE') ?? '57435200923138';
-const HH_BASIS = 'https://hohes-haus.netlify.app';
+const HH_BASIS = 'https://kompass.wildehabitate.de';
 const HUB_BESETZUNG = 'https://habitat-hub.netlify.app/besetzung';
 
 const cors = {
@@ -70,8 +70,8 @@ async function asana(pfad: string, methode = 'GET', koerper?: unknown) {
   return d.data;
 }
 
-/* Rückweg aus Asana: nur für gesendete Aufgaben. Erledigt in Asana setzt erledigt im Haus, eine geänderte Fälligkeit
-   übernimmt das Haus. Nichts wird gelöscht, nichts wieder geöffnet, der Gesprächsstand im Hub bleibt unberührt. */
+/* Rückweg aus Asana: nur für gesendete Aufgaben. Erledigt in Asana setzt erledigt im Kompass, eine geänderte Fälligkeit
+   übernimmt der Kompass. Nichts wird gelöscht, nichts wieder geöffnet, der Gesprächsstand im Hub bleibt unberührt. */
 async function asanaSync(nur?: string[]) {
   const erg = { geprueft: 0, erledigt: 0, termin: 0, fehler: 0, ohne_token: !ASANA_TOKEN };
   if (!ASANA_TOKEN) return erg;
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
   try {
     if (action === 'ping') return json({ ok: true, version: VERSION });
 
-    /* Lage für eine Saison: Formate, Zuordnungen aus dem Hub, Aufgaben des Hauses, Personen-Pool. */
+    /* Lage für eine Saison: Formate, Zuordnungen aus dem Hub, Aufgaben des Kompass, Personen-Pool. */
     if (action === 'lage') {
       const jahr = Number.isInteger(t.jahr) ? t.jahr : null;
       let sync: unknown = null;
@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
       if (vor.asana_task_gid && neu.person_id !== undefined && neu.person_id !== vor.person_id)
         throw new Fehler(409, 'Die Aufgabe liegt schon in Asana. Eine andere Person bitte dort zuweisen oder eine neue Aufgabe anlegen.', { aktuell: vor });
       if (vor.asana_task_gid && neu.faellig !== undefined && neu.faellig !== vor.faellig)
-        throw new Fehler(409, 'Die Aufgabe liegt schon in Asana. Den Termin bitte dort ändern, das Haus übernimmt ihn beim nächsten Abgleich.', { aktuell: vor });
+        throw new Fehler(409, 'Die Aufgabe liegt schon in Asana. Den Termin bitte dort ändern, der Kompass übernimmt ihn beim nächsten Abgleich.', { aktuell: vor });
       Object.assign(neu, { geaendert_von: W, version: v + 1, updated_at: new Date().toISOString() });
       const { data, error } = await db.from('gfweekly_besetzung_aufgaben').update(neu).eq('id', id).eq('version', v).select(SPALTEN);
       if (error) {
@@ -188,12 +188,12 @@ Deno.serve(async (req) => {
     if (action === 'asana_senden') {
       const W = who(t.who); if (!W) throw new Fehler(400, 'Bitte oben Alex oder Lea wählen.');
       if (t.bestaetigt !== true) throw new Fehler(400, 'Senden nach Asana braucht eine ausdrückliche Bestätigung.');
-      if (!ASANA_TOKEN) throw new Fehler(503, 'Asana ist für das Hohe Haus nicht eingerichtet. Die Aufgabe bleibt im Haus.');
+      if (!ASANA_TOKEN) throw new Fehler(503, 'Asana ist für den Kompass nicht eingerichtet. Die Aufgabe bleibt im Kompass.');
       const id = str(t.id, 40); if (!UUID.test(id)) throw new Fehler(400, 'Die Aufgabe fehlt.');
       const a = await aufgabe(id); if (!a) throw new Fehler(404, 'Diese Aufgabe gibt es nicht mehr. Bitte neu laden.');
       if (a.asana_task_gid) return json({ ok: true, schon: true, aufgabe: a });
       if (!a.person_id) throw new Fehler(400, 'Erst eine Person zuweisen, dann senden.');
-      const p = await person(a.person_id); if (!p?.asana_gid) throw new Fehler(400, `${p?.name || 'Diese Person'} hat kein Asana-Konto im Pool. Die Aufgabe bleibt im Haus.`);
+      const p = await person(a.person_id); if (!p?.asana_gid) throw new Fehler(400, `${p?.name || 'Diese Person'} hat kein Asana-Konto im Pool. Die Aufgabe bleibt im Kompass.`);
       const z = await zuordnung(a.zuordnung_id);
       /* Sperre gegen doppeltes Senden: wer die Zeile zuerst markiert, sendet. */
       const { data: claim, error: ec } = await db.from('gfweekly_besetzung_aufgaben')
@@ -201,12 +201,12 @@ Deno.serve(async (req) => {
       if (ec) throw new Error(ec.message);
       if (!claim || !claim.length) throw new Fehler(409, 'Diese Aufgabe wird gerade gesendet oder wurde schon gesendet. Bitte neu laden.');
       const zeilen = [
-        z ? `Aus dem Hohen Haus · Besetzung ${z.format} ${z.jahr} · ${z.bereich}` : `Aus dem Hohen Haus · Besetzung ${a.format_slug} ${a.jahr} · ${a.bereich}`,
+        z ? `Aus dem Kompass · Besetzung ${z.format} ${z.jahr} · ${z.bereich}` : `Aus dem Kompass · Besetzung ${a.format_slug} ${a.jahr} · ${a.bereich}`,
         z ? `Gespräch: ${z.partner}${z.angebot && z.angebot !== z.partner ? ' (' + z.angebot + ')' : ''}, Stand im Habitat Hub: ${GESPRAECH_WORT[z.status] || z.status}.` : '',
         a.beschreibung ? '\n' + a.beschreibung : '',
-        `\nIm Hohen Haus: ${HH_BASIS}/besetzung.html?festival=${encodeURIComponent(a.format_slug)}&aufgabe=${a.id}`,
+        `\nIm Kompass: ${HH_BASIS}/besetzung.html?festival=${encodeURIComponent(a.format_slug)}&aufgabe=${a.id}`,
         `Gesprächsstand und Partnerprofil: ${HUB_BESETZUNG}`,
-        'Erledigt in Asana heißt erledigt im Haus. Gesprächsstand, Budget und Verträge bleiben davon unberührt.',
+        'Erledigt in Asana heißt erledigt im Kompass. Gesprächsstand, Budget und Verträge bleiben davon unberührt.',
       ].filter(Boolean);
       let gid = '';
       try {

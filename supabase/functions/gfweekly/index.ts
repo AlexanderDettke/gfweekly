@@ -51,7 +51,7 @@ const SITE_STATUSES = ['aktiv','entwurf','archiv'];
    Befüllt vom täglichen Cowork-Auftrag (news_add_many, Dedup über source_ref), gelesen von site/neuigkeiten.html. */
 const NEWS_KINDS = ['ticker','kandidat','lage'];
 const NEWS_SOURCES = ['notiz','asana','kalender','mail','protokoll','entscheidung','manuell','plattform']; // v27: plattform (Wilde Habitate, Wild Wild Partner)
-const NEWS_STATUS = ['neu','gesehen','uebernommen','verworfen'];
+const NEWS_STATUS = ['neu','gesehen','uebernommen','verworfen','archiviert'];   // archiviert seit 22.10.2026
 const GATES = ['gf','alex','lea','team','plattform','warten']; // v28 Pförtner
 const NEWS_FIELDS = ['who','source','strand','title','body','quote','source_title','source_url','source_ref','relevance','topic_id','status','run_id'];
 function newsRow(n: any){
@@ -607,10 +607,10 @@ async function handoverItems(absence: any){
      Termine am Rand ab oder nehmen fremde mit. */
   const { data: termine, error: e5 } = await admin.from('gfweekly_news')
     .select('id,title,body,who,happened_at,source_url,source_title,strand,source_ref')
-    .eq('source','kalender').gte('happened_at', addDays(von,-1)+'T00:00:00Z').lte('happened_at', addDays(ende,1)+'T23:59:59Z').limit(HO_GRENZE);
+    .eq('source','kalender').neq('status','archiviert').gte('happened_at', addDays(von,-1)+'T00:00:00Z').lte('happened_at', addDays(ende,1)+'T23:59:59Z').limit(HO_GRENZE);
   if (e5) throw new Error('Termine konnten nicht gelesen werden: '+e5.message);
   await zaehle('Termine', admin.from('gfweekly_news').select('id', { count:'exact', head:true })
-    .eq('source','kalender').gte('happened_at', addDays(von,-1)+'T00:00:00Z').lte('happened_at', addDays(ende,1)+'T23:59:59Z'),
+    .eq('source','kalender').neq('status','archiviert').gte('happened_at', addDays(von,-1)+'T00:00:00Z').lte('happened_at', addDays(ende,1)+'T23:59:59Z'),
     (termine || []).length);
   for (const x of (termine || [])) {
     const tag = new Date(x.happened_at).toLocaleDateString('sv-SE', { timeZone:'Europe/Berlin' });
@@ -710,7 +710,7 @@ const ASANA_ABSCHNITTE = ['Sofort', 'Grün', 'Gelb', 'Rot bei der GF', 'Ruht bis
 /* Die Vertretungslinie kennt nur diese beiden. Ihre E-Mail ist der eindeutige Schlüssel zum Asana-Konto. */
 const MAIL_ALEX = 'alex@wildemoehre.org';
 const MAIL_LEA  = 'lea@wildemoehre.org';
-const HH_BASIS = 'https://hohes-haus.netlify.app';
+const HH_BASIS = 'https://kompass.wildehabitate.de';
 
 async function asana(pfad: string, methode = 'GET', koerper?: unknown, signal?: AbortSignal){
   const res = await fetch('https://app.asana.com/api/1.0' + pfad, {
@@ -768,12 +768,12 @@ function asanaNotiz(row: any, absence: any, vollmacht: string){
     vollmacht ? `Vollmacht: ${vollmacht}` : 'Vollmacht: nicht festgelegt.',
     row.frist ? `Frist: ${row.frist}` : 'Frist: keine.',
     '',
-    `Im Hohen Haus: ${asanaLink(row)}`,
+    `Im Kompass: ${asanaLink(row)}`,
     row.begruendung ? `\nWarum diese Einordnung: ${row.begruendung}` : '',
   ].join('\n');
 }
 
-/* Rücksync: erledigte Aufgaben und neue Kommentare zurück ins Haus. Läuft im Tick mit, wenn ein Token da ist. */
+/* Rücksync: erledigte Aufgaben und neue Kommentare zurück in den Kompass. Läuft im Tick mit, wenn ein Token da ist. */
 async function asanaSync(absence: any){
   if (!ASANA_TOKEN || !absence.asana_project_gid) return { erledigt:0, kommentare:0, fehler:0 };
   const seit = absence.asana_synced_at || absence.created_at || new Date(Date.now()-7*86400000).toISOString();
@@ -916,7 +916,7 @@ async function launchPersonen(){
   if (error) throw error; return data || [];
 }
 /* V29: Satz in jeder Aufgabe, damit in Asana klar ist, was zurückfließt. */
-const LAUNCH_SICHTBAR = 'Stand und Fälligkeit werden stündlich ins Hohe Haus übernommen; erledigt in Asana heißt erledigt im Haus.';
+const LAUNCH_SICHTBAR = 'Stand und Fälligkeit werden stündlich in den Kompass übernommen; erledigt in Asana heißt erledigt im Kompass.';
 const LAUNCH_SYNC_MINUTEN = 60;
 /* V29b: Laufsperre und Zeitbudget. Die Sperre ist eine Zeile in gfweekly_launch_sync mit fester Kennung; ein Lauf nimmt sie
    per bedingtem Update (frei oder älter als die Haltezeit) und gibt sie am Ende frei. Das Budget hält einen Lauf unter dem
@@ -927,8 +927,8 @@ const LAUNCH_SYNC_BUDGET_MS = 90000;
 /* Projektbeschreibung: VVK-Start, Festivalverantwortung, Link auf die Saisonseite. */
 function launchProjektNotiz(festival: any, fvName: string | null){
   return [`Launch ${festival.kurzname} 2027 · VVK-Start ${festival.sales_start_on || 'offen'} · Festivalverantwortung ${fvName || 'offen'}.`,
-    'Launch-Aufgaben aus dem Hohen Haus, je Bereich ein Abschnitt. Aufwände sind Richtwerte und werden über Ist-Stunden kalibriert.',
-    LAUNCH_SICHTBAR, '', `Saison im Hohen Haus: ${HH_BASIS}/saison.html`, `Launch verteilen: ${HH_BASIS}/launch.html?festival=${encodeURIComponent(festival.short_name || '')}`].join('\n');
+    'Launch-Aufgaben aus dem Kompass, je Bereich ein Abschnitt. Aufwände sind Richtwerte und werden über Ist-Stunden kalibriert.',
+    LAUNCH_SICHTBAR, '', `Saison im Kompass: ${HH_BASIS}/saison.html`, `Launch verteilen: ${HH_BASIS}/launch.html?festival=${encodeURIComponent(festival.short_name || '')}`].join('\n');
 }
 /* ===== V29 · Rückweg aus Asana, nach dem Muster asanaSync der Vertretung =====
    Für alle Meilensteine mit asana_task_gid: completed setzt status complete und completed_on; eine geänderte
@@ -1058,7 +1058,7 @@ async function launchSync(festivals: any[], who: string){
     await admin.from('gfweekly_launch_sync').update({ updated_at: '1970-01-01T00:00:00Z', ergebnis: { sperre: true, zuletzt: laufBeginn, von: who } }).eq('plan_id', LAUNCH_SYNC_SPERRE);
   }
 }
-/* Der Text einer Asana-Aufgabe: Aufwand als Spanne, Dauer, Vorgänger, Generator-Anteil, Link ins Haus. */
+/* Der Text einer Asana-Aufgabe: Aufwand als Spanne, Dauer, Vorgänger, Generator-Anteil, Link in den Kompass. */
 function launchAsanaNotiz(m: any, r: any, festival: any, zust: any, helfer: any, zusatz = ''){
   const lo = Number(m.aufwand_lo ?? r?.aufwand_lo ?? 0), hi = Number(m.aufwand_hi ?? r?.aufwand_hi ?? lo);
   const g = Number(m.generator_anteil ?? r?.generator_anteil ?? 0);
@@ -1073,7 +1073,7 @@ function launchAsanaNotiz(m: any, r: any, festival: any, zust: any, helfer: any,
     zust ? `Zuständig: ${zust.name}.` : 'Zuständig: noch offen.',
     r?.hinweis ? `Hinweis: ${r.hinweis}` : '',
     '',
-    `Im Hohen Haus: ${HH_BASIS}/launch.html?festival=${encodeURIComponent(festival.short_name || '')}`,
+    `Im Kompass: ${HH_BASIS}/launch.html?festival=${encodeURIComponent(festival.short_name || '')}`,
     LAUNCH_SICHTBAR,
     zusatz ? '\n' + zusatz : '',
   ];
@@ -1753,11 +1753,23 @@ Deno.serve(async (req: Request) => {
       if(loose.length){ const { data, error } = await admin.from('gfweekly_news').insert(loose).select('id'); if(error) throw error; added+=data.length; }
       return json({ ok:true, added, updated, skipped: keyed.length-(added-loose.length) });
     }
+    if (action === 'news_list' && t.archiv === true) {
+      /* 22.10.2026: Archiv durchsuchen. Nur archivierte Einträge, Suchbegriff in Titel, Text oder Zitat, höchstens 100. */
+      /* Zeichen, die im or-Filter oder als ILIKE-Muster (%, _) wirken würden, werden zu Leerzeichen. */
+      const such = (t.q ?? '').toString().replace(/[,()*%_\\"]/g, ' ').trim().slice(0, 80);
+      if (such.length < 2) return json({ error:'Suchbegriff mit mindestens zwei Zeichen' },400);
+      const { data, error } = await admin.from('gfweekly_news').select('*').eq('status', 'archiviert')
+        .or(`title.ilike."*${such}*",body.ilike."*${such}*",quote.ilike."*${such}*"`).order('happened_at',{ascending:false}).limit(100);
+      if(error) throw error;
+      return json({ items:data, gekuerzt:(data||[]).length >= 100 });
+    }
     if (action === 'news_list') {
       const limit = Math.min(parseInt(t.limit)||400, 2000);
       let q = admin.from('gfweekly_news').select('*').order('happened_at',{ascending:false}).limit(limit);
       if(Array.isArray(t.kinds)&&t.kinds.length) q = q.in('kind', t.kinds.filter((k: string)=>NEWS_KINDS.includes(k)));
+      /* Archiviertes nur, wenn es ausdrücklich im Statusfilter steht (22.10.2026). */
       if(Array.isArray(t.statuses)&&t.statuses.length) q = q.in('status', t.statuses.filter((k: string)=>NEWS_STATUS.includes(k)));
+      else q = q.neq('status', 'archiviert');
       if(t.since) q = q.gte('happened_at', t.since);
       if(t.strand) q = q.eq('strand', t.strand);
       const { data, error } = await q; if(error) throw error;
@@ -1769,7 +1781,14 @@ Deno.serve(async (req: Request) => {
       for(const f of ['title','body','quote','strand','who','source_title','source_url']) if(t[f]!==undefined) patch[f]=(t[f]??'').toString().slice(0, f==='body'?6000:500);
       if(t.relevance!==undefined && PRIOS.includes(t.relevance)) patch.relevance=t.relevance;
       if(t.topic_id!==undefined) patch.topic_id=t.topic_id||null;
-      if(t.status!==undefined){ if(!NEWS_STATUS.includes(t.status)) return json({ error:'status' },400); patch.status=t.status; patch.decided_by=(t.decided_by??'').toString().slice(0,120); patch.decided_at=new Date().toISOString(); }
+      if(t.status!==undefined){ if(!NEWS_STATUS.includes(t.status)) return json({ error:'status' },400); patch.status=t.status; patch.decided_by=(t.decided_by??'').toString().slice(0,120); patch.decided_at=new Date().toISOString();
+        /* Archiv (22.10.2026): von Hand archiviert trägt den Grund „hand“; jeder andere Status hebt Grund und Zeitpunkt auf. */
+        if(t.status==='archiviert'){ patch.archiv_grund='hand'; patch.archiviert_at=new Date().toISOString(); }
+        else {
+          /* Aus dem Archiv zurückgeholt: aktiv_ab gibt dem Eintrag neue 14 Tage bis zum nächsten Verfall. */
+          const { data: alt } = await admin.from('gfweekly_news').select('status').eq('id', t.id).maybeSingle();
+          if(alt?.status==='archiviert') patch.aktiv_ab=new Date().toISOString();
+          patch.archiv_grund=null; patch.archiviert_at=null; } }
       if(!Object.keys(patch).length) return json({ error:'nichts' },400);
       const { data, error } = await admin.from('gfweekly_news').update(patch).eq('id',t.id).select().single(); if(error) throw error; return json({ item:data });
     }
@@ -1849,6 +1868,8 @@ Deno.serve(async (req: Request) => {
     if (action === 'news_accept') {
       if(!t.id) return json({ error:'id fehlt' },400);
       const { data: n, error:e0 } = await admin.from('gfweekly_news').select('*').eq('id',t.id).single(); if(e0||!n) throw (e0||new Error('Eintrag fehlt'));
+      /* 22.10.2026: Archiviertes wird nicht übernommen, erst „Zurück in den Korb“ (sonst bräche der Rückweg des Aufräumens). */
+      if(n.status==='archiviert') return json({ error:'Der Eintrag liegt inzwischen im Archiv, bitte neu laden und erst zurückholen.' },409);
       const src = [n.source_title, n.source_url].filter(Boolean).join(' · ');
       const when = new Date(n.happened_at).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
       let topic: any = null;
@@ -1868,7 +1889,9 @@ Deno.serve(async (req: Request) => {
         };
         const { data: nt, error:e3 } = await admin.from('gfweekly_topics').insert(row).select().single(); if(e3) throw e3; topic=nt;
       }
-      const { data: item, error:e4 } = await admin.from('gfweekly_news').update({ status:'uebernommen', topic_id:topic.id, decided_by:(t.decided_by??'').toString().slice(0,120), decided_at:new Date().toISOString() }).eq('id',n.id).select().single(); if(e4) throw e4;
+      /* Nur, wenn der Eintrag inzwischen nicht archiviert wurde; sonst ein neu angelegtes Thema wieder entfernen und 409. */
+      const { data: item, error:e4 } = await admin.from('gfweekly_news').update({ status:'uebernommen', topic_id:topic.id, decided_by:(t.decided_by??'').toString().slice(0,120), decided_at:new Date().toISOString() }).eq('id',n.id).neq('status','archiviert').select().maybeSingle(); if(e4) throw e4;
+      if(!item){ if(!t.topic_id) await admin.from('gfweekly_topics').delete().eq('id', topic.id); return json({ error:'Der Eintrag liegt inzwischen im Archiv, bitte neu laden und erst zurückholen.' },409); }
       return json({ topic, item });
     }
     if (action === 'news_delete') {
@@ -2335,7 +2358,7 @@ Deno.serve(async (req: Request) => {
           } catch (_e) { team = ''; }
         }
         const daten: Record<string, unknown> = { name, workspace: ASANA_WORKSPACE,
-          notes:`Übergabekorb aus dem Hohen Haus. Eine Aufgabe je Punkt, Abschnitte nach Dringlichkeit und Ampel.\n${HH_BASIS}/uebergabe.html?id=${absence.id}` };
+          notes:`Übergabekorb aus dem Kompass. Eine Aufgabe je Punkt, Abschnitte nach Dringlichkeit und Ampel.\n${HH_BASIS}/uebergabe.html?id=${absence.id}` };
         if (team) daten.team = team;
         try { projekt = (await asana('/projects', 'POST', daten)).gid; }
         catch (e) { return json({ error:String((e as Error).message), hinweis:'Braucht der Arbeitsbereich ein Team, ASANA_TEAM setzen oder team in der Nutzlast mitgeben.' },400); }
@@ -2544,7 +2567,7 @@ Deno.serve(async (req: Request) => {
         const gleichePerson = !!alt && (alt.person_id || null) === pid;
         const zeile: Record<string, unknown> = { event_id: festival.event_id, bereich, person_id: pid,
           status: bestaetigen ? 'bestaetigt' : (pid ? 'vorschlag' : 'offen'),
-          quelle: gleichePerson && alt?.quelle ? alt.quelle : `Hohes Haus, ${by}`,
+          quelle: gleichePerson && alt?.quelle ? alt.quelle : `Kompass, ${by}`,
           notiz: t.notiz !== undefined ? (t.notiz || null) : (gleichePerson ? alt?.notiz ?? null : undefined),
           bestaetigt_von: bestaetigen ? von : null, bestaetigt_am: bestaetigen ? jetzt : null, updated_at: jetzt };
         if (zeile.notiz === undefined) delete zeile.notiz;
@@ -2586,7 +2609,7 @@ Deno.serve(async (req: Request) => {
         }
         /* Die Cockpit-Historie kennt den Wechsel als Änderung am Plan. */
         const { data: plan } = await admin.from('vvp_launch_plans').select('org_id').eq('id', festival.plan_id).single();
-        if (plan?.org_id) await admin.from('vvp_launch_plan_changes').insert({ org_id: plan.org_id, plan_id: festival.plan_id, field: 'sales_start_on', old_value: alt, new_value: neu, changed_by: `Hohes Haus, ${by}` });
+        if (plan?.org_id) await admin.from('vvp_launch_plan_changes').insert({ org_id: plan.org_id, plan_id: festival.plan_id, field: 'sales_start_on', old_value: alt, new_value: neu, changed_by: `Kompass, ${by}` });
         await launchLog(by, 'launch_set', festival.short_name, null, { sales_start_on: { alt, neu }, verschoben, fehler });
         return json({ ok:true, sales_start_on: neu, vorher: alt, verschoben, fehler });
       }

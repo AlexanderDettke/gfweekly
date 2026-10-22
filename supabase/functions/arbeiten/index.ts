@@ -1,4 +1,4 @@
-/* Das Hohe Haus · Edge Function „arbeiten“ (V33 So arbeiten wir, 09.10.2026)
+/* Kompass · Edge Function „arbeiten“ (V33 So arbeiten wir, 09.10.2026)
    Ist-Aufnahme der Abläufe je Person, Systeme damals und heute, Umfrage für Alex und Lea, Einordnung der Werkzeuge
    aus dem Hub-Register.
 
@@ -8,7 +8,7 @@
      die Runde abgegeben haben. Nach der Abgabe sind die eigenen Antworten der Runde fest; zurücknehmen geht nur,
      solange die andere Person noch nicht abgegeben hat. V34: vorher liefert lage von der anderen Person nur die Nummern
      beantworteter Fragen (Stand für den Wegweiser), nie Werte oder Texte.
-   - Hub-Register (hub.werkzeuge) nur lesen über hh_sa_werkzeuge; die Einordnung je Werkzeug liegt im Haus.
+   - Hub-Register (hub.werkzeuge) nur lesen über hh_sa_werkzeuge; die Einordnung je Werkzeug liegt im Kompass.
    - Auth wie gfweekly, saison, besetzung: Passwort im Body oder Header x-gfweekly-key gegen GFWEEKLY_PASSWORD.
      Eigene Funktion, damit die große Funktion gfweekly unberührt bleibt. */
 import { createClient } from 'jsr:@supabase/supabase-js@2';

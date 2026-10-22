@@ -1,4 +1,6 @@
-# Das Hohe Haus (vormals GF Weekly)
+# Kompass (vormals Das Hohe Haus, davor GF Weekly)
+
+> **Stand 21.10.2026: Umbenennung in Kompass.** Adresse https://kompass.wildehabitate.de/, neue Bildmarke und Favicon (Kompassrose). Paket und Prüfstand: `docs/PAKET-KOMPASS.md`. Technische Schlüssel bleiben gfweekly.
 
 > **Stand 21.10.2026: Webapp Standard, Pilot zur Erprobung**, auf dem Branch `paket/webstandard-pilot` (nicht gepusht).
 > Gesamte Webapp an `WEBAPP-PILOT-0.2` angepasst: Schrift ab 12 px, Bedienelemente 44 px, Tastatur und Fokus,

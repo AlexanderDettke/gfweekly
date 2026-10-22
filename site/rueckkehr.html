@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
-<title>Das Hohe Haus · Rückkehr</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=35" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=35" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=35" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=35" />
-<link rel="stylesheet" href="/assets/styles.css?v=35" />
+<title>Kompass · Rückkehr</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=38" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=38" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=38" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=38" />
+<link rel="stylesheet" href="/assets/styles.css?v=38" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
 
 <div id="gate">
   <div class="gate-card">
-    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <div class="mark pic"><img src="/assets/img/kompass-288.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
-    <h1>Das Hohe Haus</h1>
+    <h1>Kompass</h1>
     <div class="sub">Rückkehr · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
@@ -40,8 +40,8 @@
     <div class="rk-list" id="entList"></div>
   </section>
 
-  <section class="rk-sec" aria-label="Wartet auf dich">
-    <div class="sec-h"><h2>Wartet auf dich</h2><span class="fd-n" id="warN"></span></div>
+  <section class="rk-sec" aria-label="Für dich bereit">
+    <div class="sec-h"><h2>Für dich bereit</h2><span class="fd-n" id="warN"></span></div>
     <div class="rk-list" id="warList"></div>
   </section>
 
@@ -58,9 +58,9 @@
 
 <div class="modal-back" id="modal"></div>
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=35"></script>
-<script src="/assets/game.js?v=35"></script>
-<script src="/assets/eggs.js?v=35" defer></script>
+<script src="/assets/core.js?v=38"></script>
+<script src="/assets/game.js?v=38"></script>
+<script src="/assets/eggs.js?v=38" defer></script>
 <script>
 /* V24b · Rückkehr: was in deiner Abwesenheit entschieden wurde (nur ansehen, nichts davon wird rückgängig
    gemacht), was weitergegeben wurde und was auf dich wartet. „Übernehmen“ holt ein Thema zurück:
@@ -91,7 +91,7 @@ function renderKpis(){
   $("#kpis").innerHTML=[
     gfKachel({icon:"entscheidung",value:ent,label:"in Vertretung entschieden"}),
     gfKachel({icon:"partner",value:weiter,label:"weitergegeben"}),
-    gfKachel({icon:"frist",value:wartet,label:"wartet auf dich",tone:wartet?"warn":"pos"}),
+    gfKachel({icon:"frist",value:wartet,label:"für dich bereit",tone:wartet?"":"pos"}),
     mitAsana.length?gfKachel({icon:"release",value:asanaOffen,unit:`${asanaFertig} erledigt`,label:"Asana offen",
       title:"Aufgaben, die in Asana aus dieser Vertretung entstanden sind"}):"",
   ].join("");
@@ -116,7 +116,7 @@ function renderWartet(){
       <button class="btn btn-sm btn-brand" data-act="back">Übernehmen</button>
       <span class="m">${gfEsc(x.begruendung||"")}</span>
     </article>`).join("")
-    : `<div class="empty soft">Nichts wartet. Der Korb ist leer.</div>`;
+    : `<div class="empty soft">Für dich ist hier nichts mehr offen. ✓</div>`;
 }
 $("#warList").addEventListener("click",async e=>{
   const b=e.target.closest('[data-act="back"]'); if(!b) return;
@@ -175,7 +175,7 @@ async function ladeVorhaben(){
 function whoGleich(p){ return (p||"").toLowerCase()===gfWho().toLowerCase(); }
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("rueckkehr");
-  gfMountHero("ankunft","Rückkehr","Was in deiner Abwesenheit entschieden wurde, was weitergegeben wurde und was auf dich wartet.",{compact:true});
+  gfMountHero("ankunft","Rückkehr","Was in deiner Abwesenheit entschieden wurde, was weitergegeben wurde und was für dich bereitliegt.",{compact:true});
   await load();
 });
 </script>
