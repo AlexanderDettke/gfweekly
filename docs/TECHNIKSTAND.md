@@ -11,6 +11,8 @@ Edge Function `gfweekly` (deployt am 22.10.2026):
 - `news_list` lässt Archiviertes weg, außer `statuses` nennt `archiviert`. Mit `archiv: true` und `q` (mindestens zwei Zeichen) sucht sie nur im Archiv in Titel, Text und Zitat, höchstens 100 Treffer.
 - `news_update` kennt `archiviert` (von Hand: Grund `hand`); jeder andere Status hebt Grund und Zeitpunkt auf, so holt „Zurück in den Korb“ Archiviertes zurück und setzt `aktiv_ab`. Die Archivsuche behandelt `%` und `_` nicht als Muster.
 - Übergabekorb: Termine (`source` kalender) ohne archivierte.
+- `news_accept` übernimmt keinen archivierten Kandidaten (409); wird er zwischen Lesen und Schreiben archiviert, entfernt die Aktion ein dabei neu angelegtes Thema wieder. Grenze: beim Anhängen an ein bestehendes Thema bleibt die angehängte Notiz in diesem Fall stehen.
+- Nacharbeit aus Review-Runde 3 (Seite): eine ältere Archivsuche überschreibt keine neuere, ein Ladefehler bleibt bis zum erfolgreichen Neuladen sichtbar. Diese letzten Korrekturen sind getestet, aber nach der dritten und letzten Review-Runde nicht erneut von Codex geprüft.
 - Abzeichen, Laufband, Für dich, Pförtner, Besprechung und der Kandidatenteil des Übergabekorbs lesen Kandidaten mit Status `neu` oder Ticker der letzten 14 Tage; Archiviertes fällt dort ohne Änderung heraus. Der tägliche Lauf schreibt über `news_add_many`; der eindeutige `source_ref` verhindert, dass ein archivierter Eintrag als neuer wiederkommt (Einträge ohne `source_ref` könnten doppelt kommen).
 
 Oberfläche `site/neuigkeiten.html`, Assets `?v=36`:
@@ -18,7 +20,7 @@ Oberfläche `site/neuigkeiten.html`, Assets `?v=36`:
 - „Zu deinen Vorhaben“: je Vorhaben mit Ball bei mir die Zahl der Neuigkeiten der letzten 7 Tage; ein Tipp filtert Ticker und Korb auf das Vorhaben, mit Link zur Akte. Lassen sich die Vorhaben nicht laden, sagen beide Bereiche das; „hoch“ steht trotzdem oben.
 - „Alles andere“: Ticker, Sichtungskorb und Themenlage, zu Beginn zugeklappt (gemerkter Zustand jetzt unter `gf_nw2_`). Darunter „Archiv durchsuchen“.
 
-Prüfungen am 22.10.2026: `pruefung/neuigkeiten-probe.mjs` gegen das echte Backend 16 von 16, darunter die ganze Aufräum-Migration in einer zurückgerollten Transaktion mit Testzeilen (Testeinträge `probe:nw:1` und `probe:nw:2`, danach entfernt); Bedienung um 15 Proben erweitert (abgefangene API), Schirme mit „Braucht dich“ als Kernbereich; `pruefung/abnahme.sh` bestanden.
+Prüfungen am 22.10.2026: `pruefung/neuigkeiten-probe.mjs` gegen das echte Backend 18 von 18, darunter die ganze Aufräum-Migration in einer zurückgerollten Transaktion mit Testzeilen (Testeinträge `probe:nw:1` und `probe:nw:2`, danach entfernt); Bedienung um 16 Proben erweitert (abgefangene API), Schirme mit „Braucht dich“ als Kernbereich; `pruefung/abnahme.sh` bestanden.
 
 Grenze: Der Branch `paket/webstandard-pilot` (nicht gepusht) ändert `core.js`, `styles.css` und eine Zeile in `neuigkeiten.html` und muss vor seinem Push auf `?v=37`.
 

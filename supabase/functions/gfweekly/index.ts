@@ -1868,6 +1868,8 @@ Deno.serve(async (req: Request) => {
     if (action === 'news_accept') {
       if(!t.id) return json({ error:'id fehlt' },400);
       const { data: n, error:e0 } = await admin.from('gfweekly_news').select('*').eq('id',t.id).single(); if(e0||!n) throw (e0||new Error('Eintrag fehlt'));
+      /* 22.10.2026: Archiviertes wird nicht übernommen, erst „Zurück in den Korb“ (sonst bräche der Rückweg des Aufräumens). */
+      if(n.status==='archiviert') return json({ error:'Der Eintrag liegt inzwischen im Archiv, bitte neu laden und erst zurückholen.' },409);
       const src = [n.source_title, n.source_url].filter(Boolean).join(' · ');
       const when = new Date(n.happened_at).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
       let topic: any = null;
@@ -1887,7 +1889,9 @@ Deno.serve(async (req: Request) => {
         };
         const { data: nt, error:e3 } = await admin.from('gfweekly_topics').insert(row).select().single(); if(e3) throw e3; topic=nt;
       }
-      const { data: item, error:e4 } = await admin.from('gfweekly_news').update({ status:'uebernommen', topic_id:topic.id, decided_by:(t.decided_by??'').toString().slice(0,120), decided_at:new Date().toISOString() }).eq('id',n.id).select().single(); if(e4) throw e4;
+      /* Nur, wenn der Eintrag inzwischen nicht archiviert wurde; sonst ein neu angelegtes Thema wieder entfernen und 409. */
+      const { data: item, error:e4 } = await admin.from('gfweekly_news').update({ status:'uebernommen', topic_id:topic.id, decided_by:(t.decided_by??'').toString().slice(0,120), decided_at:new Date().toISOString() }).eq('id',n.id).neq('status','archiviert').select().maybeSingle(); if(e4) throw e4;
+      if(!item){ if(!t.topic_id) await admin.from('gfweekly_topics').delete().eq('id', topic.id); return json({ error:'Der Eintrag liegt inzwischen im Archiv, bitte neu laden und erst zurückholen.' },409); }
       return json({ topic, item });
     }
     if (action === 'news_delete') {

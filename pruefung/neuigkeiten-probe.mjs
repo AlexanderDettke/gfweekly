@@ -47,6 +47,9 @@ try {
   ok(zurueck[0]?.status === 'neu' && zurueck[0]?.aktiv === true, 'zurückgeholter 40 Tage alter Eintrag übersteht den nächsten Verfall (aktiv_ab)', zurueck);
   const h = await api('news_update', { id, status: 'archiviert', decided_by: 'Alex' });
   ok(h.item.status === 'archiviert' && h.item.archiv_grund === 'hand' && !!h.item.archiviert_at, 'Von Hand archivieren trägt den Grund „hand“', h.item);
+  const themenVor = sql("select count(*)::int n from public.gfweekly_topics where title = 'Probe Neuigkeiten Archiv Quokka'")[0].n;
+  await api('news_accept', { id, decided_by: 'Alex' }, 409).then(d => ok(/im Archiv/.test(d.error), 'Übernahme eines archivierten Kandidaten gibt 409'));
+  ok(sql("select count(*)::int n from public.gfweekly_topics where title = 'Probe Neuigkeiten Archiv Quokka'")[0].n === themenVor, 'und legt kein Thema an');
   console.log('\n== Verfall (zurückgerollt) ==');
   const v = sql("begin; select public.hh_news_verfall(14) r; rollback;");
   const nachher = sql("select status from public.gfweekly_news where source_ref = 'probe:nw:2'");
@@ -64,10 +67,12 @@ try {
     ('kandidat','Probe alt','manuell','mittel','neu','probe:nw:3', now()-interval '30 days', now()-interval '30 days', null, null, null),
     ('kandidat','Probe alt, gestern zugeteilt','manuell','mittel','neu','probe:nw:4', now()-interval '30 days', now()-interval '30 days', 'lea', 'Alex', now()-interval '1 day'),
     ('kandidat','Probe frisch','manuell','mittel','neu','probe:nw:5', now()-interval '2 days', now()-interval '2 days', null, null, null);`;
+  const echteArchiv = () => sql("select count(*)::int n from public.gfweekly_news where status='archiviert' and coalesce(source_ref,'') not like 'probe:nw:%'")[0].n;
+  const vorherArchiv = echteArchiv();
   const m = sql(`begin; ${testzeilen} ${mig} select source_ref, status, archiv_grund from public.gfweekly_news where source_ref in ('probe:nw:3','probe:nw:4','probe:nw:5') order by source_ref; rollback;`);
   const st = Object.fromEntries(m.map(r => [r.source_ref, r.archiv_grund || r.status]));
   ok(st['probe:nw:3'] === 'aufraeumen-20261022' && st['probe:nw:4'] === 'neu' && st['probe:nw:5'] === 'neu', `${datei}: alt archiviert, kürzlich zugeteilt und frisch bleiben`, st);
-  ok(sql("select count(*)::int n from public.gfweekly_news where source_ref in ('probe:nw:3','probe:nw:4','probe:nw:5')")[0].n === 0 && sql("select count(*)::int n from public.gfweekly_news where status='archiviert' and coalesce(source_ref,'') not like 'probe:nw:%'")[0].n === 0, 'nach dem Rollback nichts archiviert, keine Testzeilen');
+  ok(sql("select count(*)::int n from public.gfweekly_news where source_ref in ('probe:nw:3','probe:nw:4','probe:nw:5')")[0].n === 0 && echteArchiv() === vorherArchiv, 'nach dem Rollback Archivbestand unverändert, keine Testzeilen');
 } catch (e) { ok(false, 'Probe abgebrochen', e.message); }
 finally {
   try { aufraeumen(); console.log('  · Testeinträge abgeräumt'); } catch (e) { ok(false, 'Testeinträge nicht abgeräumt (source_ref probe:nw:1 und probe:nw:2)'); }

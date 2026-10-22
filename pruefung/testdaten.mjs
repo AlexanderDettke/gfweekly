@@ -262,7 +262,7 @@ export const ANTWORT = {
     { id:'d1', decision:'Wir bleiben beim bisherigen Gastro-Partner.', topic_id:'t4', topic_title:'Gastro-Partner für 2027 bestätigen', next_action:'Vertrag schicken', owner:'Lea', strand:'habitate', decided_by:'Alex', decided_at:tag(-5), created_at:zeit(-5) },
     { id:'d2', decision:'Der Wochenbrief geht freitags raus.', topic_id:'t3', topic_title:'Wochenbrief an das Team', next_action:'Vorlage schreiben', owner:'Alex', strand:'habitate', decided_by:'Lea', decided_at:tag(-12), created_at:zeit(-12) } ] },
   /* 22.10.2026: Archiviertes nur mit archiv und Suchbegriff (wie das Backend). */
-  news_list: (p) => p && p.archiv ? { items: NEWS.filter(x => x.status === 'archiviert' && (x.title + ' ' + x.body).toLowerCase().includes(String(p.q || '').toLowerCase())), gekuerzt:false }
+  news_list: (p) => SCHALTER.newsFehler ? { __status:500, error:'Verbindung unterbrochen' } : p && p.archiv ? { items: NEWS.filter(x => x.status === 'archiviert' && (x.title + ' ' + x.body).toLowerCase().includes(String(p.q || '').toLowerCase())), gekuerzt:false }
     : { items: NEWS.filter(x => (p && Array.isArray(p.statuses) && p.statuses.length) ? p.statuses.includes(x.status) : x.status !== 'archiviert') },
   news_update: (p) => { const x = NEWS.find(n => n.id === p.id); return { item: { ...(x || {}), id:p.id, status:p.status, archiv_grund:null, archiviert_at:null } }; },
   news_accept: (p) => { const x = NEWS.find(n => n.id === p.id); return { item: { ...(x || {}), status:'uebernommen', topic_id:'t-neu' }, topic: { id:'t-neu', title:(x && x.title) || 'Thema', board_lane:'zu_besprechen' } }; },
@@ -402,7 +402,7 @@ const vhVerlauf = [
   { id:'e4', vorhaben_id:'vh-xceed', happened_at:zeit(-9), art:'entscheidung', wer:'Alex und Lea', text:'XCeed wird Ticketanbieter.', tag:'Entscheidung', status:'bestaetigt', source_ref:'seed:2', source_url:null, created_at:zeit(-9) },
 ];
 /* Schalter für Fehlerwege in den Bedienproben. */
-export const SCHALTER = { rueckkehrFehler:false, wiederFehler:false, abschlussKonflikt:false, vhListeFehler:false };
+export const SCHALTER = { rueckkehrFehler:false, wiederFehler:false, abschlussKonflikt:false, vhListeFehler:false, newsFehler:false };
 export const VH_ANTWORT = {
   vorhaben_list: (p) => SCHALTER.vhListeFehler && !(p && p.status) ? { __status:500, error:'Verbindung unterbrochen' } : p && p.status === 'erledigt'
     ? ({ stand:zeit(0), heute, vorhaben:VORHABEN.filter(v => v.status === 'erledigt').map(v => ({ ...v, erledigt_am:zeit(-2), ergebnis:v.slug === 'saal-alt' ? 'Rechnung bezahlt, Schlüssel zurück' : null })) })
