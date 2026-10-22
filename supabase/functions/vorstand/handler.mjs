@@ -45,10 +45,10 @@ export function makeHandler({db,password,asanaToken='',workspace,fetchImpl=fetch
     if(!row)throw new OfficeError(404,'Vorgang nicht gefunden.');return row;
   }
   async function people() {
-    const rows=await checked(db.from('gfweekly_people').select('name,email,asana_gid').in('email',Object.values(PERSONS)));
+    const rows=await checked(db.from('gfweekly_people').select('name,email,asana_gid'));
     const result={};
     for(const [who,email] of Object.entries(PERSONS)) {
-      const matches=(rows||[]).filter(p=>(p.email||'').toLowerCase()===email && /^\d+$/.test(p.asana_gid||''));
+      const matches=(rows||[]).filter(p=>(p.email||'').trim().toLowerCase()===email && /^\d+$/.test(p.asana_gid||''));
       if(matches.length!==1)throw new OfficeError(400,'Asana Zuordnung für '+who+' ist nicht eindeutig.');
       result[who]=matches[0].asana_gid;
     }
@@ -111,20 +111,28 @@ export function makeHandler({db,password,asanaToken='',workspace,fetchImpl=fetch
         // Ein zweiter Klick erzeugt damit keine zweite Aufgabe. task_check findet den Beleg.
         return json({item:await finish(item,'created',task,'',who)},201);
       }
-      if(body.action==='task_check') {
+      if(body.action==='task_check'||body.action==='task_release') {
         const item=await itemById(t.id);
         if(item.asana_gid) {
           const r=await asana('tasks/'+item.asana_gid+'?opt_fields=gid,completed,permalink_url');
           return json({item:await rpc('hh_vorstand_task_sync',{p_id:item.id,p_gid:item.asana_gid,p_completed:r.data.completed,p_by:who})});
         }
         if(!['creating','unclear'].includes(item.task_state))throw new OfficeError(400,'Für diesen Vorgang wurde noch keine Aufgabe angefordert.');
+        const release=body.action==='task_release';
+        if(release&&(t.confirm!==true||t.version!==item.version))throw new OfficeError(409,'Bitte den aktuellen Stand abgleichen und die Freigabe bestätigen.');
         const ids=await people(),found=[];let offset='';
         for(let page=0;page<10;page++) {
-          const r=await asana('users/'+ids[item.task_assignee]+'/tasks?workspace='+workspace+'&limit=100&opt_fields=gid,notes,permalink_url,completed'+(offset?'&offset='+encodeURIComponent(offset):''));
+          const r=await asana('tasks?assignee='+ids[item.task_assignee]+'&workspace='+workspace+'&limit=100&opt_fields=gid,notes,permalink_url,completed'+(offset?'&offset='+encodeURIComponent(offset):''));
           for(const task of r.data||[])if((task.notes||'').includes('[Kompass Vorstand '+item.id+']'))found.push(task);
           offset=r.next_page?.offset||'';if(!offset)break;
         }
-        if(found.length!==1)return json({item,error:found.length?'Mehrere passende Aufgaben gefunden. Bitte den Originalbestand prüfen.':'Kein eindeutiger Aufgabenbeleg gefunden. Der Auftrag bleibt zur Klärung reserviert.'},409);
+        if(offset)throw new OfficeError(409,'Der Abgleich ist nach 1000 Aufgaben noch unvollständig. Die Reservierung bleibt bestehen. Bitte den Aufgabenbestand prüfen.');
+        if(found.length>1)return json({item,error:'Mehrere passende Aufgaben gefunden. Bitte den Originalbestand prüfen.'},409);
+        if(!found.length){
+          const releaseAllowed=Date.now()-Date.parse(item.updated_at)>120000;
+          if(release&&releaseAllowed)return json({item:await finish(item,'failed',null,'Nach vollständigem Asana Abgleich zur erneuten Anlage freigegeben.',who)});
+          return json({item,releaseAllowed,error:releaseAllowed?'Vollständiger Abgleich: keine passende Aufgabe gefunden. Eine erneute Anlage kann ausdrücklich freigegeben werden.':'Keine passende Aufgabe gefunden. Nach zwei Minuten erneut abgleichen, damit ein laufender Auftrag Zeit zum Abschluss hat.'},409);
+        }
         return json({item:await finish(item,'created',found[0],'',who)});
       }
       throw new OfficeError(400,'Unbekannte Aktion.');

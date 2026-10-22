@@ -7,7 +7,7 @@
   async function api(action,payload={}) {
     const r=await fetch(ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,password:gfPW(),payload:{...payload,by:gfWho()==='Lea'?'Lea':'Alex'}}),signal:AbortSignal.timeout(45000)});
     let d;try{d=await r.json();}catch{throw new Error('Der Server hat die Aktion nicht eindeutig bestätigt.');}
-    if(!r.ok){const e=new Error(d.error||'Die Aktion konnte nicht bestätigt werden.');e.status=r.status;e.item=d.item;throw e;}return d;
+    if(!r.ok){const e=new Error(d.error||'Die Aktion konnte nicht bestätigt werden.');e.status=r.status;e.item=d.item;e.releaseAllowed=d.releaseAllowed;throw e;}return d;
   }
   function summary(items) {const open=items.filter(x=>x.status!=='erledigt');return {open:open.length,urgent:open.filter(x=>x.priority).length,waiting:open.filter(x=>x.status==='wartet').length};}
   let cardRun=0;
@@ -31,6 +31,7 @@
     function taskButtons(){
       const pending=current&&['creating','unclear','created'].includes(current.task_state);
       $('#vbTaskCreate').disabled=busy||!current||pending||!asanaReady;
+      $('#vbTaskRelease').hidden=!current?true:!current.releaseAllowed;$('#vbTaskRelease').disabled=busy;
       $('#vbTaskCheck').disabled=busy||!current||!['creating','unclear','created'].includes(current.task_state)||!asanaReady;
     }
     function showTab(){root.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===tab)));root.querySelectorAll('[data-panel]').forEach(p=>p.hidden=p.dataset.panel!==tab);}
@@ -87,9 +88,10 @@
     $('#vbTaskCreate').onclick=async()=>{
       setBusy(true);try{
         await save();const d=await api('task_create',{id:current.id,version:current.version});current=d.item;items=items.map(x=>x.id===current.id?current:x);draw();list();note(d.existing?'Die vorhandene Aufgabe ist verknüpft.':'Asana hat die Aufgabe bestätigt. Der Mailvorgang bleibt offen.');
-      }catch(e){if(e.item){current=e.item;draw();}note(e.message,true);if(!e.item)await load(false);}finally{setBusy(false);}
+      }catch(e){if(e.item){current={...e.item,releaseAllowed:!!e.releaseAllowed};draw();}note(e.message,true);if(!e.item)await load(false);}finally{setBusy(false);}
     };
-    $('#vbTaskCheck').onclick=async()=>{setBusy(true);try{if(dirty)await save();const d=await api('task_check',{id:current.id});current=d.item;draw();await load(false);note('Asana Stand abgeglichen. Die Erledigung des Mailvorgangs wird gesondert geprüft.');}catch(e){if(e.item){current=e.item;draw();}note(e.message,true);}finally{setBusy(false);}};
+    $('#vbTaskCheck').onclick=async()=>{setBusy(true);try{if(dirty)await save();const d=await api('task_check',{id:current.id});current=d.item;draw();await load(false);note('Asana Stand abgeglichen. Die Erledigung des Mailvorgangs wird gesondert geprüft.');}catch(e){if(e.item){current={...e.item,releaseAllowed:!!e.releaseAllowed};draw();}note(e.message,true);}finally{setBusy(false);}};
+    $('#vbTaskRelease').onclick=async()=>{if(!confirm('Nach erneutem vollständigem Asana Abgleich die Reservierung freigeben? Nur bestätigen, wenn ihr keine passende Aufgabe selbst angelegt oder verschoben habt.'))return;setBusy(true);try{if(dirty)await save();const d=await api('task_release',{id:current.id,version:current.version,confirm:true});current=d.item;draw();await load(false);note('Abgleich bestätigt. Eine neue Anlage ist jetzt wieder möglich.');}catch(e){note(e.message,true);}finally{setBusy(false);}};
     $('#vbNewToggle').onclick=()=>{$('#vbNew').hidden=!$('#vbNew').hidden;if(!$('#vbNew').hidden)$('#vbNewTitle').focus();};
     $('#vbNewSave').onclick=async()=>{setBusy(true);try{if(dirty)throw new Error('Bitte zuerst den offenen Vorgang speichern.');const title=$('#vbNewTitle').value.trim(),url=$('#vbNewSource').value.trim();const d=await api('case_add',{source_url:url,patch:{title,next_action:$('#vbNewNext').value,task_title:title,task_notes:$('#vbNewNext').value,task_assignee:gfWho()==='Lea'?'Lea':'Alex'}});items.unshift(d.item);current=d.item;$('#vbNew').hidden=true;$('#vbNewTitle').value='';$('#vbNewSource').value='';$('#vbNewNext').value='';draw();list();note('Vorgang gemeinsam aufgenommen.');}catch(e){note(e.message,true);}finally{setBusy(false);}};
     document.addEventListener('gf-who',()=>{list();if(!dirty)draw();});

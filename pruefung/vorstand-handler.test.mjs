@@ -6,7 +6,7 @@ const base={id:'TEST-handler',organization:'mit-freude',version:1,title:'Synthet
 function mockDb(){
   let row=structuredClone(base);const calls=[];
   const db={calls,get row(){return row;},set row(v){row=v;},
-    from(table){return {select(){return this;},in(){return Promise.resolve({data:[{email:'alex@wildemoehre.org',asana_gid:'11'},{email:'lea@wildemoehre.org',asana_gid:'22'}]});},eq(){return this;},maybeSingle(){return Promise.resolve({data:row});}};},
+    from(table){return {select(){return table==='gfweekly_people'?Promise.resolve({data:[{email:'Alex@wildemoehre.org ',asana_gid:'11'},{email:'lea@wildemoehre.org',asana_gid:'22'}]}):this;},in(){return Promise.resolve({data:[{email:'alex@wildemoehre.org',asana_gid:'11'},{email:'lea@wildemoehre.org',asana_gid:'22'}]});},eq(){return this;},maybeSingle(){return Promise.resolve({data:row});}};},
     async rpc(name,p){calls.push({name,p});
       if(name==='hh_vorstand_task_claim'){
         if(row.asana_gid)return {data:{existing:true,item:structuredClone(row)}};
@@ -57,6 +57,19 @@ test('Speicherfehler nach Asana Anlage bleibt gesperrt und wird nicht erneut ang
 });
 test('Unklarer Auftrag kann über den eindeutigen Marker mit Asana abgeglichen werden',async()=>{
   const db=mockDb();db.row={...base,task_state:'unclear',task_claim:crypto.randomUUID()};
-  const fn=makeHandler({db,password:key,asanaToken:'synthetic',workspace:'33',fetchImpl:async()=>Response.json({data:[{gid:'123',notes:'[Kompass Vorstand TEST-handler]',permalink_url:'https://app.asana.com/0/0/123',completed:false}]})});
+  const fn=makeHandler({db,password:key,asanaToken:'synthetic',workspace:'33',fetchImpl:async url=>{assert(url.includes('/tasks?assignee=11&workspace=33'));return Response.json({data:[{gid:'123',notes:'[Kompass Vorstand TEST-handler]',permalink_url:'https://app.asana.com/0/0/123',completed:false}]});}});
   const r=await fn(request('task_check'));assert.equal(r.status,200);assert.equal((await r.json()).item.asana_gid,'123');
+});
+
+test('Erneute Anlage verlangt vollständigen Abgleich und ausdrückliche aktuelle Freigabe',async()=>{
+ const db=mockDb();db.row={...base,task_state:'unclear',task_claim:crypto.randomUUID(),updated_at:new Date(Date.now()-180000).toISOString()};let reads=0;
+ const fn=makeHandler({db,password:key,asanaToken:'synthetic',workspace:'33',fetchImpl:async()=>{reads++;return Response.json({data:[]});}});
+ let r=await fn(request('task_check'));assert.equal(r.status,409);assert.equal((await r.json()).releaseAllowed,true);assert.equal(db.row.task_state,'unclear');
+ assert.equal((await fn(request('task_release'))).status,409);assert.equal(reads,1);
+ r=await fn(request('task_release',{id:base.id,version:1,by:'Alex',confirm:true}));assert.equal(r.status,200);assert.equal(db.row.task_state,'failed');
+});
+test('Unvollständige Suche gibt keine Reservierung frei',async()=>{
+ const db=mockDb();db.row={...base,task_state:'unclear',task_claim:crypto.randomUUID(),updated_at:new Date(Date.now()-180000).toISOString()};let reads=0;
+ const fn=makeHandler({db,password:key,asanaToken:'synthetic',workspace:'33',fetchImpl:async()=>{reads++;return Response.json({data:[],next_page:{offset:'more'}});}});
+ const r=await fn(request('task_release',{id:base.id,version:1,by:'Alex',confirm:true}));assert.equal(r.status,409);assert.equal(db.row.task_state,'unclear');assert.equal(reads,10);
 });
