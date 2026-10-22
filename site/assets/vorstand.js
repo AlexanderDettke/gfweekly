@@ -27,7 +27,7 @@
     let items=[],current=null,dirty=false,busy=false,run=0,filter='offen',tab=['reply','task','status'].includes(q.get('tab'))?q.get('tab'):'reply',asanaReady=false;
     const text=(id,value)=>{$(id).textContent=value;};
     function note(message,error=false){text('#vbNotice',message);$('#vbNotice').classList.toggle('vb-error',error);}
-    function setBusy(on){busy=on;root.querySelectorAll('[data-write]').forEach(b=>b.disabled=on);taskButtons();}
+    function setBusy(on){busy=on;root.querySelectorAll('[data-write],#vbTake,#vbSuggest,#vbReload,#vbDetail input,#vbDetail textarea,#vbDetail select').forEach(b=>b.disabled=on);if(!on&&current&&['creating','unclear','created'].includes(current.task_state))for(const id of ['vbTaskTitle','vbTaskNotes','vbTaskWho','vbTaskDue'])$('#'+id).disabled=true;taskButtons();}
     function taskButtons(){
       const pending=current&&['creating','unclear','created'].includes(current.task_state);
       $('#vbTaskCreate').disabled=busy||!current||pending||!asanaReady;
