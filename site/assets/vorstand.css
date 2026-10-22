@@ -25,8 +25,7 @@
 .vb-tabs button[aria-selected=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--text)}
 .vb-panel{display:grid;gap:var(--s-16)}
 .vb-field{display:grid;gap:var(--s-8);font-size:var(--stufe-2);min-width:0}
-.vb-field input,.vb-field select,.vb-field input::placeholder,.vb-field textarea::placeholder{color:var(--text-2);opacity:1}
-.vb-field textarea{width:100%;min-width:0;min-height:var(--ziel-min);border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);background:var(--bg);color:var(--text);padding:var(--s-8) var(--s-12);font:inherit;font-size:var(--stufe-3)}
+.vb-field input,.vb-field select,.vb-field textarea{width:100%;min-width:0;min-height:var(--ziel-min);border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);background:var(--bg);color:var(--text);padding:var(--s-8) var(--s-12);font:inherit;font-size:var(--stufe-3)}
 .vb-field input::placeholder,.vb-field textarea::placeholder{color:var(--text-2);opacity:1}
 .vb-field textarea{min-height:120px;resize:vertical;line-height:var(--leading-text)}
 .vb-field textarea.vb-draft{min-height:280px}
@@ -40,5 +39,4 @@
 .vb-note{padding:var(--s-12);background:var(--surface-2);border-radius:var(--radius-m);color:var(--text-2);font-size:var(--stufe-2);line-height:var(--leading-text)}
 #vb a{overflow-wrap:anywhere}
 @media(max-width:850px){.vb-work{grid-template-columns:1fr}.vb-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:560px){.vb-list{max-height:260px}.vb-list,.vb-cols{grid-template-columns:1fr}.vb-detail{padding:var(--s-12)}.vb-field input,.vb-field select,.vb-field input::placeholder,.vb-field textarea::placeholder{color:var(--text-2);opacity:1}
-.vb-field textarea{font-size:16px}}
+@media(max-width:560px){.vb-list{max-height:260px}.vb-list,.vb-cols{grid-template-columns:1fr}.vb-detail{padding:var(--s-12)}.vb-field input,.vb-field select,.vb-field textarea{font-size:16px}}
