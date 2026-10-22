@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeHandler, cleanPatch, taskPayload } from '../supabase/functions/vorstand/handler.mjs';
 const key='synthetic-office-test';
-const base={id:'TEST-handler',organization:'mit-freude',version:1,title:'Synthetische Anfrage',source_url:'https://groups.google.com/a/freude-eg.de/g/vorstand/c/test-handler',task_title:'Prüfaufgabe',task_notes:'Nur synthetische Prüfung',task_assignee:'Alex',task_state:'none',asana_gid:null};
+const base={id:'TEST-handler',organization:'mit-freude',version:1,title:'Synthetische Anfrage',source_url:'https://groups.google.com/a/freude-eg.de/g/vorstand/c/test-handler',task_title:'Prüfaufgabe',task_notes:'Nur synthetische Prüfung',task_assignee:'Alex',task_state:'none',asana_gid:null,created_at:'2026-10-22T03:00:00Z'};
 function mockDb(){
   let row=structuredClone(base);const calls=[];
   const db={calls,get row(){return row;},set row(v){row=v;},
@@ -57,7 +57,7 @@ test('Speicherfehler nach Asana Anlage bleibt gesperrt und wird nicht erneut ang
 });
 test('Unklarer Auftrag kann über den eindeutigen Marker mit Asana abgeglichen werden',async()=>{
   const db=mockDb();db.row={...base,task_state:'unclear',task_claim:crypto.randomUUID()};
-  const fn=makeHandler({db,password:key,asanaToken:'synthetic',workspace:'33',fetchImpl:async url=>{assert(url.includes('/tasks?assignee=11&workspace=33'));return Response.json({data:[{gid:'123',notes:'[Kompass Vorstand TEST-handler]',permalink_url:'https://app.asana.com/0/0/123',completed:false}]});}});
+  const fn=makeHandler({db,password:key,asanaToken:'synthetic',workspace:'33',fetchImpl:async url=>{assert(url.includes('/tasks?assignee=11&workspace=33'));assert(url.includes('modified_since=2026-10-22T03%3A00%3A00Z'));return Response.json({data:[{gid:'123',notes:'[Kompass Vorstand TEST-handler]',permalink_url:'https://app.asana.com/0/0/123',completed:false}]});}});
   const r=await fn(request('task_check'));assert.equal(r.status,200);assert.equal((await r.json()).item.asana_gid,'123');
 });
 
@@ -72,4 +72,10 @@ test('Unvollständige Suche gibt keine Reservierung frei',async()=>{
  const db=mockDb();db.row={...base,task_state:'unclear',task_claim:crypto.randomUUID(),updated_at:new Date(Date.now()-180000).toISOString()};let reads=0;
  const fn=makeHandler({db,password:key,asanaToken:'synthetic',workspace:'33',fetchImpl:async()=>{reads++;return Response.json({data:[],next_page:{offset:'more'}});}});
  const r=await fn(request('task_release',{id:base.id,version:1,by:'Alex',confirm:true}));assert.equal(r.status,409);assert.equal(db.row.task_state,'unclear');assert.equal(reads,10);
+});
+
+test('Direkter Asana Beleg wird nur mit der passenden Quellenkennung verknüpft',async()=>{
+ const db=mockDb();db.row={...base,task_state:'unclear',task_claim:crypto.randomUUID()};let matching=false;
+ const fn=makeHandler({db,password:key,asanaToken:'synthetic',workspace:'33',fetchImpl:async url=>{assert(url.includes('/tasks/123?'));return Response.json({data:{gid:'123',notes:matching?'[Kompass Vorstand TEST-handler]':'Andere Aufgabe',permalink_url:'https://app.asana.com/0/0/123'}});}});
+ const payload={id:base.id,by:'Alex',asana_url:'https://app.asana.com/1/33/task/123'};assert.equal((await fn(request('task_link',payload))).status,400);assert.equal(db.row.asana_gid,null);matching=true;assert.equal((await fn(request('task_link',payload))).status,200);assert.equal(db.row.asana_gid,'123');
 });

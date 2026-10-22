@@ -111,6 +111,15 @@ export function makeHandler({db,password,asanaToken='',workspace,fetchImpl=fetch
         // Ein zweiter Klick erzeugt damit keine zweite Aufgabe. task_check findet den Beleg.
         return json({item:await finish(item,'created',task,'',who)},201);
       }
+      if(body.action==='task_link') {
+        const item=await itemById(t.id);
+        if(!['creating','unclear'].includes(item.task_state)||item.asana_gid)throw new OfficeError(409,'Nur ein ungeklärter Auftrag kann so abgeglichen werden.');
+        const url=asText(t.asana_url,1000),gid=/^https:\/\/app\.asana\.com\/[^\s]*?([0-9]+)\/?$/.exec(url)?.[1];
+        if(!gid)throw new OfficeError(400,'Bitte den vollständigen Asana Aufgabenlink einfügen.');
+        const r=await asana('tasks/'+gid+'?opt_fields=gid,notes,permalink_url,completed');
+        if(!(r.data?.notes||'').includes('[Kompass Vorstand '+item.id+']'))throw new OfficeError(400,'Die Aufgabe enthält nicht die Quellenkennung dieses Vorgangs.');
+        return json({item:await finish(item,'created',r.data,'',who)});
+      }
       if(body.action==='task_check'||body.action==='task_release') {
         const item=await itemById(t.id);
         if(item.asana_gid) {
@@ -122,7 +131,7 @@ export function makeHandler({db,password,asanaToken='',workspace,fetchImpl=fetch
         if(release&&(t.confirm!==true||t.version!==item.version))throw new OfficeError(409,'Bitte den aktuellen Stand abgleichen und die Freigabe bestätigen.');
         const ids=await people(),found=[];let offset='';
         for(let page=0;page<10;page++) {
-          const r=await asana('tasks?assignee='+ids[item.task_assignee]+'&workspace='+workspace+'&limit=100&opt_fields=gid,notes,permalink_url,completed'+(offset?'&offset='+encodeURIComponent(offset):''));
+          const r=await asana('tasks?assignee='+ids[item.task_assignee]+'&workspace='+workspace+'&limit=100&modified_since='+encodeURIComponent(item.created_at||'1970-01-01T00:00:00Z')+'&opt_fields=gid,notes,permalink_url,completed'+(offset?'&offset='+encodeURIComponent(offset):''));
           for(const task of r.data||[])if((task.notes||'').includes('[Kompass Vorstand '+item.id+']'))found.push(task);
           offset=r.next_page?.offset||'';if(!offset)break;
         }
