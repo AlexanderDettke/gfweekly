@@ -15,6 +15,7 @@
 <link rel="apple-touch-icon" href="/assets/icon-180.png?v=36" />
 <link rel="manifest" href="/assets/manifest.webmanifest?v=36" />
 <link rel="stylesheet" href="/assets/styles.css?v=36" />
+<link rel="stylesheet" href="/assets/vorstand.css?v=1" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -34,6 +35,8 @@
 <div class="app wrap" id="app">
   <header id="topbar"></header>
   <div id="hero"></div>
+
+  <section class="fd" id="fdVorstand" aria-label="Vorstandspost"><div class="fd-h"><h2>Vorstandspost</h2><span class="fd-n" id="fdVorstandN"></span><span class="line"></span><a class="btn btn-sm btn-brand" href="vorstand.html">Vorstandsbüro →</a></div><div class="fd-list" id="fdVorstandL"><div class="loading">Gemeinsamen Stand laden …</div></div></section>
 
   <!-- V31d · Vorhaben zuerst: was bei mir liegt, und was sich seit meinem letzten Besuch bewegt hat. -->
   <section class="fd" id="fdVh" aria-label="Deine Vorhaben">
@@ -71,7 +74,8 @@
 
 <button type="button" class="vh-fab" id="fdFab" aria-label="Einwurf: etwas eintragen"><span aria-hidden="true">+</span> Einwurf</button>
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=36"></script>
+<script src="/assets/core.js?v=36-vorstand1"></script>
+<script src="/assets/vorstand.js?v=1"></script>
 <script src="/assets/game.js?v=36"></script>
 <script src="/assets/eggs.js?v=36" defer></script>
 <script>
@@ -277,6 +281,10 @@ async function load(){
 }
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("start");
+  gfLoadVorstandCard();
+  document.addEventListener("gf-who",()=>gfLoadVorstandCard());
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)gfLoadVorstandCard();});
+  setInterval(()=>{if(!document.hidden)gfLoadVorstandCard();},60000);
   const wd=NOW.toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long"});
   gfMountHero("ankunft", `${gfAvatarTag(gfWho(),"hero-av")}Guten Tag, ${gfEsc(gfWho())}`, `<span class="hero-date">${wd} · ${GF_APP_SUB}</span>`,
     {slim:true, aside:`<button type="button" class="btn btn-primary fd-einwurf" id="fdEinwurf"><span aria-hidden="true">+</span> Einwurf</button>`});
