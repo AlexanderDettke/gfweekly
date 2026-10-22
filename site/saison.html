@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
-<title>Das Hohe Haus · Saison</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=36" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=36" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=36" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=36" />
-<link rel="stylesheet" href="/assets/styles.css?v=36" />
+<title>Kompass · Saison</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=37" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=37" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=37" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=37" />
+<link rel="stylesheet" href="/assets/styles.css?v=37" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 <style>
 /* Saison (V28, 30.09.2026; V29, 02.10.2026: Verteilen und starten, Rückweg aus Asana): vier Antworten in fester Reihenfolge, aus den Daten von launch_list.
@@ -152,9 +152,9 @@ details[open]>summary .chev{transform:rotate(90deg)}
 
 <div id="gate">
   <div class="gate-card">
-    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <div class="mark pic"><img src="/assets/img/kompass-288.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
-    <h1>Das Hohe Haus</h1>
+    <h1>Kompass</h1>
     <div class="sub">Saison · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
@@ -228,10 +228,10 @@ details[open]>summary .chev{transform:rotate(90deg)}
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=36"></script>
-<script src="/assets/launch-logik.js?v=36"></script>
-<script src="/assets/game.js?v=36"></script>
-<script src="/assets/eggs.js?v=36" defer></script>
+<script src="/assets/core.js?v=37"></script>
+<script src="/assets/launch-logik.js?v=37"></script>
+<script src="/assets/game.js?v=37"></script>
+<script src="/assets/eggs.js?v=37" defer></script>
 <script>
 /* V28 · Saison in vier Fragen. Daten aus launch_list, Rechenlogik aus LaunchLogik, Schreiben über launch_set und launch_confirm. */
 const $=s=>document.querySelector(s);
@@ -304,7 +304,7 @@ function asanaStand(f){
   const log=(D.log||[]).filter(e=>e.what==="launch_send"&&e.row_id===f.short_name&&e.detail&&(e.detail.url||e.detail.projekt)).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
   const letzter=log[0]||null, erster=log[log.length-1]||null;
   const d=letzter&&letzter.detail||{};
-  /* Empfänger nach den Versandregeln (Angebot liegt beim Übergebenden), nicht die Zuständigen im Haus (Review V29, Befund 6). */
+  /* Empfänger nach den Versandregeln (Angebot liegt beim Übergebenden), nicht die Zuständigen im Kompass (Review V29, Befund 6). */
   /* Empfänger über alle Versände (Namen vereinigt), Anzahl aus allen gesendeten Aufgaben; sonst Versandregeln (Review V29, Runde 3, Befund 1). */
   const empfNamen=new Set(); for(const e of log) for(const k of Object.keys(e.detail&&e.detail.empfaenger&&typeof e.detail.empfaenger==="object"?e.detail.empfaenger:{})) empfNamen.add(k);
   const vg=empfNamen.size?null:LL.versandVorschau(gesendet, D.pool, D.besetzung, f, { alle:true });

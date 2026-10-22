@@ -1,3 +1,13 @@
+## Kompass sichtbar und „Deine 5 Minuten heute“ (22.10.2026)
+
+Auftrag und Annahmen: `docs/PAKET-KOMPASS-RUHE.md`. Der Kompass-Commit vom 21.10.2026 (Abschnitt „Kompass“ weiter unten) ist auf den aktuellen main übertragen, Assets `?v=37`; Edge Functions `gfweekly`, `besetzung`, `saison`, `organisation` aus diesem Stand deployt (vorher live gleich main 3a20378).
+
+Für dich (`site/index.html`): oben „Deine 5 Minuten heute“ mit drei Dingen aus Vorhaben mit Ball bei mir, Entscheidungen an mich oder die GF und Kandidaten „hoch“ der letzten 7 Tage; Auswahl je Person und Tag in `localStorage` `gf_5min_<Person>_<Tag>`, Fortschritt als Punkte und „n von 3 abgeräumt“, danach „Noch drei?“. Ließ sich eine Quelle nicht laden, gilt ihr Eintrag als offen. Ruhigerer Ton auf Für dich und der Rückkehrseite, Zähler der Seitenleiste neutral (`.nbadge` auf `--fill`/`--text-2`).
+
+Quell-SVGs der Bildmarke unter `docs/marke/` (nicht ausgeliefert). Vorschaubild `site/assets/previews/gfweekly.webp` neu aus der Seite mit Testdaten (öffentlich erreichbar, deshalb keine echten Daten). Nacharbeit aus Review-Runde 1: Tagesauswahl wird nur aus vollständig geladenen Quellen gespeichert (sonst „vorläufig“), ein Kandidat gilt erst als abgeräumt, wenn er nicht mehr offen ist, Personenwechsel leert die Karte sofort, Leertexte sagen „für dich nichts offen“ statt „alles entschieden“. Nacharbeit aus Runde 2: eine per Pförtner an jemand anderen gegebene Entscheidung oder ein so weitergegebener Kandidat gilt als abgeräumt; Kandidaten werden bis 2.000 geladen, eine volle Seite gilt als gekürzt (Auswahl vorläufig); ein Fehler im Pförtner zeigt einen Hinweis statt „lädt …“; nach einem Personenwechsel werden ältere Antworten weder übernommen noch gezeichnet. „das Haus“ für das Werkzeug heißt jetzt Kompass (Übergabe, Vertretung, Einwurf, Besetzung); in Organisation meint „Haus“ das Unternehmen und bleibt. Nacharbeit aus Runde 3: „Noch drei?“ zeigt nur die neue Runde (Rundennummer je Eintrag), Kandidaten mit eigenem Pförtner an andere bleiben auch ohne Pförtnerliste außen vor, bei gekürzter Kandidatenliste gilt kein Kandidat als abgeräumt, ein über Mitternacht offener Tab lädt beim Zurückkommen neu. Diese letzten Korrekturen sind getestet, aber nach der dritten und letzten Review-Runde nicht erneut von Codex geprüft. Prüfungen: `pruefung/abnahme.sh` bestanden, Bedienung um eine Gruppe „Kompass, Deine 5 Minuten heute“ erweitert.
+
+Nächste Pakete: „Hier lohnt sich ein Blick“ und Mehrfachauswahl (`docs/PAKET-BLICK-UND-AUFRAEUMEN.md`), danach die technische Umbenennung mit Übergangsbrücken.
+
 ## Neuigkeiten aufräumen (22.10.2026)
 
 Auftrag und Annahmen: `docs/PAKET-NEUIGKEITEN-AUFRAEUMEN.md` (Variante A „Nur was Handeln braucht“). Vorher lagen 712 Ticker und 320 offene Kandidaten auf der Seite.
@@ -53,6 +63,10 @@ Prüfungen am 21.10.2026:
 - `pruefung/abnahme.sh`: alle Prüfungen bestanden; Bedienung um 29 Proben zum Abschließen erweitert (abgefangene API), Schirme um Filter „Erledigt“ und eine erledigte Akte (100 Bilder, 0 Meldungen).
 
 Grenzen: Wer abschließt, wählt der Browser („als Alex“ oder „als Lea“); die Edge Function prüft nur das gemeinsame Passwort. Der Rückgängig-Hinweis lebt nur auf der Seite, die abgeschlossen hat; danach geht es über „Wieder öffnen“, das abgehakte Punkte und archivierte Themen nicht zurücksetzt. Die XCeed-Proben haben im Verlauf von XCeed Einträge „Wieder geöffnet“ und „Erledigt: …“ hinterlassen.
+
+## Kompass (21.10.2026)
+
+Das Hohe Haus heißt seit 20.10.2026 Kompass, Adresse https://kompass.wildehabitate.de/ (Netlify-Hauptdomain seit 18.10.2026, hohes-haus.netlify.app leitet weiter). Name in Seitentiteln, Login, Seitenleiste (`GF_APP_NAME`), Manifest und Fußzeilen; neue Bildmarke `docs/marke/kompass.svg` und `docs/marke/kompass-klein.svg` mit allen Favicon-Größen und og-image.png; `HH_BASIS` in gfweekly und besetzung auf die neue Domain; Assets `?v=35`. Einzelheiten und Offenes: `docs/PAKET-KOMPASS.md`.
 
 ## Technische Gesamtabnahme vom 15.10.2026
 

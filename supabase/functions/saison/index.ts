@@ -1,4 +1,4 @@
-/* Das Hohe Haus · Edge Function „saison“ (24.09.2026)
+/* Kompass · Edge Function „saison“ (24.09.2026)
    Jahresrad der Festivalsaison: Zeilen (Kreislauf, Metaphasen, Departments, Festivals, Stränge) und Elemente.
    Eigene kleine Funktion statt weiterer Aktionen in „gfweekly“ (die ist zu groß für den Deploy aus Cowork).
    Auth wie gfweekly: Passwort im Body oder im Header x-gfweekly-key, geprüft gegen das Secret GFWEEKLY_PASSWORD.

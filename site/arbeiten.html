@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
-<title>Das Hohe Haus · So arbeiten wir</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=36" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=36" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=36" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=36" />
-<link rel="stylesheet" href="/assets/styles.css?v=36" />
+<title>Kompass · So arbeiten wir</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=37" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=37" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=37" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=37" />
+<link rel="stylesheet" href="/assets/styles.css?v=37" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 <style>
 /* So arbeiten wir (V33, 09.10.2026). Ist-Aufnahme der Abläufe je Person, Systeme damals und heute, Umfrage für beide,
@@ -202,9 +202,9 @@
 
 <div id="gate">
   <div class="gate-card">
-    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <div class="mark pic"><img src="/assets/img/kompass-288.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
-    <h1>Das Hohe Haus</h1>
+    <h1>Kompass</h1>
     <div class="sub">So arbeiten wir · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
     <input aria-label="Passwort" id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
@@ -252,7 +252,7 @@
           <li><b>Gemeinsam einordnen</b><span>Mit beiden Ergebnissen gehen wir Ablauf für Ablauf durch: behalten, anpassen, umbauen, weglassen. Erst daraus entstehen Vorschläge für Werkzeuge und Vereinbarungen.</span></li>
         </ol>
         <div class="sa-stand" id="saStand"></div>
-        <p class="sa-muted">Wer gerade arbeitet, steht in der Kopfzeile (Alex oder Lea). Steckbriefe und Antworten gehören der gewählten Person. Es gibt keine Konten, das Haus vertraut auf die Wahl.</p>
+        <p class="sa-muted">Wer gerade arbeitet, steht in der Kopfzeile (Alex oder Lea). Steckbriefe und Antworten gehören der gewählten Person. Es gibt keine Konten, der Kompass vertraut auf die Wahl.</p>
       </div>
       <div class="sa-sec">
         <h2>Was hier bewusst noch fehlt</h2>
@@ -314,9 +314,9 @@
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="/assets/core.js?v=36"></script>
-<script src="/assets/game.js?v=36"></script>
-<script src="/assets/eggs.js?v=36" defer></script>
+<script src="/assets/core.js?v=37"></script>
+<script src="/assets/game.js?v=37"></script>
+<script src="/assets/eggs.js?v=37" defer></script>
 <script>
 const $=s=>document.querySelector(s);
 const SA_FN="https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/arbeiten";
@@ -357,7 +357,7 @@ function renderStand(){
 }
 
 /* ---------- Ist-Aufnahme ---------- */
-const IST_FELDER=[["startet_wenn","Wann startet er?","z. B. Mail von Partner, Montagsabgleich, Frist in Asana"],["schritte","Was tue ich, in welcher Reihenfolge?",""],["werkzeuge","Welche Werkzeuge und Orte nutze ich?","Mail, WhatsApp, Hohes Haus, Asana, Sheet, Kopf …"],["beteiligte","Wer ist beteiligt, worauf warte ich?",""],["ergebnis_ort","Wo liegt am Ende das Ergebnis?",""],["laeuft_gut","Was funktioniert gut?",""],["hakt","Wo hakt es?",""]];
+const IST_FELDER=[["startet_wenn","Wann startet er?","z. B. Mail von Partner, Montagsabgleich, Frist in Asana"],["schritte","Was tue ich, in welcher Reihenfolge?",""],["werkzeuge","Welche Werkzeuge und Orte nutze ich?","Mail, WhatsApp, Kompass, Asana, Sheet, Kopf …"],["beteiligte","Wer ist beteiligt, worauf warte ich?",""],["ergebnis_ort","Wo liegt am Ende das Ergebnis?",""],["laeuft_gut","Was funktioniert gut?",""],["hakt","Wo hakt es?",""]];
 function istKarte(x, eigene){
   if(!eigene){
     return `<div class="sa-karte fremd" id="ist-${x.id}"><div class="kopf"><b>${esc(x.ablauf)}</b><div class="meta">${x.haeufigkeit?esc(x.haeufigkeit)+" · ":""}✓ freigegeben · ${x.beruehrt_andere?"berührt dich":"nur "+esc(D.andere)}${x.einordnung!=="offen"?" · "+esc(x.einordnung):""}</div></div>

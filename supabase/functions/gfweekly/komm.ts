@@ -376,12 +376,12 @@ export function kommModul(ctx: KommKontext) {
     return ((d.data || []).find((p: Any) => p?.team?.gid && !p.archived)?.team?.gid) || '';
   }
   function projektNotiz(f: Any, person: string, test: boolean) {
-    return [`Kommunikation ${f.name} ${f.ausgabe || 2027} · Rahmen aus dem Hohen Haus (Postingplan-Standard, Regelwerk ${'1.2.0'}).`,
+    return [`Kommunikation ${f.name} ${f.ausgabe || 2027} · Rahmen aus dem Kompass (Postingplan-Standard, Regelwerk ${'1.2.0'}).`,
       `Verantwortlich: ${person}. Die Geschäftsführung legt nur den Rahmen fest; Rollen und Schritte verteilst du selbst, hier oder in der Redaktionstabelle.`,
       'Je Veröffentlichung der Klassen P, L, PR, TM, NL, AD und interne Aufgaben sowie jede Pflichtveröffentlichung der Klasse M eine Aufgabe; alle übrigen Beiträge je Monat gebündelt. Die Schritte in der Beschreibung sind ein Vorschlag.',
       'Erneutes Senden legt nur Neues an und aktualisiert bei vorhandenen Aufgaben Fälligkeit und Beschreibung; Zuständigkeit, Unteraufgaben, Kommentare und Abschnitt bleiben.',
       test ? 'TESTPROJEKT: wird nach der Prüfung gelöscht.' : '',
-      `Im Hohen Haus: ${ctx.HH_BASIS}/kommunikation.html?festival=${encodeURIComponent(f.short_name)}`].filter(Boolean).join('\n');
+      `Im Kompass: ${ctx.HH_BASIS}/kommunikation.html?festival=${encodeURIComponent(f.short_name)}`].filter(Boolean).join('\n');
   }
 
   async function senden(t: Any) {
@@ -623,7 +623,7 @@ export function kommModul(ctx: KommKontext) {
       if (!test && ids.length) {
         const { data: n1, error: e1 } = await admin.rpc('hh_komm_gesendet', { p_ids: ids, p_gid: gid });
         if (e1) { gemerkt = false; fehler.push(`${a.name}: Aufgabe ${gid} steht in Asana, ließ sich aber nicht merken: ${e1.message}`); }
-        else if (Number(n1) !== ids.length) { gemerkt = false; fehler.push(`${a.name}: Aufgabe ${gid} steht in Asana, aber nur ${n1} von ${ids.length} Veröffentlichungen im Haus gefunden`); }
+        else if (Number(n1) !== ids.length) { gemerkt = false; fehler.push(`${a.name}: Aufgabe ${gid} steht in Asana, aber nur ${n1} von ${ids.length} Veröffentlichungen im Kompass gefunden`); }
         else for (const i of ids) gidJe.set(i, gid!);
       }
       if (gemerkt) erledigt.add(a.name);
@@ -991,7 +991,7 @@ export function kommModul(ctx: KommKontext) {
               const { data: h3 } = await admin.rpc('hh_komm_sperre_halten', { p_schluessel: 'hinweise', p_von: hv, p_sekunden: 120 });
               if (h3 !== true) { offen++; bericht.push('Hinweise: Sperre verloren, Rest im nächsten Tick'); break; }
               if (!stories.some((x: Any) => String(x?.text || '').includes(marke))) {
-                await asana(`/tasks/${p.asana_task_gid}/stories`, 'POST', { text: `Hinweis aus dem Hohen Haus: Für „${p.titel}“ am ${K.kurz(p.t)} liegt eine Abgabe eines Partners vor, die Freigabe fehlt noch. Bitte im Habitat Hub freigeben oder Korrektur anfordern. ${marke}` });
+                await asana(`/tasks/${p.asana_task_gid}/stories`, 'POST', { text: `Hinweis aus dem Kompass: Für „${p.titel}“ am ${K.kurz(p.t)} liegt eine Abgabe eines Partners vor, die Freigabe fehlt noch. Bitte im Habitat Hub freigeben oder Korrektur anfordern. ${marke}` });
               }
               const ok = await log('komm_hinweis', 'Zeitplan', { id, festival: p.festival_short, titel: p.titel, t: p.t, asana: true });
               if (!ok) bericht.push(`Hinweis zu ${id} zugestellt, aber nicht protokolliert; der nächste Tick findet ihn über die Marke`);

@@ -710,7 +710,7 @@ const ASANA_ABSCHNITTE = ['Sofort', 'Grün', 'Gelb', 'Rot bei der GF', 'Ruht bis
 /* Die Vertretungslinie kennt nur diese beiden. Ihre E-Mail ist der eindeutige Schlüssel zum Asana-Konto. */
 const MAIL_ALEX = 'alex@wildemoehre.org';
 const MAIL_LEA  = 'lea@wildemoehre.org';
-const HH_BASIS = 'https://hohes-haus.netlify.app';
+const HH_BASIS = 'https://kompass.wildehabitate.de';
 
 async function asana(pfad: string, methode = 'GET', koerper?: unknown, signal?: AbortSignal){
   const res = await fetch('https://app.asana.com/api/1.0' + pfad, {
@@ -768,12 +768,12 @@ function asanaNotiz(row: any, absence: any, vollmacht: string){
     vollmacht ? `Vollmacht: ${vollmacht}` : 'Vollmacht: nicht festgelegt.',
     row.frist ? `Frist: ${row.frist}` : 'Frist: keine.',
     '',
-    `Im Hohen Haus: ${asanaLink(row)}`,
+    `Im Kompass: ${asanaLink(row)}`,
     row.begruendung ? `\nWarum diese Einordnung: ${row.begruendung}` : '',
   ].join('\n');
 }
 
-/* Rücksync: erledigte Aufgaben und neue Kommentare zurück ins Haus. Läuft im Tick mit, wenn ein Token da ist. */
+/* Rücksync: erledigte Aufgaben und neue Kommentare zurück in den Kompass. Läuft im Tick mit, wenn ein Token da ist. */
 async function asanaSync(absence: any){
   if (!ASANA_TOKEN || !absence.asana_project_gid) return { erledigt:0, kommentare:0, fehler:0 };
   const seit = absence.asana_synced_at || absence.created_at || new Date(Date.now()-7*86400000).toISOString();
@@ -916,7 +916,7 @@ async function launchPersonen(){
   if (error) throw error; return data || [];
 }
 /* V29: Satz in jeder Aufgabe, damit in Asana klar ist, was zurückfließt. */
-const LAUNCH_SICHTBAR = 'Stand und Fälligkeit werden stündlich ins Hohe Haus übernommen; erledigt in Asana heißt erledigt im Haus.';
+const LAUNCH_SICHTBAR = 'Stand und Fälligkeit werden stündlich in den Kompass übernommen; erledigt in Asana heißt erledigt im Kompass.';
 const LAUNCH_SYNC_MINUTEN = 60;
 /* V29b: Laufsperre und Zeitbudget. Die Sperre ist eine Zeile in gfweekly_launch_sync mit fester Kennung; ein Lauf nimmt sie
    per bedingtem Update (frei oder älter als die Haltezeit) und gibt sie am Ende frei. Das Budget hält einen Lauf unter dem
@@ -927,8 +927,8 @@ const LAUNCH_SYNC_BUDGET_MS = 90000;
 /* Projektbeschreibung: VVK-Start, Festivalverantwortung, Link auf die Saisonseite. */
 function launchProjektNotiz(festival: any, fvName: string | null){
   return [`Launch ${festival.kurzname} 2027 · VVK-Start ${festival.sales_start_on || 'offen'} · Festivalverantwortung ${fvName || 'offen'}.`,
-    'Launch-Aufgaben aus dem Hohen Haus, je Bereich ein Abschnitt. Aufwände sind Richtwerte und werden über Ist-Stunden kalibriert.',
-    LAUNCH_SICHTBAR, '', `Saison im Hohen Haus: ${HH_BASIS}/saison.html`, `Launch verteilen: ${HH_BASIS}/launch.html?festival=${encodeURIComponent(festival.short_name || '')}`].join('\n');
+    'Launch-Aufgaben aus dem Kompass, je Bereich ein Abschnitt. Aufwände sind Richtwerte und werden über Ist-Stunden kalibriert.',
+    LAUNCH_SICHTBAR, '', `Saison im Kompass: ${HH_BASIS}/saison.html`, `Launch verteilen: ${HH_BASIS}/launch.html?festival=${encodeURIComponent(festival.short_name || '')}`].join('\n');
 }
 /* ===== V29 · Rückweg aus Asana, nach dem Muster asanaSync der Vertretung =====
    Für alle Meilensteine mit asana_task_gid: completed setzt status complete und completed_on; eine geänderte
@@ -1058,7 +1058,7 @@ async function launchSync(festivals: any[], who: string){
     await admin.from('gfweekly_launch_sync').update({ updated_at: '1970-01-01T00:00:00Z', ergebnis: { sperre: true, zuletzt: laufBeginn, von: who } }).eq('plan_id', LAUNCH_SYNC_SPERRE);
   }
 }
-/* Der Text einer Asana-Aufgabe: Aufwand als Spanne, Dauer, Vorgänger, Generator-Anteil, Link ins Haus. */
+/* Der Text einer Asana-Aufgabe: Aufwand als Spanne, Dauer, Vorgänger, Generator-Anteil, Link in den Kompass. */
 function launchAsanaNotiz(m: any, r: any, festival: any, zust: any, helfer: any, zusatz = ''){
   const lo = Number(m.aufwand_lo ?? r?.aufwand_lo ?? 0), hi = Number(m.aufwand_hi ?? r?.aufwand_hi ?? lo);
   const g = Number(m.generator_anteil ?? r?.generator_anteil ?? 0);
@@ -1073,7 +1073,7 @@ function launchAsanaNotiz(m: any, r: any, festival: any, zust: any, helfer: any,
     zust ? `Zuständig: ${zust.name}.` : 'Zuständig: noch offen.',
     r?.hinweis ? `Hinweis: ${r.hinweis}` : '',
     '',
-    `Im Hohen Haus: ${HH_BASIS}/launch.html?festival=${encodeURIComponent(festival.short_name || '')}`,
+    `Im Kompass: ${HH_BASIS}/launch.html?festival=${encodeURIComponent(festival.short_name || '')}`,
     LAUNCH_SICHTBAR,
     zusatz ? '\n' + zusatz : '',
   ];
@@ -2358,7 +2358,7 @@ Deno.serve(async (req: Request) => {
           } catch (_e) { team = ''; }
         }
         const daten: Record<string, unknown> = { name, workspace: ASANA_WORKSPACE,
-          notes:`Übergabekorb aus dem Hohen Haus. Eine Aufgabe je Punkt, Abschnitte nach Dringlichkeit und Ampel.\n${HH_BASIS}/uebergabe.html?id=${absence.id}` };
+          notes:`Übergabekorb aus dem Kompass. Eine Aufgabe je Punkt, Abschnitte nach Dringlichkeit und Ampel.\n${HH_BASIS}/uebergabe.html?id=${absence.id}` };
         if (team) daten.team = team;
         try { projekt = (await asana('/projects', 'POST', daten)).gid; }
         catch (e) { return json({ error:String((e as Error).message), hinweis:'Braucht der Arbeitsbereich ein Team, ASANA_TEAM setzen oder team in der Nutzlast mitgeben.' },400); }
@@ -2567,7 +2567,7 @@ Deno.serve(async (req: Request) => {
         const gleichePerson = !!alt && (alt.person_id || null) === pid;
         const zeile: Record<string, unknown> = { event_id: festival.event_id, bereich, person_id: pid,
           status: bestaetigen ? 'bestaetigt' : (pid ? 'vorschlag' : 'offen'),
-          quelle: gleichePerson && alt?.quelle ? alt.quelle : `Hohes Haus, ${by}`,
+          quelle: gleichePerson && alt?.quelle ? alt.quelle : `Kompass, ${by}`,
           notiz: t.notiz !== undefined ? (t.notiz || null) : (gleichePerson ? alt?.notiz ?? null : undefined),
           bestaetigt_von: bestaetigen ? von : null, bestaetigt_am: bestaetigen ? jetzt : null, updated_at: jetzt };
         if (zeile.notiz === undefined) delete zeile.notiz;
@@ -2609,7 +2609,7 @@ Deno.serve(async (req: Request) => {
         }
         /* Die Cockpit-Historie kennt den Wechsel als Änderung am Plan. */
         const { data: plan } = await admin.from('vvp_launch_plans').select('org_id').eq('id', festival.plan_id).single();
-        if (plan?.org_id) await admin.from('vvp_launch_plan_changes').insert({ org_id: plan.org_id, plan_id: festival.plan_id, field: 'sales_start_on', old_value: alt, new_value: neu, changed_by: `Hohes Haus, ${by}` });
+        if (plan?.org_id) await admin.from('vvp_launch_plan_changes').insert({ org_id: plan.org_id, plan_id: festival.plan_id, field: 'sales_start_on', old_value: alt, new_value: neu, changed_by: `Kompass, ${by}` });
         await launchLog(by, 'launch_set', festival.short_name, null, { sales_start_on: { alt, neu }, verschoben, fehler });
         return json({ ok:true, sales_start_on: neu, vorher: alt, verschoben, fehler });
       }

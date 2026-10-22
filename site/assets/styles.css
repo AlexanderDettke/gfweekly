@@ -1,5 +1,5 @@
 /* ===========================================================
-   Das Hohe Haus · styles.css · V23 (21.09.2026)
+   Kompass · styles.css · V23 (21.09.2026)
    Design-System „Wilde Habitate / Habitat-Tycoon" (Claude Design d8550ead), Farbtokens aus tokens/colors.css, Stand 20.09.2026.
    Dunkel ist Standard (:root), Hell über [data-theme="light"]. Eine Schrift (Archivo) in fünf Stufen, Zahlen tabular.
    Abstände 4/8/12/16/24/32/48 · Radien 4/6/8 (V21: Modernist-Kanten aus V9.1/V11 zurückgenommen) · Rahmen 1 px, Farbe wechselt nach Zustand ·
@@ -27,7 +27,7 @@
   --info:#c9cfa8; --info-bg:rgba(185,204,138,0.12);
   --chart-gruen:#a3b876; --chart-peach:#cfae7e; --chart-coral:#c56a4e; --chart-grid:rgba(233,233,236,0.14);
   --on-band:#171d18; --backdrop:rgba(23,29,24,0.6);
-  /* Chronik-Papier und Rang-Rahmen aus tokens/colors.css. Das Hohe Haus benutzt sie heute nirgends;
+  /* Chronik-Papier und Rang-Rahmen aus tokens/colors.css. Der Kompass benutzt sie heute nirgends;
      sie stehen hier, damit die Token-Zone die Quelle vollständig abbildet (das Papierbild liegt im Spiel-Repo). */
   --ht-papier:#1b211b; --ht-papier-2:#262e25; --ht-tinte:#ece7dd; --ht-tinte-2:rgba(236,231,221,0.72);
   --ht-linie:rgba(236,231,221,0.16); --ht-ocker:#d9b36a; --chronik-papier-bild:none;
@@ -138,7 +138,7 @@ a:hover{text-decoration:underline}
 .brand .mark{width:36px;height:36px;border-radius:var(--radius-m);display:grid;place-items:center;background:var(--action);color:var(--on-action);font-weight:600;font-size:var(--stufe-3);flex:0 0 auto}
 .brand h1{font-size:var(--fs-h1);margin:0;letter-spacing:-.02em;line-height:1.1;white-space:nowrap}
 .brand .meta{font-size:var(--stufe-2);color:var(--muted)}
-.sb-nav a .nbadge{background:var(--warn);color:var(--on-band);border-radius:var(--radius-s);font-size:var(--stufe-1);font-weight:600;padding:1px 6px;min-width:17px;text-align:center;font-variant-numeric:tabular-nums}
+.sb-nav a .nbadge{background:var(--fill);color:var(--text-2);border-radius:var(--radius-s);font-size:var(--stufe-1);font-weight:600;padding:1px 6px;min-width:17px;text-align:center;font-variant-numeric:tabular-nums}
 .sb-nav a.active .nbadge{background:var(--action);color:var(--on-action)}
 
 /* theme switch */
@@ -1781,3 +1781,17 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 .nw-archiv-f input{flex:1 1 220px;min-height:var(--ziel-min);padding:8px 10px;border-radius:var(--radius-s);border:var(--rahmen) solid var(--border-strong);background:var(--surface-2);color:var(--text);font:inherit;font-size:var(--stufe-3)}
 .nw-archiv-f input::placeholder{color:var(--text-2);opacity:1}
 @media(max-width:760px){ .nw-fokus,.nw-vh{padding:10px 12px 12px} .nw-fokus-h .hint{min-width:0;flex-basis:100%} }
+
+/* ===========================================================
+   22.10.2026 · Kompass, ruhiger Ton: Zähler in der Seitenleiste neutral (oben), „Deine 5 Minuten heute“ auf Für dich.
+   =========================================================== */
+.fd-5{border:var(--rahmen) solid var(--action-border,var(--action));border-radius:var(--radius-l);padding:12px 14px 10px;background:var(--surface)}
+.fd5-dots{font-size:var(--stufe-3);letter-spacing:.2em;color:var(--accent-strong)}
+.fd5-row{display:flex;align-items:center;gap:10px}
+.fd5-row .fd-main{flex:1 1 auto;min-width:0}
+.fd5-row .fd-side{flex:0 0 auto;margin-left:auto}
+.fd5-c{flex:0 0 28px;height:28px;display:inline-grid;place-items:center;border-radius:50%;border:var(--rahmen) solid var(--border-strong);color:var(--text-2);font-size:var(--stufe-2)}
+.fd5-row.ab .fd5-c{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-strong)}
+.fd5-row.ab .fd-title{text-decoration:line-through;color:var(--text-2)}
+.fd5-stand{margin:8px 0 0;font-size:var(--stufe-2);color:var(--text-2);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fd5-stand:empty{display:none}

@@ -5,26 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
-<title>Das Hohe Haus · Für dich</title>
+<title>Kompass · Für dich</title>
 <meta name="description" content="Für dich: deine Entscheidungen, seit gestern, nächste Fristen. Vertraulich." />
-<meta property="og:title" content="Das Hohe Haus · Geschäftsführung der Wilden Habitate" />
+<meta property="og:title" content="Kompass · Geschäftsführung der Wilden Habitate" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung, Wilde Möhre." />
 <meta property="og:image" content="assets/og-image.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=36" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=36" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=36" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=36" />
-<link rel="stylesheet" href="/assets/styles.css?v=36" />
-<link rel="stylesheet" href="/assets/vorstand.css?v=1" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=37" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=37" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=37" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=37" />
+<link rel="stylesheet" href="/assets/styles.css?v=37" />
+<link rel="stylesheet" href="/assets/vorstand.css?v=2" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
 
 <div id="gate">
   <div class="gate-card">
-    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <div class="mark pic"><img src="/assets/img/kompass-288.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
-    <h1>Das Hohe Haus</h1>
+    <h1>Kompass</h1>
     <div class="sub">Große Fragen. Klare Entscheidungen. Gelegentlich Kaffee oder besser Wein?</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
@@ -35,6 +35,13 @@
 <div class="app wrap" id="app">
   <header id="topbar"></header>
   <div id="hero"></div>
+
+  <!-- 22.10.2026 · Deine 5 Minuten heute: die drei wichtigsten Dinge des Tages, Fortschritt statt Mahnung. -->
+  <section class="fd fd-5" id="fd5" aria-labelledby="fd5H">
+    <div class="fd-h"><h2 id="fd5H">Deine 5 Minuten heute</h2><span class="fd5-dots" id="fd5Dots" aria-hidden="true"></span><span class="line"></span></div>
+    <div class="fd-list" id="fd5L"><div class="loading">lädt …</div></div>
+    <p class="fd5-stand" id="fd5Stand" role="status"></p>
+  </section>
 
   <section class="fd" id="fdVorstand" aria-label="Vorstandspost"><div class="fd-h"><h2>Vorstandspost</h2><span class="fd-n" id="fdVorstandN"></span><span class="line"></span><a class="btn btn-sm btn-brand" href="vorstand.html">Vorstandsbüro →</a></div><div class="fd-list" id="fdVorstandL"><div class="loading">Gemeinsamen Stand laden …</div></div></section>
 
@@ -74,10 +81,10 @@
 
 <button type="button" class="vh-fab" id="fdFab" aria-label="Einwurf: etwas eintragen"><span aria-hidden="true">+</span> Einwurf</button>
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=36-vorstand1"></script>
-<script src="/assets/vorstand.js?v=1"></script>
-<script src="/assets/game.js?v=36"></script>
-<script src="/assets/eggs.js?v=36" defer></script>
+<script src="/assets/core.js?v=37-vorstand2"></script>
+<script src="/assets/game.js?v=37"></script>
+<script src="/assets/eggs.js?v=37" defer></script>
+<script src="/assets/vorstand.js?v=2"></script>
 <script>
 /* V22c · Für dich. Für den Blick zwischendurch, am Handy, in unter einer Minute.
    Block 1: Einträge mit gate = gf oder = eigene Person (gate_list), sortiert nach Frist, dann Alter, höchstens fünf.
@@ -85,14 +92,15 @@
    Block 3: die drei nächsten Daten aus Fristen, Zieldaten der Partner, Meilensteinen und Kalender-Tickern. */
 const $=s=>document.querySelector(s);
 const NOW=new Date(); const TODAY=NOW.toLocaleDateString("sv-SE");
-let GL=null, LAGE=[], CAL=[], DIG=null, MS=[], STRANDS=[], ABS=[], ABSZ={}, VT=[], VH=null, SEIT=null;
+let GL=null, LAGE=[], CAL=[], DIG=null, MS=[], STRANDS=[], ABS=[], ABSZ={}, VT=[], VH=null, SEIT=null, KAND=null, KAND_VOLL=false;
+const KAND_GRENZE=2000;
 function meWho(){ return gfWho()==="Lea"?"lea":"alex"; }
 function dayDiff(d){ const a=new Date(TODAY+"T00:00:00"), b=new Date((d||"").slice(0,10)+"T00:00:00"); return Math.round((b-a)/86400000); }
 function fmtD(d){ return d?new Date(d.slice(0,10)+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}):""; }
 /* Frist als Datum plus Wort, nie nur Farbe */
 function fristWord(d){
   if(!d) return null; const n=dayDiff(d);
-  if(n<0) return {t:`${fmtD(d)} · überfällig`,tone:"crit"};
+  if(n<0) return {t:`Frist war am ${fmtD(d)}`,tone:"warn"};
   if(n===0) return {t:`${fmtD(d)} · heute`,tone:"warn"};
   if(n<=6) return {t:`${fmtD(d)} · diese Woche`,tone:"warn"};
   if(n<=13) return {t:`${fmtD(d)} · nächste Woche`,tone:"info"};
@@ -108,7 +116,7 @@ function renderVh(){
   const me=meWho();
   const meine=VH.filter(v=>v.ball===me||v.ball==="gf").sort((a,b)=>(gfVhFrist(a)||"9999").localeCompare(gfVhFrist(b)||"9999")||a.sort-b.sort);
   $("#fdVhN").textContent=meine.length||"";
-  if(!meine.length){ $("#fdVhL").innerHTML=`<p class="fd-empty">Kein Ball bei dir. <a href="vorhaben.html">Alle Vorhaben →</a></p>`; return; }
+  if(!meine.length){ $("#fdVhL").innerHTML=`<p class="fd-empty">Kein Ball bei dir, alles im Fluss. <a href="vorhaben.html">Alle Vorhaben →</a></p>`; return; }
   const show=meine.slice(0,5), rest=meine.length-show.length;
   $("#fdVhL").innerHTML=show.map(v=>{ const f=fristWord(gfVhFrist(v));
     return `<a class="fd-row" href="vorhaben.html?v=${encodeURIComponent(v.slug)}">
@@ -139,7 +147,7 @@ function renderSeit(){
     const zuMir=v.ball===me && es.some(e=>e.art==="uebergabe");
     return `<a class="fd-row" href="vorhaben.html?v=${encodeURIComponent(v.slug)}&tab=verlauf">
       <div class="fd-main"><div class="fd-title">${gfEsc(v.title)}</div><div class="fd-note">${gfEsc(GF_VH_ART[j.art]||j.art)}${j.wer?" · "+gfEsc(j.wer):""}: ${gfEsc(gfFirstSentence(j.text,160))}</div></div>
-      <div class="fd-side">${zuMir?gfZustand("action","wartet auf dich"):""}<span class="fd-who">${es.length} ${es.length===1?"Eintrag":"Einträge"} · ${gfEsc(gfNewsWhen(j.created_at))}</span></div>
+      <div class="fd-side">${zuMir?gfZustand("action","für dich bereit"):""}<span class="fd-who">${es.length} ${es.length===1?"Eintrag":"Einträge"} · ${gfEsc(gfNewsWhen(j.created_at))}</span></div>
     </a>`; }).join("")+(rest?`<a class="fd-more" href="vorhaben.html?filter=bewegt">und ${rest} weitere Vorhaben →</a>`:"");
   gfStagger($("#fdSeitL"),".fd-row");
 }
@@ -149,13 +157,14 @@ document.getElementById("fdSeitOk").addEventListener("click",()=>{ if(SEIT?.geku
 
 /* ---- Block 1 ---- */
 function renderEnt(){
+  if(!GL){ $("#fdEntL").innerHTML=`<p class="fd-empty">Die Entscheidungen ließen sich gerade nicht laden. Später noch einmal.</p>`; $("#fdEntN").textContent=""; $("#fdMeet").hidden=true; return; }
   const me=meWho(); const items=(GL.items||[]).filter(x=>x.gate==="gf"||x.gate===me).sort(itemSort);
   const gf=items.filter(x=>x.gate==="gf").length;
   $("#fdEntN").textContent=items.length?`${items.length}`:"";
   $("#fdMeet").hidden=!gf;
   if(!items.length){
     const last=(CAL.concat(LAGE)).sort((a,b)=>(b.happened_at||"").localeCompare(a.happened_at||""))[0];
-    $("#fdEntL").innerHTML=`<p class="fd-empty">Nichts wartet auf dich.${last?` Zuletzt bewegt: ${gfEsc(last.title)} (${gfNewsWhen(last.happened_at)}).`:""}</p>`; return;
+    $("#fdEntL").innerHTML=`<p class="fd-empty">Für dich ist hier gerade nichts offen. ✓${last?` Zuletzt bewegt: ${gfEsc(last.title)} (${gfNewsWhen(last.happened_at)}).`:""}</p>`; return;
   }
   const show=items.slice(0,5), rest=items.length-show.length;
   $("#fdEntL").innerHTML=show.map(x=>{
@@ -180,7 +189,7 @@ function renderNeu(){
   if(DIG&&DIG.wwp){
     $("#fdKk").innerHTML=[
       gfKachel({icon:"partner",value:DIG.wwp.partners_moved_count||0,label:"Partner mit Bewegung",unit:`${DIG.days} Tage`,href:"jahr.html"}),
-      gfKachel({icon:"frist",value:DIG.wwp.overdue_count||0,label:"Zieldaten überfällig",tone:(DIG.wwp.overdue_count||0)>0?"warn":"",href:"jahr.html"}),
+      gfKachel({icon:"frist",value:DIG.wwp.overdue_count||0,label:"Zieldaten vorbei",tone:"",href:"jahr.html"}),
     ].join("");
   } else $("#fdKk").innerHTML="";
 }
@@ -188,7 +197,7 @@ function renderNeu(){
 /* ---- Block 3 ---- */
 function renderFr(){
   const me=meWho(); const out=[];
-  (GL.items||[]).filter(x=>x.gate_frist&&x.gate_frist>=TODAY&&(x.gate==="gf"||x.gate===me)).forEach(x=>out.push({d:x.gate_frist,art:"Frist",t:x.title,href:itemHref(x)}));
+  (GL?.items||[]).filter(x=>x.gate_frist&&x.gate_frist>=TODAY&&(x.gate==="gf"||x.gate===me)).forEach(x=>out.push({d:x.gate_frist,art:"Frist",t:x.title,href:itemHref(x)}));
   (DIG?.wwp?.upcoming||[]).forEach(p=>out.push({d:p.target_on,art:"Partner",t:`${p.name}${p.next_action?` · ${p.next_action}`:""}`,href:DIG.wwp.url}));
   MS.filter(m=>m.date_from&&m.date_from>=TODAY).forEach(m=>out.push({d:m.date_from,art:"Meilenstein",t:m.title,href:"jahr.html"}));
   CAL.filter(x=>(x.happened_at||"").slice(0,10)>=TODAY).forEach(x=>out.push({d:x.happened_at.slice(0,10),art:"Termin",t:x.title,href:"neuigkeiten.html"}));
@@ -220,7 +229,7 @@ function renderVt(){
     list.innerHTML=`<div class="fd-zahlen">
       <div><b>${z.gesamt||0}</b><span>Einträge im Korb</span></div>
       <div><b>${(st.bestaetigt||0)+(st.erledigt||0)}</b><span>in Vertretung bearbeitet</span></div>
-      <div><b>${meine.length?wartet:(z.ampel?(z.ampel.rot||0)+(z.ampel.ruht||0):0)}</b><span>wartet auf dich</span></div></div>`;
+      <div><b>${meine.length?wartet:(z.ampel?(z.ampel.rot||0)+(z.ampel.ruht||0):0)}</b><span>für dich bereit</span></div></div>`;
     sec.hidden=false; return;
   }
   const meine=VT.filter(v=>v.absence.person!==ich)
@@ -250,7 +259,68 @@ function renderVt(){
   }
   sec.hidden=true;
 }
-function renderAll(){ renderVh(); renderSeit(); renderEnt(); renderVt(); renderNeu(); renderFr(); }
+/* ---- 22.10.2026 · Deine 5 Minuten heute ----
+   Drei Dinge für heute aus dem, was bei dir liegt: Vorhaben mit Ball bei dir (Frist vorbei, heute, bald), deine Entscheidungen
+   (Pförtner an dich oder GF) und Kandidaten „hoch“ der letzten 7 Tage. Die Auswahl steht je Person und Tag im Browser
+   (gf_5min_<Person>_<Tag>) und bleibt den Tag über gleich. Abgeräumt ist ein Eintrag, sobald er nicht mehr ansteht:
+   Ball weitergegeben oder Vorhaben erledigt, Entscheidung getroffen, Kandidat übernommen oder verworfen. */
+const FD5_N=3;
+function fd5Key(){ return `gf_5min_${gfWho()}_${TODAY}`; }
+function fd5Lies(){ try{ const v=JSON.parse(localStorage.getItem(fd5Key())||"null"); return Array.isArray(v)?v:null; }catch(e){ return null; } }
+function fd5Schreib(l){ try{ localStorage.setItem(fd5Key(), JSON.stringify(l)); }catch(e){} }
+/* Was gerade ansteht, als einheitliche Einträge mit Rang (kleiner zuerst). */
+function fd5Anstehend(){
+  const me=meWho(), out=[];
+  for(const v of VH||[]){ if(v.ball!==me) continue; const f=gfVhFrist(v), n=f?dayDiff(f):99;
+    out.push({ k:"vh:"+v.id, t:v.title, note:v.naechster_schritt?"→ "+v.naechster_schritt:"nächsten Schritt festlegen", href:`vorhaben.html?v=${encodeURIComponent(v.slug)}`, art:"Vorhaben", rang:n<0?0:n===0?1:n<=6?3:6 }); }
+  for(const x of (GL?.items||[]).filter(x=>x.gate===me||x.gate==="gf")){ const n=x.gate_frist?dayDiff(x.gate_frist):99;
+    out.push({ k:(x.kind==="thema"?"th:":"kd:")+x.id, t:x.title||"", note:x.gate==="gf"?"gemeinsam mit "+(me==="lea"?"Alex":"Lea"):"deine Entscheidung", href:itemHref(x), art:"Entscheidung", rang:n<=0?2:n<=6?4:7 }); }
+  const grenze=new Date(Date.now()-7*86400000).toISOString();
+  /* Per Pförtner an jemand anderen gegeben: nicht mehr meins. */
+  const woanders=new Set((GL?.items||[]).filter(x=>x.kind!=="thema"&&x.gate&&x.gate!==me&&x.gate!=="gf").map(x=>x.id));
+  const fremd=x=>woanders.has(x.id) || (x.gate&&x.gate!==me&&x.gate!=="gf");   // auch ohne Pförtnerliste am Kandidaten selbst erkennbar
+  for(const x of (KAND||[]).filter(x=>x.relevance==="hoch"&&x.created_at>=grenze&&!fremd(x))){
+    if(out.some(o=>o.k==="kd:"+x.id)) continue;
+    out.push({ k:"kd:"+x.id, t:x.title||"", note:"Kandidat „hoch“ in den Neuigkeiten", href:"neuigkeiten.html#fokus", art:"Neuigkeit", rang:5 }); }
+  return out.sort((a,b)=>a.rang-b.rang||a.t.localeCompare(b.t,"de"));
+}
+function render5(){
+  const L=$("#fd5L"); if(!L) return;
+  if(!VH && !GL){ L.innerHTML=`<p class="fd-empty">Gerade nicht geladen. Später noch einmal.</p>`; return; }
+  const jetzt=fd5Anstehend(), offenK=new Set(jetzt.map(x=>x.k));
+  /* Noch offen ist auch, was nicht mehr zu den Top-Kriterien passt, aber weiter ansteht: ein Kandidat mit Status neu
+     (auch nach Herabstufung auf „mittel“), ein Thema oder Vorhaben, das noch bei mir liegt. */
+  const me=meWho();
+  /* Per Pförtner an jemand anderen gegeben (Lea, Team, Plattform, warten): für mich abgeräumt, auch wenn noch neu. */
+  const woanders=new Set((GL?.items||[]).filter(x=>x.gate&&x.gate!==me&&x.gate!=="gf").map(x=>(x.kind==="thema"?"th:":"kd:")+x.id));
+  for(const x of KAND||[]) if(!woanders.has("kd:"+x.id) && !(x.gate&&x.gate!==me&&x.gate!=="gf")) offenK.add("kd:"+x.id);
+  for(const x of (GL?.items||[]).filter(x=>x.gate===me||x.gate==="gf")) offenK.add((x.kind==="thema"?"th:":"kd:")+x.id);
+  /* Ließ sich eine Quelle nicht laden, gilt ihr Eintrag als offen, nicht als abgeräumt. */
+  const offen=k=>offenK.has(k) || (k.startsWith("vh:")&&!VH) || (k.startsWith("th:")&&!GL) || (k.startsWith("kd:")&&(!KAND||!GL||!KAND_VOLL));
+  const vollstaendig=!!(VH&&GL&&KAND&&KAND_VOLL);
+  let auswahl=fd5Lies();
+  /* Gespeichert wird die Tagesauswahl nur aus vollständig geladenen Quellen; sonst gilt sie vorläufig und wird beim
+     nächsten Laden neu gezogen. */
+  if(!auswahl){ auswahl=jetzt.slice(0,FD5_N).map(({k,t,note,href,art})=>({k,t,note,href,art,r:0})); if(vollstaendig) fd5Schreib(auswahl); }
+  /* Jede Runde trägt ihre Nummer r; gezeigt wird nur die jüngste, auch wenn sie weniger als drei Einträge hat. */
+  const rNeu=Math.max(...auswahl.map(x=>x.r||0)), runde=auswahl.filter(x=>(x.r||0)===rNeu);
+  const fertig=runde.filter(x=>!offen(x.k)).length, gesamtFertig=auswahl.filter(x=>!offen(x.k)).length;
+  $("#fd5Dots").innerHTML=runde.map(x=>offen(x.k)?"○":"●").join("");
+  const teilweise=vollstaendig?"":`<p class="fd-empty">Nicht alles ließ sich laden${!VH?" (Vorhaben)":""}${!KAND?" (Neuigkeiten)":""}. Die Auswahl ist vorläufig.</p>`;
+  if(!auswahl.length){ L.innerHTML=teilweise||`<p class="fd-empty">Heute liegt nichts Dringendes bei dir. Schönen Tag! ☀</p>`; $("#fd5Stand").textContent=""; return; }
+  L.innerHTML=runde.map(x=>{ const ab=!offen(x.k);
+    return `<a class="fd-row fd5-row${ab?" ab":""}" href="${x.href}">
+      <span class="fd5-c" aria-hidden="true">${ab?"✓":"○"}</span>
+      <div class="fd-main"><div class="fd-title">${gfEsc(x.t)}</div><div class="fd-note">${gfEsc(x.art)} · ${gfEsc(x.note)}</div></div>
+      <div class="fd-side">${ab?`<span class="fd-who">abgeräumt</span>`:`<span class="fd-who">ansehen →</span>`}</div>
+    </a>`; }).join("")+teilweise;
+  const naechste=jetzt.filter(x=>!auswahl.some(a=>a.k===x.k));
+  if(fertig===runde.length){
+    $("#fd5Stand").innerHTML=`Alles abgeräumt${gesamtFertig>runde.length?` (${gesamtFertig} heute)`:""}. Stark! ${naechste.length?`<button type="button" class="btn btn-sm btn-ghost" id="fd5Mehr">Noch drei?</button>`:"Schönen Tag! ☀"}`;
+    const m=$("#fd5Mehr"); if(m) m.onclick=()=>{ fd5Schreib(auswahl.concat(naechste.slice(0,FD5_N).map(({k,t,note,href,art})=>({k,t,note,href,art,r:rNeu+1})))); render5(); };
+  } else $("#fd5Stand").textContent=fertig?`${fertig} von ${runde.length} abgeräumt · gut dabei`:`${runde.length} Dinge, etwa fünf Minuten`;
+}
+function renderAll(){ render5(); renderVh(); renderSeit(); renderEnt(); renderVt(); renderNeu(); renderFr(); }
 let LADE_LAUF=0;
 async function load(){
   const lauf=++LADE_LAUF, fuer=gfWho();
@@ -260,23 +330,28 @@ async function load(){
   ]);
   if(lauf!==LADE_LAUF || fuer!==gfWho()) return;   // eine ältere Antwort oder die andere Person: verwerfen
   VH=vh?vh.vorhaben||[]:null; SEIT=seit;
-  const [gl, lg, cal, dig, ms, cyc, abs]=await Promise.all([
-    gfApi("gate_list",{limit:1000}),
+  const [gl, lg, cal, dig, ms, cyc, abs, kd]=await Promise.all([
+    gfApi("gate_list",{limit:1000}).catch(()=>null),
     gfApi("news_list",{kinds:["lage"],limit:60}).catch(()=>({items:[]})),
     gfApi("news_list",{kinds:["ticker"],since:new Date(Date.now()-86400000).toISOString(),limit:120}).catch(()=>({items:[]})),
     gfApi("platform_digest",{days:7}).catch(()=>null),
     gfApi("milestones_list",{all:false}).catch(()=>({milestones:[]})),
     gfApi("cycle_get",{year:NOW.getFullYear()}).catch(()=>({strands:[]})),
     gfApi("absence_list",{}).catch(()=>({absences:[],zaehler:{}})),
+    gfApi("news_list",{kinds:["kandidat"],statuses:["neu"],limit:KAND_GRENZE}).catch(()=>null),
   ]);
+  if(lauf!==LADE_LAUF || fuer!==gfWho()) return;   // ältere Antwort: weder übernehmen noch zeichnen
   GL=gl; LAGE=lg.items||[]; CAL=(cal.items||[]).filter(x=>x.source==="kalender"); DIG=dig; MS=ms.milestones||[]; STRANDS=cyc.strands||[];
-  ABS=abs.absences||[]; ABSZ=abs.zaehler||{};
+  ABS=abs.absences||[]; ABSZ=abs.zaehler||{}; KAND=kd?kd.items||[]:null;
+  /* Volle Seite heißt: womöglich gekürzt; dann gilt die Tagesauswahl als vorläufig. */
+  KAND_VOLL=!!KAND && KAND.length<KAND_GRENZE;
   VT=[];
   const meine=ABS.filter(a=>a.status==="aktiv"||a.status==="geplant"||a.status==="rueckkehr");
   for(const a of meine){
     if(a.person===gfWho() && a.status!=="rueckkehr") continue;
     try{ const l=await gfApi("handover_list",{absence_id:a.id}); VT.push({absence:a, items:l.items||[]}); }catch(e){}
   }
+  if(lauf!==LADE_LAUF || fuer!==gfWho()) return;   // inzwischen neu geladen oder Person gewechselt: nichts Altes zeichnen
   renderAll();
 }
 gfGate(async()=>{
@@ -292,7 +367,12 @@ gfGate(async()=>{
   const einwurf=()=>gfEinwurf({ onDone:()=>{ load().catch(()=>{}); } });
   $("#fdEinwurf").onclick=einwurf; $("#fdFab").onclick=einwurf;
   /* „Seit du zuletzt da warst“ gehört der Person: beim Wechsel neu laden, nicht nur neu zeichnen. */
-  document.addEventListener("gf-who",e=>{ gfHeroText(`${gfAvatarTag(e.detail,"hero-av")}Guten Tag, ${gfEsc(e.detail)}`,null); load().catch(()=>{}); });
+  document.addEventListener("gf-who",e=>{ gfHeroText(`${gfAvatarTag(e.detail,"hero-av")}Guten Tag, ${gfEsc(e.detail)}`,null);
+    /* Die Tagesrunde gehört der Person: sofort leeren, nicht die der anderen stehen lassen. */
+    $("#fd5L").innerHTML=`<div class="loading">lädt …</div>`; $("#fd5Dots").innerHTML=""; $("#fd5Stand").textContent="";
+    load().catch(()=>{ $("#fd5L").innerHTML=`<p class="fd-empty">Gerade nicht geladen. Später noch einmal.</p>`; }); });
+  /* Tab über Mitternacht offen gelassen: beim Zurückkommen gilt der neue Tag (neue Runde). */
+  document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && new Date().toLocaleDateString("sv-SE")!==TODAY) location.reload(); });
   try{ await load(); }catch(e){ $("#fdEntL").innerHTML=`<div class="empty">Konnte nicht laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
 });
 </script>

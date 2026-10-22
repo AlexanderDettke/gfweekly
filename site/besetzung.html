@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
-<title>Das Hohe Haus · Besetzung verteilen</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=36" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=36" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=36" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=36" />
-<link rel="stylesheet" href="/assets/styles.css?v=36" />
+<title>Kompass · Besetzung verteilen</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=37" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=37" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=37" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=37" />
+<link rel="stylesheet" href="/assets/styles.css?v=37" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 <style>
 /* Besetzung verteilen (Paket Besetzung B1, 02.10.2026). Gespräche kommen aus der Besetzungswerkstatt im Habitat Hub
-   (nur lesen), Aufgaben gehören dem Hohen Haus (Edge Function „besetzung“). Gesprächsstand und Aufgabenstand stehen
+   (nur lesen), Aufgaben gehören dem Kompass (Edge Function „besetzung“). Gesprächsstand und Aufgabenstand stehen
    getrennt und immer als Symbol plus Wort. Präfix .bz- (.bs- gehört der Besprechung). */
 #bz{max-width:1040px;display:grid;gap:22px;margin-top:6px}
 .bz-lead{color:var(--text-2);max-width:72ch;margin:0;line-height:var(--leading-text)}
@@ -101,9 +101,9 @@
 
 <div id="gate">
   <div class="gate-card">
-    <div class="mark pic"><img src="/assets/img/burg-288.png" alt="" width="54" height="54"></div>
+    <div class="mark pic"><img src="/assets/img/kompass-288.png" alt="" width="54" height="54"></div>
     <span class="badge-conf">Wilde Möhre · vertraulich</span>
-    <h1>Das Hohe Haus</h1>
+    <h1>Kompass</h1>
     <div class="sub">Besetzung verteilen · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
     <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
     <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
@@ -153,9 +153,9 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=36"></script>
-<script src="/assets/game.js?v=36"></script>
-<script src="/assets/eggs.js?v=36" defer></script>
+<script src="/assets/core.js?v=37"></script>
+<script src="/assets/game.js?v=37"></script>
+<script src="/assets/eggs.js?v=37" defer></script>
 <script>
 const $=s=>document.querySelector(s);
 const BZ_FN="https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/besetzung";
@@ -225,7 +225,7 @@ function renderLage(){
   ].join("");
   const hin=[];
   zs.filter(z=>!AKTIV.includes(z.status)).forEach(z=>{ const n=aufgabenZu(z.id).filter(offen).length; if(n) hin.push(`<div class="bz-note"><b>${gfEsc(z.partner)}</b> · ${gfEsc(z.bereich)}: Gespräch ${GESPRAECH[z.status][1]}, aber ${n} ${n===1?"Aufgabe ist":"Aufgaben sind"} noch offen. Eine Absage erledigt Aufgaben nicht automatisch.</div>`); });
-  if(D.sync&&D.sync.fehler) hin.push(`<div class="bz-note">Der Abgleich mit Asana hatte ${D.sync.fehler} ${D.sync.fehler===1?"Fehler":"Fehler"}. Der Stand im Haus kann hinter Asana liegen.</div>`);
+  if(D.sync&&D.sync.fehler) hin.push(`<div class="bz-note">Der Abgleich mit Asana hatte ${D.sync.fehler} ${D.sync.fehler===1?"Fehler":"Fehler"}. Der Stand im Kompass kann hinter Asana liegen.</div>`);
   $("#bzHinweise").innerHTML=hin.join("");
 }
 
@@ -254,10 +254,10 @@ function aufgabeHTML(a){
   const wer=a.person_id?`${gfEsc(pname(a.person_id))}${p?` <span class="bz-muted">· ${gfEsc(TYP[p.typ]||p.typ||"")}</span>`:""}`:gfZustand("warn","noch niemand");
   let asana="";
   if(a.asana_task_gid) asana=`${gfZustand("pos","in Asana")} seit ${datumDE(a.asana_gesendet_at||a.updated_at)} <a href="https://app.asana.com/0/0/${gfEsc(a.asana_task_gid)}" target="_blank" rel="noopener">öffnen ↗</a>`;
-  else if(UI.asana===a.id) asana=`<div class="bz-best voll"><div>Geht als Aufgabe an <b>${gfEsc(pname(a.person_id))}</b> in deren Asana. In der Notiz stehen Festival, Bereich, Partnername und der Link zurück ins Haus. Danach gelten „erledigt“ und der Termin aus Asana.</div><div class="bz-akt"><button class="btn btn-primary btn-sm" data-act="asana-senden" data-id="${a.id}">Jetzt nach Asana senden</button><button class="btn btn-ghost btn-sm" data-act="asana-zu">Abbrechen</button></div></div>`;
-  else if(!D.asana_bereit) asana=`<span>Asana ist für das Haus nicht eingerichtet.</span>`;
+  else if(UI.asana===a.id) asana=`<div class="bz-best voll"><div>Geht als Aufgabe an <b>${gfEsc(pname(a.person_id))}</b> in deren Asana. In der Notiz stehen Festival, Bereich, Partnername und der Link zurück in den Kompass. Danach gelten „erledigt“ und der Termin aus Asana.</div><div class="bz-akt"><button class="btn btn-primary btn-sm" data-act="asana-senden" data-id="${a.id}">Jetzt nach Asana senden</button><button class="btn btn-ghost btn-sm" data-act="asana-zu">Abbrechen</button></div></div>`;
+  else if(!D.asana_bereit) asana=`<span>Asana ist für den Kompass nicht eingerichtet.</span>`;
   else if(!a.person_id) asana=`<span>Nach Asana erst mit Person.</span>`;
-  else if(p&&!p.asana) asana=`<span>${gfEsc(p.name)} hat kein Asana-Konto im Pool, die Aufgabe bleibt im Haus.</span>`;
+  else if(p&&!p.asana) asana=`<span>${gfEsc(p.name)} hat kein Asana-Konto im Pool, die Aufgabe bleibt im Kompass.</span>`;
   else if(a.status==="verworfen"||a.status==="erledigt") asana="";
   else asana=`<button class="bz-link" data-act="asana-frage" data-id="${a.id}">Nach Asana senden</button>`;
   const termin=a.asana_task_gid?`${gfFrist(a.faellig)}<div class="x">Termin pflegt Asana</div>`:`${a.faellig?gfFrist(a.faellig):""}<div><input type="date" class="bz-date" data-f="faellig" data-id="${a.id}" value="${gfEsc(a.faellig||"")}" aria-label="Termin der Aufgabe"></div>`;
