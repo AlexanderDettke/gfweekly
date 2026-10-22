@@ -659,7 +659,7 @@ async function vhUebergabe(){
       unter=S.anlass==="urlaub"?"Urlaub":"Krank";
       body=`<div class="vh-pform-z"><label class="vh-fld">Ab<input type="date" id="vhUeVon" value="${gfEsc(S.form.von)}" required></label>
         <label class="vh-fld">${S.anlass==="urlaub"?"Bis (letzter Urlaubstag)":"Voraussichtlich bis (optional)"}<input type="date" id="vhUeBis" value="${gfEsc(S.form.bis)}" ${S.anlass==="urlaub"?"required":""}></label></div>
-        <p class="vh-dlg-t">Vertretung: ${gfEsc(andere)}. Das Haus baut den Übergabekorb, die Vorhaben stehen gleich oben.</p>
+        <p class="vh-dlg-t">Vertretung: ${gfEsc(andere)}. Der Kompass baut den Übergabekorb, die Vorhaben stehen gleich oben.</p>
         <label class="vh-ue-test"><input type="checkbox" id="vhUeTest" ${S.form.test?"checked":""}> Probe (Testabwesenheit, zählt nicht für Bänder und Für dich)</label>
         <p class="vh-dlg-t">Auch eine Probe baut den Korb aus den echten Vorhaben. Was du danach sendest, bewegt echte Bälle, bis die Probe endet.</p>`;
       fuss=`<button type="button" class="btn btn-brand" data-ue-zurueck>Zurück</button><button type="button" class="btn btn-primary" id="vhUeAnlegen" style="margin-left:auto" ${S.laedt?"disabled":""}>Weiter</button>`;

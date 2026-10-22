@@ -255,7 +255,7 @@ function aufgabeHTML(a){
   let asana="";
   if(a.asana_task_gid) asana=`${gfZustand("pos","in Asana")} seit ${datumDE(a.asana_gesendet_at||a.updated_at)} <a href="https://app.asana.com/0/0/${gfEsc(a.asana_task_gid)}" target="_blank" rel="noopener">öffnen ↗</a>`;
   else if(UI.asana===a.id) asana=`<div class="bz-best voll"><div>Geht als Aufgabe an <b>${gfEsc(pname(a.person_id))}</b> in deren Asana. In der Notiz stehen Festival, Bereich, Partnername und der Link zurück in den Kompass. Danach gelten „erledigt“ und der Termin aus Asana.</div><div class="bz-akt"><button class="btn btn-primary btn-sm" data-act="asana-senden" data-id="${a.id}">Jetzt nach Asana senden</button><button class="btn btn-ghost btn-sm" data-act="asana-zu">Abbrechen</button></div></div>`;
-  else if(!D.asana_bereit) asana=`<span>Asana ist für das Haus nicht eingerichtet.</span>`;
+  else if(!D.asana_bereit) asana=`<span>Asana ist für den Kompass nicht eingerichtet.</span>`;
   else if(!a.person_id) asana=`<span>Nach Asana erst mit Person.</span>`;
   else if(p&&!p.asana) asana=`<span>${gfEsc(p.name)} hat kein Asana-Konto im Pool, die Aufgabe bleibt im Kompass.</span>`;
   else if(a.status==="verworfen"||a.status==="erledigt") asana="";

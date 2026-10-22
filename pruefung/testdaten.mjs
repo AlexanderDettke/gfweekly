@@ -266,7 +266,7 @@ export const ANTWORT = {
     : { items: NEWS.filter(x => (p && Array.isArray(p.statuses) && p.statuses.length) ? p.statuses.includes(x.status) : x.status !== 'archiviert') },
   news_update: (p) => { const x = NEWS.find(n => n.id === p.id); return { item: { ...(x || {}), id:p.id, status:p.status, archiv_grund:null, archiviert_at:null } }; },
   news_accept: (p) => { const x = NEWS.find(n => n.id === p.id); return { item: { ...(x || {}), status:'uebernommen', topic_id:'t-neu' }, topic: { id:'t-neu', title:(x && x.title) || 'Thema', board_lane:'zu_besprechen' } }; },
-  gate_list: { items:[ { kind:'thema', ...THEMEN[0] }, { kind:'kandidat', ...NEWS[2] }, { kind:'thema', ...THEMEN[1] } ],
+  gate_list: { items:[ { ...THEMEN[0], kind:'thema' }, { ...NEWS[2], kind:'kandidat' }, { ...THEMEN[1], kind:'thema' } ],
     counts:{ gf:2, Lea:1 }, themen:2, kandidaten:1 },
   absence_list: (p) => { const alle=[...NEUE, A1, A2, A3].filter(a=>p.include_test||!a.test);
     return { absences:alle, zaehler:Object.fromEntries(alle.map(a=>[a.id, zaehleKorb(KORB[a.id]||[])])) }; },

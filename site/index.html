@@ -88,7 +88,8 @@
    Block 3: die drei nächsten Daten aus Fristen, Zieldaten der Partner, Meilensteinen und Kalender-Tickern. */
 const $=s=>document.querySelector(s);
 const NOW=new Date(); const TODAY=NOW.toLocaleDateString("sv-SE");
-let GL=null, LAGE=[], CAL=[], DIG=null, MS=[], STRANDS=[], ABS=[], ABSZ={}, VT=[], VH=null, SEIT=null, KAND=null;
+let GL=null, LAGE=[], CAL=[], DIG=null, MS=[], STRANDS=[], ABS=[], ABSZ={}, VT=[], VH=null, SEIT=null, KAND=null, KAND_VOLL=false;
+const KAND_GRENZE=2000;
 function meWho(){ return gfWho()==="Lea"?"lea":"alex"; }
 function dayDiff(d){ const a=new Date(TODAY+"T00:00:00"), b=new Date((d||"").slice(0,10)+"T00:00:00"); return Math.round((b-a)/86400000); }
 function fmtD(d){ return d?new Date(d.slice(0,10)+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}):""; }
@@ -152,6 +153,7 @@ document.getElementById("fdSeitOk").addEventListener("click",()=>{ if(SEIT?.geku
 
 /* ---- Block 1 ---- */
 function renderEnt(){
+  if(!GL){ $("#fdEntL").innerHTML=`<p class="fd-empty">Die Entscheidungen ließen sich gerade nicht laden. Später noch einmal.</p>`; $("#fdEntN").textContent=""; $("#fdMeet").hidden=true; return; }
   const me=meWho(); const items=(GL.items||[]).filter(x=>x.gate==="gf"||x.gate===me).sort(itemSort);
   const gf=items.filter(x=>x.gate==="gf").length;
   $("#fdEntN").textContent=items.length?`${items.length}`:"";
@@ -191,7 +193,7 @@ function renderNeu(){
 /* ---- Block 3 ---- */
 function renderFr(){
   const me=meWho(); const out=[];
-  (GL.items||[]).filter(x=>x.gate_frist&&x.gate_frist>=TODAY&&(x.gate==="gf"||x.gate===me)).forEach(x=>out.push({d:x.gate_frist,art:"Frist",t:x.title,href:itemHref(x)}));
+  (GL?.items||[]).filter(x=>x.gate_frist&&x.gate_frist>=TODAY&&(x.gate==="gf"||x.gate===me)).forEach(x=>out.push({d:x.gate_frist,art:"Frist",t:x.title,href:itemHref(x)}));
   (DIG?.wwp?.upcoming||[]).forEach(p=>out.push({d:p.target_on,art:"Partner",t:`${p.name}${p.next_action?` · ${p.next_action}`:""}`,href:DIG.wwp.url}));
   MS.filter(m=>m.date_from&&m.date_from>=TODAY).forEach(m=>out.push({d:m.date_from,art:"Meilenstein",t:m.title,href:"jahr.html"}));
   CAL.filter(x=>(x.happened_at||"").slice(0,10)>=TODAY).forEach(x=>out.push({d:x.happened_at.slice(0,10),art:"Termin",t:x.title,href:"neuigkeiten.html"}));
@@ -270,7 +272,9 @@ function fd5Anstehend(){
   for(const x of (GL?.items||[]).filter(x=>x.gate===me||x.gate==="gf")){ const n=x.gate_frist?dayDiff(x.gate_frist):99;
     out.push({ k:(x.kind==="thema"?"th:":"kd:")+x.id, t:x.title||"", note:x.gate==="gf"?"gemeinsam mit "+(me==="lea"?"Alex":"Lea"):"deine Entscheidung", href:itemHref(x), art:"Entscheidung", rang:n<=0?2:n<=6?4:7 }); }
   const grenze=new Date(Date.now()-7*86400000).toISOString();
-  for(const x of (KAND||[]).filter(x=>x.relevance==="hoch"&&x.created_at>=grenze)){
+  /* Per Pförtner an jemand anderen gegeben: nicht mehr meins. */
+  const woanders=new Set((GL?.items||[]).filter(x=>x.kind!=="thema"&&x.gate&&x.gate!==me&&x.gate!=="gf").map(x=>x.id));
+  for(const x of (KAND||[]).filter(x=>x.relevance==="hoch"&&x.created_at>=grenze&&!woanders.has(x.id))){
     if(out.some(o=>o.k==="kd:"+x.id)) continue;
     out.push({ k:"kd:"+x.id, t:x.title||"", note:"Kandidat „hoch“ in den Neuigkeiten", href:"neuigkeiten.html#fokus", art:"Neuigkeit", rang:5 }); }
   return out.sort((a,b)=>a.rang-b.rang||a.t.localeCompare(b.t,"de"));
@@ -281,11 +285,14 @@ function render5(){
   const jetzt=fd5Anstehend(), offenK=new Set(jetzt.map(x=>x.k));
   /* Noch offen ist auch, was nicht mehr zu den Top-Kriterien passt, aber weiter ansteht: ein Kandidat mit Status neu
      (auch nach Herabstufung auf „mittel“), ein Thema oder Vorhaben, das noch bei mir liegt. */
-  for(const x of KAND||[]) offenK.add("kd:"+x.id);
-  for(const x of (GL?.items||[])) offenK.add((x.kind==="thema"?"th:":"kd:")+x.id);
+  const me=meWho();
+  /* Per Pförtner an jemand anderen gegeben (Lea, Team, Plattform, warten): für mich abgeräumt, auch wenn noch neu. */
+  const woanders=new Set((GL?.items||[]).filter(x=>x.gate&&x.gate!==me&&x.gate!=="gf").map(x=>(x.kind==="thema"?"th:":"kd:")+x.id));
+  for(const x of KAND||[]) if(!woanders.has("kd:"+x.id)) offenK.add("kd:"+x.id);
+  for(const x of (GL?.items||[]).filter(x=>x.gate===me||x.gate==="gf")) offenK.add((x.kind==="thema"?"th:":"kd:")+x.id);
   /* Ließ sich eine Quelle nicht laden, gilt ihr Eintrag als offen, nicht als abgeräumt. */
   const offen=k=>offenK.has(k) || (k.startsWith("vh:")&&!VH) || (k.startsWith("th:")&&!GL) || (k.startsWith("kd:")&&(!KAND||!GL));
-  const vollstaendig=!!(VH&&GL&&KAND);
+  const vollstaendig=!!(VH&&GL&&KAND&&KAND_VOLL);
   let auswahl=fd5Lies();
   /* Gespeichert wird die Tagesauswahl nur aus vollständig geladenen Quellen; sonst gilt sie vorläufig und wird beim
      nächsten Laden neu gezogen. */
@@ -318,23 +325,27 @@ async function load(){
   if(lauf!==LADE_LAUF || fuer!==gfWho()) return;   // eine ältere Antwort oder die andere Person: verwerfen
   VH=vh?vh.vorhaben||[]:null; SEIT=seit;
   const [gl, lg, cal, dig, ms, cyc, abs, kd]=await Promise.all([
-    gfApi("gate_list",{limit:1000}),
+    gfApi("gate_list",{limit:1000}).catch(()=>null),
     gfApi("news_list",{kinds:["lage"],limit:60}).catch(()=>({items:[]})),
     gfApi("news_list",{kinds:["ticker"],since:new Date(Date.now()-86400000).toISOString(),limit:120}).catch(()=>({items:[]})),
     gfApi("platform_digest",{days:7}).catch(()=>null),
     gfApi("milestones_list",{all:false}).catch(()=>({milestones:[]})),
     gfApi("cycle_get",{year:NOW.getFullYear()}).catch(()=>({strands:[]})),
     gfApi("absence_list",{}).catch(()=>({absences:[],zaehler:{}})),
-    gfApi("news_list",{kinds:["kandidat"],statuses:["neu"],limit:300}).catch(()=>null),
+    gfApi("news_list",{kinds:["kandidat"],statuses:["neu"],limit:KAND_GRENZE}).catch(()=>null),
   ]);
+  if(lauf!==LADE_LAUF || fuer!==gfWho()) return;   // ältere Antwort: weder übernehmen noch zeichnen
   GL=gl; LAGE=lg.items||[]; CAL=(cal.items||[]).filter(x=>x.source==="kalender"); DIG=dig; MS=ms.milestones||[]; STRANDS=cyc.strands||[];
   ABS=abs.absences||[]; ABSZ=abs.zaehler||{}; KAND=kd?kd.items||[]:null;
+  /* Volle Seite heißt: womöglich gekürzt; dann gilt die Tagesauswahl als vorläufig. */
+  KAND_VOLL=!!KAND && KAND.length<KAND_GRENZE;
   VT=[];
   const meine=ABS.filter(a=>a.status==="aktiv"||a.status==="geplant"||a.status==="rueckkehr");
   for(const a of meine){
     if(a.person===gfWho() && a.status!=="rueckkehr") continue;
     try{ const l=await gfApi("handover_list",{absence_id:a.id}); VT.push({absence:a, items:l.items||[]}); }catch(e){}
   }
+  if(lauf!==LADE_LAUF || fuer!==gfWho()) return;   // inzwischen neu geladen oder Person gewechselt: nichts Altes zeichnen
   renderAll();
 }
 gfGate(async()=>{

@@ -250,7 +250,7 @@ async function load(){
 }
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("vertretung");
-  gfMountHero("tor","Abwesenheiten","Wer ist wann weg, wer vertritt in welchem Bereich, und wie gut ist die Übergabe vorbereitet. Eine neue Abwesenheit braucht fünf Angaben, den Rest baut das Haus.",{compact:true});
+  gfMountHero("tor","Abwesenheiten","Wer ist wann weg, wer vertritt in welchem Bereich, und wie gut ist die Übergabe vorbereitet. Eine neue Abwesenheit braucht fünf Angaben, den Rest baut der Kompass.",{compact:true});
   await gfLoadPeople();
   await load();
 });

@@ -71,7 +71,7 @@ async function asana(pfad: string, methode = 'GET', koerper?: unknown) {
 }
 
 /* Rückweg aus Asana: nur für gesendete Aufgaben. Erledigt in Asana setzt erledigt im Kompass, eine geänderte Fälligkeit
-   übernimmt das Haus. Nichts wird gelöscht, nichts wieder geöffnet, der Gesprächsstand im Hub bleibt unberührt. */
+   übernimmt der Kompass. Nichts wird gelöscht, nichts wieder geöffnet, der Gesprächsstand im Hub bleibt unberührt. */
 async function asanaSync(nur?: string[]) {
   const erg = { geprueft: 0, erledigt: 0, termin: 0, fehler: 0, ohne_token: !ASANA_TOKEN };
   if (!ASANA_TOKEN) return erg;
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
   try {
     if (action === 'ping') return json({ ok: true, version: VERSION });
 
-    /* Lage für eine Saison: Formate, Zuordnungen aus dem Hub, Aufgaben des Hauses, Personen-Pool. */
+    /* Lage für eine Saison: Formate, Zuordnungen aus dem Hub, Aufgaben des Kompass, Personen-Pool. */
     if (action === 'lage') {
       const jahr = Number.isInteger(t.jahr) ? t.jahr : null;
       let sync: unknown = null;
@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
       if (vor.asana_task_gid && neu.person_id !== undefined && neu.person_id !== vor.person_id)
         throw new Fehler(409, 'Die Aufgabe liegt schon in Asana. Eine andere Person bitte dort zuweisen oder eine neue Aufgabe anlegen.', { aktuell: vor });
       if (vor.asana_task_gid && neu.faellig !== undefined && neu.faellig !== vor.faellig)
-        throw new Fehler(409, 'Die Aufgabe liegt schon in Asana. Den Termin bitte dort ändern, das Haus übernimmt ihn beim nächsten Abgleich.', { aktuell: vor });
+        throw new Fehler(409, 'Die Aufgabe liegt schon in Asana. Den Termin bitte dort ändern, der Kompass übernimmt ihn beim nächsten Abgleich.', { aktuell: vor });
       Object.assign(neu, { geaendert_von: W, version: v + 1, updated_at: new Date().toISOString() });
       const { data, error } = await db.from('gfweekly_besetzung_aufgaben').update(neu).eq('id', id).eq('version', v).select(SPALTEN);
       if (error) {

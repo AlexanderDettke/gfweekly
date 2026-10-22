@@ -93,7 +93,7 @@ function renderKopf(){
   $("#briefBtn").onclick=briefModal;
   const ab=$("#asanaBtn"); if(ab) ab.onclick=nachAsana;
   const hinweise=[];
-  if(istWache()) hinweise.push(`${gfZustand("warn","Wache")} Kurze Abwesenheit: nichts wird umgehängt. Am Tag 4 baut das Haus die Übergabe.`);
+  if(istWache()) hinweise.push(`${gfZustand("warn","Wache")} Kurze Abwesenheit: nichts wird umgehängt. Am Tag 4 baut der Kompass die Übergabe.`);
   if(a.korb_truncated) hinweise.push(`${gfZustand("warn","Unvollständig")} Beim letzten Bau lagen ${gfEsc(a.korb_abgeschnitten||"eine Quelle")} an der Obergrenze. Der Korb kann Zeilen vermissen.`);
   if(GEKUERZT) hinweise.push(`${gfZustand("warn","Ausschnitt")} Diese Ansicht zeigt nicht alle Zeilen des Korbs. Die Zähler sind deshalb zu klein.`);
   $("#wache").innerHTML = hinweise.map(h=>`<div class="ub-wache">${h}</div>`).join("");
@@ -187,7 +187,7 @@ function dossierHtml(x){
     ${verlauf?`<div><b>Letzte Einträge im Verlauf</b><ul>${verlauf}</ul></div>`:""}
     ${d.wache?`<p>${gfZustand("warn","Wache")} Diese Frist läuft in den nächsten drei Tagen ab.</p>`:""}
     ${fragen}
-    ${!zeilen.length&&!news&&!besch&&!punkte&&!verlauf?`<p class="fd-muted">Das Haus weiß zu diesem Vorgang nichts außer dem Titel.</p>`:""}
+    ${!zeilen.length&&!news&&!besch&&!punkte&&!verlauf?`<p class="fd-muted">Der Kompass weiß zu diesem Vorgang nichts außer dem Titel.</p>`:""}
     <div class="akt">
       <button class="btn btn-sm btn-brand" data-act="doss">Dossier neu</button>
       ${x.kind==="thema"?`<a class="btn btn-sm btn-brand" href="board.html?topic=${gfEsc(x.ref_id)}">Stand ergänzen</a>`:""}
@@ -214,7 +214,7 @@ async function zaehlerNeu(){
 async function alleUebernehmen(){
   const list=sichtbar().filter(x=>x.status==="vorschlag");
   if(!list.length) return gfToast("Nichts zu übernehmen");
-  if(!confirm(`${list.length} Vorschläge so übernehmen, wie das Haus sie gesetzt hat?`)) return;
+  if(!confirm(`${list.length} Vorschläge so übernehmen, wie der Kompass sie gesetzt hat?`)) return;
   try{
     const d=await gfApi("handover_set_many",{ by:gfWho(), items:list.map(x=>({ id:x.id })) });
     const schief=(d.misslungen||[]);
