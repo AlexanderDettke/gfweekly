@@ -54,7 +54,7 @@ const istBekannt = (text, seite, thema) => AUSNAHMEN.some(a => {
 let bekannteSchuld = 0;
 
 const SEITEN = [
-  ['index.html', '#fdEntL'], ['neuigkeiten.html', '#fokusList .kd'], ['besprechung.html', '#bsAgL'], ['board.html', '#lanes,#grid,.board'],
+  ['vorstand.html', '#vbDetail'], ['vorstand.html?tab=task', '#vbTask'], ['vorstand.html?tab=status', '#vbStatusPanel'], ['index.html', '#fdEntL'], ['neuigkeiten.html', '#fokusList .kd'], ['besprechung.html', '#bsAgL'], ['board.html', '#lanes,#grid,.board'],
   ['cockpit.html', '#list'], ['entscheidungen.html', '#log'], ['jahr.html', '#cycle'], ['capture.html', '#form'],
   ['seiten.html', '#groups'], ['bearbeiten.html', '#itemsView'], ['aufraeumen.html', '#list'], ['checkin.html', '#agenda'],
   ['inbox.html', '#list'],
@@ -224,7 +224,7 @@ for (const thema of THEMES) {
       }, kern);
       if (befund.tor) meldungen.push('Tor blieb zu');
       if (!befund.app) meldungen.push('Seiteninhalt blieb verborgen');
-      if (befund.nav !== 19) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 19 Haupteinträgen)');   // 19 seit V33 So arbeiten wir (09.10.2026)
+      if (befund.nav !== 20) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 20 Haupteinträgen)');   // 20 mit Vorstandsbüro (22.10.2026)
       if (befund.unternav !== 4) meldungen.push('Unternavigation unvollständig (' + befund.unternav + ' von 4 Einträgen)');
       if (befund.fehltext.length) meldungen.push('Fehlermeldung auf der Seite: ' + befund.fehltext.join(', '));
       if (befund.kern < 0) meldungen.push('Kerninhalt ' + kern + ' fehlt im Aufbau');

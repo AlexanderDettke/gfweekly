@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow">
+<title>Kompass · Vorstandsbüro</title>
+<link rel="icon" href="/assets/favicon-32.png?v=37"><link rel="stylesheet" href="/assets/styles.css?v=37"><link rel="stylesheet" href="/assets/vorstand.css?v=2">
+<script>(function(){var t=localStorage.getItem('gf_theme');document.documentElement.dataset.theme=t==='light'||t==='colorful'?'light':'dark';var n=null;try{n=localStorage.getItem('gf_nav')}catch(e){}document.documentElement.dataset.nav=matchMedia('(max-width:1023px)').matches?'drawer':n==='open'||n==='rail'?n:matchMedia('(min-width:1280px)').matches?'open':'rail';})();</script>
+</head>
+<body>
+<div id="gate"><div class="gate-card"><span class="badge-conf">mit Freude eG · vertraulich</span><h1>Kompass</h1><div class="sub">Gemeinsames Vorstandsbüro für Lea und Alexander</div><input id="pw" type="password" placeholder="Passwort" autocomplete="current-password"><button type="button" class="btn btn-primary" id="unlock">Entsperren</button><div class="err" id="gateErr"></div></div></div>
+<div class="app wrap" id="app"><header id="topbar"></header>
+<main id="vb">
+  <div class="vb-head"><div><p>mit Freude eG</p><h1>Vorstandsbüro</h1><p id="vbCounts">Gemeinsamen Stand laden …</p></div><div class="vb-tools"><a class="btn btn-brand" href="https://groups.google.com/a/freude-eg.de/g/vorstand" target="_blank" rel="noopener">Neue Post ansehen ↗</a><button type="button" class="btn btn-brand" id="vbNewToggle">Vorgang aufnehmen</button><button type="button" class="btn btn-brand" id="vbReload">Stand neu laden</button></div></div>
+  <p class="vb-muted">Hier pflegt ihr den gemeinsamen Bearbeitungsstand. Die Originalpost und ihre Kennzeichnungen bleiben in Google Groups. Neue Mails werden über „Neue Post ansehen“ geprüft und bei Bedarf aufgenommen.</p>
+  <div id="vbNotice" class="vb-notice" role="status" aria-live="polite"></div>
+  <div id="vbChanged" class="vb-changed" hidden>Der gemeinsame Stand wurde inzwischen geändert. Deine Eingaben bleiben erhalten. Vor dem Speichern bitte den aktuellen Stand abgleichen.</div>
+  <section id="vbNew" class="vb-new" aria-label="Vorgang aufnehmen" hidden><h2>Vorgang aufnehmen</h2><label class="vb-field">Titel<input id="vbNewTitle" maxlength="500"></label><label class="vb-field">Originalverlauf in der Vorstandsgruppe oder Gmail<input id="vbNewSource" type="url"></label><label class="vb-field">Nächster Schritt<textarea id="vbNewNext" maxlength="4000"></textarea></label><div><button type="button" class="btn btn-primary" id="vbNewSave" data-write>Gemeinsam aufnehmen</button></div></section>
+  <nav class="vb-filters" aria-label="Vorgänge filtern"><button type="button" class="btn btn-brand" data-filter="offen" aria-pressed="true">Offen</button><button type="button" class="btn btn-brand" data-filter="meine" aria-pressed="false">Bei mir</button><button type="button" class="btn btn-brand" data-filter="unzugewiesen" aria-pressed="false">Unzugewiesen</button><button type="button" class="btn btn-brand" data-filter="wartet" aria-pressed="false">Wartet</button><button type="button" class="btn btn-brand" data-filter="erledigt" aria-pressed="false">Erledigt</button><button type="button" class="btn btn-brand" data-filter="alle" aria-pressed="false">Alle</button></nav>
+  <div class="vb-work"><nav id="vbList" class="vb-list" aria-label="Gemeinsame Vorgangsliste"><p class="vb-muted">Lädt …</p></nav><div><p id="vbEmpty" class="vb-muted">Einen Vorgang wählen.</p>
+    <article id="vbDetail" class="vb-detail" hidden>
+      <div class="vb-case-head"><span id="vbCaseId" class="vb-muted"></span><h2 id="vbTitle"></h2><a id="vbOriginal" target="_blank" rel="noopener">Originalverlauf öffnen ↗</a></div>
+      <div class="vb-finding"><p id="vbFinding"></p><span id="vbBasis" class="vb-muted"></span></div>
+      <div class="vb-tools"><button type="button" class="btn btn-brand" id="vbTake">Ich übernehme</button></div>
+      <div class="vb-tabs" role="tablist" aria-label="Vorgang bearbeiten"><button type="button" class="btn btn-brand" id="vbTabReply" role="tab" data-tab="reply" aria-controls="vbReply" aria-selected="true">Antwortentwurf</button><button type="button" class="btn btn-brand" id="vbTabTask" role="tab" data-tab="task" aria-controls="vbTask" aria-selected="false">Asana Aufgabe</button><button type="button" class="btn btn-brand" id="vbTabStatus" role="tab" data-tab="status" aria-controls="vbStatusPanel" aria-selected="false">Bearbeitungsstand</button></div>
+      <section id="vbReply" class="vb-panel" role="tabpanel" aria-labelledby="vbTabReply" data-panel="reply">
+        <p class="vb-muted">Der Entwurf wird mit „Gemeinsam speichern“ für euch beide gesichert. Vor dem Antworten den aktuellen Originalverlauf prüfen.</p>
+        <label class="vb-field">Antwortadresse aus dem Original<input id="vbTo" type="email" maxlength="320" autocomplete="off"></label>
+        <label class="vb-field">Betreff<input id="vbSubject" maxlength="500"></label>
+        <label class="vb-field">Gemeinsamer Antwortentwurf<textarea id="vbBody" class="vb-draft" maxlength="16000"></textarea></label>
+        <div class="vb-tools"><button type="button" class="btn btn-brand" id="vbSuggest">Neutralen Vorschlag einsetzen</button><button type="button" class="btn btn-brand" id="vbCopy">Text kopieren</button><a class="btn btn-brand" id="vbReplyOriginal" target="_blank" rel="noopener">Im Original antworten ↗</a><a class="btn btn-brand" id="vbMailto" hidden>Im Mailprogramm öffnen</a></div>
+        <p class="vb-muted">Kopie im Mailprogramm: vorstand@freude-eg.de. Das Öffnen eines Entwurfs oder Originals ist kein Versandnachweis.</p>
+      </section>
+      <section id="vbTask" class="vb-panel" role="tabpanel" aria-labelledby="vbTabTask" data-panel="task" hidden>
+        <label class="vb-field">Aufgabentitel<input id="vbTaskTitle" maxlength="500"></label>
+        <label class="vb-field">Nächster Schritt und Erledigungskriterium<textarea id="vbTaskNotes" maxlength="12000"></textarea></label>
+        <div class="vb-cols"><label class="vb-field">Zuständig in Asana<select id="vbTaskWho"><option value="Alex">Alexander</option><option value="Lea">Lea</option></select></label><label class="vb-field">Frist, falls vereinbart<input id="vbTaskDue" type="date"></label></div>
+        <p class="vb-note">Die Aufgabe wird im Asana Aufgabenbereich der zuständigen Person angelegt. Alexander und Lea werden beide als Beteiligte ergänzt. Original und Kompass Vorgang werden verlinkt.</p>
+        <div class="vb-tools"><button type="button" class="btn btn-primary" id="vbTaskCreate" data-write>In Asana anlegen</button><button type="button" class="btn btn-brand" id="vbTaskCheck">Asana Stand abgleichen</button><button type="button" class="btn btn-brand" id="vbTaskRelease" hidden>Erneute Anlage freigeben</button><a class="btn btn-brand" id="vbAsana" target="_blank" rel="noopener" hidden>Aufgabe in Asana öffnen ↗</a></div>
+        <div id="vbTaskLinkBox" hidden><label class="vb-field">Vorhandene Aufgabe direkt abgleichen<input id="vbTaskLinkUrl" type="url" placeholder="Asana Aufgabenlink"></label><button type="button" class="btn btn-brand" id="vbTaskLink" data-write>Aufgabenlink prüfen</button><p class="vb-muted">Kompass übernimmt den Link nur, wenn die Aufgabe die Quellenkennung dieses Vorgangs enthält.</p></div><p id="vbTaskResult" class="vb-muted" aria-live="polite"></p><p class="vb-muted">Eine angelegte oder in Asana erledigte Aufgabe schließt den Mailvorgang hier nicht automatisch ab.</p>
+      </section>
+      <section id="vbStatusPanel" class="vb-panel" role="tabpanel" aria-labelledby="vbTabStatus" data-panel="status" hidden>
+        <div class="vb-cols"><label class="vb-field">Verantwortlich<select id="vbOwner"><option value="">Noch unzugewiesen</option><option value="Alex">Alexander</option><option value="Lea">Lea</option></select></label><label class="vb-field">Bearbeitungsstand<select id="vbStatus"><option value="pruefen">Zu prüfen</option><option value="in_bearbeitung">In Bearbeitung</option><option value="wartet">Wartet</option><option value="erledigt">Erledigt</option></select></label></div>
+        <label class="vb-field">Nächster Schritt<textarea id="vbNext" maxlength="4000"></textarea></label>
+        <div class="vb-cols"><label class="vb-field">Nächste Frist, falls vereinbart<input id="vbDue" type="date"></label><label class="vb-field">Worauf warten wir?<input id="vbWaiting" maxlength="2000"></label></div>
+        <label class="vb-field">Erledigungsnachweis, erforderlich bei Erledigt<textarea id="vbEvidence" maxlength="4000" placeholder="Zum Beispiel: Antwort im Originalverlauf vom … oder verlinkter Zahlungsbeleg"></textarea></label>
+      </section>
+      <div class="vb-save"><button type="button" class="btn btn-primary" id="vbSave" data-write>Gemeinsam speichern</button><span id="vbSaved" class="vb-muted"></span></div>
+    </article>
+  </div></div>
+</main></div>
+<div id="toast" class="toast"></div>
+<script src="/assets/core.js?v=37-vorstand2"></script><script src="/assets/vorstand.js?v=2"></script>
+<script>gfGate(async()=>{document.getElementById('app').style.display='block';gfMountTopbar('vorstand');gfVorstandStart();});</script>
+</body></html>

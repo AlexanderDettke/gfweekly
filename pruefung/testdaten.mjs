@@ -549,3 +549,6 @@ Object.assign(ANTWORT, {
   komm_berechnen: () => ({ ok: true, ergebnis: [] }),
 });
 SCHREIBEND.add('komm_pruefpunkt_set'); SCHREIBEND.add('komm_berechnen');
+
+/* Vorstandsbüro: erfundene Mailvorgänge, keine Originalpost. */
+ANTWORT.lage = { ok:true, asanaConfigured:true, items:[{ id:'TEST-oberflaeche',title:'Rückfrage zur nächsten Sitzung',finding:'Eine Antwort steht noch aus. Erfunden für die Oberflächenprüfung.',next_action:'Termin prüfen und Antwort vorbereiten.',basis_at:zeit(0),status:'pruefen',owner:'',priority:true,source_url:'https://groups.google.com/a/freude-eg.de/g/vorstand',reply_to:'test@example.org',reply_subject:'Rückfrage zur nächsten Sitzung',reply_body:'Guten Tag,\n\nvielen Dank für Ihre Nachricht.',task_title:'Termin prüfen und Antwort vorbereiten',task_notes:'Termin prüfen. Originalverlauf ist verlinkt.',task_assignee:'Alex',task_state:'none',version:1,last_by:'Testprüfung',updated_at:zeit(0)}] };

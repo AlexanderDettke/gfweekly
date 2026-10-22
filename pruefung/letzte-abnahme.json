@@ -1,7 +1,23 @@
 {
-  "stand": "b089ee475803f9d8b93921f1531254fbd77b02594a8f8626c11b50bc9956691f",
-  "commit": "e429a677fb8ac6dcb4e5de126f001bf7ff142fb9",
-  "datum": "2026-10-22T03:47:04Z",
-  "laeufe": ["tokens", "farbscan", "kontrast", "matrix", "schirme (Oberfläche)", "bedienung (Oberfläche)", "kommunikation", "organisationsentscheidungen", "waechter"],
-  "ungeprueft": "Wirkung in der Datenbank, Asana-Lebenszyklus, Nebenläufigkeit, verborgene Oberflächenteile"
+  "stand": "2e831fc9341e32a258a59ebbef7f0eb89ad341adf551ebcbe42ebbe2dcfdff13",
+  "commit": "3a135b0ac6ccf882e3c65870618a1520623515f9",
+  "datum": "2026-10-22T04:09:22Z",
+  "laeufe": [
+    "tokens",
+    "farbscan",
+    "kontrast",
+    "matrix",
+    "schirme (Oberfläche CI)",
+    "bedienung (Oberfläche CI)",
+    "organisationsentscheidungen",
+    "organisationsdatenbank",
+    "Vorstand Aktionen 12",
+    "waechter"
+  ],
+  "belege": {
+    "oberflaeche": "https://github.com/AlexanderDettke/gfweekly/actions/runs/39720252760",
+    "asana": "Synthetische Anlage, Beteiligte, wiederholte Anlage und Wiederfinden nach Unterbrechung mit echten Serveraufrufen geprüft.",
+    "datenbank": "Revisionskonflikt, doppelte Reservierung und Erledigungsbeleg mit zurückgerollter Transaktion geprüft."
+  },
+  "ungeprueft": "Fachliche Annahme durch Lea, Leas eigener Gerätezugang, automatische Aufnahme neuer Mails und Mailversand."
 }
