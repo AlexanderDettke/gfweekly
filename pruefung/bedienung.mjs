@@ -399,14 +399,33 @@ console.log('\n== Board aufgeräumt und Mehrfachauswahl (23.10.2026) ==');
   THEMEN.find(x => x.id === 't5').board_lane = 'in_klaerung';
   await b.locator('#selBar [data-sel="in_bearbeitung"]').click(); await b.waitForTimeout(400);
   pruefe('Konflikt: „1 nicht gespeichert (inzwischen geändert …)“, das andere gespeichert', /1 Thema in Bearbeitung · 1 nicht gespeichert \(inzwischen geändert/.test(await b.locator('#selRueck').innerText()), await b.locator('#selRueck').innerText());
+  /* Auswahl gilt für das Sichtbare: Ansichtswechsel leert sie; Kontrollkästchen tragen den Titel als Namen. */
+  await b.locator('.bcard[data-id="t1"]').click(); await b.waitForTimeout(80);
+  pruefe('Kontrollkästchen mit Namen „… auswählen“', /Vertrag mit dem Landkreis verlängern auswählen/.test(await b.locator('.bcard[data-id="t1"] .sel-cb').getAttribute('aria-label')));
+  await b.locator('#groupSegs [data-g="prio"]').click(); await b.waitForTimeout(150);
+  pruefe('Ansichtswechsel leert die Auswahl', /0 ausgewählt/.test(await b.locator('#selN').innerText()));
+  await b.locator('#groupSegs [data-g="ablauf"]').click(); await b.waitForTimeout(150);
   await b.locator('#selEnde').click(); await b.waitForTimeout(150);
   pruefe('„Fertig“ beendet die Auswahl, Karten öffnen wieder Details', await b.locator('#selBar').isHidden() && await b.locator('.sel-cb').count() === 0);
   await b.close();
+  /* Link auf ein archiviertes Thema: Hinweis statt Leere, „Wieder öffnen“ holt es zurück. */
+  THEMEN.push({ id:'t8', title:'Archiviertes Probethema', context:'', priority:'mittel', status:'erledigt', kind:'einmalig', board_lane:'erledigt', lane_order:2, owner:'Alex', created_at:alt, updated_at:alt, archived:true, archiv_grund:'erledigt-14' });
+  const a = await seite('/board.html?topic=t8'); await a.waitForTimeout(600);
+  pruefe('Link auf archiviertes Thema zeigt „Im Archiv“ mit Grund', /Im Archiv/.test(await a.locator('#tidyModal').innerText()) && /nach 14 Tagen ins Archiv/.test(await a.locator('#tidyModal').innerText()));
+  await a.locator('#arZurueck').click(); await a.waitForTimeout(500);
+  const za = letzte('themen_sammeln');
+  pruefe('„Wieder öffnen“ holt es offen ins Board zurück', za && za.nutzlast.items[0].aktion === 'zuruecksetzen' && za.nutzlast.items[0].wert.archived === false && za.nutzlast.items[0].wert.board_lane === 'zu_besprechen' && await a.locator('#panel.open').count() === 1, JSON.stringify(za && za.nutzlast).slice(0, 200));
+  await a.close();
   const h = await ctx.newPage(); await h.setViewportSize({ width:390, height:844 }); h.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
   await h.goto(BASE + '/board.html'); await h.waitForTimeout(700);
   await h.locator('#waehlenBtn').click(); await h.locator('.bcard').first().click(); await h.waitForTimeout(150);
   const bb = await h.locator('#selBar').boundingBox();
   pruefe('Handy 390 px: Leiste unten in voller Breite, keine waagrechte Rollleiste', bb && bb.width >= 340 && bb.y + bb.height <= 844 && await h.evaluate(() => document.documentElement.scrollWidth <= 390), JSON.stringify(bb));
+  await h.locator('[data-selmenu="weitergeben"]').click(); await h.waitForTimeout(100);
+  const pb = await h.locator('.sel-pop[data-pop="weitergeben"]').boundingBox();
+  pruefe('Handy 390 px: Menü „Weitergeben“ liegt ganz im Bild', pb && pb.x >= 0 && pb.x + pb.width <= 390 && pb.y >= 0, JSON.stringify(pb));
+  await h.keyboard.press('Escape'); await h.waitForTimeout(80);
+  pruefe('Escape schließt das Menü und gibt den Fokus an „Weitergeben“ zurück', await h.evaluate(() => document.activeElement?.dataset?.selmenu === 'weitergeben'));
   await h.close();
   THEMEN.splice(0, THEMEN.length, ...JSON.parse(saat));
 }

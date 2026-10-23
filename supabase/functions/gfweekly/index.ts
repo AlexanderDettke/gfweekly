@@ -1443,6 +1443,13 @@ Deno.serve(async (req: Request) => {
       if (gains.length) { await checkGoals(gains, WHO, DAY); await checkBadges(gains, WHO, DAY); }
       return json({ topic: data, gains });
     }
+    if (action === 'topic_get') {
+      /* 23.10.2026: ein Thema auch archiviert lesen (Links aus Übergabe, Vorhaben und Entscheidungslog führen nicht ins Leere). */
+      const id = (t.id ?? '').toString(); if (!VH_UUID.test(id)) return json({ error:'id fehlt' },400);
+      const { data, error } = await admin.from('gfweekly_topics').select('*').eq('id', id).maybeSingle();
+      if (error) throw error; if (!data) return json({ error:'Thema gibt es nicht' },404);
+      return json({ topic: data });
+    }
     if (action === 'themen_sammeln') {
       /* 23.10.2026 · Mehrfachauswahl im Board: viele Themen auf einmal erledigen, in Bearbeitung setzen, verschieben,
          weitergeben (Pförtner), archivieren oder zurücksetzen (Rückgängig). Eine Unter-Transaktion je Thema in
@@ -1865,6 +1872,7 @@ Deno.serve(async (req: Request) => {
       const patch: Record<string,unknown> = { gate:t.gate, gate_by:(t.by ?? WHO).toString().slice(0,60), gate_at:new Date().toISOString() };
       if(t.frist!==undefined) patch.gate_frist = t.frist ? t.frist : null;
       if(t.note!==undefined) patch.gate_note = (t.note??'').toString().slice(0,300);
+      if(table==='gfweekly_topics') patch.updated_at = new Date().toISOString();   // 23.10.2026: Konfliktprüfung der Mehrfachauswahl sieht die Änderung
       const { data, error } = await admin.from(table).update(patch).eq('id',t.id).select().single(); if(error) throw error;
       return json({ item:data });
     }
@@ -1873,6 +1881,7 @@ Deno.serve(async (req: Request) => {
       for(const it of items){ const table = it.kind==='thema' ? 'gfweekly_topics' : it.kind==='kandidat' ? 'gfweekly_news' : null; if(!table||!it.id||!GATES.includes(it.gate)) continue;
         const patch: Record<string,unknown> = { gate:it.gate, gate_by:(t.by ?? WHO).toString().slice(0,60), gate_at:new Date().toISOString() };
         if(it.frist!==undefined) patch.gate_frist = it.frist||null; if(it.note!==undefined) patch.gate_note=(it.note??'').toString().slice(0,300);
+        if(table==='gfweekly_topics') patch.updated_at = new Date().toISOString();
         const { error } = await admin.from(table).update(patch).eq('id',it.id); if(error) throw error; n++; }
       return json({ ok:true, updated:n });
     }

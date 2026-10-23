@@ -54,11 +54,25 @@ try {
   await api('themen_sammeln', { items: ar.ergebnis.map(x => ({ id: x.id, aktion: 'zuruecksetzen', wert: x.vorher })), by: 'Alex' });
   ta = thema(a.id);
   ok(ta.archived === false && ta.archiv_grund === null && (await api('list')).topics.some(x => x.id === a.id), 'Rückgängig holt es ins Board zurück');
+  console.log('\n== Konflikte durch andere Wege ==');
+  const vorGate = thema(a.id).updated_at;
+  await api('gate_set', { kind: 'thema', id: a.id, gate: 'alex', by: 'Lea' });
+  ok(thema(a.id).updated_at !== vorGate, 'Pförtner (gate_set) setzt updated_at, die Konfliktprüfung sieht die Änderung');
+  await api('themen_sammeln', { items: [{ id: a.id }], aktion: 'archivieren', by: 'Alex' });
+  const ka = await api('themen_sammeln', { items: [{ id: a.id }], aktion: 'erledigt', by: 'Alex' });
+  ok(ka.ok === 0 && ka.ergebnis[0].konflikt === true && /archiviert/.test(ka.ergebnis[0].grund), 'archiviertes Thema: Sammelaktion meldet Konflikt statt Erfolg', ka.ergebnis);
+  await api('themen_sammeln', { items: [{ id: a.id, aktion: 'zuruecksetzen', wert: { archived: false, archiv_grund: null } }], by: 'Alex' });
+  ok(thema(a.id).archived === false, 'Rückgängig (zuruecksetzen) darf es zurückholen');
   console.log('\n== Archivieren erledigter Themen (zurückgerollt) ==');
   const vorher = sql("select count(*)::int n from public.gfweekly_topics where archived")[0].n;
   const p = sql(`begin; update public.gfweekly_topics set board_lane='erledigt', status='erledigt', resolved_at=now()-interval '20 days' where id='${b.id}'; select public.hh_themen_erledigt_archivieren(14); select archived, archiv_grund from public.gfweekly_topics where id='${b.id}'; rollback;`);
   ok(p[0]?.archived === true && p[0]?.archiv_grund === 'erledigt-14', 'seit 20 Tagen erledigt: archiviert mit Grund erledigt-14', p);
   ok(sql("select count(*)::int n from public.gfweekly_topics where archived")[0].n === vorher, 'nach dem Rollback Archivbestand unverändert');
+  const hu = sql(`begin; update public.gfweekly_topics set board_lane='erledigt', status='erledigt', resolved_at=now()-interval '20 days' where id='${b.id}';
+    with ab as (insert into public.gfweekly_absences (person, von, art, kontakt, status, test, note) values ('Alex', current_date, 'sofort', 'keiner', 'aktiv', true, 'Probe Sammeln') returning id)
+    insert into public.gfweekly_handover (absence_id, kind, ref_id, title, status) select id, 'thema', '${b.id}', 'Probe Sammeln 2', 'bestaetigt' from ab;
+    select public.hh_themen_erledigt_archivieren(14); select archived from public.gfweekly_topics where id='${b.id}'; rollback;`);
+  ok(hu[0]?.archived === false, 'Thema in laufender Übergabe wird nicht archiviert', hu);
 } catch (e) { ok(false, 'Probe abgebrochen', e.message); }
 finally {
   try { aufraeumen(); console.log('  · Testthemen gelöscht'); } catch (e) { ok(false, 'Testthemen nicht gelöscht (created_by probe-sammeln)'); }

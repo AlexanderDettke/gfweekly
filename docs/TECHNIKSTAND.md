@@ -2,15 +2,15 @@
 
 Auftrag und Annahmen: `docs/PAKET-BLICK-UND-AUFRAEUMEN.md`, Teil A. Assets `?v=39`.
 
-Datenbank: Migration `20261023224151_hh_themen_sammeln` (angewendet): Spalte `archiv_grund` an `gfweekly_topics`; `hh_themen_sammeln(p_items, p_by)` mit einer Unter-Transaktion je Thema (Konflikt bei abweichender Spalte oder `updated_at`, millisekundengenau), Aktionen erledigt, in_bearbeitung, offen, verschieben, weitergeben, archivieren, zuruecksetzen, Rückgabe je Thema mit Stand davor; `hh_themen_erledigt_archivieren(p_tage)`. Migration `20261023230708_hh_themen_erledigt_zeitplan` läuft nach dem Ausrollen: einmal archivieren (Probelauf 22.10.: 36 erledigte Themen) und täglich 04:55 UTC; Rückweg im Kopf der Migration.
+Datenbank: Migration `20261023224151_hh_themen_sammeln` (angewendet): Spalte `archiv_grund` an `gfweekly_topics`; `hh_themen_sammeln(p_items, p_by)` mit einer Unter-Transaktion je Thema (Konflikt bei abweichender Spalte oder `updated_at`, millisekundengenau), Aktionen erledigt, in_bearbeitung, offen, verschieben, weitergeben, archivieren, zuruecksetzen, Rückgabe je Thema mit Stand davor; `hh_themen_erledigt_archivieren(p_tage)`. Nacharbeit aus Review-Runde 1, Migration `20261023231946_hh_themen_sammeln_r1` (angewendet): ein inzwischen archiviertes Thema ist ein Konflikt (außer für Rückgängig); der Archivlauf setzt `updated_at` und lässt Themen in laufenden Übergaben aus. Migration `20261023231949_hh_themen_erledigt_zeitplan` läuft nach dem Ausrollen: einmal archivieren (Probelauf 22.10.: 36 erledigte Themen) und täglich 04:55 UTC; Rückweg im Kopf der Migration.
 
-Edge Function `gfweekly`: Aktion `themen_sammeln` (nur Alex oder Lea, 1 bis 200 Themen, Eingabeprüfung je Aktion), ruft keine Habitat-Taler (`scoreTopicTransition`) auf.
+Edge Function `gfweekly`: Aktion `themen_sammeln` (nur Alex oder Lea, 1 bis 200 Themen, Eingabeprüfung je Aktion), ruft keine Habitat-Taler (`scoreTopicTransition`) auf. `gate_set` und `gate_set_many` setzen bei Themen `updated_at` (vorher nicht, die Konfliktprüfung hätte eine Pförtneränderung übersehen). Neue Lese-Aktion `topic_get` liefert ein Thema auch archiviert.
 
-Board (`site/board.html`): Erledigt als Streifen, kompakte Karten, Filtermenü, schmales Kopfbild, keine doppelten Knöpfe, Auswählen mit Leiste unten und Rückgängig. Der Haken „Person“ erscheint nur noch mit Personenfilter (vorher sichtbar trotz `hidden`). Zähler an Knöpfen neutral (`.btn .nbadge`).
+Board (`site/board.html`): Erledigt als Streifen, kompakte Karten, Filtermenü, schmales Kopfbild, keine doppelten Knöpfe, Auswählen mit Leiste unten und Rückgängig. Ein Link auf ein archiviertes Thema (Übergabe, Vorhaben, Entscheidungslog) zeigt „Im Archiv“ mit Grund und „Zurück ins Board“ bzw. bei erledigten „Wieder öffnen“. Ein Wechsel von Ansicht, Filter oder Suche leert die Auswahl; während des Speicherns sind die Knöpfe gesperrt; Karten tragen in der Auswahl ein benanntes Kontrollkästchen; Fokus kehrt nach Menüs und Neuzeichnen zurück. Der Haken „Person“ erscheint nur noch mit Personenfilter (vorher sichtbar trotz `hidden`). Zähler an Knöpfen neutral (`.btn .nbadge`).
 
 Daten: Thema `ca31e478…` hatte keinen Titel, jetzt „Helge: gemeinsame Schlüsselposition im Umbau anbieten“ (aus dem Kontext).
 
-Prüfungen: `pruefung/themen-sammeln-probe.mjs` gegen das echte Backend 14 von 14 (Testthemen danach gelöscht); Bedienung um 14 Proben „Board aufgeräumt und Mehrfachauswahl“ erweitert; `pruefung/abnahme.sh` einschließlich Webstandard-Prüfung bestanden.
+Prüfungen: `pruefung/themen-sammeln-probe.mjs` gegen das echte Backend 18 von 18 (Testthemen danach gelöscht); Bedienung um 20 Proben „Board aufgeräumt und Mehrfachauswahl“ erweitert; `pruefung/abnahme.sh` einschließlich Webstandard-Prüfung bestanden.
 
 ## Webapp Standard, Pilot zur Erprobung (21.10.2026)
 

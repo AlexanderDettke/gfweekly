@@ -239,11 +239,13 @@ export const ANTWORT = {
     { id:'l', name:'Lea', email:'lea@example.org', role:'GF', team:'GF', active:true, assignable:true, sort_order:2 },
     { id:'m', name:'Merle', email:'merle@example.org', role:'Büro', team:'Team', active:true, assignable:true, sort_order:3 } ] },
   list: () => ({ topics: THEMEN.filter(t => !t.archived) }),
+  topic_get: (p) => { const t = THEMEN.find(x => x.id === p.id); return t ? { topic: t } : { __status:404, error:'Thema gibt es nicht' }; },
   /* 23.10.2026 · Mehrfachauswahl wie hh_themen_sammeln: je Thema ok oder Konflikt, Stand davor, keine Taler. */
   themen_sammeln: (p) => ({ ok:0, gesamt:(p.items||[]).length, ergebnis:(p.items||[]).map(it => {
     const t = THEMEN.find(x => x.id === it.id); if (!t) return { id:it.id, ok:false, grund:'Thema gibt es nicht' };
     const aktion = it.aktion || p.aktion, wert = it.wert !== undefined ? it.wert : p.wert;
     if (it.expect && it.expect.board_lane !== undefined && it.expect.board_lane !== t.board_lane) return { id:t.id, ok:false, grund:'inzwischen verschoben', konflikt:true };
+    if (t.archived && aktion !== 'zuruecksetzen') return { id:t.id, ok:false, grund:'inzwischen archiviert', konflikt:true };
     const vorher = { board_lane:t.board_lane, status:t.status, resolved_at:t.resolved_at||null, next_suggested:t.next_suggested||null, gate:t.gate||null, gate_by:t.gate_by||null, gate_at:t.gate_at||null, archived:!!t.archived, archiv_grund:t.archiv_grund||null };
     if (aktion === 'erledigt') Object.assign(t, { board_lane:'erledigt', status:'erledigt' });
     if (aktion === 'in_bearbeitung') Object.assign(t, { board_lane:'in_klaerung', status:'in_klaerung' });

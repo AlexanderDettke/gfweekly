@@ -110,7 +110,7 @@ let OWNER=(params.get("owner")||params.get("person")||"").trim(), OWNER_ON=!!OWN
 let LUECKE=params.get("luecke")==="1";
 /* 23.10.2026 · Erledigt-Spalte im Ablauf zugeklappt (gf_board_erl), Mehrfachauswahl (WAEHLEN, SEL). */
 let ERL_AUF=(()=>{ try{ return localStorage.getItem("gf_board_erl")==="1"; }catch(e){ return false; } })();
-let WAEHLEN=false; const SEL=new Set();
+let WAEHLEN=false, SEL_LAEUFT=false; const SEL=new Set();
 function istLuecke(t){ return !(t.short_description||"").trim() || !(t.next_action||"").trim(); }
 /* Dieselbe Regel wie uebernahme_stat in der Edge Function: Verantwortung der Person oder ihr Ausgang.
    whoNorm macht aus „Alexander Dettke“ Alex und aus allem Übrigen Team. */
@@ -152,8 +152,8 @@ function card(t){
   const who=t.owner||t.delegate_to||"", titel=(t.title||"").trim()||"(ohne Titel)";
   const zeile=t.board_lane==="entschieden"&&t.decision?`Entschieden: ${t.decision}`:t.next_action&&t.board_lane!=="erledigt"?`→ ${t.next_action}`:"";
   const an=SEL.has(t.id);
-  return `<article class="bcard ${t.kind==="recurring"?"rec":""} ${stale?"stale":""}${WAEHLEN?" waehlbar":""}${an?" gewaehlt":""}" draggable="${WAEHLEN?"false":"true"}" data-id="${t.id}" tabindex="0"${WAEHLEN?` aria-pressed="${an}"`:""}>
-    <div class="bm">${WAEHLEN?`<input type="checkbox" class="sel-cb" ${an?"checked":""} tabindex="-1" aria-hidden="true">`:""}<span class="pill p-${t.priority}">${t.priority}</span>${t.kind==="recurring"?`<span class="pill kindtag">wiederkehrend</span>`:""}${GROUP!=="ablauf"?`<span class="pill s-${t.status}">${LANES.find(l=>l[0]===t.board_lane)?.[1].split(" ·")[0]||ST[t.status]}</span>`:""}</div>
+  return `<article class="bcard ${t.kind==="recurring"?"rec":""} ${stale?"stale":""}${WAEHLEN?" waehlbar":""}${an?" gewaehlt":""}" draggable="${WAEHLEN?"false":"true"}" data-id="${t.id}" tabindex="${WAEHLEN?"-1":"0"}">
+    <div class="bm">${WAEHLEN?`<input type="checkbox" class="sel-cb" ${an?"checked":""} aria-label="${gfEsc(titel)} auswählen">`:""}<span class="pill p-${t.priority}">${t.priority}</span>${t.kind==="recurring"?`<span class="pill kindtag">wiederkehrend</span>`:""}${GROUP!=="ablauf"?`<span class="pill s-${t.status}">${LANES.find(l=>l[0]===t.board_lane)?.[1].split(" ·")[0]||ST[t.status]}</span>`:""}</div>
     <div class="bt" title="${gfEsc(titel)}">${gfEsc(titel)}</div>
     ${zeile?`<div class="bn bn-1" title="${gfEsc(zeile)}">${gfEsc(zeile)}</div>`:""}
     <div class="bf"><span>${who?gfEsc(who):""}${t.next_suggested?` · ${new Date(t.next_suggested+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}`:""}</span><span class="bf-r"><button class="mv" data-mv="${t.id}" title="Verschieben nach …" aria-label="„${gfEsc(titel)}“ verschieben oder umsortieren" aria-haspopup="true" aria-expanded="false"${WAEHLEN?" hidden":""}>⇄</button>${stale?`<span class="age" title="Seit ${still} Tagen nicht bewegt">still seit ${still} T</span>`:""}</span></div>
@@ -187,7 +187,7 @@ function render(){
   }
   gfStagger($("#view"),".bcard"); updateTidyCount(); renderFilterN(); renderSel();
   if(MEET){ const cid=MEET.queue[MEET.idx]; const c=document.querySelector(`.bcard[data-id="${cid}"]`); if(c) c.classList.add("is-cur"); }
-  const hp=$("#hero p"); if(hp) hp.textContent=`${total} Themen · Spalten nach ${ {ablauf:"Ablauf",prio:"Priorität",zeitraum:"Zeitraum",person:"Person"}[GROUP] } · ziehen zum Verschieben, antippen für Details`;
+  const hp=$("#hero p"); if(hp) hp.textContent=`${total} Themen · Spalten nach ${ {ablauf:"Ablauf",prio:"Priorität",zeitraum:"Zeitraum",person:"Person"}[GROUP] } · `+(WAEHLEN?"Auswahl: antippen hakt an, unten gemeinsam handeln":"ziehen zum Verschieben, antippen für Details");
   bind();
 }
 
@@ -228,8 +228,8 @@ function bind(){
   document.querySelectorAll(".bcard").forEach(el=>{
     el.addEventListener("dragstart",e=>{ if(WAEHLEN){ e.preventDefault(); return; } DRAG=el.dataset.id; el.classList.add("dragging"); e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",DRAG); });
     el.addEventListener("dragend",()=>{ el.classList.remove("dragging"); document.querySelectorAll(".lane.over").forEach(l=>l.classList.remove("over")); });
-    el.addEventListener("click",e=>{ if(WAEHLEN){ waehle(el.dataset.id); return; } if(e.target.closest(".c-more")) return; if(e.target.closest(".mv")){ e.stopPropagation(); openMovePop(el.dataset.id, e.target.closest(".mv")); return; } if(MEET && MEET.queue.includes(el.dataset.id)){ MEET.idx=MEET.queue.indexOf(el.dataset.id); saveMeet(); renderMeet(); $("#meet").scrollIntoView({behavior:"smooth",block:"start"}); return; } openPanel(el.dataset.id); });
-    el.addEventListener("keydown",e=>{ if(WAEHLEN&&(e.key==="Enter"||e.key===" ")&&e.target===el){ e.preventDefault(); waehle(el.dataset.id); return; } if(e.key==="Enter"&&e.target===el) openPanel(el.dataset.id); });   /* B-02: Enter auf ⇄ oder „mehr“ öffnet nicht zusätzlich die Details */
+    el.addEventListener("click",e=>{ if(WAEHLEN){ if(e.target.closest(".sel-cb")) e.preventDefault(); waehle(el.dataset.id); return; } if(e.target.closest(".c-more")) return; if(e.target.closest(".mv")){ e.stopPropagation(); openMovePop(el.dataset.id, e.target.closest(".mv")); return; } if(MEET && MEET.queue.includes(el.dataset.id)){ MEET.idx=MEET.queue.indexOf(el.dataset.id); saveMeet(); renderMeet(); $("#meet").scrollIntoView({behavior:"smooth",block:"start"}); return; } openPanel(el.dataset.id); });
+    el.addEventListener("keydown",e=>{ if(WAEHLEN&&(e.key==="Enter"||e.key===" ")&&(e.target===el||e.target.classList.contains("sel-cb"))){ e.preventDefault(); waehle(el.dataset.id); return; } if(e.key==="Enter"&&e.target===el) openPanel(el.dataset.id); });   /* B-02: Enter auf ⇄ oder „mehr“ öffnet nicht zusätzlich die Details */
   });
   document.querySelectorAll(".lane").forEach(l=>{
     l.addEventListener("dragover",e=>{ e.preventDefault(); l.classList.add("over"); });
@@ -318,7 +318,7 @@ async function closePanel(force){
 window.addEventListener("beforeunload",e=>{ if(OPEN && P_DIRTY){ savePanel({silent:true}); e.preventDefault(); e.returnValue=""; } });
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden" && OPEN && P_DIRTY) savePanel({silent:true}); });
 $("#pClose").onclick=()=>closePanel(); $("#panelBack").onclick=()=>closePanel();
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("#filterPop").hidden){ filterZu(true); return; } if(e.key==="Escape"&&[...document.querySelectorAll(".sel-pop")].some(p=>!p.hidden)){ selMenuZu(); return; } if(e.key==="Escape"){ const tm=document.getElementById("tidyModal"); if(tm&&tm.classList.contains("open")){ tm.classList.remove("open"); return; } closePanel(); } if(e.key==="/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); $("#q").focus(); } });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("#filterPop").hidden){ filterZu(true); return; } if(e.key==="Escape"&&[...document.querySelectorAll(".sel-pop")].some(p=>!p.hidden)){ const p=[...document.querySelectorAll(".sel-pop")].find(x=>!x.hidden); selMenuZu(); document.querySelector(`[data-selmenu="${p.dataset.pop}"]`)?.focus(); return; } if(e.key==="Escape"){ const tm=document.getElementById("tidyModal"); if(tm&&tm.classList.contains("open")){ tm.classList.remove("open"); return; } closePanel(); } if(e.key==="/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); $("#q").focus(); } });
 
 /* ---- Bereinigen (V15): Marker im Text → Felder ---- */
 function tidyCandidates(){ return TOPICS.filter(t=>!t.archived && (SHOW_DONE||t.board_lane!=="erledigt") && gfTidyTopic(t)); }
@@ -367,19 +367,39 @@ function openTidyAll(){
 $("#tidyAll").onclick=openTidyAll;
 
 /* ---- Steuerung ---- */
-$("#groupSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; GROUP=b.dataset.g; localStorage.setItem("gf_board_group",GROUP); render(); };
-$("#showRec").onchange=e=>{ SHOW_REC=e.target.checked; localStorage.setItem("gf_board_rec",SHOW_REC?"1":"0"); render(); };
-$("#showDone").onchange=e=>{ SHOW_DONE=e.target.checked; localStorage.setItem("gf_board_done",SHOW_DONE?"1":"0"); render(); };
+$("#groupSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; auswahlLeeren(); GROUP=b.dataset.g; localStorage.setItem("gf_board_group",GROUP); render(); };
+$("#showRec").onchange=e=>{ auswahlLeeren(); SHOW_REC=e.target.checked; localStorage.setItem("gf_board_rec",SHOW_REC?"1":"0"); render(); };
+$("#showDone").onchange=e=>{ auswahlLeeren(); SHOW_DONE=e.target.checked; localStorage.setItem("gf_board_done",SHOW_DONE?"1":"0"); render(); };
 /* ---- 23.10.2026 · Filtermenü ---- */
 function renderFilterN(){ const n=[LUECKE,SHOW_REC,SHOW_DONE].filter(Boolean).length; const b=$("#filterN"); b.textContent=n; b.hidden=!n; }
 function filterZu(fokus){ $("#filterPop").hidden=true; $("#filterBtn").setAttribute("aria-expanded","false"); if(fokus) $("#filterBtn").focus(); }
 $("#filterBtn").onclick=e=>{ e.stopPropagation(); const auf=$("#filterPop").hidden; $("#filterPop").hidden=!auf; $("#filterBtn").setAttribute("aria-expanded",String(auf)); if(auf) $("#filterPop input")?.focus(); };
 document.addEventListener("click",e=>{ if(!e.target.closest(".bb-filter")) filterZu(false); if(!e.target.closest(".sel-w")) selMenuZu(); });
 $("#view").addEventListener("click",e=>{
-  const er=e.target.closest("[data-erl]"); if(er){ e.stopPropagation(); ERL_AUF=er.dataset.erl==="auf"; try{ localStorage.setItem("gf_board_erl",ERL_AUF?"1":"0"); }catch(x){} render(); return; }
+  const er=e.target.closest("[data-erl]"); if(er){ e.stopPropagation(); ERL_AUF=er.dataset.erl==="auf"; try{ localStorage.setItem("gf_board_erl",ERL_AUF?"1":"0"); }catch(x){} render(); fokusNach(`[data-erl="${ERL_AUF?"zu":"auf"}"]`); return; }
   const al=e.target.closest("[data-sel-alle]"); if(al){ e.stopPropagation(); const ids=[...document.querySelectorAll(`.lane[data-col="${CSS.escape(al.dataset.selAlle)}"] .bcard`)].map(c=>c.dataset.id);
-    const alleDrin=ids.every(id=>SEL.has(id)); ids.forEach(id=>alleDrin?SEL.delete(id):SEL.add(id)); render(); }
+    if(SEL_LAEUFT) return; const alleDrin=ids.every(id=>SEL.has(id)); ids.forEach(id=>alleDrin?SEL.delete(id):SEL.add(id)); render(); fokusNach(`[data-sel-alle="${CSS.escape(al.dataset.selAlle)}"]`); }
 });
+
+/* ---- 23.10.2026 · Link auf ein archiviertes Thema: lesbarer Hinweis mit „Zurück ins Board“ statt ins Leere ---- */
+async function archivHinweis(id){
+  let t; try{ t=(await gfApi("topic_get",{id})).topic; }catch(e){ gfToast("Dieses Thema gibt es nicht mehr: "+(e.message||"Verbindung")); return; }
+  if(!t.archived){ TOPICS.push(t); render(); openPanel(t.id); return; }
+  const m=$("#tidyModal"), frei=gfModalAuf?gfModalAuf(m):()=>{};
+  const grund=t.archiv_grund&&/^erledigt-/.test(t.archiv_grund)?"Es war erledigt und ist nach 14 Tagen ins Archiv gewandert.":t.archiv_grund==="hand"?"Es wurde von Hand archiviert.":"Es ist archiviert.";
+  m.innerHTML=`<div class="modal vh-dlg" role="dialog" aria-modal="true" aria-labelledby="arH"><div class="modal-h"><h3 id="arH">Im Archiv</h3><button class="icon-btn" data-x aria-label="Schließen">✕</button></div>
+    <div class="vh-dlg-b"><p class="vh-dlg-t"><b>${gfEsc(t.title||"(ohne Titel)")}</b><br>${grund}${t.decision?` Entscheidung: ${gfEsc(t.decision)}`:""}</p></div>
+    <div class="modal-f"><button class="btn btn-brand" data-x>Schließen</button><button class="btn btn-primary" id="arZurueck" style="margin-left:auto">${t.board_lane==="erledigt"?"Wieder öffnen":"Zurück ins Board"}</button></div></div>`;
+  m.classList.add("open");
+  const zu=()=>{ m.classList.remove("open"); m.innerHTML=""; frei(); };
+  m.querySelectorAll("[data-x]").forEach(b=>b.onclick=zu); m.onclick=e=>{ if(e.target===m) zu(); };
+  /* Erledigtes kommt wieder offen zurück, sonst nähme es der nächste Archivlauf gleich wieder. */
+  const wert=t.board_lane==="erledigt"?{ archived:false, archiv_grund:null, board_lane:"zu_besprechen", status:"offen", resolved_at:null }:{ archived:false, archiv_grund:null };
+  $("#arZurueck").onclick=async()=>{ try{ await gfApi("themen_sammeln",{ items:[{ id:t.id, aktion:"zuruecksetzen", wert }], by:gfWho() });
+      zu(); const d=await gfApi("list"); TOPICS=d.topics||[]; render(); openPanel(t.id); gfToast("Zurück im Board"); }
+    catch(e){ gfToast("Nicht zurückgeholt: "+(e.message||"Verbindung"),{fehler:true}); } };
+  setTimeout(()=>$("#arZurueck")?.focus(),40);
+}
 
 /* ---- 23.10.2026 · Mehrfachauswahl: anhaken, unten handeln, Rückgängig für alle ---- */
 function renderSel(){
@@ -387,16 +407,21 @@ function renderSel(){
   $("#waehlenBtn").setAttribute("aria-pressed",String(WAEHLEN)); $("#waehlenBtn").textContent=WAEHLEN?"Auswahl beenden":"Auswählen";
   for(const id of [...SEL]) if(!TOPICS.some(t=>t.id===id)) SEL.delete(id);
   $("#selN").textContent=SEL.size===1?"1 ausgewählt":`${SEL.size} ausgewählt`;
-  bar.querySelectorAll("[data-sel],[data-selmenu]").forEach(b=>{ if(!b.closest(".sel-pop")) b.disabled=!SEL.size; });
+  bar.querySelectorAll("[data-sel],[data-selmenu]").forEach(b=>{ if(!b.closest(".sel-pop")) b.disabled=!SEL.size||SEL_LAEUFT; });
+  $("#selEnde").disabled=SEL_LAEUFT;
 }
-function waehle(id){ SEL.has(id)?SEL.delete(id):SEL.add(id); const c=document.querySelector(`.bcard[data-id="${CSS.escape(id)}"]`);
-  if(c){ c.classList.toggle("gewaehlt",SEL.has(id)); c.setAttribute("aria-pressed",String(SEL.has(id))); const cb=c.querySelector(".sel-cb"); if(cb) cb.checked=SEL.has(id); } renderSel(); }
+function waehle(id){ if(SEL_LAEUFT) return; SEL.has(id)?SEL.delete(id):SEL.add(id); const c=document.querySelector(`.bcard[data-id="${CSS.escape(id)}"]`);
+  if(c){ c.classList.toggle("gewaehlt",SEL.has(id)); const cb=c.querySelector(".sel-cb"); if(cb) cb.checked=SEL.has(id); } renderSel(); }
+/* Nach dem Neuzeichnen den Fokus auf das gleichwertige Element setzen (das alte ist ersetzt). */
+function fokusNach(selektor){ requestAnimationFrame(()=>{ const el=document.querySelector(selektor); if(el) el.focus(); }); }
+/* Auswahl gilt für das, was man sieht: ein Wechsel von Ansicht, Filter oder Suche leert sie. */
+function auswahlLeeren(){ if(WAEHLEN && SEL.size){ SEL.clear(); gfToast("Auswahl geleert, weil sich die Ansicht geändert hat"); } }
 function selMenuZu(){ document.querySelectorAll(".sel-pop").forEach(p=>p.hidden=true); document.querySelectorAll("[data-selmenu]").forEach(b=>b.setAttribute("aria-expanded","false")); }
 $("#waehlenBtn").onclick=()=>{ WAEHLEN=!WAEHLEN; if(!WAEHLEN) SEL.clear(); mvZu(false); render(); };
 $("#selEnde").onclick=()=>{ WAEHLEN=false; SEL.clear(); render(); $("#waehlenBtn").focus(); };
 $("#selBar").addEventListener("click",async e=>{
   const m=e.target.closest("[data-selmenu]"); if(m){ e.stopPropagation(); const p=$(`.sel-pop[data-pop="${m.dataset.selmenu}"]`); const auf=p.hidden; selMenuZu(); p.hidden=!auf; m.setAttribute("aria-expanded",String(auf)); if(auf) p.querySelector("button")?.focus(); return; }
-  const b=e.target.closest("[data-sel]"); if(!b||!SEL.size) return;
+  const b=e.target.closest("[data-sel]"); if(!b||!SEL.size||SEL_LAEUFT) return;
   let wert=null; const aktion=b.dataset.sel;
   if(aktion==="verschieben"){ const d=new Date(today); const w=b.dataset.wert;
     if(w==="morgen") d.setDate(d.getDate()+1); else if(w==="woche") d.setDate(d.getDate()+7); else if(w==="monat") d.setMonth(d.getMonth()+1);
@@ -410,18 +435,21 @@ const SEL_WORT={erledigt:"erledigt",in_bearbeitung:"in Bearbeitung",verschieben:
 let SEL_T=null;
 async function sammeln(aktion, wert, ids){
   const items=ids.map(id=>{ const t=TOPICS.find(x=>x.id===id); return { id, expect:{ board_lane:t?.board_lane, updated_at:t?.updated_at } }; });
-  $("#selBar").setAttribute("aria-busy","true");
+  $("#selBar").setAttribute("aria-busy","true"); SEL_LAEUFT=true; renderSel();
   let r;
   try{ r=await gfApi("themen_sammeln",{ items, aktion, wert, by:gfWho() }); }
-  catch(e){ $("#selBar").removeAttribute("aria-busy"); gfToast("Nicht gespeichert: "+(e.message||"Verbindung"),{fehler:true}); return; }
-  $("#selBar").removeAttribute("aria-busy");
+  catch(e){ gfToast("Nicht gespeichert: "+(e.message||"Verbindung"),{fehler:true}); return; }
+  finally{ $("#selBar").removeAttribute("aria-busy"); SEL_LAEUFT=false; renderSel(); }
   const gut=(r.ergebnis||[]).filter(x=>x.ok), schlecht=(r.ergebnis||[]).filter(x=>!x.ok);
   for(const x of gut){ const i=TOPICS.findIndex(t=>t.id===x.id); if(i<0) continue; if(x.thema?.archived) TOPICS.splice(i,1); else Object.assign(TOPICS[i],x.thema); SEL.delete(x.id); }
   render();
   zeigeRueck(gut, schlecht, SEL_WORT[aktion]||aktion);
 }
 function zeigeRueck(gut, schlecht, wort){
-  const h=$("#selRueck"); clearTimeout(SEL_T);
+  const h=$("#selRueck");
+  /* Ein laufendes Rückgängig der vorigen Aktion nicht durch eine Meldung ohne eigenen Rückweg verdrängen. */
+  if(!gut.length && h.classList.contains("show") && $("#selRueckK")){ gfToast(`Nichts ${wort}: ${[...new Set(schlecht.map(x=>x.konflikt?"inzwischen geändert, bitte neu laden":x.grund))].join("; ")}`,{fehler:true}); return; }
+  clearTimeout(SEL_T);
   const fehl=schlecht.length?` · ${schlecht.length} nicht gespeichert (${[...new Set(schlecht.map(x=>x.konflikt?"inzwischen geändert, bitte neu laden":x.grund))].join("; ")})`:"";
   h.innerHTML=`<span>${gut.length} ${gut.length===1?"Thema":"Themen"} ${gfEsc(wort)}${gfEsc(fehl)}</span>${gut.length?`<button type="button" class="btn btn-sm btn-ghost" id="selRueckK">Rückgängig</button>`:""}`;
   h.classList.add("show");
@@ -434,7 +462,7 @@ function zeigeRueck(gut, schlecht, wort){
       h.classList.remove("show"); h.innerHTML=""; gfToast(nein?`${ok} zurückgesetzt, ${nein} inzwischen geändert`:`${ok} ${ok===1?"Thema":"Themen"} zurückgesetzt`);
     }catch(e){ k.disabled=false; h.querySelector("span").textContent=`Rückgängig hat nicht geklappt (${e.message||"Verbindung"}). Noch einmal?`; SEL_T=setTimeout(()=>{ h.classList.remove("show"); h.innerHTML=""; },30000); } };
 }
-$("#q").oninput=e=>{ Q=e.target.value.trim().toLowerCase(); render(); };
+$("#q").oninput=e=>{ auswahlLeeren(); Q=e.target.value.trim().toLowerCase(); render(); };
 if(Q) $("#q").value=Q;
 if(OWNER){
   /* Der Filter aus der Kachel soll zeigen, was die Kachel gezählt hat: die zählt auch wiederkehrende und
@@ -442,9 +470,9 @@ if(OWNER){
   $("#owWrap").hidden=false; $("#owName").textContent="nur "+OWNER; $("#owOn").checked=true;
   SHOW_REC=true; SHOW_DONE=true; $("#showRec").checked=true; $("#showDone").checked=true;
 }
-$("#owOn").onchange=e=>{ OWNER_ON=e.target.checked; render(); };
+$("#owOn").onchange=e=>{ auswahlLeeren(); OWNER_ON=e.target.checked; render(); };
 $("#lueckeOn").checked=LUECKE;
-$("#lueckeOn").onchange=e=>{ LUECKE=e.target.checked; render(); };
+$("#lueckeOn").onchange=e=>{ auswahlLeeren(); LUECKE=e.target.checked; render(); };
 $("#newTopic").onclick=async()=>{ const title=prompt("Neues Thema (Titel):"); if(!title) return; try{ const d=await gfApi("add",{title,priority:"mittel",created_by:gfWho(),board_lane:"zu_besprechen"}); TOPICS.push(d.topic); render(); openPanel(d.topic.id); }catch(e){ gfToast("Fehler: "+e.message); } };
 
 /* ---- Verschieben per Menü (Touch, Tastatur) ---- */
@@ -598,7 +626,7 @@ gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("themen"); gfMountSubnav(VIEW);
   gfMountHero(VIEW==="board"?"lagerfeuer":"karten", VIEW==="board"?"Board":"Kacheln", "lädt …", {compact:true, slim:true});   /* 23.10.2026: schmales Kopfbild; Erfassen und Besprechung stehen schon in Leiste und Navigation */
   $("#view").innerHTML=`<div class="board">${LANES.map(()=>`<section class="lane">${gfSkeleton(2,"")}</section>`).join("")}</div>`;
-  try{ const [d,p]=await Promise.all([gfApi("list"), gfLoadPeople()]); TOPICS=d.topics||[]; PEOPLE=p||[]; render(); renderMeet(); const tid=params.get("topic"); if(tid) openPanel(tid); if(params.get("meeting")==="1" && !MEET) location.href="besprechung.html"; }
+  try{ const [d,p]=await Promise.all([gfApi("list"), gfLoadPeople()]); TOPICS=d.topics||[]; PEOPLE=p||[]; render(); renderMeet(); const tid=params.get("topic"); if(tid){ if(TOPICS.some(x=>x.id===tid)) openPanel(tid); else archivHinweis(tid); } if(params.get("meeting")==="1" && !MEET) location.href="besprechung.html"; }
   catch(e){ gfLadefehler($("#view"), e);   /* B-07: Ursache, nächster Schritt, Kopfzeile nicht mehr „lädt …“ */ }
 });
 </script>
