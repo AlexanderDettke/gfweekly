@@ -1,6 +1,6 @@
 # Paket · Hier lohnt sich ein Blick und Mehrfachauswahl · Entwurf 22.10.2026
 
-Status: Vorschlag, noch nicht gebaut. Reihenfolge: nach Paket „Kompass und 5-Minuten-Runde“.
+Status: Teil A (Board und Mehrfachauswahl) gebaut am 23.10.2026, Teil B (Blick) folgt als eigenes Paket.
 
 ## Auftrag (wörtlich)
 
@@ -38,3 +38,17 @@ Vorschlag zur Umsetzung, abweichend vom Wortlaut „im täglichen Lauf“: der B
 ## Prüfung (wie bei den letzten Paketen)
 
 Wirkungsprobe gegen das echte Backend mit Testdaten und Aufräumen, KI-Lauf in einer Probe mit festen Eingaben, Bedienproben, Schirme bei 390 und 1440 px, Codex-Review bis drei Runden, dann Push.
+
+## Ergänzung 23.10.2026 · Board zuerst
+
+Alex am 23.10.2026 mit Bildschirmfoto des Boards: „also bei mir sieht das noch so aus. bewerte ob das aufgeräumt und übersichtlichkeit entspricht“. Auf die Bewertung und den Vorschlag (Erledigt zugeklappt und nach 14 Tagen ins Archiv, kompakte Karten, ruhige Kopfzeile, Mehrfachauswahl, Blick, titellose Karte korrigieren) mit der Frage „Soll ich das Paket so starten, mit dem Board als erstem Bildschirm?“ antwortete Alex „ja“.
+
+Zuschnitt: Teil A (Board und Mehrfachauswahl) und Teil B (Blick) werden nacheinander gebaut, geprüft und ausgerollt, je mit eigener Review.
+
+### Teil A · Annahmen
+
+- Erledigt im Ablauf als schmaler Streifen mit Zahl, „anzeigen“ klappt auf; Ziehen auf den Streifen erledigt weiter. Erledigte Themen gehen nach 14 Tagen ins Archiv (`archiv_grund` erledigt-14), umkehrbar; Archiviertes ist danach nur in der Datenbank sichtbar (die Seiten zeigen archivierte Themen nicht).
+- Karte: Titel höchstens zwei Zeilen (ganz im Tooltip und in den Details), eine Zeile nächster Schritt oder Entscheidung; „Ein Satz“ steht nur noch in den Details. Statt des Alters seit Anlage („33 T“) steht „still seit … T“ nur bei Themen, die sich drei Wochen nicht bewegt haben (gemessen an `updated_at`).
+- Kopfzeile: Filter (Lücken, wiederkehrende, erledigte) in einem Menü mit Zähler; „Thema erfassen“ und „Zur Besprechung“ im Kopfbild entfallen (Eingabe steht in der Navigation, Besprechung in der Leiste); Zähler an Knöpfen neutral; schmales Kopfbild.
+- Mehrfachauswahl: „Auswählen“, Karten anhaken (oder „alle“ je Spalte), unten Erledigt, In Bearbeitung (Spalte In Klärung), Verschieben (Termin `next_suggested`: morgen, nächste Woche, in einem Monat, Datum), Weitergeben (Pförtner `gate` an Alex, Lea, GF, Team; `owner` bleibt), Archivieren (mit Rückfrage). Rückgängig 10 Sekunden für die ganze Auswahl. Keine Habitat-Taler für Sammelaktionen.
+- Die titellose Karte (Angebot an Helge, angelegt 19.09.2026) bekommt den Titel „Helge: gemeinsame Schlüsselposition im Umbau anbieten“ aus ihrem Kontext.

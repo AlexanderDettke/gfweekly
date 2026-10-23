@@ -1443,6 +1443,32 @@ Deno.serve(async (req: Request) => {
       if (gains.length) { await checkGoals(gains, WHO, DAY); await checkBadges(gains, WHO, DAY); }
       return json({ topic: data, gains });
     }
+    if (action === 'themen_sammeln') {
+      /* 23.10.2026 · Mehrfachauswahl im Board: viele Themen auf einmal erledigen, in Bearbeitung setzen, verschieben,
+         weitergeben (Pförtner), archivieren oder zurücksetzen (Rückgängig). Eine Unter-Transaktion je Thema in
+         hh_themen_sammeln; Antwort je Thema ok oder Grund, dazu der Stand davor. Keine Habitat-Taler (scoreTopicTransition). */
+      const by = vhBy(t);
+      const AKTIONEN = ['erledigt','in_bearbeitung','offen','verschieben','weitergeben','archivieren','zuruecksetzen'];
+      const roh = Array.isArray(t.items) ? t.items : [];
+      if (!roh.length || roh.length > 200) return json({ error:'items: 1 bis 200 Themen' },400);
+      const items: any[] = [];
+      for (const it of roh) {
+        const id = (it?.id ?? '').toString(); if (!VH_UUID.test(id)) return json({ error:'id ist keine Kennung' },400);
+        const aktion = (it?.aktion ?? t.aktion ?? '').toString(); if (!AKTIONEN.includes(aktion)) return json({ error:'aktion: ' + AKTIONEN.join('|') },400);
+        let wert: unknown = it?.wert !== undefined ? it.wert : t.wert;
+        if (aktion === 'verschieben') { const d = vhDatum(wert); if (d === undefined) return json({ error:'verschieben braucht ein Datum (JJJJ-MM-TT) oder leer' },400); wert = d ?? ''; }
+        if (aktion === 'weitergeben' && !['alex','lea','gf','team'].includes(String(wert))) return json({ error:'weitergeben an alex, lea, gf oder team' },400);
+        if (aktion === 'zuruecksetzen' && (!wert || typeof wert !== 'object' || Array.isArray(wert))) return json({ error:'zuruecksetzen braucht den Stand davor' },400);
+        const expect: Record<string, unknown> = {};
+        if (it?.expect && typeof it.expect === 'object') {
+          if (it.expect.board_lane !== undefined) expect.board_lane = String(it.expect.board_lane);
+          if (it.expect.updated_at !== undefined) { if (isNaN(Date.parse(String(it.expect.updated_at)))) return json({ error:'expect.updated_at ist kein Zeitpunkt' },400); expect.updated_at = String(it.expect.updated_at); }
+        }
+        items.push({ id, aktion, wert: wert ?? null, expect });
+      }
+      const r = await vhRpc('hh_themen_sammeln', { p_items: items, p_by: by });
+      return json(r);
+    }
     if (action === 'delete') {
       if (!t.id) return json({ error:'id fehlt' }, 400);
       const { error } = await admin.from('gfweekly_topics').delete().eq('id', t.id);

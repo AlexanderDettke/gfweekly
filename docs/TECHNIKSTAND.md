@@ -1,3 +1,17 @@
+## Board aufgeräumt und Mehrfachauswahl (23.10.2026)
+
+Auftrag und Annahmen: `docs/PAKET-BLICK-UND-AUFRAEUMEN.md`, Teil A. Assets `?v=39`.
+
+Datenbank: Migration `20261023224151_hh_themen_sammeln` (angewendet): Spalte `archiv_grund` an `gfweekly_topics`; `hh_themen_sammeln(p_items, p_by)` mit einer Unter-Transaktion je Thema (Konflikt bei abweichender Spalte oder `updated_at`, millisekundengenau), Aktionen erledigt, in_bearbeitung, offen, verschieben, weitergeben, archivieren, zuruecksetzen, Rückgabe je Thema mit Stand davor; `hh_themen_erledigt_archivieren(p_tage)`. Migration `20261023230708_hh_themen_erledigt_zeitplan` läuft nach dem Ausrollen: einmal archivieren (Probelauf 22.10.: 36 erledigte Themen) und täglich 04:55 UTC; Rückweg im Kopf der Migration.
+
+Edge Function `gfweekly`: Aktion `themen_sammeln` (nur Alex oder Lea, 1 bis 200 Themen, Eingabeprüfung je Aktion), ruft keine Habitat-Taler (`scoreTopicTransition`) auf.
+
+Board (`site/board.html`): Erledigt als Streifen, kompakte Karten, Filtermenü, schmales Kopfbild, keine doppelten Knöpfe, Auswählen mit Leiste unten und Rückgängig. Der Haken „Person“ erscheint nur noch mit Personenfilter (vorher sichtbar trotz `hidden`). Zähler an Knöpfen neutral (`.btn .nbadge`).
+
+Daten: Thema `ca31e478…` hatte keinen Titel, jetzt „Helge: gemeinsame Schlüsselposition im Umbau anbieten“ (aus dem Kontext).
+
+Prüfungen: `pruefung/themen-sammeln-probe.mjs` gegen das echte Backend 14 von 14 (Testthemen danach gelöscht); Bedienung um 14 Proben „Board aufgeräumt und Mehrfachauswahl“ erweitert; `pruefung/abnahme.sh` einschließlich Webstandard-Prüfung bestanden.
+
 ## Webapp Standard, Pilot zur Erprobung (21.10.2026)
 
 Auftrag Alexander vom 21.10.2026: Organisationsstandards 0.5.0 übernehmen und den Webapp Standard `WEBAPP-PILOT-0.2` auf die gesamte Webapp anwenden. Der Standard bleibt ein Pilot zur Erprobung, keine beschlossene Regel. Unterlagen: `docs/webapp-standard/README.md` (Profil, Inventar mit 430 Fähigkeiten, Regelzuordnung aller 34 Regeln, Prüfmatrix T-01 bis T-22, Arbeitsstand). Bibliothek geprüft unter `organisationsstandards/` (`organisationsstandards/AKTUELL.json`).
