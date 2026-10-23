@@ -31,8 +31,8 @@ Die Seite selbst ist statisch (`site/`, kein Build). Mit echtem Passwort zeigt j
 
 | Kategorie | Stand |
 | --- | --- |
-| Umgesetzt | Ja, auf Branch `paket/webstandard-pilot` (siehe ARBEITSSTAND.md) |
+| Umgesetzt | Ja, auf `main` seit `9eab0ca` (vorher Branch `paket/webstandard-pilot`) |
 | Technisch geprüft | Ja, an der Oberfläche mit abgefangener Edge Function; Werte und Grenzen in PRUEFMATRIX.md |
 | Unabhängig geprüft | Teilweise. Drei Runden Codex-Gegenprüfung (`871965c`, `5c1bb06`, `596aed7`) mit 9, 8 und 5 Befunden, alle bestätigt und behoben. Die Korrekturen nach Runde 3 sind nicht mehr unabhängig gegengeprüft; keine unabhängige Abnahme (ARBEITSSTAND.md, Review) |
-| Veröffentlicht | Nein. Kein Push nach `main`, kein Deploy |
+| Veröffentlicht | Ja. Nach Zusammenführung mit `main` `8d9e804` (Kompass, Vorstandsbüro, Neuigkeiten) und Asset-Version `?v=38` von Alexander als `9eab0ca` nach `main` gepusht; Netlify liefert aus. Live-Prüfung vom 23.10.2026 in ARBEITSSTAND.md |
 | Fachlich angenommen | Nein. Steht aus (Testaufgaben in ARBEITSSTAND.md) |

@@ -72,3 +72,18 @@ Unabhängige Gegenprüfung durch Codex (`codex exec -m gpt-6-sol --sandbox read-
 | 3 | `596aed7` | 5 (2 hoch, 3 mittel, kein kritischer) | Alle 5 bestätigt und nach der Runde behoben: Antwort 200 ohne Inhalt galt als Erfolg (Eingabe, alle Schreibwege über `gfApi`), Saison-Rad verlor eine Eingabe, wenn eine ältere Antwort sie als gespeichert markierte, „heute“ folgte der Gerätezeitzone statt Europe/Berlin, Spielkarte beim Tippen ohne Ankündigung, verzögerter Fokus nach sehr schnellem Schließen eines Detailbereichs. Drei neue Bedienproben, zwei davon scheitern nachweislich am Stand `596aed7`. |
 
 **Stand der unabhängigen Prüfung:** Drei Runden sind ausgeschöpft (Höchstzahl). Die Korrekturen nach Runde 3 sind technisch geprüft (Abnahme und Bedienproben), aber **nicht mehr unabhängig gegengeprüft**. Eine unabhängige Abnahme wird daher nicht behauptet. Kleinster nächster Schritt: eine gesonderte, kurze Gegenprüfung nur der Commits nach `596aed7`.
+
+## Veröffentlichung und Live-Prüfung
+
+Zusammenführung mit `main` `8d9e804` (18 fremde Commits: Kompass, Vorstandsbüro mit neuer Seite `vorstand.html`, Neuigkeiten). Konflikte in `site/assets/styles.css` (beide Blöcke erhalten), `site/neuigkeiten.html` (dauerhafter Ladefehler aus `main`, dargestellt mit `gfLadefehler`), Technikstand. Asset-Version `?v=38` auf allen 26 Seiten. `pruefung/bedienung.mjs` akzeptiert den einheitlichen Wortlaut „Nicht geladen“. Vor dem Push vollständig bestanden: `pruefung/abnahme.sh` (112 Schirmbilder ohne Meldung, Webstandard-Prüfung 0 harte Befunde auf 29 Ansichten, 17 Bedienproben, Wächter ohne Befund). Push von Alexander: `9eab0ca` nach `main`.
+
+Live-Prüfung am 23.10.2026 auf https://kompass.wildehabitate.de (nur lesend):
+
+| Prüfung | Ergebnis |
+| --- | --- |
+| Ausgelieferte Dateien | Alle 26 Seiten laden `styles.css?v=38` und `core.js?v=38` (Startseite und Vorstandsbüro `?v=38-vorstand2`); `core.js` enthält `gfLadefehler`, `gfIsoTag`, `gfDialogAuf`, `gfBereichAuf`, `gfBezeichnungen`; `styles.css` enthält den Webstandard-Block |
+| Zugangsschutz | Edge Function ohne Passwort: HTTP 401. Tor live mit falschem Passwort: sichtbare Bezeichnung, „Falsches Passwort.“ mit `role="alert"`, Tor bleibt, kein Passwort gespeichert. Sicherheitsheader `x-frame-options DENY`, `nosniff`, `no-referrer`, `noindex` |
+| Hauptwege | Alle 26 ausgelieferten Seiten bei 1440 dunkel und 390 hell mit abgefangener Edge Function und Testdaten: Inhalt sichtbar, Sprunglink, neue Helfer geladen, kein seitlicher Überlauf, keine Skriptfehler, keine fehlenden Dateien |
+| Nicht geprüft | Anmeldung mit dem echten Passwort und echte Daten (bewusst ohne Zugangsdaten im Kontext); Wirkung schreibender Wege in der Datenbank |
+
+Unabhängig gegengeprüft sind die Korrekturen nach Runde 3 und die Zusammenführung nicht. Fachlich angenommen ist der Stand noch nicht.
