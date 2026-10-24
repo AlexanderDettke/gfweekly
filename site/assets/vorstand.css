@@ -40,3 +40,7 @@
 #vb a{overflow-wrap:anywhere}
 @media(max-width:850px){.vb-work{grid-template-columns:1fr}.vb-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.vb-list{max-height:260px}.vb-list,.vb-cols{grid-template-columns:1fr}.vb-detail{padding:var(--s-12)}.vb-field input,.vb-field select,.vb-field textarea{font-size:16px}}
+
+.vb-references{display:grid;gap:var(--s-8)}
+#vb details{min-width:0;overflow-wrap:anywhere}
+#vb summary{cursor:pointer;min-height:var(--ziel-min);padding:var(--s-8) 0}
