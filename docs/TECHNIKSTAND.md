@@ -8,7 +8,7 @@ Edge Function `gfweekly` (ping `version` 40), Modul `verkauf.ts`: `verkauf_list 
 
 Oberfläche: `site/index.html` Abschnitt `#fdVk` direkt unter „Deine 5 Minuten heute“, Kacheln über `gfKachel` (neu: Knopf-Variante `btn`, Zeilen `sub`, Zahl `trendWert`), Eingabe als Dialog über `gfDialogAuf`; Stile im Block „Verkauf“ (`.vk-*`) am Ende von `styles.css`. Assets `?v=39`; `paket/blick-board` muss vor seinem Push auf `?v=40`.
 
-Prüfungen: `pruefung/verkauf-probe.mjs` (Rechenregeln und Eingaben mit festen Daten, in `abnahme.sh`; mit `GF_PW` zusätzlich die Wirkung gegen das echte Backend mit Teststand `draussenbande`, Notiz „Test“, danach löscht die Probe genau ihre eigenen Zeilen nach Kennung; Rückweg von Hand `pruefung/verkauf-testdaten-loeschen.sql`). Bedienung um 25 Proben „Verkauf 2027“ erweitert (abgefangene API). Schirme und Webstandard-Prüfung ohne Befund.
+Prüfungen: `pruefung/verkauf-probe.mjs` (Rechenregeln und Eingaben mit festen Daten, in `abnahme.sh`; mit `GF_PW` zusätzlich die Wirkung gegen das echte Backend mit Teststand `draussenbande`, Notiz „Test“, danach löscht die Probe genau ihre eigenen Zeilen nach Kennung; Rückweg von Hand `pruefung/verkauf-testdaten-loeschen.sql`). Bedienung um 28 Proben „Verkauf 2027“ erweitert (abgefangene API). Schirme und Webstandard-Prüfung ohne Befund.
 
 Grenzen: Ziele und VVK-Daten lassen sich nur per SQL ändern. Wer speichert, wählt der Browser; die Edge Function prüft das gemeinsame Passwort.
 

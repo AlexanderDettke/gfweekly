@@ -3,6 +3,7 @@
    verkauf_list {saison=2027}: je aktivem Festival Ziel, letzter Stand, Vorwoche, Anteil, Tempo und nötiges Tempo, dazu die
      letzten fünf Stände; Summe und ältester Stand für die Kopfzeile.
    verkauf_set {festival_key, stichtag?, tickets, umsatz_euro?, notiz?, by}: Handeingabe (quelle hand), Upsert auf
+     (fehlende umsatz_euro/notiz lassen vorhandene Werte stehen, null leert sie),
      Festival, Saison, Stichtag und Quelle; antwortet mit gespeichert und derselben Liste wie verkauf_list
      (scheitert nur das Neuladen der Liste: gespeichert und liste_fehler).
    verkaufRechne ist rein (ohne Datenbank), damit pruefung/verkauf-probe.mjs die Regeln mit festen Daten prüfen kann. */
@@ -91,19 +92,24 @@ export function verkaufEingabe(t: Any, heute: string, whoNorm: (w: unknown) => s
   if (stichtag > heute) throw new VerkaufFehler('stichtag liegt in der Zukunft');
   const tickets = typeof t?.tickets === 'string' && /^\d+$/.test(t.tickets.trim()) ? Number(t.tickets.trim()) : t?.tickets;
   if (!Number.isInteger(tickets) || tickets < 0 || tickets > 1000000) throw new VerkaufFehler('tickets: ganze Zahl ab 0');
-  let cents: number | null = null;
+  /* Umsatz und Notiz: fehlt das Feld ganz, bleibt ein vorhandener Wert desselben Stichtags stehen (undefined wird nicht
+     geschrieben); null oder leer leert ihn ausdrücklich. So leert eine Korrektur nur der Tickets nichts Unbekanntes. */
+  let cents: number | null | undefined = t?.umsatz_euro === undefined ? undefined : null;
   const u = t?.umsatz_euro;
   if (u !== undefined && u !== null && u !== '') {
     const n = typeof u === 'number' ? u : typeof u === 'string' && /^\d+([.,]\d{1,2})?$/.test(u.trim()) ? Number(u.trim().replace(',', '.')) : NaN;
     if (!Number.isFinite(n) || n < 0 || n > 100000000) throw new VerkaufFehler('umsatz_euro: Betrag ab 0');
     cents = Math.round(n * 100);
   }
-  const notiz = (t?.notiz ?? '').toString().trim().slice(0, 500) || null;
+  const notiz = t?.notiz === undefined ? undefined : ((t.notiz ?? '').toString().trim().slice(0, 500) || null);
   const roh = (t?.by ?? '').toString().trim();
   if (!roh) throw new VerkaufFehler('by fehlt (Alex oder Lea)');
   const by = whoNorm(roh);
   if (by !== 'Alex' && by !== 'Lea') throw new VerkaufFehler('by muss Alex oder Lea sein');
-  return { festival_key: key, saison, stichtag, tickets, umsatz_brutto_cents: cents, notiz, by };
+  const e: Record<string, unknown> = { festival_key: key, saison, stichtag, tickets, by };
+  if (cents !== undefined) e.umsatz_brutto_cents = cents;
+  if (notiz !== undefined) e.notiz = notiz;
+  return e as { festival_key: string, saison: number, stichtag: string, tickets: number, by: string, umsatz_brutto_cents?: number | null, notiz?: string | null };
 }
 
 export function verkaufModul(ctx: { admin: Any, json: (b: unknown, s?: number) => Response, heuteBerlin: () => string, whoNorm: (w: unknown) => string }) {

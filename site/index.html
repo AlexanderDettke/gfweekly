@@ -393,7 +393,8 @@ function vkOeffnen(key){
   const form=m.querySelector("form"), err=m.querySelector("#vkErr");
   /* Gibt es für den Stichtag schon eine Handeingabe, stehen alle ihre Felder im Formular; sonst die Tickets des letzten Stands.
      So setzt eine Korrektur nur der Tickets Umsatz und Notiz desselben Tages nicht versehentlich auf leer. */
-  const belege=()=>{ const h=(f.verlauf||[]).find(v=>v.stichtag===form.stichtag.value&&v.quelle==="hand");
+  let bekannt=false;   // Handeingabe des Stichtags liegt vor (dann werden Umsatz und Notiz ausdrücklich geschickt, auch leer)
+  const belege=()=>{ const h=(f.verlauf||[]).find(v=>v.stichtag===form.stichtag.value&&v.quelle==="hand"); bekannt=!!h;
     form.tickets.value=h?h.tickets:(f.stand?f.stand.tickets:"");
     form.umsatz.value=h&&h.umsatz_euro!=null?String(h.umsatz_euro).replace(".",","):"";
     form.notiz.value=h&&h.notiz?h.notiz:""; };
@@ -408,7 +409,12 @@ function vkOeffnen(key){
     if(euro!==null&&!/^\d+(\.\d{1,2})?$/.test(euro)){ err.textContent="Umsatz bitte als Betrag in Euro, z. B. 12500,00."; form.umsatz.focus(); return; }
     laeuft=true; const sb=form.querySelector("[type=submit]"); sb.disabled=true; sb.textContent="Speichert …";
     try{
-      const r=await gfApi("verkauf_set",{ festival_key:f.festival_key, saison:VK.saison||2027, stichtag:tag, tickets:Number(tk), umsatz_euro:euro===null?null:Number(euro), notiz:no||null, by:gfWho() });
+      /* Ohne bekannte Handeingabe des Tages gehen leere Felder nicht mit: eine ältere Eingabe außerhalb der letzten fünf
+         Stände behält so Umsatz und Notiz (der Server schreibt fehlende Felder nicht). */
+      const nutz={ festival_key:f.festival_key, saison:VK.saison||2027, stichtag:tag, tickets:Number(tk), by:gfWho() };
+      if(bekannt||euro!==null) nutz.umsatz_euro=euro===null?null:Number(euro);
+      if(bekannt||no) nutz.notiz=no||null;
+      const r=await gfApi("verkauf_set",nutz);
       laeuft=false; m.classList.remove("open");
       if(r.festivals){ VK_LAUF++; VK=r; renderVk(); } else loadVk().catch(()=>{});   // gespeichert, nur das Neuladen der Liste scheiterte
       /* Die alte Kachel ist neu gezeichnet; erst nach der Freigabe des Dialogs (Mikroaufgabe) auf die neue fokussieren. */
@@ -417,6 +423,8 @@ function vkOeffnen(key){
     }catch(x){
       laeuft=false; sb.disabled=false; sb.textContent="Speichern";
       if(x&&x.auth){ err.textContent="Die Anmeldung gilt nicht mehr. Bitte Seite neu laden."; return; }
+      /* Ohne Antwort (Verbindung weg oder abgebrochen) ist offen, ob der Server gespeichert hat: Stand neu laden statt raten. */
+      if(x&&(x.offline||x.unklar)){ err.textContent="Ob gespeichert wurde, ist unklar ("+(x.message||"keine Antwort")+"). Die Übersicht lädt neu; bitte den Stand dort prüfen, bevor du erneut speicherst."; loadVk().catch(()=>{}); return; }
       err.textContent="Nicht gespeichert: "+((x&&x.message)||"Verbindung")+".";
     }
   };

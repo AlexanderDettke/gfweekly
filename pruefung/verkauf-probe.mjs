@@ -64,6 +64,8 @@ console.log('\n== Verkauf: Eingaben für verkauf_set ==');
 {
   const h = '2026-10-25';
   const e = verkaufEingabe({ festival_key:'draussenbande', tickets:12, umsatz_euro:'1234,5', notiz:'  Test ', by:'alex' }, h, who);
+  const ohne = verkaufEingabe({ festival_key:'a1', tickets:2, by:'Lea' }, h, who), leer = verkaufEingabe({ festival_key:'a1', tickets:2, by:'Lea', umsatz_euro:null, notiz:'' }, h, who);
+  pruefe('fehlende Felder bleiben weg, null oder leer leert ausdrücklich', !('umsatz_brutto_cents' in ohne) && !('notiz' in ohne) && leer.umsatz_brutto_cents === null && leer.notiz === null);
   pruefe('Standard: Saison 2027, Stichtag heute, Euro in Cent, Notiz getrimmt, by normalisiert', e.saison === 2027 && e.stichtag === h && e.umsatz_brutto_cents === 123450 && e.notiz === 'Test' && e.by === 'Alex', JSON.stringify(e));
   pruefe('Tickets als Ziffernfolge im Text gilt', verkaufEingabe({ festival_key:'a1', tickets:'7', by:'Lea' }, h, who).tickets === 7);
   pruefe('Tickets negativ oder gebrochen: abgelehnt', /tickets/.test(wirft(() => verkaufEingabe({ festival_key:'a1', tickets:-1, by:'Lea' }, h, who)) || '') && /tickets/.test(wirft(() => verkaufEingabe({ festival_key:'a1', tickets:1.5, by:'Lea' }, h, who)) || ''));
@@ -91,7 +93,7 @@ else {
     const r = spawnSync('npx', ['--yes', 'supabase', 'db', 'query', '--linked', '--project-ref', 'bnfmupnmqyrcltrphfak', '-f', sql], { cwd:leer, stdio:['ignore', 'pipe', 'pipe'], encoding:'utf8' });
     return r.status === 0;
   };
-  let geschrieben = false;
+  let geschrieben = false, heute = null;
   try {
     const p = await api('ping', {});
     pruefe('Edge Function mit Verkauf (ping version ≥ 40)', p.status === 200 && p.d.version >= 40, JSON.stringify(p.d));
@@ -99,7 +101,8 @@ else {
     pruefe('verkauf_list: fünf Festivals, Ziele zusammen 21.000', l.status === 200 && l.d.festivals.length === 5 && l.d.summe.ziel === 21000, JSON.stringify(l.d).slice(0, 300));
     /* Schutz: Ein echter Handstand von heute würde vom Teststand überschrieben und danach mitgelöscht. Dann nicht schreiben. */
     const vorher = l.d.festivals.find(f => f.festival_key === 'draussenbande');
-    if ((vorher.verlauf || []).some(v => v.stichtag === l.d.heute && v.quelle === 'hand' && v.notiz !== 'Test')) throw new Error('Heute gibt es schon einen echten Handstand für draussenbande; Probe schreibt nichts.');
+    heute = l.d.heute;
+    if ((vorher.verlauf || []).some(v => v.stichtag === heute && v.quelle === 'hand')) throw new Error('Heute gibt es schon einen Handstand für draussenbande; Probe schreibt nichts.');
     geschrieben = true;
     const s1 = await api('verkauf_set', { festival_key:'draussenbande', tickets:3, notiz:'Test', by:'Alex' });
     if (s1.d && s1.d.gespeichert && s1.d.gespeichert.id) eigene.add(s1.d.gespeichert.id);
@@ -109,6 +112,9 @@ else {
     if (s2.d && s2.d.gespeichert && s2.d.gespeichert.id) eigene.add(s2.d.gespeichert.id);
     pruefe('Upsert behält dieselbe Zeile (gleiche Kennung)', s1.d && s2.d && s1.d.gespeichert.id === s2.d.gespeichert.id);
     const n2 = s2.d && s2.d.festivals.find(f => f.festival_key === 'draussenbande');
+    const s3 = await api('verkauf_set', { festival_key:'draussenbande', tickets:5, by:'Alex' });
+    if (s3.d && s3.d.gespeichert && s3.d.gespeichert.id) eigene.add(s3.d.gespeichert.id);
+    pruefe('ohne umsatz_euro und notiz bleiben beide stehen', s3.status === 200 && s3.d.gespeichert.tickets === 5 && s3.d.gespeichert.umsatz_euro === 12.5 && s3.d.gespeichert.notiz === 'Test', JSON.stringify(s3.d && s3.d.gespeichert));
     pruefe('derselbe Stichtag ändert statt zu verdoppeln', s2.status === 200 && n2.stand.tickets === 4 && n2.stand.umsatz_euro === 12.5 && n2.verlauf.filter(v => v.stichtag === s2.d.heute && v.quelle === 'hand').length === 1);
     const ungueltig = await Promise.all([
       api('verkauf_set', { festival_key:'draussenbande', tickets:-1, notiz:'Test', by:'Alex' }),
@@ -123,9 +129,15 @@ else {
   finally {
     if (!geschrieben) { console.log('  (nichts geschrieben, nichts zu löschen)'); }
     else {
+    /* Antworten können verloren gehen: vor dem Löschen zurücklesen. Vor dem Schreiben gab es heute keinen Handstand für
+       draussenbande (Sperre oben), jede solche Zeile stammt also von dieser Probe. */
+    const heuteHand = async () => { const l = await api('verkauf_list', { saison:2027 }); if (l.status !== 200) return null; const d = l.d.festivals.find(f => f.festival_key === 'draussenbande'); return (d.verlauf || []).filter(v => v.stichtag === heute && v.quelle === 'hand'); };
+    const vorLoeschen = await heuteHand();
+    if (vorLoeschen === null) pruefe('Zurücklesen vor dem Löschen', false, 'verkauf_list nicht erreichbar; Rückweg von Hand: pruefung/verkauf-testdaten-loeschen.sql');
+    else for (const v of vorLoeschen) if (v.id) eigene.add(v.id);
     const weg = aufraeumen();
-    pruefe('eigene Teststände gelöscht (nach Kennung)', weg);
-    if (weg) { const l = await api('verkauf_list', { saison:2027 }); const d = l.d && l.d.festivals.find(f => f.festival_key === 'draussenbande'); pruefe('danach kein Teststand mehr', l.status === 200 && !(d.verlauf || []).some(v => v.notiz === 'Test')); }
+    const nachher = weg ? await heuteHand() : null;
+    pruefe('eigene Teststände gelöscht und zurückgelesen (heute kein Handstand mehr)', weg && Array.isArray(nachher) && nachher.length === 0, nachher === null ? 'Löschen oder Zurücklesen gescheitert; Rückweg von Hand: pruefung/verkauf-testdaten-loeschen.sql' : JSON.stringify(nachher));
     }
   }
 }

@@ -46,6 +46,7 @@ await ctx.route('**/functions/v1/**', async (route) => {
   let action = '', nutzlast = {};
   try { const j = JSON.parse(req.postData() || '{}'); action = j.action || ''; nutzlast = j.payload || {}; } catch (e) {}
   gesendet.push({ action, nutzlast });
+  if (action === 'verkauf_set' && VK_SCHALTER.setAbbruch) { VK_SCHALTER.setAbbruch = false; return route.abort('connectionreset'); }   // Antwort geht verloren
   const roh = ANTWORT[action] || FALLBACK;
   const body = typeof roh === 'function' ? roh(nutzlast) : roh;
   await route.fulfill({ status: body && body.__status ? body.__status : 200, contentType:'application/json', body:JSON.stringify(body) });
@@ -62,7 +63,7 @@ const seite = async (url) => {
     if (m.type() !== 'error') return;
     /* Eine abgefangene Fehlerantwort ist gewollt (Asana ohne Token). Der Browser meldet sie trotzdem;
        das ist keine Meldung der Seite und zählt hier nicht. */
-    if (erwarteterFehler && /Failed to load resource: the server responded with a status of (40[09]|500)/.test(m.text())) return;
+    if (erwarteterFehler && /Failed to load resource: (the server responded with a status of (40[09]|500)|net::ERR_CONNECTION_RESET)/.test(m.text())) return;   // ERR_CONNECTION_RESET: Verkauf, verlorene Antwort
     meldungen.push(m.text());
   });
   p.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
@@ -782,6 +783,21 @@ console.log('\n== Verkauf 2027 auf Für dich (25.10.2026) ==');
   await s.locator('#vkModal .btn-primary').click(); await s.waitForTimeout(500);
   pruefe('gespeichert trotz Fehler beim Neuladen: Dialog zu, Kachel zeigt 41', await s.locator('#vkModal.open').count() === 0 && /^41/.test((await s.locator('#fdVkL [data-vk="draussenbande"] .kk-v .ht-num').innerText()).trim()));
   await s.close();
+  /* Ohne Handeingabe des Tages gehen leere Felder nicht mit (ältere Eingaben behalten Umsatz und Notiz). */
+  frisch();
+  const o = await seite('/index.html'); await o.waitForTimeout(500);
+  await o.locator('#fdVkL [data-vk="fluidity"]').click(); await o.waitForTimeout(200);
+  pruefe('ohne Handeingabe des Tages: Umsatz und Notiz leer', await o.locator('#vkEu').inputValue() === '' && await o.locator('#vkNo').inputValue() === '');
+  await o.locator('#vkTk').fill('900'); await o.locator('#vkModal .btn-primary').click(); await o.waitForTimeout(400);
+  const og = letzte('verkauf_set');
+  pruefe('leere Felder ohne bekannte Eingabe werden nicht geschickt', og && og.nutzlast.tickets === 900 && !('umsatz_euro' in og.nutzlast) && !('notiz' in og.nutzlast), JSON.stringify(og && og.nutzlast));
+  /* Antwort geht verloren: „unklar“ statt „Nicht gespeichert“, Übersicht lädt neu. */
+  await o.locator('#fdVkL [data-vk="fluidity"]').click(); await o.waitForTimeout(200);
+  VK_SCHALTER.setAbbruch = true; erwarteterFehler = true; const vorher = gesendet.filter(x => x.action === 'verkauf_list').length;
+  await o.locator('#vkTk').fill('901'); await o.locator('#vkModal .btn-primary').click(); await o.waitForTimeout(600);
+  pruefe('ohne Antwort: Dialog sagt „unklar“ und die Übersicht lädt neu', /unklar/.test(await o.locator('#vkErr').innerText()) && !/Nicht gespeichert/.test(await o.locator('#vkErr').innerText()) && gesendet.filter(x => x.action === 'verkauf_list').length > vorher);
+  erwarteterFehler = false;
+  await o.close();
   /* Ladefehler: eigener Hinweis mit „Erneut laden“, die übrigen Abschnitte bleiben. */
   frisch(); VK_SCHALTER.listeFehler = true; erwarteterFehler = true;
   const e = await seite('/index.html'); await e.waitForTimeout(600);
