@@ -332,7 +332,7 @@ function render5(){
 /* ---- 25.10.2026 · Verkauf 2027 (verkauf_list, verkauf_set). Eine Kachel je Festival: Tickets gegen Ziel, Trend zur Vorwoche,
    im Plan oder unter Plan als Wort. Klick öffnet die Handeingabe mit den letzten fünf Ständen. Unabhängig von der Person. ---- */
 let VK=null, VK_LAUF=0;
-const VK_PLAN={ im_plan:["pos","im Plan"], unter_plan:["warn","unter Plan"], start_offen:["offen","Start offen"], kein_stand:["offen","noch kein Stand"] };
+const VK_PLAN={ im_plan:["pos","im Plan"], unter_plan:["warn","unter Plan"], start_offen:["offen","Start offen"], kein_stand:["offen","eintragen"] };
 const fmtInt=n=>gfFmtInt(n);
 function vkPlan(f){ if(f.plan==="vvk_ab") return gfZustand("offen","VVK ab "+fmtD(f.vvk_start)); const p=VK_PLAN[f.plan]||VK_PLAN.kein_stand; return gfZustand(p[0],p[1]); }
 function vkTitel(f){
@@ -353,7 +353,7 @@ function renderVk(){
     return gfKachel({ icon:"zahl", value:s?s.tickets:"–", unit:"/ "+fmtInt(f.ziel), label:f.name,
       tone:f.plan==="unter_plan"?"warn":f.plan==="im_plan"?"pos":"",
       trend:tr, trendWert:f.trend==null?"":(f.trend>0?"+":f.trend<0?"−":"±")+fmtInt(Math.abs(f.trend)),
-      sub:[gfEsc(s?`Stand ${fmtD(s.stichtag)}`:"Eintragen"), vkPlan(f)],
+      sub:[gfEsc(s?`Stand ${fmtD(s.stichtag)}`:"noch kein Stand"), vkPlan(f)],
       btn:`data-vk="${gfEsc(f.festival_key)}" aria-haspopup="dialog"`, title:vkTitel(f) });
   }).join("");
   const alt=VK.aeltester_tage, ohne=VK.ohne_stand||0, mahn=(alt!=null&&alt>=8)||ohne>0;
@@ -391,6 +391,13 @@ function vkOeffnen(key){
   m.querySelectorAll("[data-x]").forEach(b=>b.onclick=zu);
   m.onclick=e=>{ if(e.target===m) zu(); };
   const form=m.querySelector("form"), err=m.querySelector("#vkErr");
+  /* Gibt es für den Stichtag schon eine Handeingabe, stehen alle ihre Felder im Formular; sonst die Tickets des letzten Stands.
+     So setzt eine Korrektur nur der Tickets Umsatz und Notiz desselben Tages nicht versehentlich auf leer. */
+  const belege=()=>{ const h=(f.verlauf||[]).find(v=>v.stichtag===form.stichtag.value&&v.quelle==="hand");
+    form.tickets.value=h?h.tickets:(f.stand?f.stand.tickets:"");
+    form.umsatz.value=h&&h.umsatz_euro!=null?String(h.umsatz_euro).replace(".",","):"";
+    form.notiz.value=h&&h.notiz?h.notiz:""; };
+  belege(); form.stichtag.addEventListener("change",belege);
   form.onsubmit=async e=>{
     e.preventDefault(); if(laeuft) return; err.textContent="";
     const tag=form.stichtag.value, tk=form.tickets.value.trim(), eu=form.umsatz.value.trim().replace(/\s|€/g,""), no=form.notiz.value.trim();
@@ -402,10 +409,11 @@ function vkOeffnen(key){
     laeuft=true; const sb=form.querySelector("[type=submit]"); sb.disabled=true; sb.textContent="Speichert …";
     try{
       const r=await gfApi("verkauf_set",{ festival_key:f.festival_key, saison:VK.saison||2027, stichtag:tag, tickets:Number(tk), umsatz_euro:euro===null?null:Number(euro), notiz:no||null, by:gfWho() });
-      VK_LAUF++; VK=r; laeuft=false; m.classList.remove("open"); renderVk();
+      laeuft=false; m.classList.remove("open");
+      if(r.festivals){ VK_LAUF++; VK=r; renderVk(); } else loadVk().catch(()=>{});   // gespeichert, nur das Neuladen der Liste scheiterte
       /* Die alte Kachel ist neu gezeichnet; erst nach der Freigabe des Dialogs (Mikroaufgabe) auf die neue fokussieren. */
       setTimeout(()=>{ const neu=document.querySelector(`#fdVkL [data-vk="${CSS.escape(f.festival_key)}"]`); if(neu) neu.focus(); },0);
-      gfToast(`Gespeichert: ${f.name}, ${fmtInt(Number(tk))} Tickets am ${fmtD(tag)}.`);
+      gfToast(`Gespeichert: ${f.name}, ${fmtInt(Number(tk))} Tickets am ${fmtD(tag)}.`+(r.festivals?"":" Die Übersicht lädt neu."));
     }catch(x){
       laeuft=false; sb.disabled=false; sb.textContent="Speichern";
       if(x&&x.auth){ err.textContent="Die Anmeldung gilt nicht mehr. Bitte Seite neu laden."; return; }

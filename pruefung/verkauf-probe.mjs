@@ -1,7 +1,7 @@
 /* Verkauf 2027 (25.10.2026, docs/PAKET-VERKAUF-2027.md). Zwei Teile:
    1. Rechenregeln (immer): verkaufRechne und verkaufEingabe aus supabase/functions/gfweekly/verkauf.ts mit festen Daten.
    2. Wirkung gegen das echte Backend (nur mit GF_PW): verkauf_list, verkauf_set mit Teststand für draussenbande (Notiz „Test“),
-      Upsert auf denselben Stichtag, ungültige Eingaben. Danach löscht pruefung/verkauf-testdaten-loeschen.sql die Teststände,
+      Upsert auf denselben Stichtag, ungültige Eingaben. Danach löscht die Probe genau ihre eigenen Zeilen (nach Kennung),
       auch nach einem Abbruch (über npx supabase db query --linked, aus einem leeren Arbeitsordner, damit das Repo sauber bleibt).
    Aufruf: node pruefung/verkauf-probe.mjs
            GF_PW=… node pruefung/verkauf-probe.mjs   (Passwort aus dem Vault, nie ausgeben; siehe docs/TECHNIKSTAND.md) */
@@ -79,9 +79,15 @@ else {
   console.log('\n== Verkauf: Wirkung gegen das echte Backend (Teststand draussenbande, Notiz „Test“) ==');
   const URL_FN = 'https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/gfweekly';
   const api = async (action, payload) => { const r = await fetch(URL_FN, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ action, password:PW, payload }) }); let d = null; try { d = await r.json(); } catch (e) {} return { status:r.status, d }; };
+  /* Gelöscht werden nur die Zeilen, die diese Probe selbst geschrieben hat (Kennungen aus den Antworten von verkauf_set).
+     pruefung/verkauf-testdaten-loeschen.sql bleibt als Rückweg von Hand, falls ein Lauf ohne Antwort abbricht. */
+  const eigene = new Set();
   const aufraeumen = () => {
-    const sql = path.join(path.dirname(fileURLToPath(import.meta.url)), 'verkauf-testdaten-loeschen.sql');
+    const ids = [...eigene].filter(i => /^[0-9a-f-]{36}$/.test(i));
+    if (!ids.length) return true;
     const leer = fs.mkdtempSync(path.join(os.tmpdir(), 'vk-probe-'));
+    const sql = path.join(leer, 'loeschen.sql');
+    fs.writeFileSync(sql, `delete from public.hh_verkauf_stand where id in (${ids.map(i => `'${i}'`).join(',')}) and festival_key = 'draussenbande' and quelle = 'hand' and notiz = 'Test';\n`);
     const r = spawnSync('npx', ['--yes', 'supabase', 'db', 'query', '--linked', '--project-ref', 'bnfmupnmqyrcltrphfak', '-f', sql], { cwd:leer, stdio:['ignore', 'pipe', 'pipe'], encoding:'utf8' });
     return r.status === 0;
   };
@@ -96,9 +102,12 @@ else {
     if ((vorher.verlauf || []).some(v => v.stichtag === l.d.heute && v.quelle === 'hand' && v.notiz !== 'Test')) throw new Error('Heute gibt es schon einen echten Handstand für draussenbande; Probe schreibt nichts.');
     geschrieben = true;
     const s1 = await api('verkauf_set', { festival_key:'draussenbande', tickets:3, notiz:'Test', by:'Alex' });
+    if (s1.d && s1.d.gespeichert && s1.d.gespeichert.id) eigene.add(s1.d.gespeichert.id);
     const neu = s1.d && s1.d.festivals && s1.d.festivals.find(f => f.festival_key === 'draussenbande');
     pruefe('verkauf_set speichert mit quelle hand und Stichtag heute (Berlin)', s1.status === 200 && s1.d.gespeichert.quelle === 'hand' && s1.d.gespeichert.stichtag === s1.d.heute && neu.stand.tickets === 3, JSON.stringify(s1.d && s1.d.gespeichert));
     const s2 = await api('verkauf_set', { festival_key:'draussenbande', tickets:4, umsatz_euro:12.5, notiz:'Test', by:'Lea' });
+    if (s2.d && s2.d.gespeichert && s2.d.gespeichert.id) eigene.add(s2.d.gespeichert.id);
+    pruefe('Upsert behält dieselbe Zeile (gleiche Kennung)', s1.d && s2.d && s1.d.gespeichert.id === s2.d.gespeichert.id);
     const n2 = s2.d && s2.d.festivals.find(f => f.festival_key === 'draussenbande');
     pruefe('derselbe Stichtag ändert statt zu verdoppeln', s2.status === 200 && n2.stand.tickets === 4 && n2.stand.umsatz_euro === 12.5 && n2.verlauf.filter(v => v.stichtag === s2.d.heute && v.quelle === 'hand').length === 1);
     const ungueltig = await Promise.all([
@@ -115,7 +124,7 @@ else {
     if (!geschrieben) { console.log('  (nichts geschrieben, nichts zu löschen)'); }
     else {
     const weg = aufraeumen();
-    pruefe('Teststände gelöscht (verkauf-testdaten-loeschen.sql)', weg);
+    pruefe('eigene Teststände gelöscht (nach Kennung)', weg);
     if (weg) { const l = await api('verkauf_list', { saison:2027 }); const d = l.d && l.d.festivals.find(f => f.festival_key === 'draussenbande'); pruefe('danach kein Teststand mehr', l.status === 200 && !(d.verlauf || []).some(v => v.notiz === 'Test')); }
     }
   }

@@ -745,6 +745,8 @@ console.log('\n== Verkauf 2027 auf Für dich (25.10.2026) ==');
   pruefe('im Plan: Ton pos mit Wort und Trend gegen die Vorwoche', (await wm.getAttribute('class')).includes('pos') && /im Plan/.test(await wm.innerText()) && /\+170/.test(await wm.innerText()) && /steigt/.test(await wm.locator('.kk-trend').innerText()));
   pruefe('Einheit ist das Ziel, darunter „Stand TT.MM.“', /\/ 5\.000/.test(await fl.innerText()) && /Stand \d\d\.\d\d\./.test(await fl.innerText()));
   pruefe('ohne VVK-Start „Start offen“, ohne Stand „noch kein Stand“', /Start offen/.test(await s.locator('#fdVkL [data-vk="lusatia"]').innerText()) && /noch kein Stand/.test(await s.locator('#fdVkL [data-vk="draussenbande"]').innerText()));
+  const bn = await s.locator('#fdVkL [data-vk="by-nature"]').innerText();
+  pruefe('ohne Stand und VVK in der Zukunft: „noch kein Stand“ und „VVK ab …“', /noch kein Stand/.test(bn) && /VVK ab \d\d\.\d\d\./.test(bn), bn);
   const hoehe = await kacheln.first().evaluate(e => e.getBoundingClientRect().height);
   pruefe('Kachel ist mindestens 44 px hoch', hoehe >= 44, String(hoehe));
   /* Tastatur: Kachel öffnet die Eingabe, Fokus im Tickets-Feld, Escape schließt und gibt den Fokus zurück. */
@@ -769,12 +771,17 @@ console.log('\n== Verkauf 2027 auf Für dich (25.10.2026) ==');
   await db.click(); await s.waitForTimeout(200);
   const verlauf = await s.locator('#vkModal .vk-verlauf li').allInnerTexts();
   pruefe('letzte Stände im Dialog zeigen den Teststand mit Notiz', verlauf.length === 1 && /40/.test(verlauf[0]) && /Test/.test(verlauf[0]) && /1\.234,50/.test(verlauf[0]), verlauf.join(' | '));
+  pruefe('erneut geöffnet: Handeingabe des Stichtags mit allen Feldern vorbelegt', await s.locator('#vkTk').inputValue() === '40' && await s.locator('#vkEu').inputValue() === '1234,5' && await s.locator('#vkNo').inputValue() === 'Test');
   /* Fehler beim Speichern: Dialog bleibt offen, Meldung steht im Dialog. */
   VK_SCHALTER.setFehler = true; erwarteterFehler = true;
   await s.locator('#vkTk').fill('41'); await s.locator('#vkModal .btn-primary').click(); await s.waitForTimeout(400);
   pruefe('Fehler beim Speichern bleibt im offenen Dialog sichtbar', await s.locator('#vkModal.open').count() === 1 && /Nicht gespeichert/.test(await s.locator('#vkErr').innerText()));
   erwarteterFehler = false;
-  await s.keyboard.press('Escape'); await s.close();
+  /* Gespeichert, nur das Neuladen der Liste scheitert: kein „Nicht gespeichert“, Dialog zu, Übersicht lädt neu. */
+  VK_SCHALTER.listeNachSetFehler = true;
+  await s.locator('#vkModal .btn-primary').click(); await s.waitForTimeout(500);
+  pruefe('gespeichert trotz Fehler beim Neuladen: Dialog zu, Kachel zeigt 41', await s.locator('#vkModal.open').count() === 0 && /^41/.test((await s.locator('#fdVkL [data-vk="draussenbande"] .kk-v .ht-num').innerText()).trim()));
+  await s.close();
   /* Ladefehler: eigener Hinweis mit „Erneut laden“, die übrigen Abschnitte bleiben. */
   frisch(); VK_SCHALTER.listeFehler = true; erwarteterFehler = true;
   const e = await seite('/index.html'); await e.waitForTimeout(600);

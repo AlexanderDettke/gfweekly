@@ -3,7 +3,8 @@
    verkauf_list {saison=2027}: je aktivem Festival Ziel, letzter Stand, Vorwoche, Anteil, Tempo und nötiges Tempo, dazu die
      letzten fünf Stände; Summe und ältester Stand für die Kopfzeile.
    verkauf_set {festival_key, stichtag?, tickets, umsatz_euro?, notiz?, by}: Handeingabe (quelle hand), Upsert auf
-     Festival, Saison, Stichtag und Quelle; antwortet mit derselben Liste wie verkauf_list.
+     Festival, Saison, Stichtag und Quelle; antwortet mit gespeichert und derselben Liste wie verkauf_list
+     (scheitert nur das Neuladen der Liste: gespeichert und liste_fehler).
    verkaufRechne ist rein (ohne Datenbank), damit pruefung/verkauf-probe.mjs die Regeln mit festen Daten prüfen kann. */
 // deno-lint-ignore-file no-explicit-any
 type Any = any;
@@ -31,7 +32,7 @@ function vorrang(a: Any, b: Any): number {
 }
 const r1 = (x: number) => Math.round(x * 10) / 10;
 function standAus(s: Any) {
-  return { stichtag: s.stichtag, tickets: s.tickets, umsatz_euro: s.umsatz_brutto_cents == null ? null : Number(s.umsatz_brutto_cents) / 100,
+  return { id: s.id ?? null, stichtag: s.stichtag, tickets: s.tickets, umsatz_euro: s.umsatz_brutto_cents == null ? null : Number(s.umsatz_brutto_cents) / 100,
     quelle: s.quelle, notiz: s.notiz ?? null, by: s.by ?? '', updated_at: s.updated_at ?? null };
 }
 
@@ -111,7 +112,7 @@ export function verkaufModul(ctx: { admin: Any, json: (b: unknown, s?: number) =
   async function liste(saison: number) {
     const [z, s] = await Promise.all([
       admin.from('hh_verkauf_ziel').select('*').eq('saison', saison),
-      admin.from('hh_verkauf_stand').select('festival_key,stichtag,tickets,umsatz_brutto_cents,quelle,notiz,by,updated_at').eq('saison', saison)
+      admin.from('hh_verkauf_stand').select('id,festival_key,stichtag,tickets,umsatz_brutto_cents,quelle,notiz,by,updated_at').eq('saison', saison)
         .order('stichtag', { ascending: false }).limit(5000),
     ]);
     if (z.error) throw z.error; if (s.error) throw s.error;
@@ -131,9 +132,11 @@ export function verkaufModul(ctx: { admin: Any, json: (b: unknown, s?: number) =
         if (ze) throw ze;
         if (!z || z.aktiv === false) return json({ error: 'Festival gibt es in dieser Saison nicht' }, 404);
         const { data, error } = await admin.from('hh_verkauf_stand').upsert({ ...e, quelle: 'hand', updated_at: new Date().toISOString() },
-          { onConflict: 'festival_key,saison,stichtag,quelle' }).select('festival_key,stichtag,tickets,umsatz_brutto_cents,quelle,notiz,by,updated_at').single();
+          { onConflict: 'festival_key,saison,stichtag,quelle' }).select('id,festival_key,stichtag,tickets,umsatz_brutto_cents,quelle,notiz,by,updated_at').single();
         if (error) throw error;
-        return json({ gespeichert: standAus(data), ...(await liste(e.saison)) });
+        /* Gespeichert ist gespeichert: scheitert danach nur das Neuladen der Liste, sagt die Antwort das gesondert (liste_fehler). */
+        try { return json({ gespeichert: standAus(data), ...(await liste(e.saison)) }); }
+        catch (x) { return json({ gespeichert: standAus(data), liste_fehler: String((x as Error)?.message ?? x).slice(0, 200) }); }
       }
       return json({ error: 'unknown action' }, 400);
     } catch (e) {

@@ -571,8 +571,8 @@ export const VK_STAENDE = [
   { festival_key:'lusatia', saison:2027, stichtag:tag(-3), tickets:95, umsatz_brutto_cents:null, quelle:'hand', notiz:'Vorab-Kontingent', by:'Alex', updated_at:zeit(-3) },
 ];
 const VK_SAAT = JSON.stringify(VK_STAENDE);
-function vkZuruecksetzen(){ VK_STAENDE.splice(0, VK_STAENDE.length, ...JSON.parse(VK_SAAT)); VK_SCHALTER.listeFehler = false; VK_SCHALTER.setFehler = false; }
-export const VK_SCHALTER = { listeFehler:false, setFehler:false };
+function vkZuruecksetzen(){ VK_STAENDE.splice(0, VK_STAENDE.length, ...JSON.parse(VK_SAAT)); VK_SCHALTER.listeFehler = false; VK_SCHALTER.setFehler = false; VK_SCHALTER.listeNachSetFehler = false; }
+export const VK_SCHALTER = { listeFehler:false, setFehler:false, listeNachSetFehler:false };
 const vkListe = () => ({ saison:2027, ...verkaufRechne(VK_ZIEL, VK_STAENDE, heute) });
 Object.assign(ANTWORT, {
   verkauf_list: () => VK_SCHALTER.listeFehler ? { __status:500, error:'Verbindung unterbrochen' } : vkListe(),
@@ -583,6 +583,7 @@ Object.assign(ANTWORT, {
     const alt = VK_STAENDE.findIndex(s => s.festival_key === e.festival_key && s.saison === e.saison && s.stichtag === e.stichtag && s.quelle === 'hand');
     const zeile = { ...e, quelle:'hand', updated_at:zeit(0) };
     if (alt >= 0) VK_STAENDE[alt] = zeile; else VK_STAENDE.push(zeile);
+    if (VK_SCHALTER.listeNachSetFehler) { VK_SCHALTER.listeNachSetFehler = false; return { gespeichert:zeile, liste_fehler:'Verbindung unterbrochen' }; }
     return { gespeichert:zeile, ...vkListe() };
   },
 });
