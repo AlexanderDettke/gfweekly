@@ -1,7 +1,7 @@
 {
-  "stand": "ce5184b6a3201b70a56efb290e5e924baeb8abc7997413d9cb6b75a6b69ce8bb",
-  "commit": "a318c907a35be48e176eeb450d17e20c2d9d53ec",
-  "datum": "2026-10-24T23:33:16Z",
+  "stand": "bdede7320973df49d7da7eb769e08b522a780173e8abd88af8fcaf34e1a4d4bc",
+  "commit": "6222ed09583b10181a33d4e4a8c4d5fe3137d45e",
+  "datum": "2026-10-24T23:47:50Z",
   "laeufe": ["tokens", "farbscan", "kontrast", "matrix", "schirme (Oberfläche)", "bedienung (Oberfläche)", "kommunikation", "organisationsentscheidungen", "webstandard (Oberfläche)", "verkauf (Rechenregeln)", "waechter"],
   "ungeprueft": "Wirkung in der Datenbank, Asana-Lebenszyklus, Nebenläufigkeit, verborgene Oberflächenteile"
 }

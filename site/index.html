@@ -391,11 +391,11 @@ function vkOeffnen(key){
   m.querySelectorAll("[data-x]").forEach(b=>b.onclick=zu);
   m.onclick=e=>{ if(e.target===m) zu(); };
   const form=m.querySelector("form"), err=m.querySelector("#vkErr");
-  /* Gibt es für den Stichtag schon eine Handeingabe, stehen alle ihre Felder im Formular; sonst die Tickets des letzten Stands.
-     So setzt eine Korrektur nur der Tickets Umsatz und Notiz desselben Tages nicht versehentlich auf leer. */
+  /* Gibt es für den Stichtag schon eine Handeingabe (f.hand: alle der Saison), stehen alle ihre Felder im Formular, und ein
+     geleertes Feld leert auch gespeichert. Sonst: Tickets des letzten Stands nur für einen späteren Stichtag, sonst leer. */
   let bekannt=false;   // Handeingabe des Stichtags liegt vor (dann werden Umsatz und Notiz ausdrücklich geschickt, auch leer)
-  const belege=()=>{ const h=(f.verlauf||[]).find(v=>v.stichtag===form.stichtag.value&&v.quelle==="hand"); bekannt=!!h;
-    form.tickets.value=h?h.tickets:(f.stand?f.stand.tickets:"");
+  const belege=()=>{ const tg=form.stichtag.value, h=(f.hand||f.verlauf||[]).find(v=>v.stichtag===tg&&(v.quelle||"hand")==="hand"); bekannt=!!h;
+    form.tickets.value=h?h.tickets:(f.stand&&tg>f.stand.stichtag?f.stand.tickets:"");
     form.umsatz.value=h&&h.umsatz_euro!=null?String(h.umsatz_euro).replace(".",","):"";
     form.notiz.value=h&&h.notiz?h.notiz:""; };
   belege(); form.stichtag.addEventListener("change",belege);

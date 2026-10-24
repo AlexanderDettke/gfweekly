@@ -51,6 +51,7 @@ console.log('== Verkauf: Rechenregeln (feste Daten) ==');
   pruefe('ohne Stand, VVK-Start in der Zukunft: „vvk_ab“, stand null', f.c.stand === null && f.c.plan === 'vvk_ab' && f.c.trend === null);
   pruefe('Ziel überschritten: nötiges Tempo 0, im Plan; Tempo mindestens über eine Woche', f.d.tempo_noetig === 0 && f.d.plan === 'im_plan' && f.d.tempo === 250);
   pruefe('keine Wochen mehr bis 14 Tage vor Festival: kein nötiges Tempo, unter Plan', f.e.tempo_noetig === null && f.e.plan === 'unter_plan');
+  pruefe('alle Handeingaben der Saison für den Dialog, jüngste zuerst', f.a.hand.length === 4 && f.a.hand[0].stichtag === '2026-10-22' && f.a.hand[3].stichtag === '2026-10-08' && f.c.hand.length === 0);
   pruefe('letzte fünf Stände, jüngste zuerst', f.a.verlauf.length === 5 && f.a.verlauf[0].quelle === 'xceed_api' && f.a.verlauf[4].stichtag === '2026-10-13');
   pruefe('Summe: Tickets der letzten Stände, Ziele aller aktiven', r.summe.tickets === 310 + 40 + 250 + 50 && r.summe.ziel === 2100, JSON.stringify(r.summe));
   pruefe('ältester Stand in Tagen und Zahl ohne Stand', r.aeltester_tage === 4 && r.ohne_stand === 1, `${r.aeltester_tage} ${r.ohne_stand}`);
@@ -131,11 +132,11 @@ else {
     else {
     /* Antworten können verloren gehen: vor dem Löschen zurücklesen. Vor dem Schreiben gab es heute keinen Handstand für
        draussenbande (Sperre oben), jede solche Zeile stammt also von dieser Probe. */
-    const heuteHand = async () => { const l = await api('verkauf_list', { saison:2027 }); if (l.status !== 200) return null; const d = l.d.festivals.find(f => f.festival_key === 'draussenbande'); return (d.verlauf || []).filter(v => v.stichtag === heute && v.quelle === 'hand'); };
+    const heuteHand = async () => { try { const l = await api('verkauf_list', { saison:2027 }); if (l.status !== 200) return null; const d = l.d.festivals.find(f => f.festival_key === 'draussenbande'); return (d.verlauf || []).filter(v => v.stichtag === heute && v.quelle === 'hand'); } catch (e) { return null; } };   // Netzfehler: null, Löschen bekannter Kennungen trotzdem
     const vorLoeschen = await heuteHand();
-    if (vorLoeschen === null) pruefe('Zurücklesen vor dem Löschen', false, 'verkauf_list nicht erreichbar; Rückweg von Hand: pruefung/verkauf-testdaten-loeschen.sql');
+    if (vorLoeschen === null) pruefe('Zurücklesen vor dem Löschen', false, `verkauf_list nicht erreichbar; lösche die ${eigene.size} bekannten Kennungen, Rest von Hand: pruefung/verkauf-testdaten-loeschen.sql`);
     else for (const v of vorLoeschen) if (v.id) eigene.add(v.id);
-    const weg = aufraeumen();
+    let weg = false; try { weg = aufraeumen(); } catch (e) { weg = false; }
     const nachher = weg ? await heuteHand() : null;
     pruefe('eigene Teststände gelöscht und zurückgelesen (heute kein Handstand mehr)', weg && Array.isArray(nachher) && nachher.length === 0, nachher === null ? 'Löschen oder Zurücklesen gescheitert; Rückweg von Hand: pruefung/verkauf-testdaten-loeschen.sql' : JSON.stringify(nachher));
     }

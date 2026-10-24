@@ -138,3 +138,12 @@ Offen für Alex: den Schlüssel bei partners@xceed.me anfragen (der Vertrag ist 
 4. **Oberfläche:** Playwright bei 1440 und 390 px, dunkel und hell, ohne Konsolenfehler, Check-in unterdrückt; Bedienproben mit abgefangener API (Kachel öffnet Eingabe, Speichern, letzte fünf Stände, Tastatur, Escape); Webapp-Standard (44 px, Kontrast) über `pruefung/abnahme.sh` einschließlich `webstandard-pruefung.mjs`.
 5. **Codex-Review** am festen Commit, read-only in eigenem Worktree, mit Auftrag und dieser Datei wörtlich, ohne weitere Reviewer: bis drei Runden. Bestätigte Befunde beheben, Fehlbefunde begründet verwerfen, danach erneut testen.
 6. **Push** durch Alexander, dann **Live-Prüfung** auf kompass.wildehabitate.de: Dateien mit `?v=39`, Abschnitt „Verkauf 2027“ sichtbar, keine Konsolenfehler.
+
+### Stand des Prüfwegs (25.10.2026)
+
+- Schritt 1 erledigt: Migration in zurückgerollter Transaktion geprüft, angewendet, Seed zurückgelesen (5 Zeilen, 21.000).
+- Schritt 2 offen: Der Deploy der Edge Function wurde im Auto-Modus als Produktionsdeploy gesperrt; Alexander deployt selbst. Live-Stand vorher geprüft: byte-gleich mit `paket/blick-board` (`aac38da`); die Repo-Datei ist dieser Stand plus die Verkauf-Teile.
+- Schritt 3 lokal erledigt (Rechenregeln und Eingaben, 25 Proben); die Wirkung gegen das echte Backend folgt nach dem Deploy mit `GF_PW`.
+- Schritt 4 erledigt: `pruefung/abnahme.sh` bestanden, davon 29 Bedienproben „Verkauf 2027“.
+- Schritt 5 erledigt: Codex-Review drei Runden (`534c7d3`: 4 Befunde, `a318c90`: 4 Befunde, `6222ed0`: 3 Befunde), alle bestätigt und behoben. Die Korrekturen nach Runde 3 sind getestet, aber nicht erneut von Codex geprüft (höchstens drei Runden).
+- Schritt 6 offen: Push durch Alexander, danach Live-Prüfung.

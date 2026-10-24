@@ -68,6 +68,9 @@ export function verkaufRechne(ziele: Any[], staende: Any[], heute: string) {
         tempo: tempo === null ? null : r1(tempo), tempo_noetig: noetig === null ? null : r1(noetig), plan,
         alter_tage: letzter ? tage(letzter.stichtag, heute) : null,
         verlauf: eigene.slice(0, 5).map(standAus),
+        /* Alle Handeingaben der Saison (wöchentliche Pflege, wenige Zeilen): der Dialog belegt damit jeden Stichtag exakt vor. */
+        hand: eigene.filter(s => s.quelle === 'hand').map(s => ({ stichtag: s.stichtag, tickets: s.tickets,
+          umsatz_euro: s.umsatz_brutto_cents == null ? null : Number(s.umsatz_brutto_cents) / 100, notiz: s.notiz ?? null })),
       };
     });
   const mitStand = festivals.filter(f => f.stand);

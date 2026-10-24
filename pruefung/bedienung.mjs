@@ -773,6 +773,16 @@ console.log('\n== Verkauf 2027 auf Für dich (25.10.2026) ==');
   const verlauf = await s.locator('#vkModal .vk-verlauf li').allInnerTexts();
   pruefe('letzte Stände im Dialog zeigen den Teststand mit Notiz', verlauf.length === 1 && /40/.test(verlauf[0]) && /Test/.test(verlauf[0]) && /1\.234,50/.test(verlauf[0]), verlauf.join(' | '));
   pruefe('erneut geöffnet: Handeingabe des Stichtags mit allen Feldern vorbelegt', await s.locator('#vkTk').inputValue() === '40' && await s.locator('#vkEu').inputValue() === '1234,5' && await s.locator('#vkNo').inputValue() === 'Test');
+  /* Älterer Stichtag: nur eine Handeingabe desselben Tages wird vorbelegt (auch außerhalb der letzten fünf), sonst leer. */
+  const alt = await s.evaluate(() => VK.festivals.find(x => x.festival_key === 'wilde-moehre').hand.map(h => h.stichtag));
+  await s.keyboard.press('Escape'); await s.waitForTimeout(150);
+  await s.locator('#fdVkL [data-vk="wilde-moehre"]').click(); await s.waitForTimeout(200);
+  await s.locator('#vkTag').fill(alt[1]); await s.locator('#vkTag').dispatchEvent('change');
+  const altTk = await s.locator('#vkTk').inputValue();
+  await s.locator('#vkTag').fill('2026-01-05'); await s.locator('#vkTag').dispatchEvent('change');
+  pruefe('älterer Stichtag: Handeingabe dieses Tages vorbelegt, Tag ohne Eingabe leer', altTk === '1310' && await s.locator('#vkTk').inputValue() === '', `${altTk} / ${await s.locator('#vkTk').inputValue()}`);
+  await s.keyboard.press('Escape'); await s.waitForTimeout(150);
+  await s.locator('#fdVkL [data-vk="draussenbande"]').click(); await s.waitForTimeout(200);
   /* Fehler beim Speichern: Dialog bleibt offen, Meldung steht im Dialog. */
   VK_SCHALTER.setFehler = true; erwarteterFehler = true;
   await s.locator('#vkTk').fill('41'); await s.locator('#vkModal .btn-primary').click(); await s.waitForTimeout(400);
