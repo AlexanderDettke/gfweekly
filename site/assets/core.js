@@ -59,7 +59,9 @@ async function gfCopy(text){
    damit FormData, readPanel(), onchange und Autosave unverändert funktionieren. options: ["a","b"] oder [["wert","Beschriftung"]].
    gfStepper(name, cur, opts): − Zahl + statt <input type=number>; Grenzen mit Grund im Titel des deaktivierten Knopfs.
    gfZustand(kind, wort): Kennzeichen immer Symbol + Wort (● ○ ✓ ⚠ ↑ ↓ → ✕), nie nur Farbe.
-   gfKachel({icon,value,label,unit,tone,trend,href,title}): KPI-Kachel, Icon oben, Zahl unten (tabular), Beschriftung darunter. */
+   gfKachel({icon,value,label,unit,tone,trend,href,title}): KPI-Kachel, Icon oben, Zahl unten (tabular), Beschriftung darunter.
+     25.10.2026 (Verkauf): btn (Attribute, vom Aufrufer escaped) macht die Kachel zum Knopf, sub (fertiges HTML, z. B. gfZustand)
+     setzt Zeilen unter die Beschriftung, trendWert schreibt eine Zahl neben den Trendpfeil. */
 function gfChips(name, options, cur, opts={}){
   const attr=opts.attr||`name="${name}"`, v0=(cur??"")+"";
   const chips=options.map(o=>{ const [v,l]=Array.isArray(o)?o:[o,(o===""?"keine":o)]; const on=v0===(v+""); return `<button type="button" class="chip${on?" on":""}${v==="__new"?" neu":""}" data-v="${gfEsc(v)}" aria-pressed="${on}">${gfEsc(l)}</button>`; }).join("");
@@ -132,9 +134,11 @@ function gfIsoTag(d){ if(d){ d=new Date(d); return d.getFullYear()+"-"+String(d.
   catch(e){ const n=new Date(); return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0"); } }
 function gfFmtInt(n){ return (Number(n)||0).toLocaleString("de-DE"); }
 function gfKachel(o){
-  const tag=o.href?"a":"div", href=o.href?` href="${gfEsc(o.href)}"${/^https?:/.test(o.href)?' target="_blank" rel="noopener"':""}`:"";
-  const trend=o.trend?`<span class="kk-trend ${o.trend}" aria-label="${o.trend==="up"?"steigt":o.trend==="down"?"fällt":"gleich"}">${GF_ZST[o.trend]}</span>`:"";
-  return `<${tag} class="kk${o.tone?" "+o.tone:""}${o.href?" link":""}"${href}${o.title?` title="${gfEsc(o.title)}"`:""}><span class="kk-i" aria-hidden="true">${GF_KK_ICON[o.icon]||GF_KK_ICON.zahl}</span><span class="kk-v"><span class="ht-num">${typeof o.value==="number"?gfFmtInt(o.value):gfEsc(o.value??"keine")}</span>${o.unit?`<small>${gfEsc(o.unit)}</small>`:""}${trend}</span><span class="kk-l">${gfEsc(o.label)}</span></${tag}>`;
+  const btn=!o.href&&o.btn, tag=o.href?"a":btn?"button":"div", href=o.href?` href="${gfEsc(o.href)}"${/^https?:/.test(o.href)?' target="_blank" rel="noopener"':""}`:btn?` type="button" ${o.btn===true?"":o.btn}`:"";
+  const trendWort=o.trend==="up"?"steigt":o.trend==="down"?"fällt":"gleich";
+  const trend=o.trend?(o.trendWert!=null&&o.trendWert!==""?`<span class="kk-trend ${o.trend}"><span aria-hidden="true">${GF_ZST[o.trend]}</span><span class="ws-vh">${trendWort}</span> ${gfEsc(o.trendWert)}</span>`:`<span class="kk-trend ${o.trend}" aria-label="${trendWort}">${GF_ZST[o.trend]}</span>`):"";
+  const sub=(o.sub||[]).filter(Boolean).map(x=>`<span class="kk-s">${x}</span>`).join("");
+  return `<${tag} class="kk${o.tone?" "+o.tone:""}${o.href||btn?" link":""}"${href}${o.title?` title="${gfEsc(o.title)}"`:""}><span class="kk-i" aria-hidden="true">${GF_KK_ICON[o.icon]||GF_KK_ICON.zahl}</span><span class="kk-v"><span class="ht-num">${typeof o.value==="number"?gfFmtInt(o.value):gfEsc(o.value??"keine")}</span>${o.unit?`<small>${gfEsc(o.unit)}</small>`:""}${trend}</span><span class="kk-l">${gfEsc(o.label)}</span>${sub}</${tag}>`;
 }
 
 /* Webapp Standard G-06: Bei „Bewegung reduzieren“ springt auch das per Skript ausgelöste Scrollen sofort ans Ziel.

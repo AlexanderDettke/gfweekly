@@ -1,5 +1,10 @@
 # Kompass (vormals Das Hohe Haus, davor GF Weekly)
 
+> **Stand 25.10.2026: Verkauf 2027 auf „Für dich“** (Branch `paket/verkauf-2027`). Unter „Deine 5 Minuten heute“ eine Kachel je Festival:
+> Tickets gegen Ziel, Trend zur Vorwoche, „im Plan“ oder „unter Plan“ nach Tempo; Klick öffnet die Handeingabe mit den letzten fünf Ständen.
+> Tabellen `hh_verkauf_ziel` und `hh_verkauf_stand` (Migration angewendet), Actions `verkauf_list` und `verkauf_set` in `supabase/functions/gfweekly/verkauf.ts`.
+> Auftrag, Annahmen und Prüfweg: `docs/PAKET-VERKAUF-2027.md`. Stufe 2 (XCeed-API) wartet auf den Schlüssel.
+
 > **Stand 21.10.2026: Umbenennung in Kompass.** Adresse https://kompass.wildehabitate.de/, neue Bildmarke und Favicon (Kompassrose). Paket und Prüfstand: `docs/PAKET-KOMPASS.md`. Technische Schlüssel bleiben gfweekly.
 
 > **Stand 21.10.2026: Webapp Standard, Pilot zur Erprobung**, auf dem Branch `paket/webstandard-pilot` (nicht gepusht).

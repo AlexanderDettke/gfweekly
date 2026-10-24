@@ -9,7 +9,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODUL || 'playwright');
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ANTWORT, FALLBACK, SCHREIBEND, TPA, zuruecksetzen, SCHALTER, VORHABEN } from './testdaten.mjs';
+import { ANTWORT, FALLBACK, SCHREIBEND, TPA, zuruecksetzen, SCHALTER, VORHABEN, VK_SCHALTER } from './testdaten.mjs';
 
 const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'site');
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8',
@@ -569,7 +569,8 @@ console.log('\n== Für dich, Übergabe, Rückkehr (V31d) ==');
 {
   frisch();
   const f = await seite('/index.html');
-  pruefe('„Deine Vorhaben“ steht direkt unter „Deine 5 Minuten heute“', await f.evaluate(() => [...document.querySelectorAll('#app section.fd')].slice(0, 2).map(x => x.id).join()) === 'fd5,fdVh');
+  /* Seit 25.10.2026 steht „Verkauf 2027“ zwischen beiden (docs/PAKET-VERKAUF-2027.md). */
+  pruefe('„Deine Vorhaben“ folgt auf „Deine 5 Minuten heute“ und „Verkauf 2027“', await f.evaluate(() => [...document.querySelectorAll('#app section.fd')].slice(0, 3).map(x => x.id).join()) === 'fd5,fdVk,fdVh');
   const zeilen = await f.locator('#fdVhL .fd-row').count();
   pruefe('Deine Vorhaben: Ball bei Alex oder GF, höchstens fünf', zeilen === 3, `${zeilen} Zeilen`);
   pruefe('sortiert nach Frist', (await f.locator('#fdVhL .fd-row .fd-title').first().innerText()).includes('Lusatia'));
@@ -727,6 +728,72 @@ console.log('\n== Einwurf (V31c) ==');
   await f.locator('#fdEinwurf').click(); await f.waitForTimeout(300);
   pruefe('Einwurf öffnet auf Für dich', await f.locator('#gfEwModal.open').count() === 1);
   await f.close();
+}
+
+console.log('\n== Verkauf 2027 auf Für dich (25.10.2026) ==');
+{
+  frisch();
+  const s = await seite('/index.html'); await s.waitForTimeout(600);
+  const ids = await s.evaluate(() => [...document.querySelectorAll('#app section.fd')].map(x => x.id));
+  pruefe('Verkauf 2027 steht direkt unter „Deine 5 Minuten heute“', ids[0] === 'fd5' && ids[1] === 'fdVk', ids.join(','));
+  const kacheln = s.locator('#fdVkL button.kk[data-vk]');
+  pruefe('eine Kachel je Festival (5), als Knopf', await kacheln.count() === 5);
+  const kopf = await s.locator('#fdVkKopf').innerText();
+  pruefe('Kopfzeile: Summe gegen 21.000 und ältester Stand mit Mahnung ab 8 Tagen', /2\.387\s+von 21\.000 Tickets/.test(kopf) && /ältester Stand 12 Tage/.test(kopf) && await s.locator('#fdVkKopf .zst.warn').count() === 1, kopf);
+  const fl = s.locator('#fdVkL [data-vk="fluidity"]'), wm = s.locator('#fdVkL [data-vk="wilde-moehre"]');
+  pruefe('unter Plan: Ton warn mit Wort, nicht Farbe allein', (await fl.getAttribute('class')).includes('warn') && /unter Plan/.test(await fl.innerText()));
+  pruefe('im Plan: Ton pos mit Wort und Trend gegen die Vorwoche', (await wm.getAttribute('class')).includes('pos') && /im Plan/.test(await wm.innerText()) && /\+170/.test(await wm.innerText()) && /steigt/.test(await wm.locator('.kk-trend').innerText()));
+  pruefe('Einheit ist das Ziel, darunter „Stand TT.MM.“', /\/ 5\.000/.test(await fl.innerText()) && /Stand \d\d\.\d\d\./.test(await fl.innerText()));
+  pruefe('ohne VVK-Start „Start offen“, ohne Stand „noch kein Stand“', /Start offen/.test(await s.locator('#fdVkL [data-vk="lusatia"]').innerText()) && /noch kein Stand/.test(await s.locator('#fdVkL [data-vk="draussenbande"]').innerText()));
+  const hoehe = await kacheln.first().evaluate(e => e.getBoundingClientRect().height);
+  pruefe('Kachel ist mindestens 44 px hoch', hoehe >= 44, String(hoehe));
+  /* Tastatur: Kachel öffnet die Eingabe, Fokus im Tickets-Feld, Escape schließt und gibt den Fokus zurück. */
+  await s.locator('#fdVkL [data-vk="draussenbande"]').focus(); await s.keyboard.press('Enter'); await s.waitForTimeout(300);
+  pruefe('Kachel öffnet per Tastatur die Eingabe, Fokus auf Tickets', await s.locator('#vkModal.open [role=dialog]').count() === 1 && await s.evaluate(() => document.activeElement?.id) === 'vkTk');
+  pruefe('genau ein Primärknopf „Speichern“', await s.locator('#vkModal .btn-primary').count() === 1 && (await s.locator('#vkModal .btn-primary').innerText()).trim() === 'Speichern');
+  pruefe('Stichtag steht auf heute', await s.locator('#vkTag').inputValue() === await s.evaluate(() => VK.heute));
+  await s.keyboard.press('Escape'); await s.waitForTimeout(200);
+  pruefe('Escape schließt, Fokus zurück auf der Kachel', await s.locator('#vkModal.open').count() === 0 && await s.evaluate(() => document.activeElement?.dataset?.vk) === 'draussenbande');
+  /* Ungültige Eingabe: kein Aufruf, Hinweis am Feld. */
+  await s.locator('#fdVkL [data-vk="draussenbande"]').click(); await s.waitForTimeout(200);
+  await s.locator('#vkTk').fill('12a'); await s.locator('#vkModal .btn-primary').click(); await s.waitForTimeout(150);
+  pruefe('Tickets keine ganze Zahl: Hinweis, nichts gesendet', /ganze Zahl/.test(await s.locator('#vkErr').innerText()) && !letzte('verkauf_set'));
+  await s.locator('#vkTk').fill('40'); await s.locator('#vkEu').fill('abc'); await s.locator('#vkModal .btn-primary').click(); await s.waitForTimeout(150);
+  pruefe('Umsatz kein Betrag: Hinweis, nichts gesendet', /Betrag/.test(await s.locator('#vkErr').innerText()) && !letzte('verkauf_set'));
+  /* Speichern mit Teststand (Notiz „Test“), danach neue Kachel, Fokus und letzte Stände. */
+  await s.locator('#vkEu').fill('1.234,50'); await s.locator('#vkNo').fill('Test'); await s.locator('#vkModal .btn-primary').click(); await s.waitForTimeout(500);
+  const g = letzte('verkauf_set');
+  pruefe('Speichern schickt verkauf_set mit Festival, Stichtag, Tickets, Euro, Notiz und Person', g && g.nutzlast.festival_key === 'draussenbande' && g.nutzlast.tickets === 40 && g.nutzlast.umsatz_euro === 1234.5 && g.nutzlast.notiz === 'Test' && g.nutzlast.by === 'Alex' && /^\d{4}-\d\d-\d\d$/.test(g.nutzlast.stichtag), JSON.stringify(g && g.nutzlast));
+  const db = s.locator('#fdVkL [data-vk="draussenbande"]');
+  pruefe('nach dem Speichern: Dialog zu, Kachel zeigt 40 und Fokus steht auf ihr', await s.locator('#vkModal.open').count() === 0 && /^40/.test((await db.locator('.kk-v .ht-num').innerText()).trim()) && await s.evaluate(() => document.activeElement?.dataset?.vk) === 'draussenbande');
+  await db.click(); await s.waitForTimeout(200);
+  const verlauf = await s.locator('#vkModal .vk-verlauf li').allInnerTexts();
+  pruefe('letzte Stände im Dialog zeigen den Teststand mit Notiz', verlauf.length === 1 && /40/.test(verlauf[0]) && /Test/.test(verlauf[0]) && /1\.234,50/.test(verlauf[0]), verlauf.join(' | '));
+  /* Fehler beim Speichern: Dialog bleibt offen, Meldung steht im Dialog. */
+  VK_SCHALTER.setFehler = true; erwarteterFehler = true;
+  await s.locator('#vkTk').fill('41'); await s.locator('#vkModal .btn-primary').click(); await s.waitForTimeout(400);
+  pruefe('Fehler beim Speichern bleibt im offenen Dialog sichtbar', await s.locator('#vkModal.open').count() === 1 && /Nicht gespeichert/.test(await s.locator('#vkErr').innerText()));
+  erwarteterFehler = false;
+  await s.keyboard.press('Escape'); await s.close();
+  /* Ladefehler: eigener Hinweis mit „Erneut laden“, die übrigen Abschnitte bleiben. */
+  frisch(); VK_SCHALTER.listeFehler = true; erwarteterFehler = true;
+  const e = await seite('/index.html'); await e.waitForTimeout(600);
+  pruefe('Ladefehler zeigt Hinweis mit „Erneut laden“', /nicht geladen/i.test(await e.locator('#fdVkL').innerText()) && await e.locator('#fdVkNeu').count() === 1);
+  VK_SCHALTER.listeFehler = false;
+  await e.locator('#fdVkNeu').click(); await e.waitForTimeout(400);
+  pruefe('„Erneut laden“ holt die Kacheln', await e.locator('#fdVkL button.kk').count() === 5);
+  erwarteterFehler = false;
+  await e.close();
+  /* Handy 390: zwei Kacheln je Zeile, Dialog passt in die Breite. */
+  frisch();
+  const h = await ctx.newPage(); await h.setViewportSize({ width:390, height:844 }); h.on('pageerror', x => meldungen.push('Skriptfehler: ' + x.message));
+  await h.goto(BASE + '/index.html'); await h.waitForTimeout(700);
+  const xs = await h.evaluate(() => [...document.querySelectorAll('#fdVkL .kk')].slice(0, 3).map(k => Math.round(k.getBoundingClientRect().top)));
+  pruefe('390 px: zwei Kacheln je Zeile', xs[0] === xs[1] && xs[2] > xs[0], xs.join(','));
+  await h.locator('#fdVkL [data-vk="fluidity"]').click(); await h.waitForTimeout(300);
+  const mb = await h.locator('#vkModal .modal').boundingBox();
+  pruefe('390 px: Dialog ohne seitlichen Überlauf', mb && mb.x >= 0 && mb.x + mb.width <= 390 && await h.evaluate(() => document.documentElement.scrollWidth <= 390));
+  await h.close();
 }
 
 await browser.close();

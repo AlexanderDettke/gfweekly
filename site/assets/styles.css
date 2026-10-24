@@ -1893,3 +1893,35 @@ summary.tk-dayh,button.tk-row,.kgroup>summary.group-h,button.kd-row,.band .bi,.b
    jeden Klick ab, Rückgängig ging nur per Tastatur. */
 .toast.show .undo,.toast.show button{pointer-events:auto}
 .toast .undo button{min-height:var(--ziel-min);padding:0 8px}
+
+/* ===== Verkauf · Verkauf 2027 auf „Für dich“ (25.10.2026, docs/PAKET-VERKAUF-2027.md). Nur Tokens. ===== */
+.vk-kopf{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-8) var(--s-12);margin:0 0 var(--s-8);font-size:var(--stufe-2);color:var(--text-2)}
+.vk-kopf .vk-summe b{font-size:var(--stufe-3);color:var(--text);font-variant-numeric:tabular-nums}
+.vk-row{grid-template-columns:repeat(auto-fit,minmax(168px,1fr))}
+button.kk{font:inherit;text-align:left;width:100%;cursor:pointer;align-items:stretch}
+button.kk:hover{border-color:var(--border-strong);background:var(--surface)}
+.kk .kk-s{font-size:var(--stufe-1);color:var(--text-2);line-height:1.3;min-width:0;overflow-wrap:anywhere}
+.kk .kk-s .zst{font-size:var(--stufe-1)}
+/* Auf der Kachelfläche (--surface-2) reicht --warn/--pos als Schriftfarbe der kleinen Marke nicht (4,2:1); das Wort steht in --text, das Symbol trägt den Ton. */
+.kk .kk-s .zst.warn,.kk .kk-s .zst.pos{color:var(--text)} .kk .kk-s .zst.warn i{color:var(--warn)} .kk .kk-s .zst.pos i{color:var(--pos)}
+.vk .kk .kk-l{color:var(--text);font-weight:600;overflow-wrap:anywhere;hyphens:auto}
+.vk .kk-trend{font-size:var(--stufe-2);white-space:nowrap}
+/* G-05: bei 200 % Text und schmalen Kacheln brechen Marken und Kopfzeile um, statt seitlich hinauszuragen */
+.vk .zst{white-space:normal;min-width:0;overflow-wrap:anywhere}
+.vk-modal{max-width:520px}
+.vk-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--s-12);padding:var(--s-12) 18px 0}
+.vk-form .fld input{min-height:var(--ziel-min)}
+.vk-form .modal-f{grid-column:1/-1;padding:var(--s-4) 0 var(--s-12)}
+.vk-err{grid-column:1/-1;margin:0;color:var(--warn);font-size:var(--stufe-2)}
+.vk-err:empty{display:none}
+.vk-verlauf{padding:0 18px 18px;overflow:auto}
+.vk-verlauf h4{margin:0 0 var(--s-8);font-size:var(--stufe-2);color:var(--muted)}
+.vk-verlauf ul{list-style:none;margin:0;padding:0;display:grid;gap:var(--s-4)}
+.vk-verlauf li{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s-4) var(--s-12);padding:var(--s-8) 0;border-top:var(--rahmen) solid var(--line-soft);font-size:var(--stufe-2)}
+.vk-verlauf .vk-v-d{color:var(--text-2);min-width:3.2em}
+.vk-verlauf b{font-variant-numeric:tabular-nums}
+.vk-verlauf .vk-v-u,.vk-verlauf .vk-v-q{color:var(--text-2);min-width:0;overflow-wrap:anywhere}
+@media(max-width:600px){
+  .vk-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .vk-form{grid-template-columns:minmax(0,1fr)}
+}

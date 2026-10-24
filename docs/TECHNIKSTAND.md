@@ -1,3 +1,17 @@
+## Verkauf 2027 auf „Für dich“ (25.10.2026)
+
+Auftrag, Lesart, Abweichungen und Prüfweg: `docs/PAKET-VERKAUF-2027.md` (Abschnitt 0 und 2). Stufe 1 gebaut; Stufe 2 (XCeed Partner Tickets API) wartet auf den Schlüssel.
+
+Datenbank, Migration `20261024223230_hh_verkauf` (angewendet am 25.10.2026 per `db query --linked`, Fernhistorie mit derselben Kennung): `hh_verkauf_ziel` (Ziel, Minimalfall, VVK-Start, Festivalbeginn, Verweis `event_id` auf `vvp_events` ohne Fremdschlüssel; Seed 2027 mit fünf Festivals, Ziele zusammen 21.000) und `hh_verkauf_stand` (Stichtag, Tickets, Umsatz in Cent, Quelle `hand`, `xceed_api` oder `xceed_mail`, Notiz, Person; eindeutig je Festival, Saison, Stichtag und Quelle). RLS an ohne Policies, Rechte nur für `service_role`. Rückweg im Kopf der Migration. Drei Werte der Vorgabe weichen von `vvp_events` ab (Fluidity VVK-Start, Lusatia VVK-Start, Draußenbande Festivalbeginn); geseedet ist die Vorgabe, die Tabelle steht im Paket.
+
+Edge Function `gfweekly` (ping `version` 40), Modul `verkauf.ts`: `verkauf_list {saison}` rechnet je aktivem Festival letzten Stand (bei gleichem Stichtag `xceed_api` vor `xceed_mail` vor `hand`), Vorwoche (7 bis 13 Tage vorher), Anteil, Tempo seit VVK-Start (mindestens eine Woche) und nötiges Tempo bis 14 Tage vor Festivalbeginn, dazu die letzten fünf Stände, Summe und ältesten Stand. `verkauf_set` speichert eine Handeingabe als Upsert; `by` muss Alex oder Lea sein, der Stichtag darf nicht in der Zukunft liegen (Europe/Berlin). Der Live-Stand der Funktion war vor diesem Paket der Zweig `paket/blick-board` (`aac38da`, mit `topic_get` und `themen_sammeln`); diese Zeilen sind unverändert übernommen, damit ein Deploy sie nicht entfernt.
+
+Oberfläche: `site/index.html` Abschnitt `#fdVk` direkt unter „Deine 5 Minuten heute“, Kacheln über `gfKachel` (neu: Knopf-Variante `btn`, Zeilen `sub`, Zahl `trendWert`), Eingabe als Dialog über `gfDialogAuf`; Stile im Block „Verkauf“ (`.vk-*`) am Ende von `styles.css`. Assets `?v=39`; `paket/blick-board` muss vor seinem Push auf `?v=40`.
+
+Prüfungen: `pruefung/verkauf-probe.mjs` (Rechenregeln und Eingaben mit festen Daten, in `abnahme.sh`; mit `GF_PW` zusätzlich die Wirkung gegen das echte Backend mit Teststand `draussenbande`, Notiz „Test“, danach gelöscht über `pruefung/verkauf-testdaten-loeschen.sql`). Bedienung um 22 Proben „Verkauf 2027“ erweitert (abgefangene API). Schirme und Webstandard-Prüfung ohne Befund.
+
+Grenzen: Ziele und VVK-Daten lassen sich nur per SQL ändern. Wer speichert, wählt der Browser; die Edge Function prüft das gemeinsame Passwort.
+
 ## Webapp Standard, Pilot zur Erprobung (21.10.2026)
 
 Auftrag Alexander vom 21.10.2026: Organisationsstandards 0.5.0 übernehmen und den Webapp Standard `WEBAPP-PILOT-0.2` auf die gesamte Webapp anwenden. Der Standard bleibt ein Pilot zur Erprobung, keine beschlossene Regel. Unterlagen: `docs/webapp-standard/README.md` (Profil, Inventar mit 430 Fähigkeiten, Regelzuordnung aller 34 Regeln, Prüfmatrix T-01 bis T-22, Arbeitsstand). Bibliothek geprüft unter `organisationsstandards/` (`organisationsstandards/AKTUELL.json`).

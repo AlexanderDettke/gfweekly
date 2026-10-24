@@ -10,11 +10,11 @@
 <meta property="og:title" content="Kompass · Geschäftsführung der Wilden Habitate" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung, Wilde Möhre." />
 <meta property="og:image" content="assets/og-image.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=38" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=38" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=38" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=38" />
-<link rel="stylesheet" href="/assets/styles.css?v=38" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=39" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=39" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=39" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=39" />
+<link rel="stylesheet" href="/assets/styles.css?v=39" />
 <link rel="stylesheet" href="/assets/vorstand.css?v=2" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
@@ -41,6 +41,13 @@
     <div class="fd-h"><h2 id="fd5H">Deine 5 Minuten heute</h2><span class="fd5-dots" id="fd5Dots" aria-hidden="true"></span><span class="line"></span></div>
     <div class="fd-list" id="fd5L"><div class="loading">lädt …</div></div>
     <p class="fd5-stand" id="fd5Stand" role="status"></p>
+  </section>
+
+  <!-- 25.10.2026 · Verkauf 2027: Tickets je Festival gegen Ziel, für Alex und Lea gleich. Auftrag: docs/PAKET-VERKAUF-2027.md. -->
+  <section class="fd vk" id="fdVk" aria-labelledby="fdVkH">
+    <div class="fd-h"><h2 id="fdVkH">Verkauf 2027</h2><span class="line"></span></div>
+    <p class="vk-kopf" id="fdVkKopf"></p>
+    <div class="kk-row vk-row" id="fdVkL"><div class="loading">lädt …</div></div>
   </section>
 
 
@@ -80,11 +87,12 @@
   </section>
 </div>
 
+<div class="modal-back" id="vkModal"></div>
 <button type="button" class="vh-fab" id="fdFab" aria-label="Einwurf: etwas eintragen"><span aria-hidden="true">+</span> Einwurf</button>
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=38-vorstand2"></script>
-<script src="/assets/game.js?v=38"></script>
-<script src="/assets/eggs.js?v=38" defer></script>
+<script src="/assets/core.js?v=39-vorstand2"></script>
+<script src="/assets/game.js?v=39"></script>
+<script src="/assets/eggs.js?v=39" defer></script>
 <script src="/assets/vorstand.js?v=2"></script>
 <script>
 /* V22c · Für dich. Für den Blick zwischendurch, am Handy, in unter einer Minute.
@@ -321,6 +329,92 @@ function render5(){
     const m=$("#fd5Mehr"); if(m) m.onclick=()=>{ fd5Schreib(auswahl.concat(naechste.slice(0,FD5_N).map(({k,t,note,href,art})=>({k,t,note,href,art,r:rNeu+1})))); render5(); };
   } else $("#fd5Stand").textContent=fertig?`${fertig} von ${runde.length} abgeräumt · gut dabei`:`${runde.length} Dinge, etwa fünf Minuten`;
 }
+/* ---- 25.10.2026 · Verkauf 2027 (verkauf_list, verkauf_set). Eine Kachel je Festival: Tickets gegen Ziel, Trend zur Vorwoche,
+   im Plan oder unter Plan als Wort. Klick öffnet die Handeingabe mit den letzten fünf Ständen. Unabhängig von der Person. ---- */
+let VK=null, VK_LAUF=0;
+const VK_PLAN={ im_plan:["pos","im Plan"], unter_plan:["warn","unter Plan"], start_offen:["offen","Start offen"], kein_stand:["offen","noch kein Stand"] };
+const fmtInt=n=>gfFmtInt(n);
+function vkPlan(f){ if(f.plan==="vvk_ab") return gfZustand("offen","VVK ab "+fmtD(f.vvk_start)); const p=VK_PLAN[f.plan]||VK_PLAN.kein_stand; return gfZustand(p[0],p[1]); }
+function vkTitel(f){
+  const t=[`Ziel ${fmtInt(f.ziel)}`]; if(f.minimal!=null) t.push(`Minimalfall ${fmtInt(f.minimal)}`);
+  if(f.anteil!=null) t.push(`${String(f.anteil).replace(".",",")} % vom Ziel`);
+  if(f.tempo!=null) t.push(`Tempo ${String(f.tempo).replace(".",",")} je Woche`);
+  if(f.tempo_noetig!=null) t.push(`nötig ${String(f.tempo_noetig).replace(".",",")} je Woche`);
+  return t.join(" · ");
+}
+function vkAlter(n){ return n===0?"von heute":n===1?"1 Tag":`${n} Tage`; }
+function renderVk(){
+  const L=$("#fdVkL"), K=$("#fdVkKopf"); if(!L) return;
+  if(!VK){ L.innerHTML=`<p class="fd-empty">Verkaufsstand gerade nicht geladen. <button type="button" class="btn btn-sm btn-ghost" id="fdVkNeu">Erneut laden</button></p>`; K.innerHTML=""; $("#fdVkNeu").onclick=()=>loadVk(); return; }
+  const fs=VK.festivals||[];
+  if(!fs.length){ L.innerHTML=`<p class="fd-empty">Für 2027 sind keine Festivals hinterlegt.</p>`; K.innerHTML=""; return; }
+  L.innerHTML=fs.map(f=>{
+    const s=f.stand, tr=f.trend==null?null:f.trend>0?"up":f.trend<0?"down":"flat";
+    return gfKachel({ icon:"zahl", value:s?s.tickets:"–", unit:"/ "+fmtInt(f.ziel), label:f.name,
+      tone:f.plan==="unter_plan"?"warn":f.plan==="im_plan"?"pos":"",
+      trend:tr, trendWert:f.trend==null?"":(f.trend>0?"+":f.trend<0?"−":"±")+fmtInt(Math.abs(f.trend)),
+      sub:[gfEsc(s?`Stand ${fmtD(s.stichtag)}`:"Eintragen"), vkPlan(f)],
+      btn:`data-vk="${gfEsc(f.festival_key)}" aria-haspopup="dialog"`, title:vkTitel(f) });
+  }).join("");
+  const alt=VK.aeltester_tage, ohne=VK.ohne_stand||0, mahn=(alt!=null&&alt>=8)||ohne>0;
+  const satz=alt==null?"noch kein Stand eingetragen":`ältester Stand ${vkAlter(alt)}`+(ohne?` · ${ohne} ohne Stand`:"");
+  K.innerHTML=`<span class="vk-summe"><b class="ht-num">${fmtInt(VK.summe.tickets)}</b> von ${fmtInt(VK.summe.ziel)} Tickets</span> ${gfZustand(mahn?"warn":"offen",satz)}`;
+  L.querySelectorAll("[data-vk]").forEach(b=>b.onclick=()=>vkOeffnen(b.dataset.vk));
+}
+async function loadVk(){
+  const lauf=++VK_LAUF;
+  try{ const r=await gfApi("verkauf_list",{saison:2027}); if(lauf!==VK_LAUF) return; VK=r; }
+  catch(e){ if(lauf!==VK_LAUF) return; if(e&&e.auth) throw e; VK=null; }
+  renderVk();
+}
+function vkOeffnen(key){
+  const f=(VK&&VK.festivals||[]).find(x=>x.festival_key===key); if(!f) return;
+  const m=$("#vkModal"), heute=VK.heute||gfIsoTag();
+  const verlauf=(f.verlauf||[]).map(s=>`<li><span class="vk-v-d">${fmtD(s.stichtag)}</span><b class="ht-num">${fmtInt(s.tickets)}</b>${s.umsatz_euro!=null?`<span class="vk-v-u">${s.umsatz_euro.toLocaleString("de-DE",{style:"currency",currency:"EUR"})}</span>`:""}<span class="vk-v-q">${s.quelle==="hand"?(s.by?"von "+gfEsc(s.by):"von Hand"):s.quelle==="xceed_api"?"XCeed":"XCeed-Mail"}${s.notiz?" · "+gfEsc(s.notiz):""}</span></li>`).join("");
+  const dJ=d=>d?d.slice(8,10)+"."+d.slice(5,7)+"."+d.slice(0,4):"";
+  const info=[`Ziel ${fmtInt(f.ziel)}`, f.minimal!=null?`Minimalfall ${fmtInt(f.minimal)}`:"", f.vvk_start?`VVK-Start ${dJ(f.vvk_start)}`:"VVK-Start offen", `Festival ab ${dJ(f.festival_von)}`].filter(Boolean).join(" · ");
+  m.innerHTML=`<div class="modal vk-modal" role="dialog" aria-modal="true" aria-labelledby="vkMH">
+    <div class="modal-h"><h3 id="vkMH">${gfEsc(f.name)}</h3><button type="button" class="icon-btn" data-x aria-label="Schließen">✕</button></div>
+    <p class="modal-intro">${gfEsc(info)}</p>
+    <form class="vk-form" novalidate>
+      <div class="fld"><label for="vkTag">Stichtag</label><input id="vkTag" name="stichtag" type="date" required max="${heute}" value="${heute}"></div>
+      <div class="fld"><label for="vkTk">Tickets</label><input id="vkTk" name="tickets" type="text" inputmode="numeric" autocomplete="off" required value="${f.stand?f.stand.tickets:""}" aria-describedby="vkErr"></div>
+      <div class="fld"><label for="vkEu">Umsatz in Euro (optional)</label><input id="vkEu" name="umsatz" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 12500,00"></div>
+      <div class="fld"><label for="vkNo">Notiz (optional)</label><input id="vkNo" name="notiz" type="text" maxlength="500" autocomplete="off"></div>
+      <p class="vk-err" id="vkErr" role="alert"></p>
+      <div class="modal-f"><button type="submit" class="btn btn-primary">Speichern</button><button type="button" class="btn btn-ghost" data-x>Abbrechen</button></div>
+    </form>
+    <div class="vk-verlauf"><h4>Letzte Stände</h4>${verlauf?`<ul>${verlauf}</ul>`:`<p class="fd-empty">Noch kein Stand eingetragen.</p>`}</div>
+  </div>`;
+  let laeuft=false;
+  const zu=()=>{ if(laeuft) return; m.classList.remove("open"); };
+  m.querySelectorAll("[data-x]").forEach(b=>b.onclick=zu);
+  m.onclick=e=>{ if(e.target===m) zu(); };
+  const form=m.querySelector("form"), err=m.querySelector("#vkErr");
+  form.onsubmit=async e=>{
+    e.preventDefault(); if(laeuft) return; err.textContent="";
+    const tag=form.stichtag.value, tk=form.tickets.value.trim(), eu=form.umsatz.value.trim().replace(/\s|€/g,""), no=form.notiz.value.trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(tag)){ err.textContent="Bitte einen Stichtag wählen."; form.stichtag.focus(); return; }
+    if(tag>heute){ err.textContent="Der Stichtag darf nicht in der Zukunft liegen."; form.stichtag.focus(); return; }
+    if(!/^\d+$/.test(tk)){ err.textContent="Tickets bitte als ganze Zahl ab 0 eintragen."; form.tickets.focus(); return; }
+    const euro=eu===""?null:eu.replace(/\.(?=\d{3}(\D|$))/g,"").replace(",",".");
+    if(euro!==null&&!/^\d+(\.\d{1,2})?$/.test(euro)){ err.textContent="Umsatz bitte als Betrag in Euro, z. B. 12500,00."; form.umsatz.focus(); return; }
+    laeuft=true; const sb=form.querySelector("[type=submit]"); sb.disabled=true; sb.textContent="Speichert …";
+    try{
+      const r=await gfApi("verkauf_set",{ festival_key:f.festival_key, saison:VK.saison||2027, stichtag:tag, tickets:Number(tk), umsatz_euro:euro===null?null:Number(euro), notiz:no||null, by:gfWho() });
+      VK_LAUF++; VK=r; laeuft=false; m.classList.remove("open"); renderVk();
+      /* Die alte Kachel ist neu gezeichnet; erst nach der Freigabe des Dialogs (Mikroaufgabe) auf die neue fokussieren. */
+      setTimeout(()=>{ const neu=document.querySelector(`#fdVkL [data-vk="${CSS.escape(f.festival_key)}"]`); if(neu) neu.focus(); },0);
+      gfToast(`Gespeichert: ${f.name}, ${fmtInt(Number(tk))} Tickets am ${fmtD(tag)}.`);
+    }catch(x){
+      laeuft=false; sb.disabled=false; sb.textContent="Speichern";
+      if(x&&x.auth){ err.textContent="Die Anmeldung gilt nicht mehr. Bitte Seite neu laden."; return; }
+      err.textContent="Nicht gespeichert: "+((x&&x.message)||"Verbindung")+".";
+    }
+  };
+  gfDialogAuf(m, "#vkTk");
+}
+
 function renderAll(){ render5(); renderVh(); renderSeit(); renderEnt(); renderVt(); renderNeu(); renderFr(); }
 let LADE_LAUF=0;
 async function load(){
@@ -374,6 +468,7 @@ gfGate(async()=>{
     load().catch(()=>{ $("#fd5L").innerHTML=`<p class="fd-empty">Gerade nicht geladen. Später noch einmal.</p>`; }); });
   /* Tab über Mitternacht offen gelassen: beim Zurückkommen gilt der neue Tag (neue Runde). */
   document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && new Date().toLocaleDateString("sv-SE")!==TODAY) location.reload(); });
+  loadVk().catch(()=>{});
   try{ await load(); }catch(e){ $("#fdEntL").innerHTML=`<div class="empty">Konnte nicht laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
 });
 </script>

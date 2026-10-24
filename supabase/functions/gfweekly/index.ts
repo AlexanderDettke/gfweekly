@@ -1,5 +1,6 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { kommModul } from './komm.ts';
+import { verkaufModul } from './verkauf.ts';
 
 const PASSWORD = Deno.env.get('GFWEEKLY_PASSWORD') ?? '';
 const PROJECT_URL = Deno.env.get('SUPABASE_URL')!;
@@ -1379,6 +1380,8 @@ async function vhDossier(item: any){
 /* V32 Kommunikation: Aktionen komm_* im eigenen Modul (komm.ts), mit den Helfern dieses Hauses. */
 const KOMM = kommModul({ admin, json, heuteBerlin, whoNorm, launchFestivals, launchPersonen,
   ASANA_TOKEN, ASANA_WORKSPACE, ASANA_TEAM, HH_BASIS, MAIL_ALEX });
+/* 25.10.2026 · Verkauf 2027 je Festival auf „Für dich“ (verkauf_list, verkauf_set), siehe verkauf.ts. */
+const VERKAUF = verkaufModul({ admin, json, heuteBerlin, whoNorm });
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -1397,9 +1400,10 @@ Deno.serve(async (req: Request) => {
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:39, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY'), kommTabelleConfigured: !!Deno.env.get('GOOGLE_DIENSTKONTO_JSON') });
+    if (action === 'ping') return json({ ok:true, version:40, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY'), kommTabelleConfigured: !!Deno.env.get('GOOGLE_DIENSTKONTO_JSON') });
     /* V32 Kommunikation */
     if (typeof action === 'string' && action.startsWith('komm_')) return await KOMM.handle(action, t, WHO);
+    if (action === 'verkauf_list' || action === 'verkauf_set') return await VERKAUF.handle(action, t);
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -1442,6 +1446,39 @@ Deno.serve(async (req: Request) => {
       await scoreTopicTransition(gains, before, data, WHO, DAY);
       if (gains.length) { await checkGoals(gains, WHO, DAY); await checkBadges(gains, WHO, DAY); }
       return json({ topic: data, gains });
+    }
+    if (action === 'topic_get') {
+      /* 23.10.2026: ein Thema auch archiviert lesen (Links aus Übergabe, Vorhaben und Entscheidungslog führen nicht ins Leere). */
+      const id = (t.id ?? '').toString(); if (!VH_UUID.test(id)) return json({ error:'id fehlt' },400);
+      const { data, error } = await admin.from('gfweekly_topics').select('*').eq('id', id).maybeSingle();
+      if (error) throw error; if (!data) return json({ error:'Thema gibt es nicht' },404);
+      return json({ topic: data });
+    }
+    if (action === 'themen_sammeln') {
+      /* 23.10.2026 · Mehrfachauswahl im Board: viele Themen auf einmal erledigen, in Bearbeitung setzen, verschieben,
+         weitergeben (Pförtner), archivieren oder zurücksetzen (Rückgängig). Eine Unter-Transaktion je Thema in
+         hh_themen_sammeln; Antwort je Thema ok oder Grund, dazu der Stand davor. Keine Habitat-Taler (scoreTopicTransition). */
+      const by = vhBy(t);
+      const AKTIONEN = ['erledigt','in_bearbeitung','offen','verschieben','weitergeben','archivieren','zuruecksetzen'];
+      const roh = Array.isArray(t.items) ? t.items : [];
+      if (!roh.length || roh.length > 200) return json({ error:'items: 1 bis 200 Themen' },400);
+      const items: any[] = [];
+      for (const it of roh) {
+        const id = (it?.id ?? '').toString(); if (!VH_UUID.test(id)) return json({ error:'id ist keine Kennung' },400);
+        const aktion = (it?.aktion ?? t.aktion ?? '').toString(); if (!AKTIONEN.includes(aktion)) return json({ error:'aktion: ' + AKTIONEN.join('|') },400);
+        let wert: unknown = it?.wert !== undefined ? it.wert : t.wert;
+        if (aktion === 'verschieben') { const d = vhDatum(wert); if (d === undefined) return json({ error:'verschieben braucht ein Datum (JJJJ-MM-TT) oder leer' },400); wert = d ?? ''; }
+        if (aktion === 'weitergeben' && !['alex','lea','gf','team'].includes(String(wert))) return json({ error:'weitergeben an alex, lea, gf oder team' },400);
+        if (aktion === 'zuruecksetzen' && (!wert || typeof wert !== 'object' || Array.isArray(wert))) return json({ error:'zuruecksetzen braucht den Stand davor' },400);
+        const expect: Record<string, unknown> = {};
+        if (it?.expect && typeof it.expect === 'object') {
+          if (it.expect.board_lane !== undefined) expect.board_lane = String(it.expect.board_lane);
+          if (it.expect.updated_at !== undefined) { if (isNaN(Date.parse(String(it.expect.updated_at)))) return json({ error:'expect.updated_at ist kein Zeitpunkt' },400); expect.updated_at = String(it.expect.updated_at); }
+        }
+        items.push({ id, aktion, wert: wert ?? null, expect });
+      }
+      const r = await vhRpc('hh_themen_sammeln', { p_items: items, p_by: by });
+      return json(r);
     }
     if (action === 'delete') {
       if (!t.id) return json({ error:'id fehlt' }, 400);
@@ -1839,6 +1876,7 @@ Deno.serve(async (req: Request) => {
       const patch: Record<string,unknown> = { gate:t.gate, gate_by:(t.by ?? WHO).toString().slice(0,60), gate_at:new Date().toISOString() };
       if(t.frist!==undefined) patch.gate_frist = t.frist ? t.frist : null;
       if(t.note!==undefined) patch.gate_note = (t.note??'').toString().slice(0,300);
+      if(table==='gfweekly_topics') patch.updated_at = new Date().toISOString();   // 23.10.2026: Konfliktprüfung der Mehrfachauswahl sieht die Änderung
       const { data, error } = await admin.from(table).update(patch).eq('id',t.id).select().single(); if(error) throw error;
       return json({ item:data });
     }
@@ -1847,6 +1885,7 @@ Deno.serve(async (req: Request) => {
       for(const it of items){ const table = it.kind==='thema' ? 'gfweekly_topics' : it.kind==='kandidat' ? 'gfweekly_news' : null; if(!table||!it.id||!GATES.includes(it.gate)) continue;
         const patch: Record<string,unknown> = { gate:it.gate, gate_by:(t.by ?? WHO).toString().slice(0,60), gate_at:new Date().toISOString() };
         if(it.frist!==undefined) patch.gate_frist = it.frist||null; if(it.note!==undefined) patch.gate_note=(it.note??'').toString().slice(0,300);
+        if(table==='gfweekly_topics') patch.updated_at = new Date().toISOString();
         const { error } = await admin.from(table).update(patch).eq('id',it.id); if(error) throw error; n++; }
       return json({ ok:true, updated:n });
     }

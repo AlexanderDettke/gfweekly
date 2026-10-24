@@ -126,7 +126,7 @@ export const KORB_SAAT = {
    zuruecksetzen() stellt den Saatstand wieder her; die Bedienprüfung ruft das vor jedem Fall. */
 export let KORB = JSON.parse(JSON.stringify(KORB_SAAT));
 export let NEUE = [];
-export function zuruecksetzen(){ KORB = JSON.parse(JSON.stringify(KORB_SAAT)); NEUE = []; if (typeof vhZuruecksetzen === 'function') vhZuruecksetzen(); }
+export function zuruecksetzen(){ KORB = JSON.parse(JSON.stringify(KORB_SAAT)); NEUE = []; if (typeof vhZuruecksetzen === 'function') vhZuruecksetzen(); vkZuruecksetzen(); }
 const zeileVon = (id) => Object.values(KORB).flat().find(r => r.id === id);
 const vorgangVon = (z) => z && z.kind === 'thema'
   ? { id:z.ref_id, gate: z.vertretung ? 'alex' : 'lea', owner_backup: z.vertretung || null } : null;
@@ -552,3 +552,37 @@ SCHREIBEND.add('komm_pruefpunkt_set'); SCHREIBEND.add('komm_berechnen');
 
 /* Vorstandsbüro: erfundene Mailvorgänge, keine Originalpost. */
 ANTWORT.lage = { ok:true, asanaConfigured:true, items:[{ id:'TEST-oberflaeche',title:'Rückfrage zur nächsten Sitzung',finding:'Eine Antwort steht noch aus. Erfunden für die Oberflächenprüfung.',next_action:'Termin prüfen und Antwort vorbereiten.',basis_at:zeit(0),status:'pruefen',owner:'',priority:true,source_url:'https://groups.google.com/a/freude-eg.de/g/vorstand',reply_to:'test@example.org',reply_subject:'Rückfrage zur nächsten Sitzung',reply_body:'Guten Tag,\n\nvielen Dank für Ihre Nachricht.',task_title:'Termin prüfen und Antwort vorbereiten',task_notes:'Termin prüfen. Originalverlauf ist verlinkt.',task_assignee:'Alex',task_state:'none',version:1,last_by:'Testprüfung',updated_at:zeit(0)}] };
+
+/* 25.10.2026 · Verkauf 2027 (verkauf_list, verkauf_set). Gerechnet mit dem echten Modul der Edge Function, damit Schirme und
+   Bedienung dieselben Regeln sehen. Ziele wie der Seed; Stände erfunden: Fluidity alt (12 Tage, Mahnung), Wilde Möhre mit
+   Vorwoche, Lusatia ohne VVK-Start, Draußenbande und by nature ohne Stand. */
+import { verkaufRechne, verkaufEingabe } from '../supabase/functions/gfweekly/verkauf.ts';
+export const VK_ZIEL = [
+  { festival_key:'fluidity', saison:2027, name:'Fluidity', ziel_tickets:5000, minimal_tickets:1500, vvk_start:'2026-08-01', festival_von:'2027-08-27', sort:1, aktiv:true },
+  { festival_key:'wilde-moehre', saison:2027, name:'Wilde Möhre Freude Edition', ziel_tickets:5000, minimal_tickets:3500, vvk_start:'2026-09-01', festival_von:'2027-08-20', sort:2, aktiv:true },
+  { festival_key:'draussenbande', saison:2027, name:'Malina, Morio & die Draußenbande', ziel_tickets:3000, minimal_tickets:2000, vvk_start:'2026-10-01', festival_von:'2027-07-29', sort:3, aktiv:true },
+  { festival_key:'lusatia', saison:2027, name:'Lusatia', ziel_tickets:4500, minimal_tickets:2000, vvk_start:null, festival_von:'2027-07-23', sort:4, aktiv:true },
+  { festival_key:'by-nature', saison:2027, name:'by nature', ziel_tickets:3500, minimal_tickets:0, vvk_start:'2026-11-01', festival_von:'2027-08-06', sort:5, aktiv:true },
+];
+export const VK_STAENDE = [
+  { festival_key:'fluidity', saison:2027, stichtag:tag(-12), tickets:812, umsatz_brutto_cents:9744000, quelle:'xceed_mail', notiz:'Zahl aus der Mail', by:'Alex', updated_at:zeit(-12) },
+  { festival_key:'wilde-moehre', saison:2027, stichtag:tag(-1), tickets:1480, umsatz_brutto_cents:null, quelle:'hand', notiz:null, by:'Lea', updated_at:zeit(-1) },
+  { festival_key:'wilde-moehre', saison:2027, stichtag:tag(-9), tickets:1310, umsatz_brutto_cents:null, quelle:'hand', notiz:null, by:'Lea', updated_at:zeit(-9) },
+  { festival_key:'lusatia', saison:2027, stichtag:tag(-3), tickets:95, umsatz_brutto_cents:null, quelle:'hand', notiz:'Vorab-Kontingent', by:'Alex', updated_at:zeit(-3) },
+];
+const VK_SAAT = JSON.stringify(VK_STAENDE);
+function vkZuruecksetzen(){ VK_STAENDE.splice(0, VK_STAENDE.length, ...JSON.parse(VK_SAAT)); VK_SCHALTER.listeFehler = false; VK_SCHALTER.setFehler = false; }
+export const VK_SCHALTER = { listeFehler:false, setFehler:false };
+const vkListe = () => ({ saison:2027, ...verkaufRechne(VK_ZIEL, VK_STAENDE, heute) });
+Object.assign(ANTWORT, {
+  verkauf_list: () => VK_SCHALTER.listeFehler ? { __status:500, error:'Verbindung unterbrochen' } : vkListe(),
+  verkauf_set: (p) => {
+    if (VK_SCHALTER.setFehler) { VK_SCHALTER.setFehler = false; return { __status:500, error:'Verbindung unterbrochen' }; }
+    let e; try { e = verkaufEingabe(p, heute, (w) => { const s = String(w ?? '').toLowerCase(); return s.includes('lea') ? 'Lea' : s.includes('alex') ? 'Alex' : 'Team'; }); }
+    catch (x) { return { __status:x.status || 400, error:x.message }; }
+    const alt = VK_STAENDE.findIndex(s => s.festival_key === e.festival_key && s.saison === e.saison && s.stichtag === e.stichtag && s.quelle === 'hand');
+    const zeile = { ...e, quelle:'hand', updated_at:zeit(0) };
+    if (alt >= 0) VK_STAENDE[alt] = zeile; else VK_STAENDE.push(zeile);
+    return { gespeichert:zeile, ...vkListe() };
+  },
+});
