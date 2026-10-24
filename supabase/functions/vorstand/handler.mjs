@@ -1,6 +1,6 @@
-export class OfficeError extends Error {
-  constructor(status, message) { super(message); this.status = status; }
-}
+import { OfficeError } from './office-error.mjs';
+import { chatInput, cleanInsight } from './chat-source.mjs';
+export { OfficeError } from './office-error.mjs';
 const PERSONS = { Alex: 'alex@wildemoehre.org', Lea: 'lea@wildemoehre.org' };
 const STATES = ['pruefen','in_bearbeitung','wartet','erledigt'];
 const TEXT = { title:500, finding:8000, next_action:4000, waiting_on:2000, completion_evidence:4000, reply_to:320, reply_subject:500, reply_body:16000, task_title:500, task_notes:12000 };
@@ -13,7 +13,8 @@ export function cleanPatch(raw={}) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new OfficeError(400,'Ungültige Eingabe.');
   const out={};
   for (const [key,value] of Object.entries(raw)) {
-    if (key in TEXT) { if (typeof value !== 'string' || value.length>TEXT[key]) throw new OfficeError(400,'Text fehlt oder ist zu lang: '+key); out[key]=value.trim(); }
+    if (key==='insight') out.insight=cleanInsight(value);
+    else if (Object.hasOwn(TEXT,key)) { if (typeof value !== 'string' || value.length>TEXT[key]) throw new OfficeError(400,'Text fehlt oder ist zu lang: '+key); out[key]=value.trim(); }
     else if (key==='priority') { if (typeof value!=='boolean') throw new OfficeError(400,'Priorität ist ungültig.'); out[key]=value; }
     else if (key==='status' && STATES.includes(value)) out[key]=value;
     else if (key==='owner' && ['',...Object.keys(PERSONS)].includes(value)) out[key]=value;
@@ -29,7 +30,7 @@ export function taskPayload(item, people, workspace) {
   const who=item.task_assignee;
   if (!people[who]) throw new OfficeError(400,'Die zuständige Person ist in Asana nicht eindeutig verknüpft.');
   const marker='[Kompass Vorstand '+item.id+']';
-  const notes=[item.task_notes,'',marker,'Original: '+item.source_url,'Kompass: https://kompass.wildehabitate.de/vorstand.html?id='+encodeURIComponent(item.id),'','Die Anlage der Aufgabe schließt den Mailvorgang nicht ab.'].join('\n');
+  const notes=[item.task_notes,'',marker,'Original: '+item.source_url,'Kompass: https://kompass.wildehabitate.de/vorstand.html?id='+encodeURIComponent(item.id),'','Die Anlage der Aufgabe schließt den Vorgang nicht ab.'].join('\n');
   const data={ workspace, name:item.task_title, notes, assignee:people[who], followers:[...new Set(Object.values(people))] };
   if(item.task_due_on) data.due_on=item.task_due_on;
   return data;
@@ -81,6 +82,19 @@ export function makeHandler({db,password,asanaToken='',workspace,fetchImpl=fetch
       if(body.action==='case_save') {
         const patch=cleanPatch(t.patch);
         return json({item:await rpc('hh_vorstand_save',{p_id:t.id,p_version:t.version,p_patch:patch,p_by:who})});
+      }
+      if(body.action==='chat_add') {
+        const source=chatInput(t),patch=cleanPatch(t.patch);
+        if(Object.keys(patch).some(k=>!['title','finding','next_action'].includes(k)))throw new OfficeError(400,'Neue Erkenntnisse beginnen ohne zugewiesene Verantwortung oder Beschluss.');
+        if(!patch.title||!patch.finding)throw new OfficeError(400,'Titel und belegter Stand werden benötigt.');
+        const find=()=>checked(db.from('hh_vorstand_cases').select('*').eq('organization','mit-freude').eq('source_kind','chat').eq('source_key',source.source_key).maybeSingle());
+        const existing=await find();
+        if(existing)return json({item:existing,existing:true});
+        const result=await db.from('hh_vorstand_cases').insert({id:'VG-'+crypto.randomUUID(),...patch,...source,organization:'mit-freude',last_by:who}).select().single();
+        if(result.error?.code==='23505'){
+          const duplicate=await find();if(duplicate)return json({item:duplicate,existing:true});
+        }
+        return json({item:await checked(Promise.resolve(result)),existing:false},201);
       }
       if(body.action==='case_add') {
         const patch=cleanPatch(t.patch);const url=asText(t.source_url,1500);
