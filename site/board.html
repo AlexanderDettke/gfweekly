@@ -318,7 +318,8 @@ async function closePanel(force){
 window.addEventListener("beforeunload",e=>{ if(OPEN && P_DIRTY){ savePanel({silent:true}); e.preventDefault(); e.returnValue=""; } });
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden" && OPEN && P_DIRTY) savePanel({silent:true}); });
 $("#pClose").onclick=()=>closePanel(); $("#panelBack").onclick=()=>closePanel();
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("#filterPop").hidden){ filterZu(true); return; } if(e.key==="Escape"&&[...document.querySelectorAll(".sel-pop")].some(p=>!p.hidden)){ const p=[...document.querySelectorAll(".sel-pop")].find(x=>!x.hidden); selMenuZu(); document.querySelector(`[data-selmenu="${p.dataset.pop}"]`)?.focus(); return; } if(e.key==="Escape"){ const tm=document.getElementById("tidyModal"); if(tm&&tm.classList.contains("open")){ tm.classList.remove("open"); return; } closePanel(); } if(e.key==="/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); $("#q").focus(); } });
+let ARCHIV_ZU=null;
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&ARCHIV_ZU){ ARCHIV_ZU(); return; } if(e.key==="Escape"&&!$("#filterPop").hidden){ filterZu(true); return; } if(e.key==="Escape"&&[...document.querySelectorAll(".sel-pop")].some(p=>!p.hidden)){ const p=[...document.querySelectorAll(".sel-pop")].find(x=>!x.hidden); selMenuZu(); document.querySelector(`[data-selmenu="${p.dataset.pop}"]`)?.focus(); return; } if(e.key==="Escape"){ const tm=document.getElementById("tidyModal"); if(tm&&tm.classList.contains("open")){ tm.classList.remove("open"); return; } closePanel(); } if(e.key==="/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); $("#q").focus(); } });
 
 /* ---- Bereinigen (V15): Marker im Text → Felder ---- */
 function tidyCandidates(){ return TOPICS.filter(t=>!t.archived && (SHOW_DONE||t.board_lane!=="erledigt") && gfTidyTopic(t)); }
@@ -391,11 +392,13 @@ async function archivHinweis(id){
     <div class="vh-dlg-b"><p class="vh-dlg-t"><b>${gfEsc(t.title||"(ohne Titel)")}</b><br>${grund}${t.decision?` Entscheidung: ${gfEsc(t.decision)}`:""}</p></div>
     <div class="modal-f"><button class="btn btn-brand" data-x>Schließen</button><button class="btn btn-primary" id="arZurueck" style="margin-left:auto">${t.board_lane==="erledigt"?"Wieder öffnen":"Zurück ins Board"}</button></div></div>`;
   m.classList.add("open");
-  const zu=()=>{ m.classList.remove("open"); m.innerHTML=""; frei(); };
+  const zu=()=>{ m.classList.remove("open"); m.innerHTML=""; ARCHIV_ZU=null; frei(); };
+  ARCHIV_ZU=zu;
   m.querySelectorAll("[data-x]").forEach(b=>b.onclick=zu); m.onclick=e=>{ if(e.target===m) zu(); };
   /* Erledigtes kommt wieder offen zurück, sonst nähme es der nächste Archivlauf gleich wieder. */
   const wert=t.board_lane==="erledigt"?{ archived:false, archiv_grund:null, board_lane:"zu_besprechen", status:"offen", resolved_at:null }:{ archived:false, archiv_grund:null };
-  $("#arZurueck").onclick=async()=>{ try{ await gfApi("themen_sammeln",{ items:[{ id:t.id, aktion:"zuruecksetzen", wert }], by:gfWho() });
+  $("#arZurueck").onclick=async()=>{ try{ const r=await gfApi("themen_sammeln",{ items:[{ id:t.id, aktion:"zuruecksetzen", wert, expect:{ updated_at:t.updated_at } }], by:gfWho() });
+      const e1=(r.ergebnis||[])[0]; if(!e1||!e1.ok){ gfToast("Nicht zurückgeholt: "+(e1?.konflikt?"inzwischen geändert, bitte neu laden":(e1?.grund||"unbekannt")),{fehler:true}); return; }
       zu(); const d=await gfApi("list"); TOPICS=d.topics||[]; render(); openPanel(t.id); gfToast("Zurück im Board"); }
     catch(e){ gfToast("Nicht zurückgeholt: "+(e.message||"Verbindung"),{fehler:true}); } };
   setTimeout(()=>$("#arZurueck")?.focus(),40);
@@ -404,8 +407,10 @@ async function archivHinweis(id){
 /* ---- 23.10.2026 · Mehrfachauswahl: anhaken, unten handeln, Rückgängig für alle ---- */
 function renderSel(){
   const bar=$("#selBar"); bar.hidden=!WAEHLEN; document.documentElement.classList.toggle("board-waehlen",WAEHLEN);
+  if(WAEHLEN) requestAnimationFrame(()=>document.documentElement.style.setProperty("--selbar-h", bar.offsetHeight+"px"));
   $("#waehlenBtn").setAttribute("aria-pressed",String(WAEHLEN)); $("#waehlenBtn").textContent=WAEHLEN?"Auswahl beenden":"Auswählen";
-  for(const id of [...SEL]) if(!TOPICS.some(t=>t.id===id)) SEL.delete(id);
+  /* Ausgewählt bleibt nur, was als Karte zu sehen ist (zugeklappt, gefiltert oder archiviert fällt heraus). */
+  for(const id of [...SEL]) if(!document.querySelector(`.bcard[data-id="${CSS.escape(id)}"]`)) SEL.delete(id);
   $("#selN").textContent=SEL.size===1?"1 ausgewählt":`${SEL.size} ausgewählt`;
   bar.querySelectorAll("[data-sel],[data-selmenu]").forEach(b=>{ if(!b.closest(".sel-pop")) b.disabled=!SEL.size||SEL_LAEUFT; });
   $("#selEnde").disabled=SEL_LAEUFT;
@@ -432,7 +437,7 @@ $("#selBar").addEventListener("click",async e=>{
   selMenuZu(); await sammeln(aktion, wert, [...SEL]);
 });
 const SEL_WORT={erledigt:"erledigt",in_bearbeitung:"in Bearbeitung",verschieben:"verschoben",weitergeben:"weitergegeben",archivieren:"archiviert"};
-let SEL_T=null;
+let SEL_T=null, RUECK=[];   // Rückwege der Sammelaktionen der letzten 10 Sekunden, jüngste zuletzt
 async function sammeln(aktion, wert, ids){
   const items=ids.map(id=>{ const t=TOPICS.find(x=>x.id===id); return { id, expect:{ board_lane:t?.board_lane, updated_at:t?.updated_at } }; });
   $("#selBar").setAttribute("aria-busy","true"); SEL_LAEUFT=true; renderSel();
@@ -450,13 +455,19 @@ function zeigeRueck(gut, schlecht, wort){
   /* Ein laufendes Rückgängig der vorigen Aktion nicht durch eine Meldung ohne eigenen Rückweg verdrängen. */
   if(!gut.length && h.classList.contains("show") && $("#selRueckK")){ gfToast(`Nichts ${wort}: ${[...new Set(schlecht.map(x=>x.konflikt?"inzwischen geändert, bitte neu laden":x.grund))].join("; ")}`,{fehler:true}); return; }
   clearTimeout(SEL_T);
+  if(gut.length) RUECK.push(gut); 
   const fehl=schlecht.length?` · ${schlecht.length} nicht gespeichert (${[...new Set(schlecht.map(x=>x.konflikt?"inzwischen geändert, bitte neu laden":x.grund))].join("; ")})`:"";
-  h.innerHTML=`<span>${gut.length} ${gut.length===1?"Thema":"Themen"} ${gfEsc(wort)}${gfEsc(fehl)}</span>${gut.length?`<button type="button" class="btn btn-sm btn-ghost" id="selRueckK">Rückgängig</button>`:""}`;
+  const mehr=RUECK.length>1?` (Rückgängig nimmt auch die ${RUECK.length-1===1?"vorige Aktion":(RUECK.length-1)+" vorigen Aktionen"} zurück)`:"";
+  h.innerHTML=`<span>${gut.length} ${gut.length===1?"Thema":"Themen"} ${gfEsc(wort)}${gfEsc(fehl)}${gfEsc(mehr)}</span>${RUECK.length?`<button type="button" class="btn btn-sm btn-ghost" id="selRueckK">Rückgängig</button>`:""}`;
   h.classList.add("show");
-  SEL_T=setTimeout(()=>{ h.classList.remove("show"); h.innerHTML=""; }, gut.length?10000:8000);
+  SEL_T=setTimeout(()=>{ h.classList.remove("show"); h.innerHTML=""; RUECK=[]; }, RUECK.length?10000:8000);
   const k=$("#selRueckK"); if(!k) return;
   k.onclick=async()=>{ k.disabled=true; clearTimeout(SEL_T);
-    const items=gut.map(x=>({ id:x.id, aktion:"zuruecksetzen", wert:x.vorher, expect:{ updated_at:x.thema?.updated_at } }));
+    /* Jüngste Aktion zuerst zurück; je Thema der Stand davor der ältesten Aktion, die es geändert hat. */
+    const alle=RUECK.slice().reverse().flat(), seen=new Map();
+    for(const x of alle) seen.set(x.id, { vorher:x.vorher, nach:seen.has(x.id)?seen.get(x.id).nach:x.thema?.updated_at });
+    const items=[...seen.entries()].map(([id,v])=>({ id, aktion:"zuruecksetzen", wert:v.vorher, expect:{ updated_at:v.nach } }));
+    RUECK=[];
     try{ const r=await gfApi("themen_sammeln",{ items, by:gfWho() }); const ok=(r.ergebnis||[]).filter(x=>x.ok).length, nein=(r.gesamt||0)-ok;
       const d=await gfApi("list"); TOPICS=d.topics||[]; render();
       h.classList.remove("show"); h.innerHTML=""; gfToast(nein?`${ok} zurückgesetzt, ${nein} inzwischen geändert`:`${ok} ${ok===1?"Thema":"Themen"} zurückgesetzt`);

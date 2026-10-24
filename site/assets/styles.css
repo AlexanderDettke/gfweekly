@@ -1926,5 +1926,7 @@ summary.tk-dayh,button.tk-row,.kgroup>summary.group-h,button.kd-row,.band .bi,.b
 .sel-datum input{min-height:var(--ziel-min);padding:4px 8px;border-radius:var(--radius-s);border:var(--rahmen) solid var(--border-strong);background:var(--surface-2);color:var(--text);font:inherit}
 html.board-waehlen .wrap{padding-bottom:120px}
 .sel-rueck{display:flex;align-items:center;gap:12px;pointer-events:auto;max-width:calc(100vw - 32px);bottom:96px}
+/* Hinweis immer über der Auswahlleiste, nie über ihren Knöpfen */
+html.board-waehlen .sel-rueck{bottom:calc(var(--selbar-h,64px) + 28px + env(safe-area-inset-bottom,0px))}
 .sel-rueck:not(.show){pointer-events:none}
 @media(max-width:680px){ .board.mit-zu{grid-template-columns:none;grid-auto-columns:minmax(78vw,1fr)} .sel-bar{left:16px;right:16px;transform:none;max-width:none} .sel-bar .btn{flex:1 1 auto} }

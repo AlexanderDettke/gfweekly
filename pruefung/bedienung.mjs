@@ -399,6 +399,21 @@ console.log('\n== Board aufgeräumt und Mehrfachauswahl (23.10.2026) ==');
   THEMEN.find(x => x.id === 't5').board_lane = 'in_klaerung';
   await b.locator('#selBar [data-sel="in_bearbeitung"]').click(); await b.waitForTimeout(400);
   pruefe('Konflikt: „1 nicht gespeichert (inzwischen geändert …)“, das andere gespeichert', /1 Thema in Bearbeitung · 1 nicht gespeichert \(inzwischen geändert/.test(await b.locator('#selRueck').innerText()), await b.locator('#selRueck').innerText());
+  /* Zwei Aktionen hintereinander: ein Rückgängig nimmt beide zurück. Frisch beginnen: Auswahl neu, alte Rückwege abgelaufen. */
+  await b.locator('#selEnde').click(); await b.waitForTimeout(10500); await b.locator('#waehlenBtn').click(); await b.waitForTimeout(150);
+  await b.locator('.bcard[data-id="t1"]').click(); await b.locator('#selBar [data-sel="in_bearbeitung"]').click(); await b.waitForTimeout(300);
+  await b.locator('.bcard[data-id="t7"]').click(); await b.locator('#selBar [data-sel="erledigt"]').click(); await b.waitForTimeout(300);
+  pruefe('Rückgängig-Hinweis verdeckt die Auswahlleiste nicht', await b.evaluate(() => { const r = document.getElementById('selRueck').getBoundingClientRect(), l = document.getElementById('selBar').getBoundingClientRect(); return r.bottom <= l.top; }));
+  pruefe('zweite Aktion: Hinweis sagt, dass Rückgängig auch die vorige zurücknimmt', /auch die vorige Aktion/.test(await b.locator('#selRueck').innerText()), await b.locator('#selRueck').innerText());
+  await b.locator('#selRueckK').click(); await b.waitForTimeout(500);
+  const zw = letzte('themen_sammeln');
+  pruefe('Rückgängig setzt beide Themen auf den Stand vor der ersten Aktion', zw && zw.nutzlast.items.length >= 2 && zw.nutzlast.items.every(x => x.aktion === 'zuruecksetzen')
+    && THEMEN.find(x => x.id === 't7').board_lane === 'zu_besprechen' && ['zu_besprechen','in_klaerung'].includes(THEMEN.find(x => x.id === 't1').board_lane), JSON.stringify(zw && zw.nutzlast.items.map(x => [x.id, x.wert.board_lane])));
+  /* Zuklappen nimmt ausgewählte erledigte Karten aus der Auswahl. */
+  await b.locator('.lane-zu [data-erl="auf"]').click(); await b.waitForTimeout(150);
+  await b.locator('.lane[data-col="erledigt"] .bcard').first().click(); await b.waitForTimeout(80);
+  await b.locator('[data-erl="zu"]').click(); await b.waitForTimeout(150);
+  pruefe('Zuklappen leert die Auswahl der verdeckten Karten', /0 ausgewählt/.test(await b.locator('#selN').innerText()), await b.locator('#selN').innerText());
   /* Auswahl gilt für das Sichtbare: Ansichtswechsel leert sie; Kontrollkästchen tragen den Titel als Namen. */
   await b.locator('.bcard[data-id="t1"]').click(); await b.waitForTimeout(80);
   pruefe('Kontrollkästchen mit Namen „… auswählen“', /Vertrag mit dem Landkreis verlängern auswählen/.test(await b.locator('.bcard[data-id="t1"] .sel-cb').getAttribute('aria-label')));
@@ -410,8 +425,13 @@ console.log('\n== Board aufgeräumt und Mehrfachauswahl (23.10.2026) ==');
   await b.close();
   /* Link auf ein archiviertes Thema: Hinweis statt Leere, „Wieder öffnen“ holt es zurück. */
   THEMEN.push({ id:'t8', title:'Archiviertes Probethema', context:'', priority:'mittel', status:'erledigt', kind:'einmalig', board_lane:'erledigt', lane_order:2, owner:'Alex', created_at:alt, updated_at:alt, archived:true, archiv_grund:'erledigt-14' });
-  const a = await seite('/board.html?topic=t8'); await a.waitForTimeout(600);
+  let a = await seite('/board.html?topic=t8'); await a.waitForTimeout(600);
   pruefe('Link auf archiviertes Thema zeigt „Im Archiv“ mit Grund', /Im Archiv/.test(await a.locator('#tidyModal').innerText()) && /nach 14 Tagen ins Archiv/.test(await a.locator('#tidyModal').innerText()));
+  await a.keyboard.press('Escape'); await a.waitForTimeout(150);
+  pruefe('Escape schließt den Archivdialog, die Seite bleibt bedienbar', !(await a.locator('#tidyModal.open').count()) && await a.evaluate(() => ![...document.body.children].some(e => e.inert)));
+  await a.close();
+  const a2 = await seite('/board.html?topic=t8'); await a2.waitForTimeout(600);
+  a = a2;
   await a.locator('#arZurueck').click(); await a.waitForTimeout(500);
   const za = letzte('themen_sammeln');
   pruefe('„Wieder öffnen“ holt es offen ins Board zurück', za && za.nutzlast.items[0].aktion === 'zuruecksetzen' && za.nutzlast.items[0].wert.archived === false && za.nutzlast.items[0].wert.board_lane === 'zu_besprechen' && await a.locator('#panel.open').count() === 1, JSON.stringify(za && za.nutzlast).slice(0, 200));
