@@ -397,10 +397,14 @@ async function archivHinweis(id){
   m.querySelectorAll("[data-x]").forEach(b=>b.onclick=zu); m.onclick=e=>{ if(e.target===m) zu(); };
   /* Erledigtes kommt wieder offen zurück, sonst nähme es der nächste Archivlauf gleich wieder. */
   const wert=t.board_lane==="erledigt"?{ archived:false, archiv_grund:null, board_lane:"zu_besprechen", status:"offen", resolved_at:null }:{ archived:false, archiv_grund:null };
-  $("#arZurueck").onclick=async()=>{ try{ const r=await gfApi("themen_sammeln",{ items:[{ id:t.id, aktion:"zuruecksetzen", wert, expect:{ updated_at:t.updated_at } }], by:gfWho() });
-      const e1=(r.ergebnis||[])[0]; if(!e1||!e1.ok){ gfToast("Nicht zurückgeholt: "+(e1?.konflikt?"inzwischen geändert, bitte neu laden":(e1?.grund||"unbekannt")),{fehler:true}); return; }
-      zu(); const d=await gfApi("list"); TOPICS=d.topics||[]; render(); openPanel(t.id); gfToast("Zurück im Board"); }
-    catch(e){ gfToast("Nicht zurückgeholt: "+(e.message||"Verbindung"),{fehler:true}); } };
+  $("#arZurueck").onclick=async()=>{ let r;
+    try{ r=await gfApi("themen_sammeln",{ items:[{ id:t.id, aktion:"zuruecksetzen", wert, expect:{ updated_at:t.updated_at } }], by:gfWho() }); }
+    catch(e){ gfToast("Nicht zurückgeholt: "+(e.message||"Verbindung"),{fehler:true}); return; }
+    const e1=(r.ergebnis||[])[0]; if(!e1||!e1.ok){ gfToast("Nicht zurückgeholt: "+(e1?.konflikt?"inzwischen geändert, bitte neu laden":(e1?.grund||"unbekannt")),{fehler:true}); return; }
+    zu(); gfToast("Zurück im Board");
+    /* Gespeichert ist es; scheitert nur das Neuladen, nicht „Nicht zurückgeholt“ melden. */
+    try{ const d=await gfApi("list"); TOPICS=d.topics||[]; render(); openPanel(t.id); }
+    catch(e){ gfToast(`Zurück im Board, aber das Board lädt nicht neu (${e.message||"Verbindung"}). Bitte die Seite neu laden.`,{fehler:true}); } };
   setTimeout(()=>$("#arZurueck")?.focus(),40);
 }
 
@@ -464,20 +468,25 @@ function zeigeRueck(gut, schlecht, wort){
   const k=$("#selRueckK"); if(!k) return;
   /* Die Rückwege werden beim ersten Klick einmal berechnet und bleiben bis zur bestätigten Rücknahme; „Noch einmal?“ schickt
      dieselben. War die Rücknahme trotz fehlender Antwort schon durch, meldet die Konfliktprüfung (updated_at) die Themen als geändert. */
-  let items=null;
-  k.onclick=async()=>{ k.disabled=true; clearTimeout(SEL_T);
+  /* Während der Rücknahme sind Auswahl und Sammelaktionen gesperrt (SEL_LAEUFT); entfernt werden danach nur die eigenen Rückwege. */
+  let items=null, genutzt=null;
+  k.onclick=async()=>{ if(SEL_LAEUFT) return; k.disabled=true; clearTimeout(SEL_T);
     if(!items){
+      genutzt=RUECK.slice();
       /* Jüngste Aktion zuerst zurück; je Thema der Stand davor der ältesten Aktion, die es geändert hat. */
-      const alle=RUECK.slice().reverse().flat(), seen=new Map();
+      const alle=genutzt.slice().reverse().flat(), seen=new Map();
       for(const x of alle) seen.set(x.id, { vorher:x.vorher, nach:seen.has(x.id)?seen.get(x.id).nach:x.thema?.updated_at });
       items=[...seen.entries()].map(([id,v])=>({ id, aktion:"zuruecksetzen", wert:v.vorher, expect:{ updated_at:v.nach } }));
     }
     let r;
+    $("#selBar").setAttribute("aria-busy","true"); SEL_LAEUFT=true; renderSel();
     try{ r=await gfApi("themen_sammeln",{ items, by:gfWho() }); }
     catch(e){ k.disabled=false; h.querySelector("span").textContent=`Rückgängig hat nicht geklappt (${e.message||"Verbindung"}). Noch einmal?`; SEL_T=setTimeout(()=>{ h.classList.remove("show"); h.innerHTML=""; RUECK=[]; },30000); return; }
-    RUECK=[];
+    finally{ $("#selBar").removeAttribute("aria-busy"); SEL_LAEUFT=false; renderSel(); }
+    RUECK=RUECK.filter(x=>!genutzt.includes(x));
     const ok=(r.ergebnis||[]).filter(x=>x.ok).length, nein=(r.gesamt||0)-ok;
-    h.classList.remove("show"); h.innerHTML=""; gfToast(nein?`${ok} zurückgesetzt, ${nein} inzwischen geändert`:`${ok} ${ok===1?"Thema":"Themen"} zurückgesetzt`);
+    if(h.contains(k)){ h.classList.remove("show"); h.innerHTML=""; }
+    gfToast(nein?`${ok} zurückgesetzt, ${nein} inzwischen geändert`:`${ok} ${ok===1?"Thema":"Themen"} zurückgesetzt`);
     try{ const d=await gfApi("list"); TOPICS=d.topics||[]; render(); }
     catch(e){ gfToast(`Zurückgesetzt, aber das Board lädt nicht neu (${e.message||"Verbindung"}). Bitte die Seite neu laden.`,{fehler:true}); } };
 }

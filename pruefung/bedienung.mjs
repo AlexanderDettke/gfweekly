@@ -46,6 +46,8 @@ await ctx.route('**/functions/v1/**', async (route) => {
   let action = '', nutzlast = {};
   try { const j = JSON.parse(req.postData() || '{}'); action = j.action || ''; nutzlast = j.payload || {}; } catch (e) {}
   gesendet.push({ action, nutzlast });
+  if (action === 'themen_sammeln' && SCHALTER.sammelnAbbruch) { SCHALTER.sammelnAbbruch = false; ANTWORT.themen_sammeln(nutzlast); return route.abort('connectionreset'); }   // gespeichert, Antwort verloren
+  if (action === 'themen_sammeln' && SCHALTER.sammelnLangsam) { SCHALTER.sammelnLangsam = false; await new Promise(r => setTimeout(r, 800)); }
   if (action === 'verkauf_set' && VK_SCHALTER.setAbbruch) { VK_SCHALTER.setAbbruch = false; return route.abort('connectionreset'); }   // Antwort geht verloren
   const roh = ANTWORT[action] || FALLBACK;
   const body = typeof roh === 'function' ? roh(nutzlast) : roh;
@@ -384,8 +386,16 @@ console.log('\n== Board aufgeräumt und Mehrfachauswahl (23.10.2026) ==');
   const se = letzte('themen_sammeln');
   pruefe('Erledigt schickt beide Themen mit gesehenem Stand, als Alex', se && se.nutzlast.aktion === 'erledigt' && se.nutzlast.items.length === 2 && se.nutzlast.items.every(x => x.expect && x.expect.board_lane && x.expect.updated_at) && se.nutzlast.by === 'Alex', JSON.stringify(se && se.nutzlast).slice(0, 200));
   pruefe('danach: Karten in Erledigt, Hinweis „2 Themen erledigt · Rückgängig“', await b.locator('.lane-zu').count() === 1 && /Erledigt\s*3/.test(await b.locator('.lane-zu').innerText()) && /2 Themen erledigt/.test(await b.locator('#selRueck').innerText()));
+  /* Rücknahme gespeichert, Antwort verloren: der zweite Versuch schickt dieselben Rückwege, die Konfliktprüfung verhindert doppeltes Anwenden. */
+  SCHALTER.sammelnAbbruch = true; erwarteterFehler = true;
+  await b.locator('#selRueckK').click(); await b.waitForTimeout(500);
+  erwarteterFehler = false;
+  const ab = letzte('themen_sammeln');
+  pruefe('Antwort der Rücknahme verloren: Hinweis mit „Noch einmal?“', /Noch einmal/.test(await b.locator('#selRueck').innerText()) && THEMEN.find(x => x.id === 't1').board_lane === 'zu_besprechen', await b.locator('#selRueck').innerText());
+  const t1Stand = THEMEN.find(x => x.id === 't1').updated_at;
   await b.locator('#selRueckK').click(); await b.waitForTimeout(500);
   const ru = letzte('themen_sammeln');
+  pruefe('zweiter Versuch: dieselben Rückwege, Konflikt gemeldet, nichts doppelt angewandt', JSON.stringify(ru.nutzlast.items) === JSON.stringify(ab.nutzlast.items) && THEMEN.find(x => x.id === 't1').updated_at === t1Stand && /0 zurückgesetzt, 2 inzwischen geändert/.test(await b.locator('#toast, .toast').allInnerTexts().then(x => x.join(' '))), await b.locator('#toast, .toast').allInnerTexts().then(x => x.join(' | ')));
   pruefe('Rückgängig setzt beide mit dem Stand davor zurück', ru && ru.nutzlast.items.length === 2 && ru.nutzlast.items.every(x => x.aktion === 'zuruecksetzen' && x.wert && x.wert.board_lane === 'zu_besprechen') && await b.locator('.lane[data-col="zu_besprechen"] .bcard[data-id="t1"]').count() === 1, JSON.stringify(ru && ru.nutzlast).slice(0, 200));
   /* Verschieben und Weitergeben über die Menüs, Alle in einer Spalte */
   await b.locator('[data-sel-alle="in_klaerung"]').click(); await b.waitForTimeout(100);
@@ -412,7 +422,12 @@ console.log('\n== Board aufgeräumt und Mehrfachauswahl (23.10.2026) ==');
   erwarteterFehler = false;
   const st = letzte('themen_sammeln');
   pruefe('Störung beim Rückgängig: Hinweis bleibt mit „Noch einmal?“', await b.locator('#selRueck.show #selRueckK').isEnabled() && /Noch einmal/.test(await b.locator('#selRueck').innerText()), await b.locator('#selRueck').innerText());
-  await b.locator('#selRueckK').click(); await b.waitForTimeout(500);
+  /* Während die Rücknahme läuft, ist die Auswahl gesperrt (sonst löschte ihre Antwort den Rückweg einer neuen Aktion). */
+  SCHALTER.sammelnLangsam = true;
+  await b.locator('#selRueckK').click(); await b.waitForTimeout(250);
+  await b.locator('.bcard[data-id="t5"]').click(); await b.waitForTimeout(80);
+  pruefe('während der Rücknahme: Auswahl gesperrt, Leiste beschäftigt', await b.locator('.bcard[data-id="t5"].gewaehlt').count() === 0 && await b.locator('#selBar[aria-busy="true"]').count() === 1);
+  await b.waitForTimeout(900);
   const zw = letzte('themen_sammeln');
   pruefe('zweiter Versuch schickt dieselben Rückwege, nicht leer', st && zw && zw.nutzlast.items.length >= 2 && JSON.stringify(zw.nutzlast.items) === JSON.stringify(st.nutzlast.items), JSON.stringify(zw && zw.nutzlast.items.length));
   pruefe('Rückgängig setzt beide Themen auf den Stand vor der ersten Aktion', zw && zw.nutzlast.items.length >= 2 && zw.nutzlast.items.every(x => x.aktion === 'zuruecksetzen')
@@ -443,6 +458,15 @@ console.log('\n== Board aufgeräumt und Mehrfachauswahl (23.10.2026) ==');
   await a.locator('#arZurueck').click(); await a.waitForTimeout(500);
   const za = letzte('themen_sammeln');
   pruefe('„Wieder öffnen“ holt es offen ins Board zurück', za && za.nutzlast.items[0].aktion === 'zuruecksetzen' && za.nutzlast.items[0].wert.archived === false && za.nutzlast.items[0].wert.board_lane === 'zu_besprechen' && await a.locator('#panel.open').count() === 1, JSON.stringify(za && za.nutzlast).slice(0, 200));
+  await a.close();
+  /* Gespeichert, nur das Neuladen scheitert: nicht „Nicht zurückgeholt“ melden (Befund Review 25.10.2026). */
+  THEMEN.push({ id:'t9', title:'Zweites Archivthema', context:'', priority:'mittel', status:'erledigt', kind:'einmalig', board_lane:'erledigt', lane_order:3, owner:'Alex', created_at:alt, updated_at:alt, archived:true, archiv_grund:'erledigt-14' });
+  a = await seite('/board.html?topic=t9'); await a.waitForTimeout(600);
+  SCHALTER.boardListeFehler = true; erwarteterFehler = true;
+  await a.locator('#arZurueck').click(); await a.waitForTimeout(500);
+  erwarteterFehler = false;
+  const ladeText = await a.locator('#toast').innerText().catch(() => '');
+  pruefe('Wieder öffnen gespeichert, Neuladen scheitert: Hinweis „Seite neu laden“, nicht „Nicht zurückgeholt“', THEMEN.find(x => x.id === 't9').archived === false && /neu laden/.test(ladeText) && !/Nicht zurückgeholt/.test(ladeText) && !(await a.locator('#tidyModal.open').count()), ladeText);
   await a.close();
   const h = await ctx.newPage(); await h.setViewportSize({ width:390, height:844 }); h.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
   await h.goto(BASE + '/board.html'); await h.waitForTimeout(700);

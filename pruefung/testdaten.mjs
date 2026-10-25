@@ -238,7 +238,7 @@ export const ANTWORT = {
     { id:'a', name:'Alex', email:'alex@example.org', role:'GF', team:'GF', active:true, assignable:true, sort_order:1 },
     { id:'l', name:'Lea', email:'lea@example.org', role:'GF', team:'GF', active:true, assignable:true, sort_order:2 },
     { id:'m', name:'Merle', email:'merle@example.org', role:'Büro', team:'Team', active:true, assignable:true, sort_order:3 } ] },
-  list: () => ({ topics: THEMEN.filter(t => !t.archived) }),
+  list: () => { if (SCHALTER.boardListeFehler) { SCHALTER.boardListeFehler = false; return { __status:500, error:'Verbindung unterbrochen' }; } return { topics: THEMEN.filter(t => !t.archived) }; },
   topic_get: (p) => { const t = THEMEN.find(x => x.id === p.id); return t ? { topic: t } : { __status:404, error:'Thema gibt es nicht' }; },
   /* 23.10.2026 · Mehrfachauswahl wie hh_themen_sammeln: je Thema ok oder Konflikt, Stand davor, keine Taler. */
   themen_sammeln: (p) => { if (SCHALTER.sammelnFehler) { SCHALTER.sammelnFehler = false; return { __status:500, error:'Verbindung unterbrochen' }; }
@@ -421,7 +421,7 @@ const vhVerlauf = [
   { id:'e4', vorhaben_id:'vh-xceed', happened_at:zeit(-9), art:'entscheidung', wer:'Alex und Lea', text:'XCeed wird Ticketanbieter.', tag:'Entscheidung', status:'bestaetigt', source_ref:'seed:2', source_url:null, created_at:zeit(-9) },
 ];
 /* Schalter für Fehlerwege in den Bedienproben. */
-export const SCHALTER = { rueckkehrFehler:false, wiederFehler:false, abschlussKonflikt:false, vhListeFehler:false, newsFehler:false, sammelnFehler:false };
+export const SCHALTER = { rueckkehrFehler:false, wiederFehler:false, abschlussKonflikt:false, vhListeFehler:false, newsFehler:false, sammelnFehler:false, sammelnAbbruch:false, sammelnLangsam:false, boardListeFehler:false };
 export const VH_ANTWORT = {
   vorhaben_list: (p) => SCHALTER.vhListeFehler && !(p && p.status) ? { __status:500, error:'Verbindung unterbrochen' } : p && p.status === 'erledigt'
     ? ({ stand:zeit(0), heute, vorhaben:VORHABEN.filter(v => v.status === 'erledigt').map(v => ({ ...v, erledigt_am:zeit(-2), ergebnis:v.slug === 'saal-alt' ? 'Rechnung bezahlt, Schlüssel zurück' : null })) })
