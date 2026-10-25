@@ -1,0 +1,17 @@
+# Antwort auf Codex-Runde 2 · Stufe 2 · Ein Behälter
+
+Geprüfter Stand: `30636f2`. Befunde in `STUFE2-runde-2.md` (2 schwer, 6 mittel). Korrekturen in Migration
+`20261026010000_stufe2_runde2.sql` (angewendet am 26.10.2026) und im Commit „fix(stufe2): Runde 2“.
+
+| Nr | Schwere | Bewertung | Was geändert ist |
+| --- | --- | --- | --- |
+| 1 | schwer | bestätigt | `handover_set` wies die Korbzeile nach dem Abschließen des Vorhabens mit 409 ab (Sperre vom 21.10. für Zeilen abgeschlossener Vorhaben). Die Sperre gilt jetzt nicht für `status erledigt`, denn genau dieser Zustand ist das Ziel; Reihenfolge bleibt Vorhaben, dann Zeile. Wirkungsprobe: beide Zustände zurückgelesen. Eine gemeinsame Datenbanktransaktion hätte `hh_vorhaben_abschliessen` (Rückgängig-Daten, Themen) in `hh_handover_set` verschränkt; der Gewinn wäre klein, weil das Abschließen zuerst läuft und ein Fehler der Zeile sichtbar gemeldet wird. |
+| 2 | schwer | bestätigt | Leas laufende Abwesenheit hat 14 bestätigte Themenzeilen, 10 Partnerzeilen und 11 unbestätigte Themenvorschläge. `hh_absence_end_s2` schreibt für bestätigte Themen- und Kandidatenzeilen den Verlaufseintrag an das Vorhaben der Quelle (die Themen sind seit der Auflösung Punkte dieser Vorhaben); bestätigte Zeilen ohne Vorhaben (Partner, Termin, Meilenstein) und alle nie bestätigten Vorschläge stehen namentlich im Übergabeprotokoll (`gfweekly_handover_log`), Antwort nennt `liegen_geblieben`, `ohne_vorhaben`, `entfallen`, `protokoll`. Ein Abschluss „erst nach gesicherter Übernahme“ würde die Rückkehr blockieren; das Protokoll macht den Rest nachvollziehbar, ohne Akten zu fluten. |
+| 3 | mittel | bestätigt | `rueckkehr_lage` lädt alle Vorhaben; „Entschieden“ und „Bewegt“ zeigen auch abgeschlossene, „Wartet“ und „Nach Menschen“ nur aktive oder pausierte. |
+| 4 | mittel | bestätigt | `hh_lauf_rueckgaengig` verlangt einen bestätigten Eintrag, dessen Zeitpunkt zur aktuellen Erledigung des Punkts gehört (± 2 Minuten um `erledigt_at`); sonst `PT409`. |
+| 5 | mittel | bestätigt (Lesart) | Verfall nur für Vorschläge automatischer Urheber (`created_by` nicht Alex, Lea, kompass). Die alten Vorschläge des Abgleichs (`abgleich-alex`, `cowork`, `kompass-chat-pilot`) sind Vorschläge des Laufs im Sinn von Abschnitt 6 und der Stufe-1-Regel E3 („älter als 14 Tage ohne Antwort verfallen“); sie zählen seit dem 25.10. unter `lauf_bilanz` als `verfallen` statt still liegen zu bleiben. Betroffen am 26.10.: 40 Einträge. |
+| 6 | mittel | bestätigt | Spalte `hh_vorhaben_verlauf.status_at` per Trigger bei jedem Statuswechsel; die Bilanz zählt Verwerfen und Verfall in der Woche von `status_at`, Entstehung in der Woche des Eintrags. |
+| 7 | mittel | bestätigt | „Nach Menschen“ zeigt alle Einträge (ab dem 13. eingeklappt) und an Entscheidungen „Entschieden“ (Ergebnis in einem Satz über ein Eingabefeld) und „Abgeben“ (alex, lea, team) über die Stufe-1-Aktionen; danach lädt das Lagebild neu. Entschiedene Einträge bleiben in den Phasenblöcken, Abschnitt 5.2 nennt für die Personensicht Punkte und offene Entscheidungen. Bedienprobe für Abgeben. |
+| 8 | mittel | bestätigt | Wirkungsprobe mit Testkandidat (gate_frist nur Vorschlag, Korb, Zuordnen) und mit dem vollständigen Erledigt-Weg einer Vorhaben-Zeile über eine zweite Testabwesenheit (Vorhaben erledigt, Punkte mit, Korbzeile erledigt, beide Zustände gelesen); Übergabeprotokoll beim Ende geprüft. |
+
+Empfehlung 2 (`docs/STAND-STUFE-2.md`): liegt seit diesem Commit vor; Push-Stand wird nach dem Push nachgetragen.

@@ -106,7 +106,11 @@ function renderPhasen(){
 }
 function renderMenschen(){
   const M=LAGE.nach_menschen||[];
-  $("#menschen").innerHTML=M.length?M.map(m=>`<div class="rk2-mensch"><h3>${gfEsc(m.name)} <span class="fd-n">${m.eintraege.length}</span></h3><div class="rk2-cols"><div class="rk2-col" style="grid-column:1/-1"><ul>${m.eintraege.slice(0,12).map(x=>`<li><b>${gfEsc(x.text)}</b><small>${gfEsc(EN_ART[x.art]||x.art)}${x.vorhaben?` · <a href="${akte(x.slug)}">${gfEsc(x.vorhaben)}</a>`:""} · ${gfEsc(GF_PHASE[x.phase]||"")} ${x.frist?gfFrist(x.frist):""}</small></li>`).join("")}${m.eintraege.length>12?`<li><small>und ${m.eintraege.length-12} weitere in den Akten</small></li>`:""}</ul></div></div></div>`).join("")
+  /* Runde 2, Befund 7: alle Einträge (ab dem 13. eingeklappt), Entscheidungen mit „Entschieden“ und „Abgeben“ wie in der Liste. */
+  const zeileMensch=x=>{
+    const akt=x.art==="entscheidung"&&(x.status==="offen"||x.status==="vertagt")?`<span class="rk2-akt"><button type="button" class="btn btn-sm btn-primary" data-men-ent="${x.id}">Entschieden</button><button type="button" class="btn btn-sm" data-men-abg="${x.id}">Abgeben</button></span>`:"";
+    return `<li><b>${gfEsc(x.text)}</b><small>${gfEsc(EN_ART[x.art]||x.art)}${x.status&&x.status!=="offen"?` · ${gfEsc(x.status==="abgegeben"?"abgegeben an "+(x.abgegeben_an||""):x.status)}`:""}${x.vorhaben?` · <a href="${akte(x.slug)}">${gfEsc(x.vorhaben)}</a>`:""} · ${gfEsc(GF_PHASE[x.phase]||"")} ${x.frist?gfFrist(x.frist):""}</small>${akt}</li>`; };
+  $("#menschen").innerHTML=M.length?M.map(m=>`<div class="rk2-mensch"><h3>${gfEsc(m.name)} <span class="fd-n">${m.eintraege.length}</span></h3><div class="rk2-cols"><div class="rk2-col" style="grid-column:1/-1"><ul>${m.eintraege.slice(0,12).map(zeileMensch).join("")}</ul>${m.eintraege.length>12?`<details class="rk2-mehr"><summary>${m.eintraege.length-12} weitere</summary><ul>${m.eintraege.slice(12).map(zeileMensch).join("")}</ul></details>`:""}</div></div></div>`).join("")
     : `<p class="fd-empty">Keine offenen Punkte.</p>`;
 }
 function renderAll(){ renderKopf(); renderBrief(); renderPhasen(); renderMenschen(); }
@@ -145,6 +149,19 @@ gfGate(async()=>{
   gfMountHero("ankunft","Rückkehr","Was in deiner Abwesenheit entschieden wurde, was sich bewegt hat und was auf dich wartet: nach Launch, Formatpartner und Systembau, und nach Menschen.",{compact:true});
   document.addEventListener("gf-who",()=>load());
   await load();
+});
+
+/* Nach Menschen: Entschieden (Ergebnis in einem Satz) und Abgeben (alex, lea, team) wie in der Liste; danach Lagebild neu laden. */
+$("#menschen").addEventListener("click", async e=>{
+  const be=e.target.closest("[data-men-ent]"), ba=e.target.closest("[data-men-abg]"); if(!be&&!ba) return;
+  const knopf=be||ba; const id=knopf.dataset.menEnt||knopf.dataset.menAbg;
+  if(be){ const erg=(prompt("Ergebnis in einem Satz:")||"").trim(); if(!erg) return; knopf.disabled=true;
+    try{ await gfApi("entscheidung_entscheiden",{ id, ergebnis:erg, by:gfWho() }); gfToast("Entschieden"); await load(); }
+    catch(err){ knopf.disabled=false; gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); } return; }
+  const an=(prompt("Abgeben an: alex, lea oder team","lea")||"").trim().toLowerCase(); if(!["alex","lea","team"].includes(an)){ if(an) gfToast("Bitte alex, lea oder team."); return; }
+  knopf.disabled=true;
+  try{ await gfApi("entscheidung_abgeben",{ id, an, by:gfWho() }); gfToast("Abgegeben an "+an); await load(); }
+  catch(err){ knopf.disabled=false; gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); }
 });
 </script>
 </body>

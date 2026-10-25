@@ -39,7 +39,7 @@ else {
   const URL_FN = 'https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/gfweekly';
   const api = async (action, payload) => { const r = await fetch(URL_FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, password: PW, payload }) }); let d = null; try { d = await r.json(); } catch { d = null; } return { status: r.status, d }; };
   const M = 'Stufe 2 Probe (Test)';
-  const K = { vorhaben: null, punktA: null, punktB: null, thema: null, absence: null };
+  const K = { vorhaben: null, punktA: null, punktB: null, thema: null, kandidat: null, absence: null, absence2: null };
   const sql = (text) => {
     const leer = fs.mkdtempSync(path.join(os.tmpdir(), 's2-probe-')); const f = path.join(leer, 'q.sql'); fs.writeFileSync(f, text);
     const r = spawnSync('npx', ['--yes', 'supabase', 'db', 'query', '--linked', '--project-ref', 'bnfmupnmqyrcltrphfak', '-f', f], { cwd: leer, stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' });
@@ -48,13 +48,14 @@ else {
   };
   const aufraeumen = () => {
     const t = [];
-    const q = [K.punktA, K.punktB, K.thema].filter(Boolean).map(i => `'${i}'`).join(',');
+    const q = [K.punktA, K.punktB, K.thema, K.kandidat].filter(Boolean).map(i => `'${i}'`).join(',');
     if (q) t.push(`delete from public.hh_entscheidungen where quelle_id in (${q});`);
-    if (K.absence) { t.push(`delete from public.gfweekly_handover where absence_id = '${K.absence}';`); t.push(`delete from public.gfweekly_handover_log where absence_id = '${K.absence}';`); t.push(`delete from public.gfweekly_absences where id = '${K.absence}' and test = true;`); }
+    for (const ab of [K.absence, K.absence2].filter(Boolean)) { t.push(`delete from public.gfweekly_handover where absence_id = '${ab}';`); t.push(`delete from public.gfweekly_handover_log where absence_id = '${ab}';`); t.push(`delete from public.gfweekly_absences where id = '${ab}' and test = true;`); }
+    if (K.kandidat) t.push(`delete from public.gfweekly_news where id = '${K.kandidat}' and title like '%(Test)%';`);
     if (K.vorhaben) { t.push(`delete from public.hh_vorhaben_verlauf where vorhaben_id = '${K.vorhaben}';`); t.push(`delete from public.hh_vorhaben_punkte where vorhaben_id = '${K.vorhaben}';`); t.push(`delete from public.hh_vorhaben where id = '${K.vorhaben}' and title like '%(Test)%';`); }
     if (K.thema) { t.push(`delete from public.gfweekly_decisions where topic_id = '${K.thema}';`); t.push(`delete from public.gfweekly_topics where id = '${K.thema}' and title like '%(Test)%';`); }
     if (!t.length) return { rows: [] };
-    t.push(`select (select count(*) from public.hh_entscheidungen where quelle_id in (${q || "'00000000-0000-0000-0000-000000000000'"})) as en, (select count(*) from public.hh_vorhaben where id ${K.vorhaben ? `= '${K.vorhaben}'` : 'is null'}) as vh, (select count(*) from public.gfweekly_topics where id ${K.thema ? `= '${K.thema}'` : 'is null'}) as th, (select count(*) from public.gfweekly_absences where id ${K.absence ? `= '${K.absence}'` : 'is null'}) as ab;`);
+    t.push(`select (select count(*) from public.hh_entscheidungen where quelle_id in (${q || "'00000000-0000-0000-0000-000000000000'"})) as en, (select count(*) from public.hh_vorhaben where id ${K.vorhaben ? `= '${K.vorhaben}'` : 'is null'}) as vh, (select count(*) from public.gfweekly_topics where id ${K.thema ? `= '${K.thema}'` : 'is null'}) as th, (select count(*) from public.gfweekly_absences where id in (${[K.absence, K.absence2].filter(Boolean).map(i => `'${i}'`).join(',') || "'00000000-0000-0000-0000-000000000000'"})) as ab, (select count(*) from public.gfweekly_news where id ${K.kandidat ? `= '${K.kandidat}'` : 'is null'}) as kd;`);
     return sql(t.join('\n'));
   };
   const heute = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Berlin' });
@@ -82,6 +83,19 @@ else {
     const l1 = await api('entscheidungen_list', { status: 'alle' });
     const eA = meine(l1).find(e => e.quelle_id === K.punktA), eT = meine(l1).find(e => e.quelle_id === K.thema);
     pruefe('Thema: Frist leer, frist_vorschlag aus gate_frist, nicht reif, Zustand ohne; Punkt: Vorhaben mit Phase launch und Fokus', eT && eT.frist === null && eT.frist_vorschlag === plus(4) && !eT.reif && eT.zustand === 'ohne' && eA && eA.vorhaben?.phase === 'launch' && eA.vorhaben?.fokus === true, JSON.stringify([eT, eA]).slice(0, 400));
+    /* Testkandidat: nur noch ein Vorschlag an ein Vorhaben; gate_frist ist Vorschlag, Zuordnung über den Korb (Runde 2, Befund 8) */
+    const kref = 'test:stufe2k:' + Date.now();
+    await api('news_add_many', { items: [{ kind: 'kandidat', title: M + ' Kandidat', body: 'Probe', source: 'notiz', source_ref: kref, who: 'Alex' }] });
+    const kl0 = await api('news_list', { kinds: ['kandidat'], statuses: ['neu'], limit: 500 });
+    K.kandidat = (kl0.d?.items || []).find(x => x.source_ref === kref)?.id || null;
+    const kg = K.kandidat ? await api('gate_set', { kind: 'kandidat', id: K.kandidat, gate: 'gf', frist: plus(6), by: 'Alex' }) : { status: 0 };
+    const lk = await api('entscheidungen_list', { status: 'alle' });
+    const eK = (lk.d?.eintraege || []).find(e => e.quelle_id === K.kandidat);
+    const kb1 = await api('korb_list', {});
+    const kz = await api('korb_set', { kind: 'kandidat', id: K.kandidat, aktion: 'zuordnen', vorhaben_id: K.vorhaben, by: 'Lea' });
+    const kb2 = await api('korb_list', {});
+    const kq = sql(`select vorhaben_id, status from public.gfweekly_news where id = '${K.kandidat}';`);
+    pruefe('Kandidat: gate_frist nur Vorschlag (Zustand ohne, nicht reif), im Korb; Zuordnen setzt das Vorhaben und nimmt ihn aus dem Korb', !!K.kandidat && kg.status === 200 && eK && eK.frist === null && eK.frist_vorschlag === plus(6) && !eK.reif && (kb1.d?.eintraege || []).some(x => x.id === K.kandidat) && kz.status === 200 && !(kb2.d?.eintraege || []).some(x => x.id === K.kandidat) && kq.rows?.[0]?.vorhaben_id === K.vorhaben, JSON.stringify([kg.status, eK, kz.d, kq.rows]).slice(0, 400));
     /* Vorschlag übernehmen = Frist von Hand */
     const fu = await api('entscheidung_set', { id: eT.id, frist: eT.frist_vorschlag, expect_updated_at: eT.updated_at, by: 'Alex' });
     pruefe('Vorschlag übernehmen setzt Frist mit Quelle hand und macht reif', fu.status === 200 && fu.d.entscheidung.frist === plus(4) && fu.d.entscheidung.frist_quelle === 'hand', JSON.stringify(fu.d).slice(0, 200));
@@ -156,13 +170,26 @@ else {
     pruefe('Rückkehr-Lagebild: vier Phasen in fester Reihenfolge, nach Menschen, Brief schreiben und lesen, unbekannte Abwesenheit 404', rl.status === 200 && (rl.d.phasen || []).map(p => p.phase).join(',') === 'launch,formatpartner,systembau,sonstiges' && Array.isArray(rl.d.nach_menschen) && rb.status === 200 && rl2.d?.brief === 'Probe-Brief (Test)' && rl404.status === 404, JSON.stringify([rl.status, rl.d?.zaehler, rb.d, rl404.status]).slice(0, 300));
     const ae = K.absence ? await api('absence_end', { id: K.absence, by: 'Alex' }) : { status: 0 };
     const aq = K.absence ? sql(`select (select count(*) from public.hh_vorhaben_verlauf where source_ref = 'abwesenheit:${K.absence}:liegen:${meineZeile?.id}') as verlauf, (select count(*) from public.gfweekly_handover where absence_id = '${K.absence}' and status in ('vorschlag','bestaetigt')) as offen, (select count(*) from public.hh_vorhaben_verlauf where source_ref like 'abwesenheit:${K.absence}:liegen:%') as alle;`) : {};
-    pruefe('Willkommen zurück: beendet, genau die bestätigte Testzeile liegen geblieben (ein Verlaufseintrag), unbestätigte Vorschläge entfallen ohne Eintrag, keine offene Korbzeile mehr', ae.status === 200 && ae.d.liegen_geblieben === 1 && Number(aq.rows?.[0]?.verlauf) === 1 && Number(aq.rows[0].alle) === 1 && Number(aq.rows[0].offen) === 0 && ae.d.absence?.status === 'beendet', JSON.stringify([ae.d?.liegen_geblieben, ae.d?.entfallen, aq.rows, ae.d?.error]).slice(0, 300));
+    const alog = K.absence ? sql(`select count(*) as n from public.gfweekly_handover_log where absence_id = '${K.absence}' and text like 'Beim Ende entfallen, nie bestätigt%';`) : {};
+    pruefe('Willkommen zurück: beendet, genau die bestätigte Testzeile liegen geblieben (ein Verlaufseintrag), unbestätigte Vorschläge entfallen und stehen namentlich im Übergabeprotokoll, keine offene Korbzeile mehr', ae.status === 200 && ae.d.liegen_geblieben === 1 && Number(aq.rows?.[0]?.verlauf) === 1 && Number(aq.rows[0].alle) === 1 && Number(aq.rows[0].offen) === 0 && ae.d.absence?.status === 'beendet' && ((ae.d.entfallen || 0) === 0 || Number(alog.rows?.[0]?.n) === 1), JSON.stringify([ae.d?.liegen_geblieben, ae.d?.entfallen, ae.d?.protokoll, aq.rows, alog.rows, ae.d?.error]).slice(0, 300));
+    /* Übergabe „Erledigt“ an einer Vorhaben-Zeile gegen das echte Backend: Vorhaben abschließen, dann Korbzeile erledigt (Runde 2, Befund 1) */
+    const ab2 = await api('absence_set', { person: 'Lea', von: heute, bis: plus(5), art: 'geplant', kontakt: 'wochenbrief', test: true, note: M + ' zwei', by: 'Alex' });
+    K.absence2 = ab2.d?.absence?.id || null;
+    if (K.absence2) await api('handover_build', { absence_id: K.absence2 });
+    const hl2 = K.absence2 ? await api('handover_list', { absence_id: K.absence2 }) : { status: 0, d: {} };
+    const zeile2 = (hl2.d?.items || []).find(z => z.ref_id === K.vorhaben);
+    const va = await api('vorhaben_abschliessen', { id: K.vorhaben, by: 'Alex', punkte_mit: true });
+    const he = zeile2 ? await api('handover_set', { id: zeile2.id, status: 'erledigt', by: 'Alex' }) : { status: 0 };
+    const eq = sql(`select (select status from public.hh_vorhaben where id = '${K.vorhaben}') as vstatus, (select status from public.gfweekly_handover where id = '${zeile2?.id}') as hstatus, (select count(*) from public.hh_vorhaben_punkte where vorhaben_id = '${K.vorhaben}' and erledigt = false) as offen;`);
+    pruefe('Erledigt an der Vorhaben-Zeile: Vorhaben erledigt (Punkte mit), Korbzeile erledigt, beide Zustände zurückgelesen', !!zeile2 && va.status === 200 && he.status === 200 && eq.rows?.[0]?.vstatus === 'erledigt' && eq.rows[0].hstatus === 'erledigt' && Number(eq.rows[0].offen) === 0, JSON.stringify([!!zeile2, va.status, he.status, he.d?.error, eq.rows]).slice(0, 300));
+    const ae2 = K.absence2 ? await api('absence_end', { id: K.absence2, by: 'Alex' }) : { status: 0 };
+    pruefe('Zweite Abwesenheit beendet: nichts liegen geblieben', ae2.status === 200 && (ae2.d.liegen_geblieben || 0) === 0, JSON.stringify([ae2.d?.liegen_geblieben, ae2.d?.entfallen, ae2.d?.error]).slice(0, 200));
   } catch (e) {
     fehler++; console.log('  FEHLT  Ausnahme in der Wirkungsprobe · ' + (e.stack || e.message).slice(0, 400));
   } finally {
     const r = aufraeumen();
     const z = r.rows?.[0];
-    pruefe('Aufgeräumt: eigene Entscheidungen, Vorhaben, Punkte, Verlauf, Thema, Abwesenheit und Korb gelöscht', !!z && Number(z.en) === 0 && Number(z.vh) === 0 && Number(z.th) === 0 && Number(z.ab) === 0, JSON.stringify(r).slice(0, 300));
+    pruefe('Aufgeräumt: eigene Entscheidungen, Vorhaben, Punkte, Verlauf, Thema, Kandidat, Abwesenheiten und Körbe gelöscht', !!z && Number(z.en) === 0 && Number(z.vh) === 0 && Number(z.th) === 0 && Number(z.ab) === 0 && Number(z.kd) === 0, JSON.stringify(r).slice(0, 300));
   }
 }
 console.log(`\n${ok} ok, ${fehler} Abweichungen`);

@@ -1812,6 +1812,8 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 input:not([type=hidden]):focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--focus)!important;outline-offset:1px}
 .stepper:focus-within{outline:2px solid var(--focus);outline-offset:1px}
 .stepper input:focus-visible{outline:none!important}
+.rk2-akt{display:inline-flex;gap:var(--s-8);margin-top:var(--s-4)}
+.rk2-mehr>summary{cursor:pointer;min-height:var(--ziel-min);display:flex;align-items:center;color:var(--text-2)}
 /* Stufe 2: der Ring sitzt am Suchfeld selbst, nicht am Rahmen (Tastaturprobe misst das fokussierte Element). */
 .search:focus-within{outline:none}
 .search input:focus-visible{outline:none!important;box-shadow:var(--ring);border-radius:var(--radius-s)}

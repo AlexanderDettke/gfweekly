@@ -2007,7 +2007,7 @@ Deno.serve(async (req: Request) => {
         if (!it.id) { misslungen.push({ id:null, titel:null, grund:'ohne id' }); continue; }
         /* 21.10.2026: Korbzeilen zu erledigten oder archivierten Vorhaben bewegen keinen Ball mehr. */
         const { data: hz } = await admin.from('gfweekly_handover').select('kind,ref_id,title').eq('id', it.id).maybeSingle();
-        if (hz && hz.kind === 'vorhaben' && (await vhAbgeschlossen([hz])).size) {
+        if (hz && hz.kind === 'vorhaben' && it.status !== 'erledigt' && (await vhAbgeschlossen([hz])).size) {   // Stufe 2, Runde 2 Befund 1: „erledigt“ darf die Zeile eines abgeschlossenen Vorhabens schließen
           const grund = 'Das Vorhaben ist inzwischen abgeschlossen, bitte neu laden';
           if (action === 'handover_set') return json({ error:'Übergabe nicht gespeichert: ' + grund }, 409);
           misslungen.push({ id: it.id, titel: hz.title ?? null, grund, konflikt: true }); continue;
