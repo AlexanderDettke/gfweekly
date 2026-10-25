@@ -52,7 +52,7 @@ else {
   const URL_FN = 'https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/gfweekly';
   const api = async (action, payload) => { const r = await fetch(URL_FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, password: PW, payload }) }); let d = null; try { d = await r.json(); } catch (e) {} return { status: r.status, d }; };
   const M = 'Stufe 1 Probe (Test)';
-  const K = { vorhaben: null, punkt: null, thema: null, kandidat: null, decisionIds: [] };
+  const K = { vorhaben: null, punkt: null, thema: null, kandidat: null, session: null };
   const sql = (text) => {
     const leer = fs.mkdtempSync(path.join(os.tmpdir(), 'en-probe-')); const f = path.join(leer, 'q.sql'); fs.writeFileSync(f, text);
     const r = spawnSync('npx', ['--yes', 'supabase', 'db', 'query', '--linked', '--project-ref', 'bnfmupnmqyrcltrphfak', '-f', f], { cwd: leer, stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' });
@@ -64,6 +64,7 @@ else {
     const t = [];
     if (ids) t.push(`delete from public.hh_entscheidungen where quelle_id in (${ids});`);
     if (K.thema) t.push(`delete from public.gfweekly_decisions where topic_id = '${K.thema}';`);
+    if (K.session) t.push(`delete from public.gfweekly_sessions where id = '${K.session}' and title like '%(Test)%';`);
     if (K.vorhaben) { t.push(`delete from public.hh_vorhaben_verlauf where vorhaben_id = '${K.vorhaben}';`); t.push(`delete from public.hh_vorhaben_punkte where vorhaben_id = '${K.vorhaben}';`); t.push(`delete from public.hh_vorhaben where id = '${K.vorhaben}' and title like '%(Test)%';`); }
     if (K.thema) t.push(`delete from public.gfweekly_topics where id = '${K.thema}' and title like '%(Test)%';`);
     if (K.kandidat) t.push(`delete from public.gfweekly_news where id = '${K.kandidat}' and title like '%(Test)%';`);
@@ -93,10 +94,9 @@ else {
     K.kandidat = (kl.d?.items || []).find(x => x.source_ref === ref)?.id || null;
     pruefe('Testkandidat angelegt (ohne Vorhaben, für den Korb)', kd.status === 200 && !!K.kandidat, JSON.stringify(kd.d).slice(0, 160));
     /* Sammeln idempotent */
-    const l1 = await api('entscheidungen_list', { status: 'alle' });
-    const l2 = await api('entscheidungen_list', { status: 'alle' });
+    const [l1, l2] = await Promise.all([api('entscheidungen_list', { status: 'alle' }), api('entscheidungen_list', { status: 'alle' })]);   // gleichzeitig: ON CONFLICT (Runde 1, Befund 5)
     const meine = (l) => (l.d?.eintraege || []).filter(e => [K.punkt, K.thema].includes(e.quelle_id));
-    pruefe('sammeln ist idempotent: zweimal gleiche Gesamtzahl, Testpunkt und Testthema je einmal', l1.status === 200 && l1.d.gesamt === l2.d.gesamt && meine(l1).length === 2 && meine(l2).length === 2 && l2.d.sync.eingefuegt === 0, `${l1.d?.gesamt} / ${l2.d?.gesamt}, ${meine(l2).length}`);
+    pruefe('sammeln ist idempotent, auch gleichzeitig: beide Aufrufe 200, gleiche Gesamtzahl, Testpunkt und Testthema je einmal', l1.status === 200 && l2.status === 200 && l1.d.gesamt === l2.d.gesamt && meine(l1).length === 2 && meine(l2).length === 2, `${l1.status}/${l2.status} ${l1.d?.gesamt} / ${l2.d?.gesamt}, ${meine(l2).length}`);
     const eP = meine(l2).find(e => e.quelle_art === 'punkt'), eT = meine(l2).find(e => e.quelle_art === 'thema');
     pruefe('Punkt: Frage = Titel, Frist aus dem Punkt, Vorhaben aufgelöst, Link zur Akte', eP && eP.frage === M + ' Punkt' && eP.frist === plus(3) && eP.frist_quelle === 'punkt' && eP.vorhaben?.id === K.vorhaben && /^vorhaben\.html\?v=/.test(eP.herkunft?.url || ''), JSON.stringify(eP).slice(0, 300));
     pruefe('Thema: Frist aus gate_frist, Zustand diese Woche, reif, Link zum Thema', eT && eT.frist === plus(1) && ['heute', 'woche'].includes(eT.zustand) && eT.reif && eT.herkunft?.url === `board.html?topic=${K.thema}`, JSON.stringify(eT).slice(0, 300));
@@ -111,14 +111,20 @@ else {
     const e2 = await api('entscheidung_entscheiden', { id: eP.id, ergebnis: 'Probe: so machen wir es (Test)', by: 'Lea' });
     const q1 = sql(`select p.erledigt, p.erledigt_by, (select count(*) from public.hh_vorhaben_verlauf v where v.punkt_id = p.id and v.art = 'entscheidung' and v.created_by = 'kompass') as verlauf from public.hh_vorhaben_punkte p where p.id = '${K.punkt}';`);
     pruefe('Punkt entscheiden: erledigt, erledigt_by Lea, ein Verlaufseintrag art entscheidung; Doppelaufruf ändert nichts', e1.status === 200 && e1.d.geaendert === true && e1.d.entscheidung.status === 'entschieden' && e2.status === 200 && e2.d.geaendert === false && q1.rows?.[0]?.erledigt === true && q1.rows[0].erledigt_by === 'Lea' && Number(q1.rows[0].verlauf) === 1, JSON.stringify(q1).slice(0, 200));
+    await api('punkt_save', { id: K.punkt, stand: 'inzwischen geändert (Test)', wer: 'Lea', by: 'Alex' });
+    const rk = await api('entscheidung_zurueck', { id: eP.id, by: 'Alex' });
+    pruefe('zurück nach Änderung am Original: 409, nichts überschrieben (Runde 1, Befund 1)', rk.status === 409 && sql(`select wer from public.hh_vorhaben_punkte where id = '${K.punkt}';`).rows?.[0]?.wer === 'Lea', JSON.stringify(rk.d));
+    await api('punkt_save', { id: K.punkt, wer: 'GF gemeinsam', by: 'Alex' });
     const r1 = await api('entscheidung_zurueck', { id: eP.id, by: 'Alex' });
     const q2 = sql(`select p.erledigt, (select count(*) from public.hh_vorhaben_verlauf v where v.punkt_id = p.id and v.art = 'entscheidung') as verlauf from public.hh_vorhaben_punkte p where p.id = '${K.punkt}';`);
     pruefe('zurück: Punkt wieder offen, Verlaufseintrag entfernt, Status offen', r1.status === 200 && r1.d.entscheidung.status === 'offen' && q2.rows?.[0]?.erledigt === false && Number(q2.rows[0].verlauf) === 0, JSON.stringify(q2).slice(0, 200));
     /* Thema entscheiden: Beschluss und board_lane; zurück */
-    const e3 = await api('entscheidung_entscheiden', { id: eT.id, ergebnis: 'Probe Thema entschieden (Test)', by: 'Alex' });
+    const ss = await api('session_start', { participants: 'Alex, Lea', started_by: 'Alex', title: 'Stufe 1 Probe (Test)' });
+    K.session = ss.d?.session?.id || null;
+    const e3 = await api('entscheidung_entscheiden', { id: eT.id, ergebnis: 'Probe Thema entschieden (Test)', by: 'Alex', session_id: K.session });
     const tg = await api('topic_get', { id: K.thema });
-    const q3 = sql(`select count(*) as n from public.gfweekly_decisions where topic_id = '${K.thema}';`);
-    pruefe('Thema entscheiden: board_lane entschieden, decision, ein Beschluss', e3.status === 200 && tg.d?.topic?.board_lane === 'entschieden' && tg.d.topic.decision === 'Probe Thema entschieden (Test)' && Number(q3.rows?.[0]?.n) === 1, JSON.stringify(tg.d?.topic).slice(0, 200));
+    const q3 = sql(`select count(*) as n, max(session_id::text) as s from public.gfweekly_decisions where topic_id = '${K.thema}';`);
+    pruefe('Thema entscheiden: board_lane entschieden, decision, ein Beschluss mit der Sitzungskennung (Runde 1, Befund 4)', e3.status === 200 && tg.d?.topic?.board_lane === 'entschieden' && tg.d.topic.decision === 'Probe Thema entschieden (Test)' && Number(q3.rows?.[0]?.n) === 1 && !!K.session && q3.rows[0].s === K.session, JSON.stringify([tg.d?.topic?.board_lane, q3.rows]).slice(0, 200));
     const r2 = await api('entscheidung_zurueck', { id: eT.id, by: 'Alex' });
     const tg2 = await api('topic_get', { id: K.thema });
     const q4 = sql(`select count(*) as n from public.gfweekly_decisions where topic_id = '${K.thema}';`);
@@ -133,6 +139,8 @@ else {
     const a1 = await api('entscheidung_abgeben', { id: eT.id, an: 'lea', by: 'Alex' });
     const tg4 = await api('topic_get', { id: K.thema });
     pruefe('abgeben an Lea: Status abgegeben, gate lea am Thema', a1.status === 200 && a1.d.entscheidung.status === 'abgegeben' && tg4.d?.topic?.gate === 'lea' && tg4.d.topic.gate_by === 'Alex');
+    const ax = await api('entscheidung_entscheiden', { id: eT.id, ergebnis: 'Probe nach Abgabe', by: 'Alex' });
+    pruefe('abgegebene Entscheidung lässt sich nicht entscheiden (409, Runde 1 Befund 2)', ax.status === 409, String(ax.status));
     const a2 = await api('entscheidung_abgeben', { id: eP.id, an: 'team', by: 'Lea' });
     const q5 = sql(`select wer from public.hh_vorhaben_punkte where id = '${K.punkt}';`);
     pruefe('abgeben Punkt ins Team: wer = Team, Verlaufseintrag', a2.status === 200 && q5.rows?.[0]?.wer === 'Team');
@@ -159,6 +167,8 @@ else {
     pruefe('Korb: archivieren für Kandidaten abgelehnt (400)', k5.status === 400);
     /* Hinfällig bei archivierter Quelle */
     const ar = await api('themen_sammeln', { items: [{ id: K.thema, aktion: 'archivieren' }], by: 'Alex' });
+    const alt = await api('entscheidung_entscheiden', { id: eT.id, ergebnis: 'Probe auf archiviertes Thema', by: 'Alex' });
+    pruefe('Entscheiden auf eine inzwischen archivierte Quelle: 409 (Runde 1, Befund 2)', alt.status === 409, String(alt.status));
     const l6 = await api('entscheidungen_list', { status: 'alle' });
     const eT3 = (l6.d?.eintraege || []).find(e => e.id === eT.id);
     pruefe('Thema archiviert: Zeile hinfällig (nicht mehr in alle), Punkt bleibt offen', ar.status === 200 && !eT3 && (l6.d?.eintraege || []).some(e => e.id === eP.id && e.status === 'offen'), JSON.stringify(eT3).slice(0, 160));

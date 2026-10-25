@@ -1014,6 +1014,9 @@ console.log('\n== Stufe 1: Entscheidungsliste, Besprechung darauf, Korb, Spielsc
   /* Filter Entschieden: gedämpft mit Ergebnis */
   await p.locator('#enFilter [data-filter="entschieden"]').click(); await p.waitForTimeout(400);
   pruefe('Filter Entschieden: letzte 30 Tage gedämpft mit Ergebnis, ohne Aktionsknöpfe', await p.locator('.en-dim .en-row[data-id="en9"]').count() === 1 && /Ergebnis:/.test(await p.locator('.en-row[data-id="en9"] .en-vs').innerText()) && await p.locator('.en-row[data-id="en9"] .en-btns').count() === 0);
+  await p.locator('#enFilter [data-filter="abgegeben"]').click(); await p.waitForTimeout(400);
+  await p.locator('.en-row[data-id="en10"] .en-q').click(); await p.waitForTimeout(100);
+  pruefe('Filter Abgegeben: Zeile ohne Entschieden/Vertagen/Abgeben, nur Rückgängig im aufgeklappten Teil', await p.locator('.en-row[data-id="en10"] .en-btns').count() === 0 && await p.locator('.en-row[data-id="en10"] [data-act="zurueck"]').count() === 1);
   await p.locator('#enFilter [data-filter="offen"]').click(); await p.waitForTimeout(400);
   pruefe('Fußleiste nennt die Besprechung und führt dorthin', /Besprechung heute: \d+/.test(await p.locator('#enFussT').innerText()) && await p.locator('#enFuss a[href="besprechung.html"]').count() === 1);
   pruefe('Beschlüsse als Klappe unten, geschlossen', await p.locator('#enBeschl:not([open])').count() === 1);
@@ -1032,7 +1035,11 @@ console.log('\n== Stufe 1: Entscheidungsliste, Besprechung darauf, Korb, Spielsc
   const geo = await h.evaluate(() => { const r = document.querySelector('#enListe .en-row'); const q = r.querySelector('.en-q').getBoundingClientRect(), b = [...r.querySelectorAll('.en-btns .btn')].map(x => x.getBoundingClientRect());
     return { unter: b.every(x => x.top >= q.bottom), hoch: b.every(x => x.height >= 44), breit: document.documentElement.scrollWidth <= 390, zeilen: Math.round(q.height / parseFloat(getComputedStyle(r.querySelector('.en-q')).lineHeight)) }; });
   pruefe('390 px: Knöpfe unter der Frage, 44 px hoch, kein seitlicher Überlauf', geo.unter && geo.hoch && geo.breit, JSON.stringify(geo));
-  pruefe('390 px: Frage höchstens drei Zeilen', geo.zeilen <= 3, String(geo.zeilen));
+  const drei = await h.evaluate(() => { const r = document.querySelector('#enListe .en-row'); const lh = parseFloat(getComputedStyle(r.querySelector('.en-q')).lineHeight); const q = r.querySelector('.en-q').getBoundingClientRect().height, her = r.querySelector('.en-her'), vs = r.querySelector('.en-vs');
+    return { qZeilen: Math.round(q / lh), herEinzeilig: her.scrollHeight <= parseFloat(getComputedStyle(her).lineHeight) * 1.5, vsVersteckt: !vs || getComputedStyle(vs).display === 'none' }; });
+  pruefe('390 px: geschlossene Zeile höchstens drei Textzeilen (Frage zwei, Herkunft eine, Vorschlag erst aufgeklappt)', drei.qZeilen <= 2 && drei.herEinzeilig && drei.vsVersteckt, JSON.stringify(drei));
+  await h.locator('#enListe .en-row .en-q').first().click(); await h.waitForTimeout(150);
+  pruefe('390 px: aufgeklappt zeigt den Vorschlag', await h.evaluate(() => { const vs = document.querySelector('#enListe .en-row.auf .en-vs'); return !!vs && getComputedStyle(vs).display !== 'none'; }));
   await h.locator('#enListe .en-row [data-act="entschieden"]').first().click(); await h.waitForTimeout(300);
   const mb = await h.locator('#enModal .modal').boundingBox();
   pruefe('390 px: Blatt ohne seitlichen Überlauf', mb && mb.x >= 0 && mb.x + mb.width <= 390);
@@ -1044,14 +1051,15 @@ console.log('\n== Stufe 1: Entscheidungsliste, Besprechung darauf, Korb, Spielsc
   pruefe('Besprechung: Kopfzeile „Heute: n Entscheidungen, k überfällig, m diese Woche“', /Heute: 9 Entscheidungen, 2 überfällig, 2 diese Woche/.test(await b.locator('#bsTop').innerText()), await b.locator('#bsTop').innerText());
   pruefe('Agenda = Entscheidungsliste in deren Reihenfolge, überfällig zuerst', await b.locator('#bsAgL .bs-row').count() === 9 && /Bürgschaft/.test(await b.locator('#bsAgL .bs-row').first().locator('.bs-q').innerText()));
   pruefe('alte Themen-Knöpfe gibt es in der Agenda nicht mehr', await b.locator('[data-o="in_klaerung"],[data-o="uebernommen"],[data-o="warten"]').count() === 0);
-  pruefe('Material-Klappe für Einträge mit Ausgang GF ohne Entscheidung', await b.locator('#bsMat summary').count() === 1);
+  await b.locator('#bsMat summary').click(); await b.waitForTimeout(150);   // zu: innerText der Klappe wäre leer
+  pruefe('Material-Klappe leer, weil alle Einträge mit Ausgang GF (t1, n3) eine Entscheidungszeile haben', await b.locator('#bsMat summary').count() === 1 && await b.locator('#bsMatL .fd-row').count() === 0 && /Nichts ohne Entscheidung/.test(await b.locator('#bsMatL').innerText()), await b.locator('#bsMatL').innerText());
   await b.locator('#meetBtn').click(); await b.waitForTimeout(500);
   pruefe('Besprechung starten: session_start, Timer, erster Punkt mit drei Knöpfen plus Überspringen', !!letzte('session_start') && await b.locator('#meetTimer').count() === 1 && (await b.locator('#meet .meet-btns .btn').allInnerTexts()).join('|') === 'Entschieden|Vertagen|Abgeben|Überspringen');
   await b.locator('#meet [data-o="entschieden"]').click(); await b.waitForTimeout(100);
   pruefe('Entschieden ohne Ergebnis: Hinweis, nichts gesendet', /Ergebnis/.test(await b.locator('#mErr').innerText()) && !letzte('entscheidung_entscheiden'));
   await b.locator('#mErg').fill('Bürgschaft nur mit Deckel.'); await b.locator('#meet [data-o="entschieden"]').click(); await b.waitForTimeout(400);
   const e1 = letzte('entscheidung_entscheiden');
-  pruefe('Entschieden in der Besprechung schreibt über entscheidung_entscheiden und geht weiter', e1 && e1.nutzlast.id === 'en4' && e1.nutzlast.ergebnis === 'Bürgschaft nur mit Deckel.' && await b.locator('#meet .meet-cur').getAttribute('data-key') === 'en:en8');
+  pruefe('Entschieden in der Besprechung schreibt über entscheidung_entscheiden mit session_id und geht weiter', e1 && e1.nutzlast.id === 'en4' && e1.nutzlast.ergebnis === 'Bürgschaft nur mit Deckel.' && e1.nutzlast.session_id === 's-neu' && await b.locator('#meet .meet-cur').getAttribute('data-key') === 'en:en8');
   await b.locator('#meet [data-o="vertagt"]').click(); await b.waitForTimeout(400);
   const v1 = letzte('entscheidung_vertagen');
   pruefe('Vertagen in der Besprechung mit Standard plus 7 Tage', v1 && v1.nutzlast.id === 'en8' && v1.nutzlast.bis === new Date(Date.now() + 7 * 86400000).toLocaleDateString('sv-SE'));
@@ -1065,6 +1073,12 @@ console.log('\n== Stufe 1: Entscheidungsliste, Besprechung darauf, Korb, Spielsc
   pruefe('Beenden: Protokoll nennt Frage, Ergebnis, Vertagt bis, Abgegeben an, Übersprungen', se && /Entscheidungen\n1\. Bürgschaft[^\n]*: Bürgschaft nur mit Deckel\./.test(se.nutzlast.protocol) && /Vertagt\n- Saalmiete[^\n]* bis \d\d\.\d\d\.\d{4}/.test(se.nutzlast.protocol) && /Abgegeben\n- Shuttle[^\n]* an Team/.test(se.nutzlast.protocol) && /Übersprungen\n- Schließen wir mit Xceed/.test(se.nutzlast.protocol) && /Offen geblieben \(zu besprechen\): 6/.test(se.nutzlast.protocol), se && se.nutzlast.protocol.slice(0, 400));
   pruefe('Protokollfenster offen, Besprechung beendet', await b.locator('#gfModal.open').count() === 1 && await b.locator('#meet[hidden]').count() === 1);
   await b.close();
+  /* Material: fehlt die Entscheidungszeile zu n3 (abgegeben zählt als erfasst, fehlend nicht), steht der Kandidat im Material. */
+  frisch(); EN_ZEILEN.splice(EN_ZEILEN.findIndex(e => e.id === 'en3'), 1);
+  const b1 = await seite('/besprechung.html'); await b1.waitForTimeout(400);
+  await b1.locator('#bsMat summary').click(); await b1.waitForTimeout(150);
+  pruefe('Material zeigt den Kandidaten ohne Entscheidungszeile', await b1.locator('#bsMatL .fd-row').count() === 1 && /Pressefrage/.test(await b1.locator('#bsMatL').innerText()), await b1.locator('#bsMatL').innerText());
+  await b1.close();
   /* Leerzustand */
   frisch(); EN_ZEILEN.splice(0, EN_ZEILEN.length, ...EN_ZEILEN.filter(e => e.status === 'entschieden'));
   const b2 = await seite('/besprechung.html');

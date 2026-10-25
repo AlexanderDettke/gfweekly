@@ -648,7 +648,7 @@ function enListe(p) {
   const status = (p && p.status) || 'offen';
   const { alle, zaehler } = enRechne(EN_ZEILEN, heute);
   const letzte = alle.filter(e => e.status === 'entschieden').sort((a, b) => String(b.entschieden_am || '').localeCompare(String(a.entschieden_am || '')))[0] || null;
-  return { heute, status, sync:(p && p.sync === false) ? null : { eingefuegt:0, aktualisiert:0, hinfaellig:0, wieder_offen:0 }, zaehler, eintraege:enFilter(alle, status, heute), gesamt:alle.length,
+  return { heute, status, sync:(p && p.sync === false) ? null : { eingefuegt:0, aktualisiert:0, hinfaellig:0, wieder_offen:0 }, zaehler, eintraege:enFilter(alle, status, heute), gesamt:alle.length, erfasst:alle.map(e => e.quelle_id),
     zuletzt_entschieden: letzte ? { id:letzte.id, frage:letzte.frage, ergebnis:letzte.ergebnis, entschieden_am:letzte.entschieden_am, entschieden_von:letzte.entschieden_von } : null };
 }
 function enAktion(p, wie) {
@@ -656,6 +656,8 @@ function enAktion(p, wie) {
   if (EN_SCHALTER.konflikt) { EN_SCHALTER.konflikt = false; return { __status:409, error:'Die Quelle ist inzwischen erledigt oder weitergegeben; bitte neu laden' }; }
   const by = enPerson(p); if (!by) return { __status:400, error:'by muss Alex oder Lea sein' };
   const e = enFinde(p); if (e.__status) return e;
+  if (wie !== 'zurueck' && e.status === 'abgegeben') return { __status:409, error:`Abgegeben an ${e.abgegeben_an}; erst zurückholen (Rückgängig) oder den Ausgang wieder auf GF setzen` };
+  if (wie === 'entscheiden' && p.session_id) e.session_id = p.session_id;
   const eigen = { status:e.status, ergebnis:e.ergebnis, entschieden_am:e.entschieden_am, entschieden_von:e.entschieden_von, frist:e.frist, frist_quelle:e.frist_quelle, vertagt_bis:e.vertagt_bis, abgegeben_an:e.abgegeben_an };
   if (wie === 'entscheiden') { const erg = String(p.ergebnis || '').trim(); if (erg.length < 5) return { __status:400, error:'Ergebnis fehlt (ein Satz, mindestens fünf Zeichen)' };
     if (e.status === 'entschieden') return { ok:true, geaendert:false, entscheidung:e };

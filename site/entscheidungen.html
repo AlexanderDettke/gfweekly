@@ -67,6 +67,8 @@
     <div class="sec-h" style="margin-top:24px"><h2>Protokolle der Besprechungen</h2><span class="hint">öffnen, kopieren oder per Mail verschicken</span><span class="line"></span></div>
     <div id="sessions"><div class="loading">lädt …</div></div>
   </details>
+  <!-- Spielschicht (nur mit GF_SPIEL=true): Abzeichenleiste wie vor Stufe 1, Sprungmarke #abzeichen aus jahr.html. -->
+  <section id="abzeichen" hidden><div class="sec-h" style="margin-top:34px"><h2>Abzeichen</h2><span class="hint" id="bdgHint">einmal je Jahr, je 25 Taler</span><span class="line"></span></div><div class="badgebar" id="badges"></div></section>
 </div>
 
 <div class="modal-back" id="enModal"></div>
@@ -157,8 +159,8 @@ function zeile(e){
     :e.status==="abgegeben"?gfZustand("offen",`abgegeben an ${EN_AN[e.abgegeben_an]||e.abgegeben_an}`)
     :e.status==="vertagt"?gfZustand(e.wieder_faellig?"warn":"offen",`vertagt bis ${gfFmtShort(e.vertagt_bis)}${e.wieder_faellig?" · wieder fällig":""}`):"";
   const rueck=!!e.rueckweg_at && (Date.now()-new Date(e.rueckweg_at).getTime())<86400000 && e.status!=="offen";
-  const aktiv=e.status==="offen"||e.status==="vertagt"||e.status==="abgegeben";
-  return `<article class="en-row${e.reif?"":" en-row-unreif"}" data-id="${e.id}">
+  const aktiv=e.status==="offen"||e.status==="vertagt";   // abgegebene zuerst zurückholen (Rückgängig) oder Ausgang wieder GF
+  return `<article class="en-row${e.reif?"":" en-row-unreif"}${offen?" auf":""}" data-id="${e.id}">
     <div class="en-main">
       <button type="button" class="en-q" aria-expanded="${offen}" aria-controls="enD-${e.id}">${gfEsc(e.frage)}</button>
       <div class="en-her">${herkunft(e)} · ${fristWort(e)}${status?` · ${status}`:""}${e.frage_von==="lauf"?` · <span class="fd-muted">Frage vom Lauf</span>`:""}</div>
@@ -175,7 +177,7 @@ function zeile(e){
   </article>`;
 }
 function bind(){
-  $("#enListe").querySelectorAll(".en-q").forEach(b=>b.onclick=()=>{ const id=b.closest(".en-row").dataset.id; const d=document.getElementById("enD-"+id); const auf=d.hidden; d.hidden=!auf; b.setAttribute("aria-expanded",String(auf)); if(auf) EN_OFFEN.add(id); else EN_OFFEN.delete(id); });
+  $("#enListe").querySelectorAll(".en-q").forEach(b=>b.onclick=()=>{ const row=b.closest(".en-row"); const id=row.dataset.id; const d=document.getElementById("enD-"+id); const auf=d.hidden; d.hidden=!auf; row.classList.toggle("auf",auf); b.setAttribute("aria-expanded",String(auf)); if(auf) EN_OFFEN.add(id); else EN_OFFEN.delete(id); });
   $("#enListe").querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>{ const id=b.closest(".en-row").dataset.id; const e=(EN.eintraege||[]).find(x=>x.id===id); if(!e) return; aktion(e, b.dataset.act, b); });
   const u=$("#enUnreif"); if(u) u.addEventListener("toggle",()=>{ if(u.open) EN_OFFEN.add("unreif"); else EN_OFFEN.delete("unreif"); });
 }
@@ -345,6 +347,15 @@ $("#q").oninput=e=>{ Q=e.target.value.trim().toLowerCase(); renderLog(); };
 $("#rangeSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; RANGE=+b.dataset.r; renderLog(); };
 $("#addDec").onclick=()=>{ EDITING={id:null, decided_at:iso(today), topic_title:"", decision:"", next_action:"", owner:""}; renderLog(); setTimeout(()=>{ const f=$("#log form.editcard"); if(f){ f.scrollIntoView({behavior:"smooth",block:"center"}); f.querySelector('[name="decision"]').focus(); } },50); };
 $("#mailBtn").onclick=wochenmail;
+
+/* Abzeichenleiste (V17) nur mit Spielschicht: alle 19, erreichte in Farbe. */
+function renderBadges(st){
+  const G=window.GF_GAME; if(!GF_SPIEL||!G) return; const got=new Map((st?.badges||[]).map(b=>[b.key,b]));
+  $("#abzeichen").hidden=false;
+  $("#bdgHint").textContent=`${got.size} von ${G.badges.length} · ${st?.year||today.getFullYear()} · je 25 Taler`;
+  $("#badges").innerHTML=G.badges.map(([k,l])=>{ const b=got.get(k); return `<div class="bdg ${b?"":"locked"}" title="${gfEsc(l)}${b?` · ${gfFmtShort(b.earned_at)}${b.who&&b.who!=="Team"?" · "+gfEsc(b.who):""}`:" · noch nicht erreicht"}"><img src="${G.icon("abzeichen-"+k)}" alt=""><div class="bl"><span>${gfEsc(l)}</span><small>${b?`${gfFmtShort(b.earned_at)}${b.who&&b.who!=="Team"?" · "+gfEsc(b.who):""}`:"offen"}</small></div></div>`; }).join("");
+}
+document.addEventListener("gf-game",e=>renderBadges(e.detail));
 
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("entscheidungen");

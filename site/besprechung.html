@@ -193,7 +193,7 @@ async function outcome(x, o){
   if(!p) return;
   BS_LAEUFT=true; $("#meet").querySelectorAll("[data-o]").forEach(b=>b.disabled=true);
   try{
-    await gfApi(p[0],{ id:x.id, by:who, ...p[1] });
+    await gfApi(p[0],{ id:x.id, by:who, ...(o==="entschieden"?{ session_id:MEET.sessionId }:{}), ...p[1] });
     MEET.log=MEET.log.filter(l=>l.key!==entry.key); MEET.log.push(entry);
     gfToast({entschieden:"Entscheidung festgehalten",vertagt:"Vertagt bis "+gfFmtShort(entry.until),abgegeben:"Abgegeben an "+entry.an}[o]);
     BS_LAEUFT=false; advance();
@@ -225,7 +225,7 @@ async function loadLast(){
 async function ladeAgenda(){
   EN=await gfApi("entscheidungen_list",{status:"offen"}); ITEMS=EN.eintraege||[];
   const g=await gfApi("gate_list",{gate:"gf",limit:1000}).catch(()=>({items:[]}));
-  const drin=new Set(ITEMS.map(x=>x.quelle_id));
+  const drin=new Set(EN.erfasst||ITEMS.map(x=>x.quelle_id));   // alle erfassten Quellen, auch vertagte und abgegebene
   MATERIAL=(g.items||[]).filter(x=>x.gate==="gf"&&!drin.has(x.id));
 }
 /* Rote Korbzeilen laufender Abwesenheiten einsammeln, damit die Agenda sie kennzeichnen kann (V24b). */

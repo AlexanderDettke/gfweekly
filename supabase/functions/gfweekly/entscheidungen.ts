@@ -158,7 +158,7 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
     const { alle, zaehler } = enRechne(data || [], heute);
     const gezeigt = await herkunft(enFilter(alle, status, heute));
     const letzte = alle.filter(e => e.status === 'entschieden').sort((a, b) => String(b.entschieden_am || '').localeCompare(String(a.entschieden_am || '')))[0] || null;
-    return { heute, status, sync, zaehler, eintraege: gezeigt, gesamt: alle.length,
+    return { heute, status, sync, zaehler, eintraege: gezeigt, gesamt: alle.length, erfasst: alle.map(e => e.quelle_id),
       zuletzt_entschieden: letzte ? { id: letzte.id, frage: letzte.frage, ergebnis: letzte.ergebnis, entschieden_am: letzte.entschieden_am, entschieden_von: letzte.entschieden_von } : null };
   }
 
@@ -207,28 +207,26 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
       if (error) throw error; if (!data) throw new EnFehler('Das Thema ist inzwischen archiviert; bitte neu laden', 409);
       return { ok: true, aktion, item: data };
     }
-    let vorhabenId = (t.vorhaben_id ?? '').toString();
-    let angelegt: Any = null;
+    /* Zuordnen, Anlegen und Verlaufseintrag laufen in einer Transaktion (hh_korb_zuordnen, Runde 1 Befund 3). */
     if (aktion === 'neu') {
       const titel = (t.titel ?? orig.title ?? '').toString().trim().slice(0, 200);
       if (titel.length < 3) throw new EnFehler('titel fehlt');
-      const basis = titel.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'vorhaben';
-      const { data: da, error: es } = await admin.from('hh_vorhaben').select('slug').like('slug', basis + '%'); if (es) throw es;
-      const vergeben = new Set((da || []).map((r: Any) => r.slug));
-      let slug = basis; for (let i = 2; vergeben.has(slug) && i < 1000; i++) slug = basis + '-' + i;
-      const r = await rpc('hh_vorhaben_neu', { p_row: { title: titel, slug, gruppe: 'sonstiges', status: 'aktiv', ball: 'gf' }, p_by: wer, p_notiz: `Aus dem Korb angelegt (${kind === 'thema' ? 'Thema' : 'Kandidat'}: ${orig.title})` });
-      angelegt = r?.vorhaben || r; vorhabenId = angelegt?.id || '';
+      const basis = titel.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'vorhaben';
+      for (let versuch = 0; versuch < 3; versuch++) {
+        const { data: da, error: es } = await admin.from('hh_vorhaben').select('slug').like('slug', basis + '%'); if (es) throw es;
+        const vergeben = new Set(((da || []) as Any[]).map((r: Any) => r.slug));
+        let slug = basis; for (let i = 2; vergeben.has(slug) && i < 1000; i++) slug = basis + '-' + i;
+        const { data, error } = await admin.rpc('hh_korb_zuordnen', { p_kind: kind, p_id: kid, p_vorhaben: null, p_neu: { title: titel, slug, gruppe: 'sonstiges' }, p_by: wer });
+        if (error && error.code === '23505') continue;   // slug gleichzeitig vergeben: neuer Versuch
+        if (error) { const m = /^PT(\d{3})$/.exec(error.code || ''); if (m) throw new EnFehler(error.message, parseInt(m[1])); throw error; }
+        return { ...(data as Any), aktion };
+      }
+      throw new EnFehler('Kein freier slug gefunden', 409);
     }
+    const vorhabenId = (t.vorhaben_id ?? '').toString();
     if (!EN_UUID.test(vorhabenId)) throw new EnFehler('vorhaben_id fehlt');
-    const { data: vh, error: e1 } = await admin.from('hh_vorhaben').select('id,slug,title,status').eq('id', vorhabenId).maybeSingle();
-    if (e1) throw e1; if (!vh) throw new EnFehler('Vorhaben gibt es nicht', 404);
-    if (!['aktiv', 'pausiert'].includes(vh.status)) throw new EnFehler('Das Vorhaben ist nicht mehr aktiv', 409);
-    const patch: Any = { vorhaben_id: vorhabenId }; if (kind === 'thema') patch.updated_at = new Date().toISOString();
-    const { data: upd, error: e2 } = await admin.from(tabelle).update(patch).eq('id', kid).is('vorhaben_id', null).select('id,title,vorhaben_id').maybeSingle();
-    if (e2) throw e2; if (!upd) throw new EnFehler('Der Eintrag ist inzwischen einem Vorhaben zugeordnet; bitte neu laden', 409);
-    const { data: verlauf, error: e3 } = await admin.from('hh_vorhaben_verlauf').insert({ vorhaben_id: vorhabenId, art: 'notiz', wer, text: `Aus dem Korb zugeordnet: ${orig.title}`, status: 'bestaetigt', created_by: wer }).select('id').single();
-    if (e3) throw e3;
-    return { ok: true, aktion, item: upd, vorhaben: { id: vh.id, slug: vh.slug, title: vh.title }, angelegt: !!angelegt, verlauf_id: verlauf?.id };
+    const r = await rpc('hh_korb_zuordnen', { p_kind: kind, p_id: kid, p_vorhaben: vorhabenId, p_neu: null, p_by: wer });
+    return { ...(r as Any), aktion };
   }
 
   async function handle(action: string, t: Any): Promise<Response> {
@@ -245,7 +243,9 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
       if (action === 'entscheidung_entscheiden') {
         const wer = by(t); const eid = id(t); const erg = (t.ergebnis ?? '').toString().trim();
         if (erg.length < 5) throw new EnFehler('Ergebnis fehlt (ein Satz, mindestens fünf Zeichen)');
-        const r = await rpc('hh_entscheidung_entscheiden', { p_id: eid, p_ergebnis: erg.slice(0, 4000), p_by: wer });
+        const sitzung = (t.session_id ?? '').toString();
+        if (sitzung && !EN_UUID.test(sitzung)) throw new EnFehler('session_id ist keine Kennung');
+        const r = await rpc('hh_entscheidung_entscheiden', { p_id: eid, p_ergebnis: erg.slice(0, 4000), p_by: wer, p_session: sitzung || null });
         return json({ ok: true, geaendert: !!r?.geaendert, entscheidung: await eine(eid) });
       }
       if (action === 'entscheidung_vertagen') {
