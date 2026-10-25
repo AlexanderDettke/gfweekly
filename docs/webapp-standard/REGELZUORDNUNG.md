@@ -66,6 +66,8 @@ Anwendbarkeit: **A** anwendbar, **B** bedingt anwendbar, **N** nicht zutreffend 
 | A3 | G-02 Farbtabelle | alle | Markenprofil Wilde Habitate (dunkel Standard, Honiggold, Blattgrün) statt der hellblauen Pilotpalette. G-02 lässt ein dokumentiertes Profil zu; Bedeutung und 4,5:1 gelten. Tokens bleiben quellgleich (`pruefung/tokens.py`). | Keine | Pilotpalette | Offen, Alexander | Pilotdauer |
 | A4 | G-03 Rundung 6/8 px | alle | Design-System 4/6/8 px. | Keine | — | Offen | Pilotdauer |
 | A5 | G-05 Schwelle 1024 px | Navigation | Bestand: Schublade unter 1024 px, schmale Leiste bis 1279 px. Entspricht der Schwelle. | Keine | — | — | — |
+| A6 | G-01 Grundschrift 16 px | alle | Stufe 1 (25.10.2026, Paket Abschnitt 7.1): Fließtext 0,9375 rem (15 px), Nebentext 0,8125 rem (13 px), Zeilenhöhe 1,4; kleinste Rolle bleibt 12 px. | Dichtere Seiten | 16 px | Entschieden, Alex (Paket) | bis Stufe 2 |
+| A7 | G-03 Chips 44 px | alle | Chips sind 32 px hoch; das 44-px-Ziel liegt als unsichtbare Fläche darüber (`.chip::after`). | Keine für die Bedienung; optisch dichter | 44-px-Chips | Entschieden, Alex (Paket) | bis Stufe 2 |
 
 ## 4. Lücken (abnahmerelevant, nicht als bestanden gezählt)
 

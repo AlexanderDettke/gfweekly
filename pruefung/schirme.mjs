@@ -55,7 +55,7 @@ let bekannteSchuld = 0;
 
 const SEITEN = [
   ['vorstand.html', '#vbDetail'], ['vorstand.html?tab=task', '#vbTask'], ['vorstand.html?tab=status', '#vbStatusPanel'], ['index.html', '#fdEntL'], ['neuigkeiten.html', '#fokusList .kd'], ['besprechung.html', '#bsAgL'], ['board.html', '#lanes,#grid,.board'],
-  ['cockpit.html', '#list'], ['entscheidungen.html', '#log'], ['jahr.html', '#cycle'], ['capture.html', '#form'],
+  ['cockpit.html', '#list'], ['entscheidungen.html', '#enListe .en-row'], ['jahr.html', '#cycle'], ['capture.html', '#form'],
   ['seiten.html', '#groups'], ['bearbeiten.html', '#itemsView'], ['aufraeumen.html', '#list'], ['checkin.html', '#agenda'],
   ['inbox.html', '#list'],
   ['vertretung.html', '#absList'], ['uebergabe.html', '#list'], ['rueckkehr.html', '#entList'],

@@ -1,6 +1,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { kommModul } from './komm.ts';
 import { verkaufModul } from './verkauf.ts';
+import { entscheidungenModul } from './entscheidungen.ts';
 
 const PASSWORD = Deno.env.get('GFWEEKLY_PASSWORD') ?? '';
 const PROJECT_URL = Deno.env.get('SUPABASE_URL')!;
@@ -1382,6 +1383,7 @@ const KOMM = kommModul({ admin, json, heuteBerlin, whoNorm, launchFestivals, lau
   ASANA_TOKEN, ASANA_WORKSPACE, ASANA_TEAM, HH_BASIS, MAIL_ALEX });
 /* 25.10.2026 · Verkauf 2027 je Festival auf „Für dich“ (verkauf_list, verkauf_set), siehe verkauf.ts. */
 const VERKAUF = verkaufModul({ admin, json, heuteBerlin, whoNorm });
+const ENTSCHEIDUNGEN = entscheidungenModul({ admin, json, heuteBerlin, whoNorm });
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -1400,10 +1402,11 @@ Deno.serve(async (req: Request) => {
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:40, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY'), kommTabelleConfigured: !!Deno.env.get('GOOGLE_DIENSTKONTO_JSON') });
+    if (action === 'ping') return json({ ok:true, version:41, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY'), kommTabelleConfigured: !!Deno.env.get('GOOGLE_DIENSTKONTO_JSON') });
     /* V32 Kommunikation */
     if (typeof action === 'string' && action.startsWith('komm_')) return await KOMM.handle(action, t, WHO);
     if (action === 'verkauf_list' || action === 'verkauf_set') return await VERKAUF.handle(action, t);
+    if (typeof action === 'string' && (action === 'entscheidungen_list' || action.startsWith('entscheidung_') || action === 'korb_list' || action === 'korb_set')) return await ENTSCHEIDUNGEN.handle(action, t);
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });

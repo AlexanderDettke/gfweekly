@@ -9,7 +9,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODUL || 'playwright');
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ANTWORT, FALLBACK, SCHREIBEND, TPA, zuruecksetzen, SCHALTER, VORHABEN, VK_SCHALTER, THEMEN } from './testdaten.mjs';
+import { ANTWORT, FALLBACK, SCHREIBEND, TPA, zuruecksetzen, SCHALTER, VORHABEN, VK_SCHALTER, THEMEN, EN_SCHALTER, EN_ZEILEN, KORB_DATEN } from './testdaten.mjs';
 
 const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'site');
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8',
@@ -950,6 +950,163 @@ console.log('\n== Verkauf 2027 auf Für dich (25.10.2026) ==');
   const mb = await h.locator('#vkModal .modal').boundingBox();
   pruefe('390 px: Dialog ohne seitlichen Überlauf', mb && mb.x >= 0 && mb.x + mb.width <= 390 && await h.evaluate(() => document.documentElement.scrollWidth <= 390));
   await h.close();
+}
+
+console.log('\n== Stufe 1: Entscheidungsliste, Besprechung darauf, Korb, Spielschicht aus (25.10.2026) ==');
+{
+  frisch();
+  const p = await seite('/entscheidungen.html');
+  pruefe('Navigation: Entscheidungen in „Heute“ direkt nach Für dich, nicht mehr unter Themen', await p.evaluate(() => { const a = [...document.querySelectorAll('.sb-nav .sb-group')][0].querySelectorAll('a'); return a[0].dataset.k === 'start' && a[1].dataset.k === 'entscheidungen' && !document.querySelector('#subnavSlot a[data-sk="entscheidungen"]'); }));
+  pruefe('Spielschicht aus: kein game.js, kein Talerbalken, GF_SPIEL false', await p.evaluate(() => GF_SPIEL === false && !document.querySelector('script[src*="game.js"]') && !document.getElementById('gameBar') && !window.GF_GAME));
+  pruefe('Check-in wird mit gesetztem Tagesschlüssel nicht gesendet', !letzte('checkin'));
+  pruefe('vier Kacheln: offen 9, diese Woche 4, mit Vorschlag 6, überfällig 2', await p.evaluate(() => [...document.querySelectorAll('#enKk .kk .ht-num')].map(x => x.textContent.trim()).join(',')) === '9,4,6,2');
+  const abschn = await p.evaluate(() => [...document.querySelectorAll('#enListe .en-sec-h')].map(h => h.firstChild.textContent.trim()));
+  pruefe('Abschnitte nach Fristzustand in der Reihenfolge Überfällig, Diese Woche, Nächste zwei Wochen, Später, Ohne Frist', abschn.join('|') === 'Überfällig|Diese Woche|Nächste zwei Wochen|Später|Ohne Frist', abschn.join('|'));
+  pruefe('„Noch keine Frage“ eingeklappt mit Zähler 2', await p.locator('#enUnreif:not([open]) summary .fd-n').innerText() === '2');
+  const erste = p.locator('#enListe .en-row').first();
+  pruefe('erste Zeile: überfällige Frage mit Herkunft, Fristzustand und Vorschlag', /Bürgschaft/.test(await erste.locator('.en-q').innerText()) && /Thema/.test(await erste.locator('.en-her').innerText()) && /überfällig/.test(await erste.locator('.en-her').innerText()) && /Vorschlag:/.test(await erste.locator('.en-vs').innerText()));
+  pruefe('wieder fällige vertagte Entscheidung steht in der Liste mit Marke', /wieder fällig/.test(await p.locator('.en-row[data-id="en8"] .en-her').innerText()));
+  pruefe('je Zeile drei Knöpfe: Entschieden, Vertagen, Abgeben', (await erste.locator('.en-btns .btn').allInnerTexts()).join('|') === 'Entschieden|Vertagen|Abgeben');
+  await p.locator('.en-row[data-id="en1"] .en-q').click(); await p.waitForTimeout(100);
+  pruefe('Tippen auf die Frage klappt auf: Originaltext, Link zur Akte des Vorhabens, Stift', await p.locator('#enD-en1:not([hidden])').count() === 1 && /Vorschlag liegt/.test(await p.locator('#enD-en1 .en-det-x').innerText()) && await p.locator('#enD-en1 a[href="vorhaben.html?v=helge"]').count() === 1 && await p.locator('#enD-en1 [data-act="edit"]').count() === 1);
+  pruefe('Thema verlinkt auf board.html?topic=', await p.locator('.en-row[data-id="en2"] .en-q').click().then(() => p.locator('#enD-en2 a[href="board.html?topic=t-xceed"]').count()) === 1);
+  /* Entschieden: Pflichtfeld, dann Wirkung, Zeile weg, Rückgängig */
+  await erste.locator('[data-act="entschieden"]').click(); await p.waitForTimeout(200);
+  pruefe('Blatt „Entschieden“ öffnet mit Fokus im Ergebnis', await p.locator('#enModal.open [role=dialog]').count() === 1 && await p.evaluate(() => document.activeElement?.id) === 'enErg');
+  await p.locator('#enModal [type="submit"]').click(); await p.waitForTimeout(100);
+  pruefe('leeres Ergebnis wird abgelehnt, nichts gesendet', /Ergebnis/.test(await p.locator('#enErr').innerText()) && !letzte('entscheidung_entscheiden'));
+  await p.locator('#enErg').fill('Ja, mit Deckel 20.000 Euro.'); await p.locator('#enModal [type="submit"]').click(); await p.waitForTimeout(500);
+  const ent = letzte('entscheidung_entscheiden');
+  pruefe('Entschieden sendet id, by und Ergebnis', ent && ent.nutzlast.id === 'en4' && ent.nutzlast.by === 'Alex' && ent.nutzlast.ergebnis === 'Ja, mit Deckel 20.000 Euro.');
+  pruefe('Zeile verschwindet, Hinweis mit Rückgängig, Zähler 8', await p.locator('.en-row[data-id="en4"]').count() === 0 && await p.locator('#enRueck.show #enRueckK').count() === 1 && await p.evaluate(() => document.querySelector('#enKk .kk .ht-num').textContent.trim()) === '8');
+  await p.locator('#enRueckK').click(); await p.waitForTimeout(500);
+  const zr = letzte('entscheidung_zurueck');
+  pruefe('Rückgängig sendet entscheidung_zurueck, Zeile ist wieder da', zr && zr.nutzlast.id === 'en4' && await p.locator('.en-row[data-id="en4"]').count() === 1);
+  /* Vertagen: Standard plus 7 Tage */
+  await p.locator('.en-row[data-id="en2"] [data-act="vertagt"]').click(); await p.waitForTimeout(200);
+  const std = await p.locator('#enBis').inputValue(); const plus7 = new Date(Date.now() + 7 * 86400000).toLocaleDateString('sv-SE');
+  pruefe('Vertagen: Datumsfeld mit Standard plus 7 Tage', std === plus7, std);
+  await p.locator('#enModal [type="submit"]').click(); await p.waitForTimeout(500);
+  const vt = letzte('entscheidung_vertagen');
+  pruefe('Vertagen sendet bis, Zeile verschwindet aus Offen', vt && vt.nutzlast.id === 'en2' && vt.nutzlast.bis === plus7 && await p.locator('.en-row[data-id="en2"]').count() === 0);
+  /* Abgeben: Chips */
+  await p.locator('.en-row[data-id="en3"] [data-act="abgegeben"]').click(); await p.waitForTimeout(200);
+  await p.locator('#enModal [type="submit"]').click(); await p.waitForTimeout(100);
+  pruefe('Abgeben ohne Wahl wird abgelehnt', /wählen/.test(await p.locator('#enErr').innerText()) && !letzte('entscheidung_abgeben'));
+  await p.locator('#enModal .chip[data-v="lea"]').click(); await p.locator('#enModal [type="submit"]').click(); await p.waitForTimeout(500);
+  const ab = letzte('entscheidung_abgeben');
+  pruefe('Abgeben an Lea sendet an=lea', ab && ab.nutzlast.id === 'en3' && ab.nutzlast.an === 'lea' && await p.locator('.en-row[data-id="en3"]').count() === 0);
+  /* Fehler beim Speichern: Blatt bleibt offen, Zeile bleibt */
+  EN_SCHALTER.setFehler = true; erwarteterFehler = true;
+  await p.locator('.en-row[data-id="en11"] [data-act="entschieden"]').click(); await p.waitForTimeout(200);
+  await p.locator('#enErg').fill('Anbieter B nehmen.'); await p.locator('#enModal [type="submit"]').click(); await p.waitForTimeout(400);
+  erwarteterFehler = false;
+  pruefe('Fehler beim Speichern: Blatt bleibt offen mit Meldung, Zeile bleibt', await p.locator('#enModal.open').count() === 1 && /Nicht gespeichert/.test(await p.locator('#enErr').innerText()) && await p.locator('.en-row[data-id="en11"]').count() === 1);
+  await p.keyboard.press('Escape'); await p.waitForTimeout(150);
+  /* Bearbeiten: Frage, Frist, Vorschlag */
+  await p.locator('#enUnreif summary').click(); await p.waitForTimeout(150);
+  await p.locator('.en-row[data-id="en5"] .en-q').click(); await p.waitForTimeout(100);
+  await p.locator('#enD-en5 [data-act="edit"]').click(); await p.waitForTimeout(200);
+  await p.locator('#enFr').fill('Bebauungsplan: beauftragen wir die Geländesicherung noch 2026?'); await p.locator('#enFt').fill(plus7); await p.locator('#enModal [type="submit"]').click(); await p.waitForTimeout(500);
+  const st = letzte('entscheidung_set');
+  pruefe('Bearbeiten sendet nur geänderte Felder (frage, frist) mit by', st && st.nutzlast.id === 'en5' && /Geländesicherung noch 2026/.test(st.nutzlast.frage) && st.nutzlast.frist === plus7 && st.nutzlast.vorschlag === undefined && st.nutzlast.by === 'Alex');
+  pruefe('die Zeile ist danach reif und steht unter „Nächste zwei Wochen“ (Frist in 7 Tagen)', await p.locator('#enS-zwei_wochen ~ .en-list .en-row[data-id="en5"]').count() === 1 && await p.locator('#enUnreif summary .fd-n').innerText() === '1');
+  /* Filter Entschieden: gedämpft mit Ergebnis */
+  await p.locator('#enFilter [data-filter="entschieden"]').click(); await p.waitForTimeout(400);
+  pruefe('Filter Entschieden: letzte 30 Tage gedämpft mit Ergebnis, ohne Aktionsknöpfe', await p.locator('.en-dim .en-row[data-id="en9"]').count() === 1 && /Ergebnis:/.test(await p.locator('.en-row[data-id="en9"] .en-vs').innerText()) && await p.locator('.en-row[data-id="en9"] .en-btns').count() === 0);
+  await p.locator('#enFilter [data-filter="offen"]').click(); await p.waitForTimeout(400);
+  pruefe('Fußleiste nennt die Besprechung und führt dorthin', /Besprechung heute: \d+/.test(await p.locator('#enFussT').innerText()) && await p.locator('#enFuss a[href="besprechung.html"]').count() === 1);
+  pruefe('Beschlüsse als Klappe unten, geschlossen', await p.locator('#enBeschl:not([open])').count() === 1);
+  await p.locator('#enBeschl summary').click(); await p.waitForTimeout(300);
+  pruefe('Klappe offen zeigt die Beschlüsse (decisions_list)', await p.locator('#log .drow').count() === 2);
+  await p.close();
+  /* Ladefehler */
+  frisch(); EN_SCHALTER.listeFehler = true; erwarteterFehler = true;
+  const pf = await seite('/entscheidungen.html'); erwarteterFehler = false;
+  pruefe('Ladefehler der Liste sichtbar benannt, nicht „lädt …“', /nicht laden|Verbindung/.test(await pf.locator('#enListe').innerText()) && !/lädt …/.test(await pf.locator('#enListe').innerText()));
+  await pf.close();
+  /* Handy 390 */
+  frisch();
+  const h = await ctx.newPage(); await h.setViewportSize({ width:390, height:844 }); h.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
+  await h.goto(BASE + '/entscheidungen.html'); await h.waitForTimeout(800);
+  const geo = await h.evaluate(() => { const r = document.querySelector('#enListe .en-row'); const q = r.querySelector('.en-q').getBoundingClientRect(), b = [...r.querySelectorAll('.en-btns .btn')].map(x => x.getBoundingClientRect());
+    return { unter: b.every(x => x.top >= q.bottom), hoch: b.every(x => x.height >= 44), breit: document.documentElement.scrollWidth <= 390, zeilen: Math.round(q.height / parseFloat(getComputedStyle(r.querySelector('.en-q')).lineHeight)) }; });
+  pruefe('390 px: Knöpfe unter der Frage, 44 px hoch, kein seitlicher Überlauf', geo.unter && geo.hoch && geo.breit, JSON.stringify(geo));
+  pruefe('390 px: Frage höchstens drei Zeilen', geo.zeilen <= 3, String(geo.zeilen));
+  await h.locator('#enListe .en-row [data-act="entschieden"]').first().click(); await h.waitForTimeout(300);
+  const mb = await h.locator('#enModal .modal').boundingBox();
+  pruefe('390 px: Blatt ohne seitlichen Überlauf', mb && mb.x >= 0 && mb.x + mb.width <= 390);
+  await h.close();
+}
+{
+  frisch();
+  const b = await seite('/besprechung.html'); await b.waitForTimeout(400);
+  pruefe('Besprechung: Kopfzeile „Heute: n Entscheidungen, k überfällig, m diese Woche“', /Heute: 9 Entscheidungen, 2 überfällig, 2 diese Woche/.test(await b.locator('#bsTop').innerText()), await b.locator('#bsTop').innerText());
+  pruefe('Agenda = Entscheidungsliste in deren Reihenfolge, überfällig zuerst', await b.locator('#bsAgL .bs-row').count() === 9 && /Bürgschaft/.test(await b.locator('#bsAgL .bs-row').first().locator('.bs-q').innerText()));
+  pruefe('alte Themen-Knöpfe gibt es in der Agenda nicht mehr', await b.locator('[data-o="in_klaerung"],[data-o="uebernommen"],[data-o="warten"]').count() === 0);
+  pruefe('Material-Klappe für Einträge mit Ausgang GF ohne Entscheidung', await b.locator('#bsMat summary').count() === 1);
+  await b.locator('#meetBtn').click(); await b.waitForTimeout(500);
+  pruefe('Besprechung starten: session_start, Timer, erster Punkt mit drei Knöpfen plus Überspringen', !!letzte('session_start') && await b.locator('#meetTimer').count() === 1 && (await b.locator('#meet .meet-btns .btn').allInnerTexts()).join('|') === 'Entschieden|Vertagen|Abgeben|Überspringen');
+  await b.locator('#meet [data-o="entschieden"]').click(); await b.waitForTimeout(100);
+  pruefe('Entschieden ohne Ergebnis: Hinweis, nichts gesendet', /Ergebnis/.test(await b.locator('#mErr').innerText()) && !letzte('entscheidung_entscheiden'));
+  await b.locator('#mErg').fill('Bürgschaft nur mit Deckel.'); await b.locator('#meet [data-o="entschieden"]').click(); await b.waitForTimeout(400);
+  const e1 = letzte('entscheidung_entscheiden');
+  pruefe('Entschieden in der Besprechung schreibt über entscheidung_entscheiden und geht weiter', e1 && e1.nutzlast.id === 'en4' && e1.nutzlast.ergebnis === 'Bürgschaft nur mit Deckel.' && await b.locator('#meet .meet-cur').getAttribute('data-key') === 'en:en8');
+  await b.locator('#meet [data-o="vertagt"]').click(); await b.waitForTimeout(400);
+  const v1 = letzte('entscheidung_vertagen');
+  pruefe('Vertagen in der Besprechung mit Standard plus 7 Tage', v1 && v1.nutzlast.id === 'en8' && v1.nutzlast.bis === new Date(Date.now() + 7 * 86400000).toLocaleDateString('sv-SE'));
+  await b.locator('#meet .chip[data-v="team"]').click(); await b.locator('#meet [data-o="abgegeben"]').click(); await b.waitForTimeout(400);
+  const a1 = letzte('entscheidung_abgeben');
+  pruefe('Abgeben ins Team', a1 && a1.nutzlast.id === 'en11' && a1.nutzlast.an === 'team');
+  await b.locator('#meet [data-o="skip"]').click(); await b.waitForTimeout(200);
+  pruefe('Überspringen geht ohne Speichern weiter', await b.locator('#meet .meet-cur').getAttribute('data-key') === 'en:en3' && (await b.locator('#bsAgL .bs-row.is-done').count()) === 4);
+  await b.locator('#meetEnd').click(); await b.waitForTimeout(500);
+  const se = letzte('session_end');
+  pruefe('Beenden: Protokoll nennt Frage, Ergebnis, Vertagt bis, Abgegeben an, Übersprungen', se && /Entscheidungen\n1\. Bürgschaft[^\n]*: Bürgschaft nur mit Deckel\./.test(se.nutzlast.protocol) && /Vertagt\n- Saalmiete[^\n]* bis \d\d\.\d\d\.\d{4}/.test(se.nutzlast.protocol) && /Abgegeben\n- Shuttle[^\n]* an Team/.test(se.nutzlast.protocol) && /Übersprungen\n- Schließen wir mit Xceed/.test(se.nutzlast.protocol) && /Offen geblieben \(zu besprechen\): 6/.test(se.nutzlast.protocol), se && se.nutzlast.protocol.slice(0, 400));
+  pruefe('Protokollfenster offen, Besprechung beendet', await b.locator('#gfModal.open').count() === 1 && await b.locator('#meet[hidden]').count() === 1);
+  await b.close();
+  /* Leerzustand */
+  frisch(); EN_ZEILEN.splice(0, EN_ZEILEN.length, ...EN_ZEILEN.filter(e => e.status === 'entschieden'));
+  const b2 = await seite('/besprechung.html');
+  pruefe('Leerzustand: „Keine offenen Entscheidungen. Zuletzt entschieden: …“', /Keine offenen Entscheidungen\. Zuletzt entschieden: Gastro/.test(await b2.locator('#bsTop').innerText()), await b2.locator('#bsTop').innerText());
+  await b2.close();
+}
+{
+  frisch();
+  const p = await seite('/index.html'); await p.waitForTimeout(400);
+  pruefe('Für dich: „Deine Entscheidung“ aus entscheidungen_list, höchstens fünf, „und 4 weitere“ auf die Liste', await p.locator('#fdEntL .fd-row').count() === 5 && /und 4 weitere/.test(await p.locator('#fdEntL .fd-more').innerText()) && (await p.locator('#fdEntL .fd-more').getAttribute('href')) === 'entscheidungen.html' && !(await p.locator('#fdMeet').isHidden()));
+  pruefe('Für dich: erste Zeile ist die überfällige Frage mit Herkunft', /Bürgschaft/.test(await p.locator('#fdEntL .fd-row').first().innerText()) && /Thema/.test(await p.locator('#fdEntL .fd-row').first().locator('.fd-who').innerText()));
+  await p.close();
+}
+{
+  frisch();
+  const p = await seite('/vorhaben.html'); await p.waitForTimeout(400);
+  pruefe('Korb „Ohne Vorhaben“ unter der Liste mit drei Einträgen', await p.locator('#vhKorb .en-korb-z').count() === 3 && await p.locator('#vhKorbN').innerText() === '3');
+  const z1 = p.locator('.en-korb-z[data-id="n-haerting"]');
+  pruefe('Kandidat Härting: Art, Datum, Vorschlag des Laufs als Marke, Knopf „Zuordnen: Liquidität …“', /Kandidat/.test(await z1.locator('.fd-note').innerText()) && /Vorschlag: Liquidität/.test(await z1.locator('.fd-note').innerText()) && /^Zuordnen: Liquidität/.test(await z1.locator('[data-k="vorschlag"]').innerText()));
+  pruefe('„Alle Vorschläge übernehmen“ mit Zähler', /\(1\)/.test(await p.locator('#vhKorbAlle').innerText()));
+  await z1.locator('[data-k="vorschlag"]').click(); await p.waitForTimeout(500);
+  const ks = letzte('korb_set');
+  pruefe('Zuordnen zum Vorschlag sendet vorhaben_id, Zeile verschwindet', ks && ks.nutzlast.kind === 'kandidat' && ks.nutzlast.id === 'n-haerting' && ks.nutzlast.aktion === 'zuordnen' && ks.nutzlast.vorhaben_id === 'vh-liquiditaet' && ks.nutzlast.by === 'Alex' && await p.locator('.en-korb-z[data-id="n-haerting"]').count() === 0);
+  const z2 = p.locator('.en-korb-z[data-id="n-korb2"]');
+  await z2.locator('[data-k="waehlen"]').click(); await p.waitForTimeout(150);
+  pruefe('Zuordnen ohne Vorschlag öffnet die Chip-Reihe der aktiven Vorhaben', await p.locator('#kw-n-korb2:not([hidden]) .chip').count() >= 10);
+  await p.locator('#kw-n-korb2 .chip[data-zu="vh-draussenbande"]').click(); await p.waitForTimeout(400);
+  const ks2 = letzte('korb_set');
+  pruefe('Chip wählt das Vorhaben', ks2 && ks2.nutzlast.id === 'n-korb2' && ks2.nutzlast.vorhaben_id === 'vh-draussenbande');
+  await p.locator('.en-korb-z[data-id="t-korb"] [data-k="archivieren"]').click(); await p.waitForTimeout(400);
+  const ks3 = letzte('korb_set');
+  pruefe('Thema archivieren über den Korb, danach Leerzustand', ks3 && ks3.nutzlast.kind === 'thema' && ks3.nutzlast.aktion === 'archivieren' && /zugeordnet/.test(await p.locator('#vhKorbL').innerText()));
+  await p.close();
+  frisch();
+  const p2 = await seite('/vorhaben.html'); await p2.waitForTimeout(400);
+  await p2.evaluate(() => { window.prompt = (m, d) => d; });   // die Rückfrage mit dem vorbelegten Titel bestätigen
+  await p2.locator('.en-korb-z[data-id="n-korb2"] [data-k="neu"]').click(); await p2.waitForTimeout(500);
+  const kn = letzte('korb_set');
+  pruefe('„Neues Vorhaben“ legt mit dem Titel an und ordnet zu (Rückfrage bestätigt)', kn && kn.nutzlast.aktion === 'neu' && kn.nutzlast.titel === 'Anfrage Schulklasse für Juni' && !!letzte('vorhaben_list'));
+  await p2.locator('.en-korb-z[data-id="n-haerting"] [data-k="verwerfen"]').click(); await p2.waitForTimeout(400);
+  pruefe('Kandidat verwerfen über den Korb', letzte('korb_set').nutzlast.aktion === 'verwerfen');
+  await p2.close();
 }
 
 await browser.close();

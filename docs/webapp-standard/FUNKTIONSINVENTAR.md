@@ -38,6 +38,12 @@ Abschnitt 0 nennt jede Fähigkeit, die der Pilot verändert hat, mit neuer Umset
 | W-29 | Saison-Rad: Autospeichern während weiterer Eingabe | Ältere Antwort setzte „gespeichert“, jüngere Eingabe ging beim Schließen verloren; Anfragen liefen parallel | Speichern nacheinander mit Änderungsrevision; „gespeichert“ nur für die jüngste Eingabe | B-04 | Probe 17 |
 | W-30 | Kalendertag „heute“ | Gerätezeitzone | Europe/Berlin, auch bei anderer Gerätezeitzone | D-03 | Probe 16 |
 | W-20 | Navigation | Kein Sprunglink, Dunkel/Hell und Person ohne Zustand für Vorlesesoftware | „Zum Inhalt springen“, `aria-pressed`, Fokus zurück zum Menüknopf beim Schließen der Schublade | B-01, B-08 | Messung Tastatur |
+| S1-01 | Entscheidungslog, Besprechungen, Abzeichen, Wochenmail (`entscheidungen.html`, bisher unter Themen) | Abzeichen nur mit Spielschicht | Seite ist die Entscheidungsliste der GF (Gruppe Heute): Kacheln, Abschnitte nach Fristzustand, je Zeile Entschieden, Vertagen, Abgeben, Aufklappen mit Quelle und Stift, Rückgängig 10 s; Beschlüsse, Protokolle, Wochenmail als Klappe; Abzeichen entfallen (`GF_SPIEL=false`) | P-01, B-04, B-08, G-03 | Bedienproben „Stufe 1“ (entscheidungen.html), `pruefung/entscheidungen-probe.mjs` |
+| S1-02 | Agenda der Besprechung aus `gate_list` mit Themen-Knöpfen (`besprechung.html`) | Besprechungszustand `gf_besprechung` der alten Form | Agenda aus `entscheidungen_list {status offen}`; Entschieden, Vertagen, Abgeben, Überspringen über die Entscheidungsfunktionen; Material-Klappe nur lesen; alter Zustand wird verworfen (`v:2`) | P-01, B-04 | Bedienproben „Stufe 1“ (besprechung.html) |
+| S1-03 | „Deine Entscheidung“ auf Für dich aus `gate_list` (`index.html`) | | aus `entscheidungen_list`, höchstens fünf, „und n weitere“ auf die Liste | P-01 | Bedienprobe |
+| S1-04 | Vorhaben: Einträge ohne Vorhaben nur über Akte oder Einwurf zuzuordnen (`vorhaben.html`) | | Abschnitt „Ohne Vorhaben“ (Korb): Zuordnen zum Vorschlag des Laufs oder per Chip, Neues Vorhaben, Verwerfen, Archivieren, „Alle Vorschläge übernehmen“ mit Zähler in der Rückfrage | B-06, B-08 | Bedienproben „Stufe 1“ (vorhaben.html) |
+| S1-05 | Spielschicht auf allen Seiten (Taler, Lagerplatz, Flammen, Abzeichen, Habitat-Punkte, Überraschungen, Protokoll zählt) | `?game=`, `?egg=` | Aus über `GF_SPIEL=false` in `core.js`; Check-in bleibt als Gruß ohne Taler; eine Konstante schaltet zurück | P-01 | Bedienprobe (kein game.js, kein `#gameBar`), Schirme ohne Konsolenfehler |
+| S1-06 | Schrift auf allen Seiten | | Fließtext 15 px, Titel 16 px, Nebentext 13 px, Kacheln und Seitentitel 22 px, Zeilenhöhe 1,4, Chips 32 px mit 44-px-Ziel, Lesebreite 880 px (Tokens) | G-01, G-03 | Messung `webstandard-pruefung.mjs` (keine Rolle unter 12 px, keine Ziele unter 44 px) |
 
 Hinweis zum Umfang: Im Ordner `site/` liegen **25** HTML-Seiten, nicht 26. Alle 25 sind unten aufgenommen.
 
@@ -267,6 +273,7 @@ Quelle: `docs/PAKET-VORHABEN-ABSCHLIESSEN.md` und `site/vorhaben.html` bei `05af
 ---
 
 ### 3.4 besprechung.html · Besprechung
+**Stand 25.10.2026 (Stufe 1, S1-02):** Agenda = Entscheidungsliste; je Punkt Entschieden, Vertagen, Abgeben, Überspringen. Die Zeilen unten beschreiben den Stand vor Stufe 1.
 **Hauptaufgabe:** Agenda aller der GF gemeinsam gehörenden Punkte vorbereiten, in einer Besprechung Punkt für Punkt abarbeiten (entscheiden, weitergeben, übernehmen, verwerfen) und das Protokoll erzeugen.
 **Darstellungsformen:** Kopfzeile mit Zählung, nummerierte Agenda-Liste (Frage/Stand/Vorschlag/Frist als Definitionsliste), Besprechungsbereich mit Timer und Formular, Liste der Beschlüsse der letzten Besprechung, Dialog (Protokoll).
 **Navigation/Einstieg:** `gfMountTopbar("besprechung")` (besprechung.html:248). Keine URL-Parameter; Zustand einer laufenden Besprechung in localStorage `gf_besprechung` (besprechung.html:66-67).
@@ -359,8 +366,9 @@ Quelle: `docs/PAKET-VORHABEN-ABSCHLIESSEN.md` und `site/vorhaben.html` bei `05af
 
 ---
 
-### 3.7 entscheidungen.html · Themen · Entscheidungen
-**Hauptaufgabe:** Entscheidungslog nach Monaten, Besprechungsprotokolle und Abzeichen zeigen, Entscheidungen nachtragen/bearbeiten und eine Wochenmail erzeugen.
+### 3.7 entscheidungen.html · Heute · Entscheidungen
+**Stand 25.10.2026 (Stufe 1, S1-01):** Entscheidungsliste der GF (Kacheln, Abschnitte, drei Knöpfe je Zeile, Rückgängig, Bearbeiten); Beschlüsse, Protokolle und Wochenmail als Klappe; Abzeichen entfallen. Die Zeilen unten beschreiben den Stand vor Stufe 1.
+**Hauptaufgabe (bis 25.10.2026):** Entscheidungslog nach Monaten, Besprechungsprotokolle und Abzeichen zeigen, Entscheidungen nachtragen/bearbeiten und eine Wochenmail erzeugen.
 **Darstellungsformen:** Kennzahlenleiste, Liste gruppiert nach Monat (Zeilen), Inline-Formular, Liste der Besprechungen, Abzeichenleiste (Bildraster), Dialog (Protokoll, Wochenmail).
 **Navigation/Einstieg:** `gfMountTopbar("themen")`, `gfMountSubnav("entscheidungen")` (entscheidungen.html:201). Sprungmarke `#abzeichen` (entscheidungen.html:54; verlinkt aus jahr.html:340). Keine URL-Parameter.
 

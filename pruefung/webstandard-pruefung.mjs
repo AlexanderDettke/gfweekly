@@ -213,9 +213,11 @@ for (const seite of SEITEN) {
     await ctx.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { document.documentElement.style.fontSize = '200%'; }); });
     const { page, fehler } = await oeffne(ctx, seite);
     const u = await page.evaluate(UEBERLAUF);
-    const skaliert = await page.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
+    /* Stufe 1 (25.10.2026): Grundschrift 15 px statt 16 px; gemessen wird das Verhältnis 200 % zu 100 %, nicht ein fester Wert. */
+    const sk = await page.evaluate(() => { const b = () => parseFloat(getComputedStyle(document.body).fontSize); const zwei = b(); document.documentElement.style.fontSize = '100%'; const eins = b(); document.documentElement.style.fontSize = '200%'; return { eins, zwei }; });
+    const skaliert = sk.zwei;
     e.text200_body = skaliert; e.ueberlauf200 = u.breite > 1281 ? u.breite : 0;
-    if (skaliert < 31) melde(seite, `200 % Text: Grundschrift wächst nicht mit (${skaliert} px)`);
+    if (skaliert < sk.eins * 1.95) melde(seite, `200 % Text: Grundschrift wächst nicht mit (${sk.eins} zu ${skaliert} px)`);
     if (u.breite > 1281) melde(seite, `200 % Text: seitlicher Überlauf ${u.breite} px` + (u.raus.length ? ' (zuerst ' + u.raus.join(', ') + ')' : ''));
     if (fehler.length) melde(seite, '200 %: ' + fehler.join(' | '));
     await ctx.close();
@@ -271,7 +273,7 @@ for (const seite of SEITEN) {
 }
 
 /* B-07: Ladefehler werden sichtbar benannt, nicht als leere Seite oder ewiges „lädt …“ (Stichprobe an Hauptseiten). */
-for (const [seite, aktion] of [['vorhaben.html', 'vorhaben_list'], ['board.html', 'list'], ['neuigkeiten.html', 'news_list'], ['entscheidungen.html', 'sessions_list']]) {
+for (const [seite, aktion] of [['vorhaben.html', 'vorhaben_list'], ['board.html', 'list'], ['neuigkeiten.html', 'news_list'], ['entscheidungen.html', 'entscheidungen_list']]) {
   const ctx = await kontext(browser, { fehler: (a) => a === aktion });
   const { page } = await oeffne(ctx, seite);
   const r = await page.evaluate(() => { const t = document.body.innerText || ''; return { laedt: t.includes('lädt …'), hinweis: /Fehler|nicht laden|nicht geladen|fehlgeschlagen|Verbindung|Testfehler/i.test(t) }; });

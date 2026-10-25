@@ -6,12 +6,12 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Kompass · Entscheidungen</title>
-<meta name="description" content="Entscheidungslog, Protokolle und Wochenmail der Geschäftsleitung, Wilde Möhre. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=40" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=40" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=40" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=40" />
-<link rel="stylesheet" href="/assets/styles.css?v=40" />
+<meta name="description" content="Offene Entscheidungen der Geschäftsführung, Wilde Möhre: entscheiden, vertagen, abgeben. Vertraulich." />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=41" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=41" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=41" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=41" />
+<link rel="stylesheet" href="/assets/styles.css?v=41" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -30,83 +30,244 @@
 
 <div class="app wrap" id="app">
   <header id="topbar"></header>
-  <div id="subnav"></div>
   <div id="hero"></div>
 
-  <section class="start-hero"><div class="start-stats" id="stats"></div></section>
+  <!-- Stufe 1 (25.10.2026) · Entscheidungsliste: vier Kacheln, Abschnitte nach Fristzustand, je Zeile drei Knöpfe. -->
+  <div class="kk-row en-kk" id="enKk" aria-label="Zähler"></div>
 
-  <div class="toolbar">
-    <div class="search" role="search"><label class="ws-vh" for="q">Entscheidungen durchsuchen</label><input id="q" type="search" placeholder="Entscheidungen durchsuchen … (Taste /)" /></div>
-    <div class="segs" id="rangeSegs">
-      <button class="seg" data-r="30">30 Tage</button>
-      <button class="seg on" data-r="90">Quartal</button>
-      <button class="seg" data-r="365">Jahr</button>
-      <button class="seg" data-r="0">Alle</button>
-    </div>
-    <button class="btn btn-ghost" id="addDec" title="Entscheidung ohne Board-Thema nachtragen">＋ Entscheidung</button>
+  <div class="en-steuer">
+    <div class="fchips" role="group" aria-label="Filter" id="enFilter"></div>
+    <span class="en-stand" id="enStand" role="status"></span>
   </div>
 
-  <div id="log"><div class="loading">lädt …</div></div>
+  <div id="enListe" aria-live="polite"><div class="loading">lädt …</div></div>
 
-  <div class="sec-h" style="margin-top:34px"><h2>Besprechungen</h2><span class="hint">Protokoll öffnen, kopieren oder per Mail verschicken</span><span class="line"></span></div>
-  <div id="sessions"><div class="loading">lädt …</div></div>
+  <div class="en-rueck" id="enRueck" role="status" aria-live="polite"></div>
 
-  <div class="sec-h" id="abzeichen" style="margin-top:34px"><h2>Abzeichen</h2><span class="hint" id="bdgHint">einmal je Jahr, je 25 Taler</span><span class="line"></span></div>
-  <div class="badgebar" id="badges"></div>
+  <div class="en-fuss" id="enFuss" hidden>
+    <span id="enFussT"></span>
+    <a class="btn btn-primary" href="besprechung.html">Zur Besprechung</a>
+  </div>
+
+  <!-- Bisheriger Inhalt der Seite als Klappe: Beschlüsse (decisions_list), Protokolle der Besprechungen, Wochenmail. -->
+  <details class="en-klappe" id="enBeschl">
+    <summary><span>Beschlüsse</span><span class="fd-n" id="enBeschlN"></span></summary>
+    <div class="toolbar en-toolbar">
+      <div class="search" role="search"><label class="ws-vh" for="q">Beschlüsse durchsuchen</label><input id="q" type="search" placeholder="Beschlüsse durchsuchen …" /></div>
+      <div class="segs" id="rangeSegs">
+        <button class="seg" data-r="30">30 Tage</button>
+        <button class="seg on" data-r="90">Quartal</button>
+        <button class="seg" data-r="365">Jahr</button>
+        <button class="seg" data-r="0">Alle</button>
+      </div>
+      <button class="btn btn-ghost" id="addDec" title="Beschluss ohne Board-Thema nachtragen">＋ Beschluss</button>
+      <button class="btn btn-ghost" id="mailBtn">Wochenmail erzeugen</button>
+    </div>
+    <div id="log"><div class="loading">lädt …</div></div>
+    <div class="sec-h" style="margin-top:24px"><h2>Protokolle der Besprechungen</h2><span class="hint">öffnen, kopieren oder per Mail verschicken</span><span class="line"></span></div>
+    <div id="sessions"><div class="loading">lädt …</div></div>
+  </details>
 </div>
 
+<div class="modal-back" id="enModal"></div>
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=40"></script>
-<script src="/assets/game.js?v=40"></script>
-<script src="/assets/eggs.js?v=40" defer></script>
+<script src="/assets/core.js?v=41"></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
-let DEC=[], SESS=[], TOPICS=[], MS=[], CYC=null, Q="", RANGE=90, EDITING=null;
+let EN=null, EN_FILTER="offen", EN_LAUF=0, EN_OFFEN=new Set();
 const today=new Date(); today.setHours(0,0,0,0);
-function iso(d){ return gfIsoTag(d); }   /* D-03: Ortszeit statt UTC, vorher Vortag in Berlin */
+function iso(d){ return gfIsoTag(d); }
 function daysAgo(n){ const d=new Date(today); d.setDate(d.getDate()-n); return d; }
+
+/* ---- Wörter ---- */
+const EN_ART={ punkt:"Vorhaben-Punkt", thema:"Thema", kandidat:"Kandidat" };
+const EN_AN={ alex:"Alex", lea:"Lea", team:"Team" };
+const EN_ABSCHNITT=[["ueberfaellig","Überfällig"],["woche","Diese Woche"],["zwei_wochen","Nächste zwei Wochen"],["spaeter","Später"],["ohne","Ohne Frist"]];
+function abschnitt(e){ if(!e.reif) return "unreif"; if(e.zustand==="heute") return "woche"; return e.zustand; }
+function fristWort(e){
+  if(!e.frist) return gfZustand("offen","ohne Frist");
+  const d=e.frist.slice(8,10)+"."+e.frist.slice(5,7)+".";
+  const w=e.zustand==="ueberfaellig"?"überfällig":e.zustand==="heute"?"heute":e.zustand==="woche"?"diese Woche":e.zustand==="zwei_wochen"?"in "+e.tage+" Tagen":"später";
+  return gfZustand(e.zustand==="ueberfaellig"?"crit":["heute","woche"].includes(e.zustand)?"warn":"offen", d+" · "+w);
+}
+function herkunft(e){
+  const h=e.herkunft||{}; const teile=[EN_ART[e.quelle_art]||e.quelle_art];
+  if(e.vorhaben) teile.push(e.vorhaben.title); else if(e.quelle_art==="thema" && h.titel && h.titel!==e.frage) teile.push(h.titel);
+  if(h.quelle) teile.push(h.quelle);
+  if(h.datum) teile.push("vom "+gfFmtShort(h.datum));
+  return teile.map(gfEsc).join(" · ");
+}
+function quelleLink(e){
+  const h=e.herkunft||{}; if(!h.url) return "";
+  const l=e.quelle_art==="punkt"?"Akte des Vorhabens":e.quelle_art==="thema"?"Zum Thema":"Zur Mail";
+  return `<a class="btn btn-sm btn-ghost" href="${gfEsc(h.url)}"${/^https?:/.test(h.url)?' target="_blank" rel="noopener"':""}>${l}</a>`;
+}
+
+/* ---- Laden ---- */
+async function load(still){
+  const lauf=++EN_LAUF;
+  let d;
+  try{ d=await gfApi("entscheidungen_list",{status:EN_FILTER, sync: !still}); }
+  catch(e){ if(e.auth) throw e; if(lauf!==EN_LAUF) return; gfLadefehler($("#enListe"), e, {titel:"Die Entscheidungen ließen sich nicht laden."}); return; }
+  if(lauf!==EN_LAUF) return;
+  EN=d; render();
+}
+function render(){ renderKacheln(); renderFilter(); renderListe(); renderFuss(); }
+function renderKacheln(){
+  const z=EN.zaehler||{};
+  $("#enKk").innerHTML=[
+    gfKachel({icon:"zahl", value:z.offen||0, label:"offen", btn:`data-f="offen"`}),
+    gfKachel({icon:"zahl", value:z.diese_woche||0, label:"diese Woche", tone:z.diese_woche?"warn":"", btn:`data-f="offen"`}),
+    gfKachel({icon:"zahl", value:z.mit_vorschlag||0, label:"mit Vorschlag", btn:`data-f="offen"`}),
+    gfKachel({icon:"zahl", value:z.ueberfaellig||0, label:"überfällig", tone:z.ueberfaellig?"crit":"", btn:`data-f="offen"`}),
+  ].join("");
+  $("#enStand").textContent=`Stand ${new Date().toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}${EN.sync&&EN.sync.eingefuegt?` · ${EN.sync.eingefuegt} neu aus den Quellen`:""}`;
+}
+function renderFilter(){
+  const z=EN.zaehler||{};
+  const f=[["offen",`Offen${z.offen?" · "+z.offen:""}`],["vertagt",`Vertagt${z.vertagt?" · "+z.vertagt:""}`],["abgegeben",`Abgegeben${z.abgegeben?" · "+z.abgegeben:""}`],["entschieden","Entschieden"]];
+  $("#enFilter").innerHTML=f.map(([k,l])=>`<button type="button" class="chip${EN_FILTER===k?" on":""}" aria-pressed="${EN_FILTER===k}" data-filter="${k}">${l}</button>`).join("");
+}
+function renderFuss(){
+  const z=EN.zaehler||{}; const n=z.diese_woche||0;
+  $("#enFuss").hidden=false;
+  $("#enFussT").textContent=n?`Besprechung heute: ${n} ${n===1?"Entscheidung":"Entscheidungen"} überfällig oder diese Woche.`:"Nichts Dringendes für die Besprechung. Die Liste ist der Einstieg.";
+}
+function renderListe(){
+  const L=EN.eintraege||[];
+  if(!L.length){
+    const z=EN.zuletzt_entschieden;
+    const leer=EN_FILTER==="offen"?`Keine offenen Entscheidungen.${z?` Zuletzt entschieden: ${gfEsc(z.frage)} (${gfFmtShort(z.entschieden_am)}, ${gfEsc(z.entschieden_von||"")}).`:""}`
+      :EN_FILTER==="vertagt"?"Nichts vertagt.":EN_FILTER==="abgegeben"?"Nichts abgegeben.":"In den letzten 30 Tagen nichts entschieden.";
+    $("#enListe").innerHTML=`<p class="fd-empty">${leer}</p>`; return;
+  }
+  if(EN_FILTER!=="offen"){ $("#enListe").innerHTML=`<div class="en-list${EN_FILTER==="entschieden"?" en-dim":""}">${L.map(zeile).join("")}</div>`; bind(); return; }
+  const gruppen=new Map(); for(const e of L){ const k=abschnitt(e); if(!gruppen.has(k)) gruppen.set(k,[]); gruppen.get(k).push(e); }
+  let html="";
+  for(const [k,label] of EN_ABSCHNITT){ const items=gruppen.get(k); if(!items||!items.length) continue;
+    html+=`<section class="en-sec" aria-labelledby="enS-${k}"><h2 class="en-sec-h" id="enS-${k}">${label} <span class="fd-n">${items.length}</span></h2><div class="en-list">${items.map(zeile).join("")}</div></section>`; }
+  const u=gruppen.get("unreif")||[];
+  if(u.length) html+=`<details class="en-sec en-unreif" id="enUnreif"${EN_OFFEN.has("unreif")?" open":""}><summary><span>Noch keine Frage</span><span class="fd-n">${u.length}</span><span class="en-sec-hint">Ohne Frist, Vorschlag und Frageform. Der Lauf formuliert sie; du kannst sie auch selbst fassen.</span></summary><div class="en-list">${u.map(zeile).join("")}</div></details>`;
+  $("#enListe").innerHTML=html; gfStagger($("#enListe"),".en-row"); bind();
+}
+function zeile(e){
+  const offen=EN_OFFEN.has(e.id); const h=e.herkunft||{};
+  const status=e.status==="entschieden"?gfZustand("ok",`entschieden ${gfFmtShort(e.entschieden_am)} · ${e.entschieden_von||""}`)
+    :e.status==="abgegeben"?gfZustand("offen",`abgegeben an ${EN_AN[e.abgegeben_an]||e.abgegeben_an}`)
+    :e.status==="vertagt"?gfZustand(e.wieder_faellig?"warn":"offen",`vertagt bis ${gfFmtShort(e.vertagt_bis)}${e.wieder_faellig?" · wieder fällig":""}`):"";
+  const rueck=!!e.rueckweg_at && (Date.now()-new Date(e.rueckweg_at).getTime())<86400000 && e.status!=="offen";
+  const aktiv=e.status==="offen"||e.status==="vertagt"||e.status==="abgegeben";
+  return `<article class="en-row${e.reif?"":" en-row-unreif"}" data-id="${e.id}">
+    <div class="en-main">
+      <button type="button" class="en-q" aria-expanded="${offen}" aria-controls="enD-${e.id}">${gfEsc(e.frage)}</button>
+      <div class="en-her">${herkunft(e)} · ${fristWort(e)}${status?` · ${status}`:""}${e.frage_von==="lauf"?` · <span class="fd-muted">Frage vom Lauf</span>`:""}</div>
+      ${e.vorschlag?`<div class="en-vs"><b>Vorschlag:</b> ${gfEsc(e.vorschlag)}</div>`:""}
+      ${e.status==="entschieden"&&e.ergebnis?`<div class="en-vs"><b>Ergebnis:</b> ${gfEsc(e.ergebnis)}</div>`:""}
+      <div class="en-det" id="enD-${e.id}"${offen?"":" hidden"}>
+        ${h.titel&&h.titel!==e.frage?`<div class="en-det-t">Original: ${gfEsc(h.titel)}</div>`:""}
+        ${h.text?`<div class="en-det-x">${gfEsc(gfFirstSentence(h.text,600))}</div>`:""}
+        ${h.fehlt?`<div class="en-det-x">${gfZustand("warn","Die Quelle gibt es nicht mehr")}</div>`:""}
+        <div class="en-det-a">${quelleLink(e)}${aktiv?`<button type="button" class="btn btn-sm btn-ghost" data-act="edit" aria-label="Frage, Frist und Vorschlag bearbeiten">✎ Bearbeiten</button>`:""}${rueck?`<button type="button" class="btn btn-sm btn-ghost" data-act="zurueck">Rückgängig</button>`:""}</div>
+      </div>
+    </div>
+    ${aktiv?`<div class="en-btns"><button type="button" class="btn btn-primary" data-act="entschieden">Entschieden</button><button type="button" class="btn" data-act="vertagt">Vertagen</button><button type="button" class="btn" data-act="abgegeben">Abgeben</button></div>`:""}
+  </article>`;
+}
+function bind(){
+  $("#enListe").querySelectorAll(".en-q").forEach(b=>b.onclick=()=>{ const id=b.closest(".en-row").dataset.id; const d=document.getElementById("enD-"+id); const auf=d.hidden; d.hidden=!auf; b.setAttribute("aria-expanded",String(auf)); if(auf) EN_OFFEN.add(id); else EN_OFFEN.delete(id); });
+  $("#enListe").querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>{ const id=b.closest(".en-row").dataset.id; const e=(EN.eintraege||[]).find(x=>x.id===id); if(!e) return; aktion(e, b.dataset.act, b); });
+  const u=$("#enUnreif"); if(u) u.addEventListener("toggle",()=>{ if(u.open) EN_OFFEN.add("unreif"); else EN_OFFEN.delete("unreif"); });
+}
+
+/* ---- Blatt: Entschieden, Vertagen, Abgeben, Bearbeiten ---- */
+function blatt(titel, inner, fokus){
+  const m=$("#enModal");
+  m.innerHTML=`<div class="modal en-modal" role="dialog" aria-modal="true" aria-labelledby="enMT"><div class="modal-h"><h3 id="enMT">${titel}</h3><button type="button" class="icon-btn" data-x aria-label="Schließen">✕</button></div>${inner}</div>`;
+  gfDialogAuf(m, fokus); m.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>m.classList.remove("open")); m.onclick=e=>{ if(e.target===m) m.classList.remove("open"); };
+  return m;
+}
+const FUSS=(wort)=>`<p class="en-err" id="enErr" role="alert"></p><div class="modal-f"><button type="submit" class="btn btn-primary">${wort}</button><button type="button" class="btn btn-brand" data-x>Abbrechen</button></div>`;
+function aktion(e, act, ausl){
+  if(act==="zurueck") return zurueck(e, ausl);
+  const frage=`<p class="modal-intro en-modal-q">${gfEsc(e.frage)}</p>`;
+  if(act==="entschieden"){
+    const m=blatt("Entschieden", `${frage}<form class="en-form" id="enF" novalidate><div class="fld ffull"><label for="enErg">Ergebnis, ein Satz</label><textarea id="enErg" rows="3" required placeholder="Was ist entschieden? Mit Betrag, Datum oder Name, wenn es sie gibt."></textarea></div>${FUSS("Entschieden")}</form>`, "#enErg");
+    m.querySelector("#enF").onsubmit=ev=>{ ev.preventDefault(); const erg=m.querySelector("#enErg").value.trim(); if(erg.length<5){ m.querySelector("#enErr").textContent="Bitte das Ergebnis in einem Satz festhalten."; m.querySelector("#enErg").focus(); return; } senden(e,"entscheidung_entscheiden",{ergebnis:erg},m); };
+  }
+  if(act==="vertagt"){
+    const std=gfAddDays(gfIsoTag(),7);
+    const m=blatt("Vertagen", `${frage}<form class="en-form" id="enF" novalidate><div class="fld"><label for="enBis">Bis</label><input id="enBis" type="date" value="${std}" min="${gfIsoTag()}" required></div>${FUSS("Vertagen")}</form>`, "#enBis");
+    m.querySelector("#enF").onsubmit=ev=>{ ev.preventDefault(); const bis=m.querySelector("#enBis").value; if(!bis||bis<gfIsoTag()){ m.querySelector("#enErr").textContent="Bitte ein Datum ab heute wählen."; return; } senden(e,"entscheidung_vertagen",{bis},m); };
+  }
+  if(act==="abgegeben"){
+    const m=blatt("Abgeben", `${frage}<form class="en-form" id="enF" novalidate><div class="fld"><label>An</label>${gfChips("an",[["alex","Alex"],["lea","Lea"],["team","Team"]],"",{label:"An wen"})}</div>${FUSS("Abgeben")}</form>`, ".chip");
+    m.querySelectorAll(".fchips .chip").forEach(c=>c.onclick=()=>gfChipsSet(m.querySelector('input[name="an"]'), c.dataset.v));
+    m.querySelector("#enF").onsubmit=ev=>{ ev.preventDefault(); const an=m.querySelector('input[name="an"]').value; if(!an){ m.querySelector("#enErr").textContent="Bitte wählen: Alex, Lea oder Team."; return; } senden(e,"entscheidung_abgeben",{an},m); };
+  }
+  if(act==="edit"){
+    const m=blatt("Frage, Frist, Vorschlag", `<form class="en-form" id="enF" novalidate><div class="fld ffull"><label for="enFr">Frage</label><textarea id="enFr" rows="2" required>${gfEsc(e.frage)}</textarea></div><div class="fld"><label for="enFt">Frist</label><input id="enFt" type="date" value="${e.frist||""}"></div><div class="fld ffull"><label for="enVs">Vorschlag</label><textarea id="enVs" rows="2">${gfEsc(e.vorschlag||"")}</textarea></div>${FUSS("Speichern")}</form>`, "#enFr");
+    m.querySelector("#enF").onsubmit=async ev=>{ ev.preventDefault(); const p={ id:e.id, by:gfWho() }; const fr=m.querySelector("#enFr").value.trim(), ft=m.querySelector("#enFt").value, vs=m.querySelector("#enVs").value.trim();
+      if(fr.length<3){ m.querySelector("#enErr").textContent="Die Frage braucht mindestens drei Zeichen."; return; }
+      if(fr!==e.frage) p.frage=fr; if((e.frist||"")!==ft) p.frist=ft||null; if((e.vorschlag||"")!==vs) p.vorschlag=vs||null;
+      if(Object.keys(p).length===2){ m.classList.remove("open"); return; }
+      const btn=m.querySelector('[type="submit"]'); btn.disabled=true;
+      try{ await gfApi("entscheidung_set",p); m.classList.remove("open"); gfToast("Gespeichert"); await load(true); }
+      catch(x){ btn.disabled=false; m.querySelector("#enErr").textContent="Nicht gespeichert: "+(x.message||"Verbindung"); } };
+  }
+}
+/* Nach jeder Aktion verschwindet die Zeile; der Hinweis bietet 10 Sekunden Rückgängig. Die Nutzlast des Rückgängig steht fest,
+   ein zweiter Versuch schickt dieselbe; während der Rücknahme ist der Knopf gesperrt. */
+let RUECK_T=null;
+async function senden(e, action, p, m){
+  const btn=m.querySelector('[type="submit"]'); btn.disabled=true; m.querySelector("#enErr").textContent="";
+  try{ await gfApi(action,{ id:e.id, by:gfWho(), ...p }); }
+  catch(x){ btn.disabled=false; m.querySelector("#enErr").textContent=(x.konflikt?"":"Nicht gespeichert: ")+(x.message||"Verbindung"); if(x.konflikt) load(true); return; }
+  m.classList.remove("open");
+  const wort={ entscheidung_entscheiden:"Entschieden", entscheidung_vertagen:`Vertagt bis ${gfFmtShort(p.bis)}`, entscheidung_abgeben:`Abgegeben an ${EN_AN[p.an]}` }[action];
+  zeigeRueck(e, wort);
+  const row=document.querySelector(`.en-row[data-id="${CSS.escape(e.id)}"]`); if(row) row.remove();
+  EN.eintraege=(EN.eintraege||[]).filter(x=>x.id!==e.id);
+  await load(true);
+  const n=document.querySelector(".en-row .en-q"); if(n) n.focus(); else $("#enFilter .chip.on")?.focus();
+}
+function zeigeRueck(e, wort){
+  const h=$("#enRueck"); clearTimeout(RUECK_T);
+  h.innerHTML=`<span>${gfEsc(wort)}: ${gfEsc(e.frage)}</span><button type="button" class="btn btn-sm btn-ghost" id="enRueckK">Rückgängig</button>`; h.classList.add("show");
+  RUECK_T=setTimeout(()=>{ h.classList.remove("show"); h.innerHTML=""; },10000);
+  const k=$("#enRueckK"); let laeuft=false;
+  k.onclick=async()=>{ if(laeuft) return; laeuft=true; k.disabled=true; clearTimeout(RUECK_T);
+    try{ await gfApi("entscheidung_zurueck",{ id:e.id, by:gfWho() }); h.classList.remove("show"); h.innerHTML=""; gfToast("Zurückgenommen"); await load(true); }
+    catch(x){ laeuft=false; k.disabled=false; h.querySelector("span").textContent=`Rückgängig hat nicht geklappt (${x.message||"Verbindung"}). Noch einmal?`; RUECK_T=setTimeout(()=>{ h.classList.remove("show"); h.innerHTML=""; },30000); } };
+}
+async function zurueck(e, ausl){
+  ausl.disabled=true;
+  try{ await gfApi("entscheidung_zurueck",{ id:e.id, by:gfWho() }); gfToast("Zurückgenommen"); await load(true); }
+  catch(x){ ausl.disabled=false; gfToast("Rückgängig hat nicht geklappt: "+(x.message||"Verbindung"),{fehler:true}); }
+}
+$("#enFilter").addEventListener("click",e=>{ const b=e.target.closest("[data-filter]"); if(!b) return; EN_FILTER=b.dataset.filter; renderFilter(); $("#enListe").innerHTML=`<div class="loading">lädt …</div>`; load(true); });
+$("#enKk").addEventListener("click",e=>{ const b=e.target.closest("[data-f]"); if(!b) return; if(EN_FILTER!=="offen"){ EN_FILTER="offen"; renderFilter(); load(true); } else $("#enListe").scrollIntoView({behavior:"smooth",block:"start"}); });
+
+/* ---- Klappe: Beschlüsse (bisheriges Entscheidungslog), Protokolle, Wochenmail ---- */
+let DEC=[], SESS=[], TOPICS=[], MS=[], CYC=null, Q="", RANGE=90, EDITING=null, BESCHL_GELADEN=false;
 function monthKey(d){ return d.slice(0,7); }
 function monthLabel(k){ const [y,m]=k.split("-"); return new Date(+y,+m-1,1).toLocaleDateString("de-DE",{month:"long",year:"numeric"}); }
-
-async function load(){
+async function loadBeschl(){
   try{
     const [d,s,t]=await Promise.all([gfApi("decisions_list",{limit:1000}), gfApi("sessions_list",{limit:60}), gfApi("list")]);
-    DEC=d.decisions||[]; SESS=s.sessions||[]; TOPICS=t.topics||[];
-    render(); renderSessions();
-  }catch(e){ gfLadefehler($("#log"), e, {auch:["#sessions"]});   /* B-07: Ursache, nächster Schritt, Kopfzeile nicht mehr „lädt …“ */ }
+    DEC=d.decisions||[]; SESS=s.sessions||[]; TOPICS=t.topics||[]; BESCHL_GELADEN=true;
+    renderLog(); renderSessions();
+  }catch(e){ gfLadefehler($("#log"), e, {auch:["#sessions"]}); }
 }
-
-/* ---- Abzeichenleiste (V17): alle 19, erreichte in Farbe ---- */
-function renderBadges(st){
-  const G=window.GF_GAME; if(!G) return; const got=new Map((st?.badges||[]).map(b=>[b.key,b]));
-  $("#bdgHint").textContent=`${got.size} von ${G.badges.length} · ${st?.year||today.getFullYear()} · je 25 Taler`;
-  $("#badges").innerHTML=G.badges.map(([k,l])=>{ const b=got.get(k); return `<div class="bdg ${b?"":"locked"}" title="${gfEsc(l)}${b?` · ${gfFmtShort(b.earned_at)}${b.who&&b.who!=="Team"?" · "+gfEsc(b.who):""}`:" · noch nicht erreicht"}"><img src="${G.icon("abzeichen-"+k)}" alt=""><div class="bl"><span>${gfEsc(l)}</span><small>${b?`${gfFmtShort(b.earned_at)}${b.who&&b.who!=="Team"?" · "+gfEsc(b.who):""}`:"offen"}</small></div></div>`; }).join("");
-}
-document.addEventListener("gf-game",e=>renderBadges(e.detail));
-
-function visible(){
-  const since=RANGE?iso(daysAgo(RANGE)):"0000";
-  return DEC.filter(x=>x.decided_at>=since && (!Q||[x.topic_title,x.decision,x.next_action,x.owner,x.decided_by].join(" ").toLowerCase().includes(Q)));
-}
-function render(){
+function visible(){ const since=RANGE?iso(daysAgo(RANGE)):"0000"; return DEC.filter(x=>x.decided_at>=since && (!Q||[x.topic_title,x.decision,x.next_action,x.owner,x.decided_by].join(" ").toLowerCase().includes(Q))); }
+function renderLog(){
   document.querySelectorAll("#rangeSegs .seg").forEach(b=>b.classList.toggle("on",+b.dataset.r===RANGE));
-  const v=visible();
-  const week=DEC.filter(x=>x.decided_at>=iso(daysAgo(7))).length;
-  const open=TOPICS.filter(t=>t.board_lane==="zu_besprechen"&&t.kind!=="recurring").length;
-  $("#stats").innerHTML=`
-    <div class="sstat"><div class="k">Entscheidungen</div><div class="v">${DEC.length}</div></div>
-    <div class="sstat"><div class="k">letzte 7 Tage</div><div class="v">${week}</div></div>
-    <div class="sstat"><div class="k">Besprechungen</div><div class="v">${SESS.filter(s=>s.ended_at).length}</div></div>
-    <div class="sstat"><div class="k">zu besprechen</div><div class="v">${open}</div></div>`;
-  if(!v.length && !EDITING){ $("#log").innerHTML=`<div class="empty pic" style="--hero-img:url(/assets/img/lagerfeuer.webp)"><div><h3>${Q?"Nichts gefunden.":"Noch keine Entscheidungen im Zeitraum."}</h3><p>Entscheidungen entstehen im Besprechungsmodus des Boards oder über „＋ Entscheidung“.</p></div></div>`; return; }
+  const v=visible(); $("#enBeschlN").textContent=DEC.length?String(DEC.length):"";
+  if(!v.length && !EDITING){ $("#log").innerHTML=`<p class="fd-empty">${Q?"Nichts gefunden.":"Keine Beschlüsse im Zeitraum."}</p>`; return; }
   const months=[...new Set(v.map(x=>monthKey(x.decided_at)))];
   let html= EDITING&&!EDITING.id ? editForm(EDITING) : "";
-  for(const m of months){
-    const items=v.filter(x=>monthKey(x.decided_at)===m);
-    html+=`<div class="group"><div class="group-h">${monthLabel(m)} <span class="n">${items.length}</span></div><div class="dlist">${items.map(row).join("")}</div></div>`;
-  }
-  $("#log").innerHTML=html; gfStagger($("#log"),".drow"); bind();
+  for(const m of months){ const items=v.filter(x=>monthKey(x.decided_at)===m); html+=`<div class="group"><div class="group-h">${monthLabel(m)} <span class="n">${items.length}</span></div><div class="dlist">${items.map(row).join("")}</div></div>`; }
+  $("#log").innerHTML=html; bindLog();
 }
 function row(x){
   if(EDITING && EDITING.id===x.id) return editForm(x);
@@ -118,7 +279,7 @@ function row(x){
       <div class="dx">${gfClamp(x.decision,"d"+x.id,240)}</div>
       ${x.next_action||x.owner?`<div class="dn">${x.next_action?`<b>Nächster Schritt:</b> ${gfEsc(x.next_action)}`:""}${x.owner?` <span class="muted">· ${gfEsc(x.owner)}</span>`:""}</div>`:""}
     </div>
-    <div class="da"><button class="icon-btn" data-act="edit" title="Bearbeiten">✎</button><button class="icon-btn" data-act="del" title="Löschen">✕</button></div>
+    <div class="da"><button class="icon-btn" data-act="edit" title="Bearbeiten" aria-label="Bearbeiten">✎</button><button class="icon-btn" data-act="del" title="Löschen" aria-label="Löschen">✕</button></div>
   </article>`;
 }
 function editForm(x){
@@ -126,81 +287,71 @@ function editForm(x){
     <div class="fgrid">
       <div class="fld"><label>Datum</label><input name="decided_at" type="date" value="${x.decided_at||iso(today)}" required /></div>
       <div class="fld"><label>Thema</label><input name="topic_title" value="${gfEsc(x.topic_title||"")}" placeholder="Worum ging es?" /></div>
-      <div class="fld ffull"><label>Entscheidung</label><textarea name="decision" rows="2" required>${gfEsc(x.decision||"")}</textarea></div>
+      <div class="fld ffull"><label>Beschluss</label><textarea name="decision" rows="2" required>${gfEsc(x.decision||"")}</textarea></div>
       <div class="fld"><label>Nächster Schritt</label><input name="next_action" value="${gfEsc(x.next_action||"")}" /></div>
       <div class="fld"><label>Verantwortung</label><input name="owner" value="${gfEsc(x.owner||"")}" /></div>
     </div>
     <div class="actions-row" style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-primary" type="submit">Speichern</button><button class="btn btn-brand" type="button" data-act="cancel">Abbrechen</button></div>
   </form>`;
 }
-function bind(){
-  document.querySelectorAll(".drow[data-id] [data-act]").forEach(b=>b.onclick=async ev=>{
+function bindLog(){
+  document.querySelectorAll("#log .drow[data-id] [data-act]").forEach(b=>b.onclick=async ev=>{
     ev.preventDefault(); const el=b.closest(".drow"); const id=el.dataset.id; const x=DEC.find(d=>d.id===id);
-    if(b.dataset.act==="edit"){ EDITING={...x}; render(); }
-    if(b.dataset.act==="cancel"){ EDITING=null; render(); }
-    if(b.dataset.act==="del"){ if(!confirm("Diese Entscheidung aus dem Log löschen?")) return; try{ await gfApi("decision_delete",{id}); DEC=DEC.filter(d=>d.id!==id); render(); gfToast("Gelöscht"); }catch(e){ gfToast("Fehler: "+e.message); } }
+    if(b.dataset.act==="edit"){ EDITING={...x}; renderLog(); }
+    if(b.dataset.act==="cancel"){ EDITING=null; renderLog(); }
+    if(b.dataset.act==="del"){ if(!confirm("Diesen Beschluss aus dem Log löschen?")) return; try{ await gfApi("decision_delete",{id}); DEC=DEC.filter(d=>d.id!==id); renderLog(); gfToast("Gelöscht"); }catch(e){ gfToast("Fehler: "+e.message,{fehler:true}); } }
   });
-  document.querySelectorAll("form.editcard").forEach(f=>f.onsubmit=async ev=>{
+  document.querySelectorAll("#log form.editcard").forEach(f=>f.onsubmit=async ev=>{
     ev.preventDefault(); const fd=new FormData(f); const p={}; for(const [k,v] of fd.entries()) p[k]=v.trim();
     try{
       if(f.dataset.id){ const d=await gfApi("decision_update",{id:f.dataset.id,...p}); DEC=DEC.map(x=>x.id===d.decision.id?d.decision:x); }
       else { const d=await gfApi("decision_add",{...p, decided_by:gfWho()}); DEC.unshift(d.decision); }
-      EDITING=null; render(); gfToast("Gespeichert");
-    }catch(e){ gfToast("Fehler: "+e.message); }
+      EDITING=null; renderLog(); gfToast("Gespeichert");
+    }catch(e){ gfToast("Fehler: "+e.message,{fehler:true}); }
   });
 }
-
 function renderSessions(){
   const done=SESS.filter(s=>s.ended_at);
-  if(!done.length){ $("#sessions").innerHTML=`<div class="empty">Noch keine abgeschlossene Besprechung. Im Board „Besprechung starten“, am Ende entsteht hier das Protokoll.</div>`; return; }
+  if(!done.length){ $("#sessions").innerHTML=`<p class="fd-empty">Noch keine abgeschlossene Besprechung. Unter Besprechung starten, am Ende entsteht hier das Protokoll.</p>`; return; }
   $("#sessions").innerHTML=`<div class="dlist">${done.map(s=>{ const log=Array.isArray(s.summary)?s.summary:[]; const nd=log.filter(l=>l.outcome==="entschieden").length; const dur=Math.round((new Date(s.ended_at)-new Date(s.started_at))/60000);
     return `<article class="drow srow-s" data-sid="${s.id}">
       <div class="dd"><b>${gfFmtShort(s.started_at)}</b><span>${gfFmtTime(s.started_at)} · ${dur} min</span></div>
-      <div class="db"><div class="dt">${gfEsc(s.title||"Besprechung")}</div><div class="dn">${gfEsc(s.participants)} · ${log.length} Themen behandelt · ${nd} Entscheidung${nd===1?"":"en"}</div></div>
-      <div class="da"><button class="btn btn-sm" data-proto>Protokoll</button><button class="icon-btn" data-sdel title="Löschen">✕</button></div>
+      <div class="db"><div class="dt">${gfEsc(s.title||"Besprechung")}</div><div class="dn">${gfEsc(s.participants)} · ${log.length} Punkte behandelt · ${nd} Entscheidung${nd===1?"":"en"}</div></div>
+      <div class="da"><button class="btn btn-sm" data-proto>Protokoll</button><button class="icon-btn" data-sdel title="Löschen" aria-label="Löschen">✕</button></div>
     </article>`; }).join("")}</div>`;
   document.querySelectorAll("[data-proto]").forEach(b=>b.onclick=()=>{ const s=SESS.find(x=>x.id===b.closest(".drow").dataset.sid); gfTextModal(`Protokoll · ${gfFmtShort(s.started_at)}`, s.protocol||"(kein Protokolltext gespeichert)", {subject:`GF-Besprechung ${gfFmtShort(s.started_at)} · Protokoll`}); });
-  document.querySelectorAll("[data-sdel]").forEach(b=>b.onclick=async()=>{ const id=b.closest(".drow").dataset.sid; if(!confirm("Besprechung samt Protokoll löschen? Entscheidungen bleiben im Log.")) return; try{ await gfApi("session_delete",{id}); SESS=SESS.filter(s=>s.id!==id); renderSessions(); render(); gfToast("Gelöscht"); }catch(e){ gfToast("Fehler: "+e.message); } });
+  document.querySelectorAll("[data-sdel]").forEach(b=>b.onclick=async()=>{ const id=b.closest(".drow").dataset.sid; if(!confirm("Besprechung samt Protokoll löschen? Beschlüsse bleiben im Log.")) return; try{ await gfApi("session_delete",{id}); SESS=SESS.filter(s=>s.id!==id); renderSessions(); gfToast("Gelöscht"); }catch(e){ gfToast("Fehler: "+e.message,{fehler:true}); } });
 }
-
-/* ---- Wochenmail: Entscheidungen der Woche, offene Prioritäten, nächste Meilensteine ---- */
+/* Wochenmail: Beschlüsse der Woche, offene Prioritäten, nächste Meilensteine (ohne Habitat-Punkte, Stufe 1). */
 async function wochenmail(){
-  try{
-    const [ms,cyc]=await Promise.all([gfApi("milestones_list",{all:false}), gfApi("cycle_get",{year:today.getFullYear()})]);
-    MS=ms.milestones||[]; CYC=cyc;
-  }catch(e){ MS=[]; CYC=null; }
-  const since=iso(daysAgo(7));
-  const dec=DEC.filter(x=>x.decided_at>=since);
+  if(!BESCHL_GELADEN) await loadBeschl();
+  try{ const [ms,cyc]=await Promise.all([gfApi("milestones_list",{all:false}), gfApi("cycle_get",{year:today.getFullYear()})]); MS=ms.milestones||[]; CYC=cyc; }catch(e){ MS=[]; CYC=null; }
+  const since=iso(daysAgo(7)); const dec=DEC.filter(x=>x.decided_at>=since);
   const hoch=TOPICS.filter(t=>t.priority==="hoch"&&t.status!=="erledigt"&&t.kind!=="recurring").slice(0,8);
-  const zb=TOPICS.filter(t=>t.board_lane==="zu_besprechen"&&t.kind!=="recurring");
-  const kl=TOPICS.filter(t=>t.board_lane==="in_klaerung");
-  const in30=iso(daysAgo(-30));
-  const next=MS.filter(m=>m.date_from&&m.date_from>=iso(today)&&m.date_from<=in30).slice(0,6);
-  const L=[];
-  L.push(`GF-Wochenmail Wilde Möhre · Woche bis ${gfFmtShort(iso(today))}`);
-  L.push(`Von: ${gfWho()} · Stand ${gfFmtDay(today)}`); L.push("");
+  const zb=TOPICS.filter(t=>t.board_lane==="zu_besprechen"&&t.kind!=="recurring"); const kl=TOPICS.filter(t=>t.board_lane==="in_klaerung");
+  const in30=iso(daysAgo(-30)); const next=MS.filter(m=>m.date_from&&m.date_from>=iso(today)&&m.date_from<=in30).slice(0,6);
+  const L=[]; L.push(`GF-Wochenmail Wilde Möhre · Woche bis ${gfFmtShort(iso(today))}`); L.push(`Von: ${gfWho()} · Stand ${gfFmtDay(today)}`); L.push("");
   L.push(`Entscheidungen der Woche (${dec.length})`);
   if(dec.length) dec.forEach((x,i)=>L.push(`${i+1}. ${x.topic_title?x.topic_title+": ":""}${x.decision}${x.next_action?` → ${x.next_action}`:""}${x.owner?` (${x.owner})`:""}`)); else L.push("- keine");
-  L.push("");
+  L.push(""); if(EN&&EN.zaehler) L.push(`Offene Entscheidungen der GF: ${EN.zaehler.offen}, davon ${EN.zaehler.diese_woche} überfällig oder diese Woche`); L.push("");
   L.push(`Priorität hoch, offen (${hoch.length})`); hoch.forEach(t=>L.push(`- ${t.title}${t.owner?` (${t.owner})`:""}${t.next_action?`: ${t.next_action}`:""}`)); if(!hoch.length) L.push("- keine"); L.push("");
   L.push(`Zu besprechen: ${zb.length} Themen · In Klärung: ${kl.length}`); L.push("");
   if(next.length){ L.push("Nächste Meilensteine (30 Tage)"); next.forEach(m=>L.push(`- ${gfFmtShort(m.date_from)}${m.date_to?` bis ${gfFmtShort(m.date_to)}`:""} ${m.title}${m.strand?` · ${m.strand}`:""}`)); L.push(""); }
   if(CYC){ const tr=(CYC.transitions||[]).map(x=>({...x,d:x.date||x.date_from})).filter(x=>x.d&&x.d>=iso(today)).sort((a,b)=>a.d<b.d?-1:1)[0]; if(tr) L.push(`Nächster Übergang: ${tr.title||tr.label||""} am ${gfFmtShort(tr.d)}`); L.push(""); }
-  const st=window.GF_GAME?.state; if(st){ const rk={bronze:"Bronze",silber:"Silber",gold:"Gold"}[st.rank]||"kein Rang"; L.push(`Habitat-Punkte: ${st.weekPts} Taler diese Woche (${rk}) · ${st.total} im Jahrestopf, Stufe ${st.level?.label||""}${st.badges?.length?` · ${st.badges.length} Abzeichen`:""}`); L.push(""); }
   L.push("Erstellt mit Kompass · kompass.wildehabitate.de");
-  gfApi("score_event",{kind:"wochenmail"}).catch(()=>{});
-  gfTextModal("Wochenmail-Entwurf", L.join("\n"), {pic:"wochenmail", subject:`GF-Wochenmail · Woche bis ${gfFmtShort(iso(today))}`, intro:"Entwurf aus Board, Entscheidungslog und Meilensteinen. Vor dem Versand kurz durchlesen und ergänzen."});
+  gfTextModal("Wochenmail-Entwurf", L.join("\n"), {pic:"wochenmail", subject:`GF-Wochenmail · Woche bis ${gfFmtShort(iso(today))}`, intro:"Entwurf aus Entscheidungsliste, Beschlüssen und Meilensteinen. Vor dem Versand kurz durchlesen und ergänzen."});
 }
-
-$("#q").oninput=e=>{ Q=e.target.value.trim().toLowerCase(); render(); };
-document.addEventListener("keydown",e=>{ if(e.key==="/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); $("#q").focus(); } });
-$("#rangeSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; RANGE=+b.dataset.r; render(); };
-$("#addDec").onclick=()=>{ EDITING={id:null, decided_at:iso(today), topic_title:"", decision:"", next_action:"", owner:""}; render(); setTimeout(()=>{ const f=$("form.editcard"); if(f){ f.scrollIntoView({behavior:"smooth",block:"center"}); f.querySelector('[name="decision"]').focus(); } },50); };
+$("#q").oninput=e=>{ Q=e.target.value.trim().toLowerCase(); renderLog(); };
+$("#rangeSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; RANGE=+b.dataset.r; renderLog(); };
+$("#addDec").onclick=()=>{ EDITING={id:null, decided_at:iso(today), topic_title:"", decision:"", next_action:"", owner:""}; renderLog(); setTimeout(()=>{ const f=$("#log form.editcard"); if(f){ f.scrollIntoView({behavior:"smooth",block:"center"}); f.querySelector('[name="decision"]').focus(); } },50); };
+$("#mailBtn").onclick=wochenmail;
 
 gfGate(async()=>{
-  $("#app").style.display="block"; gfMountTopbar("themen"); gfMountSubnav("entscheidungen");
-  gfMountHero("entscheidungen","Entscheidungen","Was wir entschieden haben, wann und mit welchem nächsten Schritt. Darunter die Protokolle der Besprechungen.",{compact:true, aside:`<button class="btn btn-sm" id="mailBtn">Wochenmail erzeugen</button><a class="btn btn-sm" href="board.html?meeting=1">Besprechung starten</a>`});
-  $("#mailBtn").onclick=wochenmail;
+  $("#app").style.display="block"; gfMountTopbar("entscheidungen");
+  gfMountHero("lager","Entscheidungen","Was die Geschäftsführung entscheiden muss: jede Frage mit Frist und Herkunft. Entscheiden, vertagen oder abgeben; die Besprechung arbeitet diese Liste ab.",{compact:true});
+  document.addEventListener("gf-who",()=>load(true));
+  document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && new Date().toLocaleDateString("sv-SE")!==iso(today)) location.reload(); });
+  loadBeschl().catch(()=>{});
   await load();
 });
 </script>

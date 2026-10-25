@@ -80,6 +80,22 @@ Die Proben 16 und 17 scheitern am Stand von Runde 3 (`596aed7`) und bestehen am 
 
 Die Proben fanden während der Umsetzung zwei echte Fehler, die dann behoben wurden: Enter auf ⇄ öffnete zusätzlich die Details (schon im Bestand), und das Umsortieren zählte eine unsichtbare wiederkehrende Karte mit.
 
+### 3a. Bedienproben Stufe 1 (25.10.2026, `pruefung/bedienung.mjs`, Gruppe „Stufe 1“)
+
+| Probe | Erwartung | Beleg |
+| --- | --- | --- |
+| Entscheidungsliste: Kacheln, Abschnitte, Zeile | 4 Kacheln mit Zahlen; Abschnitte Überfällig, Diese Woche, Nächste zwei Wochen, Später, Ohne Frist; „Noch keine Frage“ eingeklappt mit Zähler; Zeile mit Herkunft, Fristzustand, Vorschlag, drei Knöpfen | Bedienprobe |
+| Entschieden, Vertagen, Abgeben | Pflichtfeld Ergebnis; Vertagen Standard plus 7 Tage; Abgeben nur mit Wahl; Zeile verschwindet; Hinweis mit Rückgängig; Rückgängig stellt her | Bedienprobe, `entscheidungen-probe.mjs` (Wirkung) |
+| Fehler beim Speichern | Blatt bleibt offen mit Meldung, Zeile bleibt | Bedienprobe |
+| Bearbeiten | nur geänderte Felder, by | Bedienprobe |
+| Filter Entschieden, Fußleiste, Klappe Beschlüsse | gedämpft mit Ergebnis ohne Knöpfe; Fußleiste mit Link; Klappe lädt erst beim Öffnen | Bedienprobe |
+| Ladefehler | sichtbar benannt, kein „lädt …“ | Bedienprobe, `webstandard-pruefung.mjs` (B-07) |
+| 390 px | Knöpfe unter der Frage, 44 px, kein Überlauf, Frage höchstens drei Zeilen, Blatt passt | Bedienprobe |
+| Besprechung | Kopfzeile, Agenda in Listenreihenfolge, keine Themen-Knöpfe, Material-Klappe, Start, Entschieden ohne Text abgelehnt, Entschieden, Vertagen, Abgeben, Überspringen, Protokoll mit vier Gruppen, Leerzustand | Bedienprobe |
+| Für dich | höchstens fünf, „und n weitere“, Zur Besprechung | Bedienprobe |
+| Korb | drei Einträge, Vorschlag als Marke, Zuordnen zum Vorschlag, Chip-Reihe, Archivieren, Neues Vorhaben, Verwerfen, „Alle Vorschläge übernehmen“ mit Zähler | Bedienprobe, `entscheidungen-probe.mjs` (Wirkung) |
+| Spielschicht | kein game.js, kein `#gameBar`, `GF_SPIEL` false, Check-in mit Tagesschlüssel nicht gesendet | Bedienprobe |
+
 ## 4. Leistung (T-18)
 
 Zeit vom Aufruf bis zum gefüllten Kerninhalt ohne „lädt …“, Median aus fünf Läufen, gleiche Testdaten, zwei Durchgänge je Stand.

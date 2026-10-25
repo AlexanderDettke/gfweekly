@@ -10,11 +10,11 @@
 <meta property="og:title" content="Kompass · Geschäftsführung der Wilden Habitate" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung, Wilde Möhre." />
 <meta property="og:image" content="assets/og-image.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=40" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=40" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=40" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=40" />
-<link rel="stylesheet" href="/assets/styles.css?v=40" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=41" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=41" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=41" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=41" />
+<link rel="stylesheet" href="/assets/styles.css?v=41" />
 <link rel="stylesheet" href="/assets/vorstand.css?v=2" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
@@ -90,18 +90,16 @@
 <div class="modal-back" id="vkModal"></div>
 <button type="button" class="vh-fab" id="fdFab" aria-label="Einwurf: etwas eintragen"><span aria-hidden="true">+</span> Einwurf</button>
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=40-vorstand2"></script>
-<script src="/assets/game.js?v=40"></script>
-<script src="/assets/eggs.js?v=40" defer></script>
+<script src="/assets/core.js?v=41-vorstand2"></script>
 <script src="/assets/vorstand.js?v=2"></script>
 <script>
 /* V22c · Für dich. Für den Blick zwischendurch, am Handy, in unter einer Minute.
-   Block 1: Einträge mit gate = gf oder = eigene Person (gate_list), sortiert nach Frist, dann Alter, höchstens fünf.
+   Block 1 (Stufe 1, 25.10.2026): offene Entscheidungen der GF aus entscheidungen_list, höchstens fünf; gate_list bleibt für die Tagesrunde.
    Block 2: Briefing des Laufs (news_list kind lage, je Strang ein Satz, höchstens sechs) und zwei Plattform-Zahlen (platform_digest).
    Block 3: die drei nächsten Daten aus Fristen, Zieldaten der Partner, Meilensteinen und Kalender-Tickern. */
 const $=s=>document.querySelector(s);
 const NOW=new Date(); const TODAY=NOW.toLocaleDateString("sv-SE");
-let GL=null, LAGE=[], CAL=[], DIG=null, MS=[], STRANDS=[], ABS=[], ABSZ={}, VT=[], VH=null, SEIT=null, KAND=null, KAND_VOLL=false;
+let GL=null, ENL=null, LAGE=[], CAL=[], DIG=null, MS=[], STRANDS=[], ABS=[], ABSZ={}, VT=[], VH=null, SEIT=null, KAND=null, KAND_VOLL=false;
 const KAND_GRENZE=2000;
 function meWho(){ return gfWho()==="Lea"?"lea":"alex"; }
 function dayDiff(d){ const a=new Date(TODAY+"T00:00:00"), b=new Date((d||"").slice(0,10)+"T00:00:00"); return Math.round((b-a)/86400000); }
@@ -165,25 +163,26 @@ document.getElementById("fdSeitOk").addEventListener("click",()=>{ if(SEIT?.geku
   SEIT={ seit:jetzt, eintraege:[], vorhaben:SEIT?.vorhaben||[] }; renderSeit(); gfToast("Alles gesehen"); });
 
 /* ---- Block 1 ---- */
+/* Stufe 1 (25.10.2026): „Deine Entscheidung“ liest die Entscheidungsliste (entscheidungen_list, offen plus wieder fällige vertagte),
+   höchstens fünf, der Rest als „und n weitere“ auf entscheidungen.html. */
+const EN_ART={ punkt:"Vorhaben-Punkt", thema:"Thema", kandidat:"Kandidat" };
 function renderEnt(){
-  if(!GL){ $("#fdEntL").innerHTML=`<p class="fd-empty">Die Entscheidungen ließen sich gerade nicht laden. Später noch einmal.</p>`; $("#fdEntN").textContent=""; $("#fdMeet").hidden=true; return; }
-  const me=meWho(); const items=(GL.items||[]).filter(x=>x.gate==="gf"||x.gate===me).sort(itemSort);
-  const gf=items.filter(x=>x.gate==="gf").length;
+  if(!ENL){ $("#fdEntL").innerHTML=`<p class="fd-empty">Die Entscheidungen ließen sich gerade nicht laden. Später noch einmal.</p>`; $("#fdEntN").textContent=""; $("#fdMeet").hidden=true; return; }
+  const items=ENL.eintraege||[];
   $("#fdEntN").textContent=items.length?`${items.length}`:"";
-  $("#fdMeet").hidden=!gf;
+  $("#fdMeet").hidden=!items.length;
   if(!items.length){
-    const last=(CAL.concat(LAGE)).sort((a,b)=>(b.happened_at||"").localeCompare(a.happened_at||""))[0];
-    $("#fdEntL").innerHTML=`<p class="fd-empty">Für dich ist hier gerade nichts offen. ✓${last?` Zuletzt bewegt: ${gfEsc(last.title)} (${gfNewsWhen(last.happened_at)}).`:""}</p>`; return;
+    const z=ENL.zuletzt_entschieden;
+    $("#fdEntL").innerHTML=`<p class="fd-empty">Keine offenen Entscheidungen. ✓${z?` Zuletzt entschieden: ${gfEsc(z.frage)} (${gfFmtShort(z.entschieden_am)}).`:""}</p>`; return;
   }
   const show=items.slice(0,5), rest=items.length-show.length;
   $("#fdEntL").innerHTML=show.map(x=>{
-    const f=fristWord(x.gate_frist); const who=x.gate==="gf"?"GF gemeinsam":(x.gate==="lea"?"Lea":"Alex");
-    const note=x.gate_note||x.short_description||(x.kind==="thema"?gfFirstSentence(x.context||"",160):gfFirstSentence(x.body||"",160));
-    return `<a class="fd-row" href="${itemHref(x)}">
-      <div class="fd-main"><div class="fd-title">${gfEsc(x.title||"")}</div>${note?`<div class="fd-note">${gfEsc(note)}</div>`:""}</div>
-      <div class="fd-side">${f?gfZustand(f.tone||"info",f.t):`<span class="fd-muted">ohne Frist</span>`}<span class="fd-who">${who}${x.gate_by==="lauf"?" · Vorschlag":""}</span></div>
+    const f=fristWord(x.frist); const her=[EN_ART[x.quelle_art]||x.quelle_art, x.vorhaben?x.vorhaben.title:null].filter(Boolean).join(" · ");
+    return `<a class="fd-row" href="entscheidungen.html">
+      <div class="fd-main"><div class="fd-title">${gfEsc(x.frage||"")}</div>${x.vorschlag?`<div class="fd-note">Vorschlag: ${gfEsc(gfFirstSentence(x.vorschlag,160))}</div>`:x.reif?"":`<div class="fd-note">noch keine Frage</div>`}</div>
+      <div class="fd-side">${f?gfZustand(f.tone||"info",f.t):`<span class="fd-muted">ohne Frist</span>`}<span class="fd-who">${gfEsc(her)}</span></div>
     </a>`;
-  }).join("")+(rest?`<a class="fd-more" href="aufraeumen.html">und ${rest} weitere →</a>`:"");
+  }).join("")+(rest?`<a class="fd-more" href="entscheidungen.html">und ${rest} weitere →</a>`:"");
   gfStagger($("#fdEntL"),".fd-row");
 }
 
@@ -441,7 +440,7 @@ async function load(){
   ]);
   if(lauf!==LADE_LAUF || fuer!==gfWho()) return;   // eine ältere Antwort oder die andere Person: verwerfen
   VH=vh?vh.vorhaben||[]:null; SEIT=seit;
-  const [gl, lg, cal, dig, ms, cyc, abs, kd]=await Promise.all([
+  const [gl, lg, cal, dig, ms, cyc, abs, kd, enl]=await Promise.all([
     gfApi("gate_list",{limit:1000}).catch(()=>null),
     gfApi("news_list",{kinds:["lage"],limit:60}).catch(()=>({items:[]})),
     gfApi("news_list",{kinds:["ticker"],since:new Date(Date.now()-86400000).toISOString(),limit:120}).catch(()=>({items:[]})),
@@ -450,9 +449,10 @@ async function load(){
     gfApi("cycle_get",{year:NOW.getFullYear()}).catch(()=>({strands:[]})),
     gfApi("absence_list",{}).catch(()=>({absences:[],zaehler:{}})),
     gfApi("news_list",{kinds:["kandidat"],statuses:["neu"],limit:KAND_GRENZE}).catch(()=>null),
+    gfApi("entscheidungen_list",{status:"offen"}).catch(()=>null),
   ]);
   if(lauf!==LADE_LAUF || fuer!==gfWho()) return;   // ältere Antwort: weder übernehmen noch zeichnen
-  GL=gl; LAGE=lg.items||[]; CAL=(cal.items||[]).filter(x=>x.source==="kalender"); DIG=dig; MS=ms.milestones||[]; STRANDS=cyc.strands||[];
+  GL=gl; ENL=enl; LAGE=lg.items||[]; CAL=(cal.items||[]).filter(x=>x.source==="kalender"); DIG=dig; MS=ms.milestones||[]; STRANDS=cyc.strands||[];
   ABS=abs.absences||[]; ABSZ=abs.zaehler||{}; KAND=kd?kd.items||[]:null;
   /* Volle Seite heißt: womöglich gekürzt; dann gilt die Tagesauswahl als vorläufig. */
   KAND_VOLL=!!KAND && KAND.length<KAND_GRENZE;

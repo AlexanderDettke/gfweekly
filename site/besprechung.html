@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Kompass · Besprechung</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=40" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=40" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=40" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=40" />
-<link rel="stylesheet" href="/assets/styles.css?v=40" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=41" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=41" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=41" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=41" />
+<link rel="stylesheet" href="/assets/styles.css?v=41" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -31,82 +31,86 @@
   <header id="topbar"></header>
   <div id="hero"></div>
 
-  <!-- V22d · Besprechung: Vorbereitung vorher, Abarbeiten währenddessen, Protokoll danach. -->
+  <!-- Stufe 1 (25.10.2026) · Besprechung: Agenda = Entscheidungsliste (offen plus wieder fällige vertagte), abarbeiten mit
+       Entschieden, Vertagen, Abgeben, Überspringen; Protokoll danach. Der Abarbeitungsblock aus V22d bleibt. -->
   <div class="bs-top" id="bsTop"></div>
   <section class="meet" id="meet" hidden></section>
 
   <section class="fd" id="bsAg" aria-label="Agenda">
-    <div class="fd-h"><h2>Agenda</h2><span class="fd-n" id="bsAgN"></span><span class="line"></span><a class="btn btn-sm btn-brand" href="aufraeumen.html">Aufräumen</a><button class="btn btn-sm btn-primary" id="meetBtn">Besprechung starten</button></div>
+    <div class="fd-h"><h2>Agenda</h2><span class="fd-n" id="bsAgN"></span><span class="line"></span><a class="btn btn-sm btn-brand" href="entscheidungen.html">Entscheidungsliste</a><button class="btn btn-sm btn-primary" id="meetBtn">Besprechung starten</button></div>
     <div class="bs-list" id="bsAgL"><div class="loading">lädt …</div></div>
   </section>
 
+  <details class="en-klappe" id="bsMat">
+    <summary><span>Material: Einträge mit Ausgang GF ohne Entscheidung</span><span class="fd-n" id="bsMatN"></span></summary>
+    <p class="fd-note en-sec-hint">Nur lesen, für die Übergangszeit bis Stufe 2. Was hier steht, hat der Lauf noch nicht in die Entscheidungsliste aufgenommen.</p>
+    <div class="bs-list" id="bsMatL"></div>
+  </details>
+
   <section class="fd" id="bsLast" aria-label="Letzte Besprechung">
-    <div class="fd-h"><h2>Beschlüsse der letzten Besprechung</h2><span class="fd-n" id="bsLastN"></span><span class="line"></span><a class="btn btn-sm btn-ghost" href="entscheidungen.html">Entscheidungslog →</a></div>
+    <div class="fd-h"><h2>Beschlüsse der letzten Besprechung</h2><span class="fd-n" id="bsLastN"></span><span class="line"></span><a class="btn btn-sm btn-ghost" href="entscheidungen.html#enBeschl">Beschlüsse →</a></div>
     <div class="bs-list" id="bsLastL"></div>
   </section>
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=40"></script>
-<script src="/assets/game.js?v=40"></script>
-<script src="/assets/eggs.js?v=40" defer></script>
+<script src="/assets/core.js?v=41"></script>
 <script>
-/* V22d · Besprechung. Agenda = alle Einträge mit gate = gf (Themen und Kandidaten), sortiert nach Frist, dann Priorität.
-   Je Punkt vier Zeilen: Frage, Stand, Vorschlag, Frist; fehlt eine, steht dort das Wort „fehlt“.
-   Abarbeiten wie der Besprechungsmodus des Boards (V13), neu: an Lea / an Alex / ins Team geben (gate_set) und
-   für Kandidaten: als Thema übernehmen (news_accept) oder verwerfen. Zustand in localStorage gf_besprechung. */
 const $=s=>document.querySelector(s);
 const NOW=new Date(); const TODAY=NOW.toLocaleDateString("sv-SE");
-const PO={hoch:0,kritisch:0,mittel:1,niedrig:2};
-let ITEMS=[], PEOPLE=[], LASTSESS=null, LASTDEC=[], TOPICS=[], LASTERR=null;
-/* V24b: Punkte, die im Übergabekorb einer Abwesenheit rot liegen, tragen in der Agenda die Marke „Vertretung“.
-   VERTRETUNG hält dazu je Vorgang die abwesende Person. */
-let VERTRETUNG={};
+let EN=null, ITEMS=[], MATERIAL=[], LASTSESS=null, LASTDEC=[], TOPICS=[], LASTERR=null, VERTRETUNG={};
+const EN_ART={ punkt:"Vorhaben-Punkt", thema:"Thema", kandidat:"Kandidat" };
+const EN_AN={ alex:"Alex", lea:"Lea", team:"Team" };
+/* Zustand der laufenden Besprechung in localStorage gf_besprechung (v2: Schlüssel en:<id>; ältere Stände aus der Zeit der
+   Themen-Agenda werden verworfen, ihre Einträge passen zu keiner Zeile mehr). */
 let MEET=null, MEET_T=null;
-try{ MEET=JSON.parse(localStorage.getItem("gf_besprechung")||"null"); }catch(e){ MEET=null; }
+try{ MEET=JSON.parse(localStorage.getItem("gf_besprechung")||"null"); if(MEET && MEET.v!==2) MEET=null; }catch(e){ MEET=null; }
 function saveMeet(){ try{ if(MEET) localStorage.setItem("gf_besprechung",JSON.stringify(MEET)); else localStorage.removeItem("gf_besprechung"); }catch(e){} }
-function key(x){ return x.kind+":"+x.id; }
+function key(x){ return "en:"+x.id; }
 function byKey(k){ return ITEMS.find(x=>key(x)===k); }
-function dayDiff(d){ const a=new Date(TODAY+"T00:00:00"), b=new Date((d||"").slice(0,10)+"T00:00:00"); return Math.round((b-a)/86400000); }
-function fristWord(d){
-  if(!d) return null; const n=dayDiff(d); const s=gfFmtShort(d).slice(0,6)+gfFmtShort(d).slice(8);
-  if(n<0) return {t:`${s} · überfällig`,tone:"crit"}; if(n===0) return {t:`${s} · heute`,tone:"warn"};
-  if(n<=6) return {t:`${s} · diese Woche`,tone:"warn"}; if(n<=13) return {t:`${s} · nächste Woche`,tone:"info"}; return {t:s,tone:""};
+function fristWort(e){
+  if(!e.frist) return null; const s=e.frist.slice(8,10)+"."+e.frist.slice(5,7)+".";
+  if(e.zustand==="ueberfaellig") return {t:`${s} · überfällig`,tone:"crit"}; if(e.zustand==="heute") return {t:`${s} · heute`,tone:"warn"};
+  if(e.zustand==="woche") return {t:`${s} · diese Woche`,tone:"warn"}; if(e.zustand==="zwei_wochen") return {t:`${s} · in ${e.tage} Tagen`,tone:"info"}; return {t:s,tone:""};
 }
-function stand(x){ return x.kind==="thema" ? (x.short_description||gfFirstSentence(x.context||"",200)) : gfFirstSentence(x.body||"",200); }
-function vorschlag(x){ return x.kind==="thema" ? (x.next_action||x.recommendation||"") : ""; }
-function agenda(){ return ITEMS.filter(x=>x.gate==="gf").sort((a,b)=>(a.gate_frist||"9999").localeCompare(b.gate_frist||"9999") || ((PO[a.priority||a.relevance]??1)-(PO[b.priority||b.relevance]??1)) || (a.created_at||"").localeCompare(b.created_at||"")); }
+function herkunft(e){ const h=e.herkunft||{}; const t=[EN_ART[e.quelle_art]||e.quelle_art]; if(e.vorhaben) t.push(e.vorhaben.title); else if(e.quelle_art==="thema"&&h.titel&&h.titel!==e.frage) t.push(h.titel); if(h.quelle) t.push(h.quelle); return t.map(gfEsc).join(" · "); }
+function agenda(){ return ITEMS; }
 function fmtDur(ms){ const s=Math.floor(ms/1000); const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), x=s%60; return (h?h+":":"")+String(m).padStart(2,"0")+":"+String(x).padStart(2,"0"); }
 const FEHLT=`<span class="bs-fehlt">fehlt</span>`;
+const WORT={ entschieden:"entschieden", vertagt:"vertagt", abgegeben:"abgegeben", uebersprungen:"übersprungen" };
 
 /* ---- Vorbereitung ---- */
 function renderTop(){
-  const ag=agenda(); const mitFrist=ag.filter(x=>x.gate_frist).length, ohneV=ag.filter(x=>!vorschlag(x)).length;
-  $("#bsTop").innerHTML=ag.length
-    ? `<p class="bs-line">Diese Woche: <b>${ag.length}</b> Punkte, davon <b>${mitFrist}</b> mit Frist, <b>${ohneV}</b> ohne Vorschlag.</p>`
-    : `<p class="bs-line">Nichts für die Runde. Alles, was der GF gehört, ist entschieden oder weitergegeben.</p>`;
+  const z=EN&&EN.zaehler||{}; const n=ITEMS.length;
+  $("#bsTop").innerHTML=n
+    ? `<p class="bs-line">Heute: <b>${n}</b> ${n===1?"Entscheidung":"Entscheidungen"}, <b>${z.ueberfaellig||0}</b> überfällig, <b>${(z.diese_woche||0)-(z.ueberfaellig||0)}</b> diese Woche${z.unreif?`, <b>${z.unreif}</b> noch ohne Frage`:""}.</p>`
+    : `<p class="bs-line">Keine offenen Entscheidungen.${EN&&EN.zuletzt_entschieden?` Zuletzt entschieden: ${gfEsc(EN.zuletzt_entschieden.frage)} (${gfFmtShort(EN.zuletzt_entschieden.entschieden_am)}).`:""}</p>`;
 }
 function rowAgenda(x, i){
-  const f=fristWord(x.gate_frist); const v=vorschlag(x), s=stand(x);
+  const f=fristWort(x);
   const done=MEET && MEET.log.find(l=>l.key===key(x)); const cur=MEET && MEET.cur===key(x);
   return `<article class="bs-row${cur?" is-cur":""}${done?" is-done":""}" data-key="${gfEsc(key(x))}">
     <div class="bs-num">${i+1}</div>
     <div class="bs-body">
-      <div class="bs-q">${gfEsc(x.title||"")}${x.kind==="kandidat"?` <span class="fd-muted">Kandidat</span>`:""}${x.gate_by==="lauf"?` <span class="fd-muted">· Vorschlag des Laufs</span>`:""}${VERTRETUNG[x.id]?` ${gfZustand("warn","Vertretung für "+VERTRETUNG[x.id])}`:""}</div>
+      <div class="bs-q">${gfEsc(x.frage)}${x.wieder_faellig?` ${gfZustand("warn","vertagt, wieder fällig")}`:""}${VERTRETUNG[x.quelle_id]?` ${gfZustand("warn","Vertretung für "+VERTRETUNG[x.quelle_id])}`:""}</div>
       <dl class="bs-dl">
-        <dt>Stand</dt><dd>${s?gfEsc(s):FEHLT}</dd>
-        <dt>Vorschlag</dt><dd>${v?gfEsc(v):FEHLT}</dd>
+        <dt>Herkunft</dt><dd>${herkunft(x)}</dd>
+        <dt>Vorschlag</dt><dd>${x.vorschlag?gfEsc(x.vorschlag):FEHLT}</dd>
         <dt>Frist</dt><dd>${f?gfZustand(f.tone||"info",f.t):FEHLT}</dd>
       </dl>
-      ${done?`<div class="bs-done">${gfZustand("ok",({entschieden:"entschieden",in_klaerung:"in Klärung",erledigt:"erledigt",vertagt:"vertagt",besprochen:"besprochen",lea:"an Lea",alex:"an Alex",team:"ins Team",uebernommen:"als Thema übernommen",verworfen:"verworfen",warten:"kann warten"})[done.outcome]||done.outcome)}</div>`:""}
+      ${done?`<div class="bs-done">${gfZustand(done.outcome==="uebersprungen"?"offen":"ok",(WORT[done.outcome]||done.outcome)+(done.outcome==="vertagt"&&done.until?" bis "+gfFmtShort(done.until):done.outcome==="abgegeben"&&done.an?" an "+done.an:""))}</div>`:""}
     </div>
     ${MEET&&!done?`<button class="btn btn-sm btn-ghost bs-go" data-key="${gfEsc(key(x))}">Aufrufen</button>`:""}
   </article>`;
 }
 function renderAgenda(){
   const ag=agenda(); $("#bsAgN").textContent=ag.length?String(ag.length):"";
-  $("#bsAgL").innerHTML=ag.length ? ag.map(rowAgenda).join("") : `<p class="fd-empty">Leere Agenda.</p>`;
+  $("#bsAgL").innerHTML=ag.length ? ag.map(rowAgenda).join("") : `<p class="fd-empty">Keine offenen Entscheidungen. Neue entstehen aus Vorhaben-Punkten der GF, Themen und Kandidaten mit Ausgang GF.</p>`;
   $("#bsAgL").querySelectorAll(".bs-go").forEach(b=>b.onclick=()=>{ MEET.cur=b.dataset.key; saveMeet(); renderMeet(); $("#meet").scrollIntoView({behavior:"smooth",block:"start"}); });
+}
+function renderMaterial(){
+  $("#bsMatN").textContent=MATERIAL.length?String(MATERIAL.length):"";
+  $("#bsMatL").innerHTML=MATERIAL.length ? MATERIAL.map(x=>`<a class="fd-row" href="${x.kind==="thema"?`board.html?topic=${encodeURIComponent(x.id)}`:"aufraeumen.html"}"><div class="fd-main"><div class="fd-title">${gfEsc(x.title||"")}</div><div class="fd-note">${x.kind==="kandidat"?"Kandidat":"Thema"}${x.gate_frist?` · Frist ${gfFmtShort(x.gate_frist)}`:""}</div></div></a>`).join("") : `<p class="fd-empty">Nichts ohne Entscheidung.</p>`;
 }
 function renderLast(){
   if(LASTERR){ gfLadefehler($("#bsLastL"), LASTERR, {titel:"Letzte Besprechung nicht geladen."}); return; }
@@ -117,7 +121,7 @@ function renderLast(){
   $("#bsLastL").innerHTML=LASTDEC.map(d=>{
     const t=TOPICS.find(t=>t.id===d.topic_id); let st="";
     if(t){ st = (t.board_lane==="erledigt"||t.status==="erledigt") ? gfZustand("ok","nächster Schritt erledigt") : t.next_action ? gfZustand("offen","nächster Schritt offen") : gfZustand("warn","ohne nächsten Schritt"); }
-    return `<a class="fd-row" href="${t?`board.html?topic=${t.id}`:"entscheidungen.html"}">
+    return `<a class="fd-row" href="${t?`board.html?topic=${t.id}`:"entscheidungen.html#enBeschl"}">
       <div class="fd-main"><div class="fd-title">${gfEsc(d.topic_title||d.decision.slice(0,80))}</div><div class="fd-note">${gfEsc(d.decision)}${d.next_action?` · Nächster Schritt: ${gfEsc(d.next_action)}`:""}${d.owner?` (${gfEsc(d.owner)})`:""}</div></div>
       <div class="fd-side">${st}</div></a>`;
   }).join("");
@@ -128,12 +132,13 @@ async function startMeet(){
   const participants=prompt("Wer ist dabei?","Alex, Lea"); if(participants===null) return;
   try{
     const d=await gfApi("session_start",{participants, started_by:gfWho(), title:"Besprechung"});
-    const ag=agenda(); MEET={ sessionId:d.session.id, started:d.session.started_at, participants, cur: ag.length?key(ag[0]):null, log:[] };
+    const ag=agenda(); MEET={ v:2, sessionId:d.session.id, started:d.session.started_at, participants, cur: ag.length?key(ag[0]):null, log:[] };
     saveMeet(); renderAll(); gfToast("Besprechung gestartet");
-  }catch(e){ gfToast("Start fehlgeschlagen: "+e.message); }
+  }catch(e){ gfToast("Start fehlgeschlagen: "+e.message,{fehler:true}); }
 }
 function pendingKeys(){ const done=new Set(MEET.log.map(l=>l.key)); return agenda().map(key).filter(k=>!done.has(k)); }
 function advance(){ const p=pendingKeys(); const ag=agenda().map(key); const i=ag.indexOf(MEET.cur); MEET.cur=p.find(k=>ag.indexOf(k)>i)||p[0]||null; saveMeet(); renderAll(); }
+let BS_LAEUFT=false;
 function renderMeet(){
   const box=$("#meet"); clearInterval(MEET_T);
   if(!MEET){ box.hidden=true; box.innerHTML=""; $("#meetBtn").textContent="Besprechung starten"; $("#meetBtn").classList.remove("btn-ghost"); return; }
@@ -143,39 +148,29 @@ function renderMeet(){
   const head=`<div class="meet-h">
       <div class="meet-timer" id="meetTimer">00:00</div>
       <div class="meet-meta"><b>Besprechung</b> · ${gfEsc(MEET.participants)} · ${MEET.log.length} von ${agenda().length} behandelt · ${nDec} Entscheidung${nDec===1?"":"en"}</div>
-      <div class="meet-actions"><button class="btn btn-sm btn-brand" id="meetNext" title="Nächster offener Punkt">▶</button><button class="btn btn-sm btn-primary" id="meetEnd">Beenden · Protokoll</button></div>
+      <div class="meet-actions"><button class="btn btn-sm btn-brand" id="meetNext" title="Nächster offener Punkt" aria-label="Nächster offener Punkt">▶</button><button class="btn btn-sm btn-primary" id="meetEnd">Beenden · Protokoll</button></div>
     </div>`;
   let body="";
   if(!cur){
-    if(MEET.log.length) document.dispatchEvent(new CustomEvent("gf-egg-bus"));
     body=`<div class="meet-done"><h3>Alle Punkte behandelt.</h3><p>${MEET.log.length} Punkte, ${nDec} Entscheidung${nDec===1?"":"en"}. Mit „Beenden · Protokoll“ abschließen.</p></div>`;
   } else {
-    const pos=pend.indexOf(MEET.cur); const f=fristWord(cur.gate_frist); const th=cur.kind==="thema";
+    const pos=pend.indexOf(MEET.cur); const f=fristWort(cur); const h=cur.herkunft||{};
     body=`<div class="meet-cur" data-key="${gfEsc(MEET.cur)}">
-      <div class="meet-cur-h"><span class="pill p-${cur.priority||cur.relevance||"mittel"}">${cur.priority||cur.relevance||"mittel"}</span><span class="pill">${th?"Thema":"Kandidat"}</span><span class="meet-pos">Punkt ${pos+1} von ${pend.length} offen${f?` · Frist ${f.t}`:" · ohne Frist"}</span>${th?`<a class="btn btn-sm btn-ghost" style="margin-left:auto" href="board.html?topic=${cur.id}">Details</a>`:""}</div>
-      <h3 class="meet-title">${gfEsc(cur.title)}</h3>
-      ${stand(cur)?`<p class="meet-desc">${gfEsc(stand(cur))}</p>`:""}
-      ${th&&cur.context?`<div class="meet-ctx">${gfClamp(cur.context,"b"+cur.id,260)}</div>`:""}
-      ${!th&&cur.quote?`<div class="meet-ctx">„${gfEsc(cur.quote)}“</div>`:""}
-      ${cur.gate_note?`<div class="fd-note" style="margin-bottom:10px"><i>${gfEsc(cur.gate_note)}</i></div>`:""}
-      ${th?`<div class="fgrid meet-form">
-        <div class="fld ffull"><label>Entscheidung</label><textarea id="mDecision" rows="2" placeholder="Was ist entschieden? Ein bis zwei Sätze.">${gfEsc(cur.decision||"")}</textarea></div>
-        <div class="fld"><label>Nächster Schritt</label><input id="mNext" value="${gfEsc(cur.next_action||"")}" placeholder="Was passiert als Nächstes?" /></div>
-        <div class="fld"><label>Verantwortung</label><input id="mOwner" list="peopleList2" value="${gfEsc(cur.owner||"")}" /><datalist id="peopleList2">${[...new Set([...PEOPLE.map(p=>p.name),"Alex","Lea","Lea & Alex"])].map(p=>`<option value="${gfEsc(p)}">`).join("")}</datalist></div>
-      </div>`:""}
+      <div class="meet-cur-h"><span class="pill">${EN_ART[cur.quelle_art]||cur.quelle_art}</span><span class="meet-pos">Punkt ${pos+1} von ${pend.length} offen${f?` · Frist ${f.t}`:" · ohne Frist"}</span>${h.url?`<a class="btn btn-sm btn-ghost" style="margin-left:auto" href="${gfEsc(h.url)}"${/^https?:/.test(h.url)?' target="_blank" rel="noopener"':""}>${cur.quelle_art==="punkt"?"Akte":cur.quelle_art==="thema"?"Thema":"Mail"}</a>`:""}</div>
+      <h3 class="meet-title">${gfEsc(cur.frage)}</h3>
+      <p class="meet-desc">${herkunft(cur)}</p>
+      ${cur.vorschlag?`<div class="meet-ctx"><b>Vorschlag:</b> ${gfEsc(cur.vorschlag)}</div>`:""}
+      ${h.text?`<div class="meet-ctx">${gfEsc(gfFirstSentence(h.text,400))}</div>`:""}
+      <div class="fgrid meet-form">
+        <div class="fld ffull"><label for="mErg">Ergebnis, ein Satz</label><textarea id="mErg" rows="2" placeholder="Was ist entschieden? Mit Betrag, Datum oder Name, wenn es sie gibt."></textarea></div>
+        <div class="fld"><label for="mBis">Vertagen bis</label><input id="mBis" type="date" value="${gfAddDays(TODAY,7)}" min="${TODAY}"></div>
+        <div class="fld"><label>Abgeben an</label>${gfChips("an",[["alex","Alex"],["lea","Lea"],["team","Team"]],"",{label:"Abgeben an"})}</div>
+      </div>
+      <p class="en-err" id="mErr" role="alert"></p>
       <div class="meet-btns">
-        ${th?`<button class="btn btn-primary" data-o="entschieden">Entschieden</button>
-        <button class="btn" data-o="in_klaerung">In Klärung</button>
-        <button class="btn" data-o="erledigt">Erledigt</button>
-        <button class="btn" data-o="vertagt" data-days="7">Vertagen 1 Woche</button>
-        <button class="btn" data-o="vertagt" data-days="30">Vertagen 1 Monat</button>`
-        :`<button class="btn btn-primary" data-o="uebernommen" title="Als Thema ins Board, bleibt bei der GF">Als Thema übernehmen</button>
-        <button class="btn" data-o="verworfen">Verwerfen</button>`}
-        <button class="btn" data-o="lea" title="Ausgang Lea: verschwindet aus der Runde, erscheint auf Leas Seite">An Lea geben</button>
-        <button class="btn" data-o="alex" title="Ausgang Alex">An Alex geben</button>
-        <button class="btn" data-o="team">Ins Team geben</button>
-        <button class="btn" data-o="warten">Kann warten</button>
-        ${th?`<button class="btn btn-ghost" data-o="besprochen">Besprochen, weiter</button>`:""}
+        <button class="btn btn-primary" data-o="entschieden">Entschieden</button>
+        <button class="btn" data-o="vertagt">Vertagen</button>
+        <button class="btn" data-o="abgegeben">Abgeben</button>
         <button class="btn btn-ghost" data-o="skip">Überspringen</button>
       </div>
     </div>`;
@@ -184,54 +179,41 @@ function renderMeet(){
   const tick=()=>{ const el=$("#meetTimer"); if(el) el.textContent=fmtDur(Date.now()-new Date(MEET.started)); }; tick(); MEET_T=setInterval(tick,1000);
   $("#meetEnd").onclick=endMeet;
   $("#meetNext").onclick=()=>{ const p=pendingKeys(); const ag=agenda().map(key); const i=ag.indexOf(MEET.cur); const n=p.find(k=>ag.indexOf(k)>i)||p[0]; if(n){ MEET.cur=n; saveMeet(); renderAll(); } };
-  box.querySelectorAll("[data-o]").forEach(b=>b.onclick=()=>outcome(cur, b.dataset.o, parseInt(b.dataset.days)||0));
+  box.querySelectorAll(".fchips .chip").forEach(c=>c.onclick=()=>gfChipsSet(box.querySelector('input[name="an"]'), c.dataset.v));
+  box.querySelectorAll("[data-o]").forEach(b=>b.onclick=()=>outcome(cur, b.dataset.o));
 }
-async function outcome(x, o, days){
-  if(o==="skip"){ const p=pendingKeys().filter(k=>k!==key(x)); const ag=agenda().map(key); const i=ag.indexOf(key(x)); const n=p.find(k=>ag.indexOf(k)>i)||p[0]; if(n){ MEET.cur=n; saveMeet(); renderAll(); } else gfToast("Kein weiterer offener Punkt"); return; }
-  const th=x.kind==="thema"; const who=gfWho();
-  const decision=th?$("#mDecision").value.trim():"", next_action=th?$("#mNext").value.trim():"", owner=th?$("#mOwner").value.trim():"";
-  if(o==="entschieden" && !decision){ gfToast("Bitte die Entscheidung in ein bis zwei Sätzen festhalten."); $("#mDecision").focus(); return; }
-  let until=null, entry={ key:key(x), id:x.id, title:x.title, outcome:o, decision:"", next_action, owner, until:null };
+async function outcome(x, o){
+  if(BS_LAEUFT) return;
+  const err=$("#mErr"); if(err) err.textContent="";
+  if(o==="skip"){ MEET.log=MEET.log.filter(l=>l.key!==key(x)); MEET.log.push({ key:key(x), id:x.id, title:x.frage, outcome:"uebersprungen" }); advance(); return; }
+  const who=gfWho(); let p=null, entry={ key:key(x), id:x.id, title:x.frage, outcome:o, decision:"", until:null, an:null };
+  if(o==="entschieden"){ const erg=$("#mErg").value.trim(); if(erg.length<5){ err.textContent="Bitte das Ergebnis in einem Satz festhalten."; $("#mErg").focus(); return; } p=["entscheidung_entscheiden",{ ergebnis:erg }]; entry.decision=erg; }
+  if(o==="vertagt"){ const bis=$("#mBis").value; if(!bis||bis<TODAY){ err.textContent="Bitte ein Datum ab heute wählen."; $("#mBis").focus(); return; } p=["entscheidung_vertagen",{ bis }]; entry.until=bis; }
+  if(o==="abgegeben"){ const an=$("#meet input[name='an']").value; if(!an){ err.textContent="Bitte wählen: Alex, Lea oder Team."; return; } p=["entscheidung_abgeben",{ an }]; entry.an=EN_AN[an]; }
+  if(!p) return;
+  BS_LAEUFT=true; $("#meet").querySelectorAll("[data-o]").forEach(b=>b.disabled=true);
   try{
-    if(["lea","alex","team","warten"].includes(o)){
-      await gfApi("gate_set",{kind:x.kind,id:x.id,gate:o,by:who}); x.gate=o; x.gate_by=who;
-      if(th && (next_action||owner)) await gfApi("update",{id:x.id,next_action,owner,last_discussed:TODAY});
-    } else if(o==="uebernommen"){
-      const d=await gfApi("news_accept",{id:x.id,decided_by:who}); x.status="uebernommen";
-      if(d.topic){ await gfApi("gate_set",{kind:"thema",id:d.topic.id,gate:"gf",by:who,note:x.gate_note||""}); const nt={kind:"thema",...d.topic,gate:"gf",gate_by:who}; ITEMS.push(nt); TOPICS.push(d.topic); }
-      ITEMS=ITEMS.filter(i=>i!==x);
-    } else if(o==="verworfen"){
-      await gfApi("news_update",{id:x.id,status:"verworfen",decided_by:who}); ITEMS=ITEMS.filter(i=>i!==x);
-    } else {
-      const patch={ id:x.id, last_discussed:TODAY, next_action, owner }; if(decision) patch.decision=decision;
-      if(o==="entschieden"){ patch.board_lane="entschieden"; patch.status="offen"; }
-      if(o==="in_klaerung"){ patch.board_lane="in_klaerung"; patch.status="in_klaerung"; }
-      if(o==="erledigt"){ patch.board_lane="erledigt"; patch.status="erledigt"; }
-      if(o==="vertagt"){ const d=new Date(TODAY+"T00:00:00"); d.setDate(d.getDate()+days); until=d.toLocaleDateString("sv-SE"); patch.next_suggested=until; entry.until=until; }
-      const d=await gfApi("update",patch); Object.assign(x,d.topic);
-      if(o==="entschieden"){ await gfApi("decision_add",{ topic_id:x.id, session_id:MEET.sessionId, topic_title:x.title, decision, next_action, owner, decided_by:who }); entry.decision=decision; }
-      if(o==="entschieden"||o==="erledigt") ITEMS=ITEMS.filter(i=>i!==x);
-    }
+    await gfApi(p[0],{ id:x.id, by:who, ...p[1] });
     MEET.log=MEET.log.filter(l=>l.key!==entry.key); MEET.log.push(entry);
-    gfToast({entschieden:"Entscheidung festgehalten",in_klaerung:"Nach „In Klärung“",erledigt:"Erledigt",vertagt:"Vertagt bis "+gfFmtShort(until),besprochen:"Als besprochen markiert",lea:"An Lea gegeben",alex:"An Alex gegeben",team:"Ins Team gegeben",warten:"Kann warten",uebernommen:"Als Thema übernommen",verworfen:"Verworfen"}[o]);
-    advance();
-  }catch(e){ gfToast("Speichern fehlgeschlagen: "+e.message); }
+    gfToast({entschieden:"Entscheidung festgehalten",vertagt:"Vertagt bis "+gfFmtShort(entry.until),abgegeben:"Abgegeben an "+entry.an}[o]);
+    BS_LAEUFT=false; advance();
+  }catch(e){ BS_LAEUFT=false; $("#meet").querySelectorAll("[data-o]").forEach(b=>b.disabled=false); err.textContent=(e.konflikt?"":"Nicht gespeichert: ")+(e.message||"Verbindung"); if(e.konflikt) ladeAgenda().then(renderAll); }
 }
 async function endMeet(){
   if(!MEET) return; const ended=new Date().toISOString();
-  const log=MEET.log.map(l=>({ ...l, outcome: ["lea","alex","team","warten","uebernommen","verworfen"].includes(l.outcome) ? "besprochen" : l.outcome, next_action: l.next_action || ({lea:"an Lea gegeben",alex:"an Alex gegeben",team:"ins Team gegeben",warten:"kann warten",uebernommen:"als Thema übernommen",verworfen:"verworfen"})[l.outcome] || "" }));
-  const open=agenda().filter(x=>!MEET.log.some(l=>l.key===key(x)));
+  const log=MEET.log.map(l=>({ ...l }));
+  const open=agenda().filter(x=>!MEET.log.some(l=>l.key===key(x)&&l.outcome!=="uebersprungen")).map(x=>({ title:x.frage }));
   const text=gfProtocolText({started:MEET.started, ended, participants:MEET.participants}, log, open);
   try{ await gfApi("session_end",{ id:MEET.sessionId, protocol:text, summary:MEET.log, title:`Besprechung ${gfFmtShort(MEET.started)}`, agenda_leer: !open.length }); }
   catch(e){ gfToast("Speichern des Protokolls fehlgeschlagen: "+e.message,{fehler:true});
     /* Webapp Standard B-04, B-07: ohne bestätigtes Speichern bleibt die Besprechung offen; der Text ist zur Sicherung kopierbar,
-       „Besprechung beenden“ versucht es erneut. Vorher wurde die Sitzung trotzdem beendet und „Gespeichert“ angezeigt. */
+       „Besprechung beenden“ versucht es erneut. */
     gfTextModal("Protokoll nicht gespeichert", text, { subject:`GF-Besprechung ${gfFmtShort(ended)} · Protokoll`, intro:"Speichern fehlgeschlagen: "+gfEsc(e.message||"unbekannter Fehler")+". Die Besprechung läuft weiter und nichts ist verloren. Kopiere den Text zur Sicherheit und beende die Besprechung erneut, sobald die Verbindung wieder steht." });
     return; }
-  MEET=null; saveMeet(); await loadLast(); renderAll();
-  gfTextModal("Protokoll der Besprechung", text, { subject:`GF-Besprechung ${gfFmtShort(ended)} · Protokoll`, intro:"Gespeichert unter Themen › Entscheidungen. Hier kopieren oder per Mail verschicken.", extra:`<a class="btn btn-ghost" href="entscheidungen.html">Entscheidungslog</a>` });
+  MEET=null; saveMeet(); await Promise.all([loadLast(), ladeAgenda()]); renderAll();
+  gfTextModal("Protokoll der Besprechung", text, { subject:`GF-Besprechung ${gfFmtShort(ended)} · Protokoll`, intro:"Gespeichert unter Entscheidungen › Beschlüsse. Hier kopieren oder per Mail verschicken.", extra:`<a class="btn btn-ghost" href="entscheidungen.html#enBeschl">Beschlüsse</a>` });
 }
-function renderAll(){ renderTop(); renderMeet(); renderAgenda(); renderLast(); }
+function renderAll(){ renderTop(); renderMeet(); renderAgenda(); renderMaterial(); renderLast(); }
 /* Webapp Standard B-07: ein Ladefehler ist kein „noch keine Besprechung“. LASTERR hält ihn fest, renderLast zeigt ihn. */
 async function loadLast(){
   LASTERR=null;
@@ -239,13 +221,19 @@ async function loadLast(){
   LASTSESS=(s.sessions||[]).find(x=>x.ended_at)||null;
   LASTDEC=LASTSESS ? ((await gfApi("decisions_list",{session_id:LASTSESS.id}).catch(e=>{ LASTERR=e; return {decisions:[]}; })).decisions||[]) : [];
 }
-/* Rote Korbzeilen laufender Abwesenheiten einsammeln, damit die Agenda sie kennzeichnen kann. */
+/* Agenda aus der Entscheidungsliste; Material = Einträge mit Ausgang GF, die noch keine Zeile in der Liste haben. */
+async function ladeAgenda(){
+  EN=await gfApi("entscheidungen_list",{status:"offen"}); ITEMS=EN.eintraege||[];
+  const g=await gfApi("gate_list",{gate:"gf",limit:1000}).catch(()=>({items:[]}));
+  const drin=new Set(ITEMS.map(x=>x.quelle_id));
+  MATERIAL=(g.items||[]).filter(x=>x.gate==="gf"&&!drin.has(x.id));
+}
+/* Rote Korbzeilen laufender Abwesenheiten einsammeln, damit die Agenda sie kennzeichnen kann (V24b). */
 async function ladeVertretung(){
   try{
     const a=await gfApi("absence_list",{});
     for(const abs of (a.absences||[]).filter(x=>(x.status==="aktiv"||x.status==="geplant") && x.person!==gfWho())){
       const l=await gfApi("handover_list",{absence_id:abs.id, status:["vorschlag","bestaetigt"]});
-      /* Rot heißt: gehört der GF gemeinsam, liegt also in dieser Runde bei mir. */
       for(const x of (l.items||[])) if(x.ampel==="rot") VERTRETUNG[x.ref_id]=abs.person;
     }
   }catch(e){ VERTRETUNG={}; }
@@ -253,13 +241,13 @@ async function ladeVertretung(){
 $("#meetBtn").onclick=()=>{ if(MEET){ $("#meet").scrollIntoView({behavior:"smooth",block:"start"}); return; } startMeet(); };
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("besprechung");
-  gfMountHero("lager","Besprechung","Alles, was der GF gemeinsam gehört: vorbereitet, abgearbeitet, protokolliert.",{compact:true});
+  gfMountHero("lager","Besprechung","Die offenen Entscheidungen der GF, der Reihe nach: entscheiden, vertagen, abgeben. Am Ende das Protokoll.",{compact:true});
   try{
-    const [g,t,p]=await Promise.all([gfApi("gate_list",{gate:"gf",limit:1000}), gfApi("list"), gfLoadPeople().catch(()=>[]), loadLast()]);
-    ITEMS=g.items||[]; TOPICS=t.topics||[]; PEOPLE=p||[];
+    const [t]=await Promise.all([gfApi("list"), ladeAgenda(), loadLast()]);
+    TOPICS=t.topics||[];
     await ladeVertretung();
     renderAll();
-  }catch(e){ $("#bsAgL").innerHTML=`<div class="empty">Konnte nicht laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
+  }catch(e){ if(e.auth) throw e; gfLadefehler($("#bsAgL"), e, {titel:"Die Agenda ließ sich nicht laden."}); }
 });
 </script>
 </body>

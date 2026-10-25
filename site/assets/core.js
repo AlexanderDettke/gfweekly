@@ -8,6 +8,10 @@
    Passwort im Request-Body (serverseitig in der Edge Function geprüft).
    =========================================================== */
 const GF_FN = "https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/gfweekly";
+/* Stufe 1 (25.10.2026, docs/PAKET-STUFE-1-ENTSCHEIDUNGEN.md, Abschnitt 7): Spielschicht aus. Mit GF_SPIEL=true laden alle Seiten wieder
+   game.js und eggs.js (Taler, Lagerplatz, Flammen, Abzeichen, Habitat-Punkte, Überraschungen), gfTextModal zählt verschickte Protokolle
+   und der Abschnitt #habitat auf jahr.html erscheint. Tabellen und Bilder bleiben unberührt; nur diese eine Konstante schaltet. */
+const GF_SPIEL=false;
 
 /* ---- session helpers ---- */
 function gfPW(){ return sessionStorage.getItem("gf_pw") || ""; }
@@ -166,6 +170,7 @@ function gfGate(onReady){
     try{ await gfApi("people_list"); }
     catch(e){ if(gate) gate.style.display=""; if(err) err.textContent = e.auth ? "Falsches Passwort." : (e.offline ? e.message : ("Anmeldung nicht möglich: "+(e.message||"Verbindung"))); if(e.auth||!e.offline) sessionStorage.removeItem("gf_pw"); return; }
     if(gate) gate.style.display="none";
+    gfCheckin(); if(!window.__gfCiWho){ window.__gfCiWho=true; document.addEventListener("gf-who",()=>gfCheckin()); }
     try{ await onReady(); }
     catch(e){
       if(e&&e.auth){ sessionStorage.removeItem("gf_pw"); if(gate) gate.style.display=""; if(err) err.textContent="Die Anmeldung gilt nicht mehr. Bitte gib das Passwort erneut ein."; if(inp) inp.focus(); return; }
@@ -178,6 +183,31 @@ function gfGate(onReady){
   if(btn) btn.onclick=()=>attempt(inp.value.trim()||gfPW());
   if(inp) inp.addEventListener("keydown",e=>{ if(e.key==="Enter") btn.click(); });
   if(gfPW()) attempt(gfPW()); else if(inp) inp.focus();
+}
+
+/* Spielschicht: mit GF_SPIEL=true werden game.js und eggs.js nachgeladen (so wie sie bis zum 25.10.2026 in jeder Seite standen).
+   Ohne Spielschicht bleibt der tägliche Check-in als schlichter Gruß: einmal je Person und Tag (localStorage gf_ci_<Person>_<Tag>,
+   derselbe Schlüssel wie vorher, damit Proben ihn weiter unterdrücken), Aufruf der Aktion checkin ohne Anzeige von Talern. */
+(function(){
+  const v=(document.currentScript&&document.currentScript.src.match(/[?&]v=([^&]+)/)||[])[1]||"";
+  const lade=(src,defer)=>{ const sc=document.createElement("script"); sc.src=src+(v?"?v="+v:""); if(defer) sc.defer=true; document.head.appendChild(sc); };
+  if(GF_SPIEL){ lade("/assets/game.js"); lade("/assets/eggs.js",true); }
+  else document.addEventListener("DOMContentLoaded",()=>{ const h=document.getElementById("habitat"); if(h) h.hidden=true; });
+})();
+let _gfCiLaeuft=false;
+async function gfCheckin(){
+  if(GF_SPIEL||_gfCiLaeuft||!gfPW()) return;
+  const w=gfWho(), day=gfIsoTag(), key=`gf_ci_${w}_${day}`;
+  let done=false; try{ done=localStorage.getItem(key)==="1"; }catch(e){}
+  if(done) return;
+  _gfCiLaeuft=true;
+  try{
+    const d=await gfApi("checkin",{who:w, local_day:day, hour:new Date().getHours()});
+    try{ localStorage.setItem(key,"1"); }catch(e){}
+    if(d&&d.first){ const h=new Date().getHours(); const gruss=h<11?"Guten Morgen":h<18?"Guten Tag":"Guten Abend"; const n=d.streak||1;
+      gfToast(`${gruss}, ${w}. ${n>1?`Tag ${n} in Folge.`:"Schön, dass du da bist."}`); }
+  }catch(e){}
+  _gfCiLaeuft=false;
 }
 
 /* Webapp Standard B-07, P-04: einheitlicher Ladefehler mit Ursache und nächstem Schritt. el bekommt die Meldung;
@@ -223,12 +253,12 @@ const GF_ICONS={
   wegweiser:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 5.5h10.5L18.5 8l-3 2.5H5z"/><path d="M19 13.5H8.5L5.5 16l3 2.5H19z"/></svg>'
 };
 const GF_NAV=[
-  ["Heute",[["start","index.html","Für dich","home",null,"Deine Entscheidungen, seit gestern, nächste Fristen"],["vorhaben","vorhaben.html","Vorhaben","wegweiser","vorhabenBadge","Woche, Board, Liste, Akte je Vorhaben"],["neuigkeiten","neuigkeiten.html","Neuigkeiten","bell","newsBadge","Ticker, Sichtungskorb, Themenlage"],["besprechung","besprechung.html","Besprechung","check",null,"Agenda der GF, abarbeiten, Protokoll"]]],
+  ["Heute",[["start","index.html","Für dich","home",null,"Deine Entscheidungen, seit gestern, nächste Fristen"],["entscheidungen","entscheidungen.html","Entscheidungen","check",null,"Offene Entscheidungen der GF als Frage mit Frist: entscheiden, vertagen, abgeben"],["vorhaben","vorhaben.html","Vorhaben","wegweiser","vorhabenBadge","Woche, Board, Liste, Akte je Vorhaben"],["neuigkeiten","neuigkeiten.html","Neuigkeiten","bell","newsBadge","Ticker, Sichtungskorb, Themenlage"],["besprechung","besprechung.html","Besprechung","check",null,"Agenda der GF, abarbeiten, Protokoll"]]],
   ["Arbeiten",[["vorstand","vorstand.html","Vorstand","pen",null,"Gemeinsame Vorstandspost der mit Freude eG: Stand, Antwortentwürfe und Asana Aufgaben"],["themen","board.html","Themen","board","themenBadge","Board, Kacheln, Liste, Entscheidungen"],["jahr","jahr.html","Jahr","cal",null,"Zyklus, Meilensteine, Rituale, Team, Plattformen, Habitat"],["saison","saison.html","Saison","rad",null,"Saison in vier Fragen: Phase und Herausforderung, wen wir haben, was sich geändert hat, wann was wie passieren kann"],["kommunikation","kommunikation.html","Kommunikation","megafon",null,"Postingplan-Standard: wer zuständig ist, wo es eng wird, was die GF entscheidet"],["launch","launch.html","Launch","fahne",null,"Launch verteilen: wer macht was bis wann für alle fünf Festivals, bestätigen und nach Asana senden"],["organisation","organisation.html","Organisation","haus","orgBadge","Haus, Operations, Formate: acht Entscheidungen, Teamaufbau, Tore der vier Stufen"],["besetzung","besetzung.html","Besetzung","leute",null,"Aus Gesprächen der Besetzungswerkstatt Aufgaben mit Person machen, je Festival und Bereich"],["arbeiten","arbeiten.html","So arbeiten wir","zwei",null,"Ist-Aufnahme, Umfrage und Systeme: wie wir heute arbeiten und was davon bleibt"],["capture","capture.html","Eingabe","pen",null,"Thema erfassen"]]],
   ["Vertretung",[["vertretung","vertretung.html","Abwesenheiten","schild",null,"Wer ist wann weg, wer vertritt, mit welcher Vollmacht"],["uebergabe","uebergabe.html","Übergabe","tausch","uebergabeBadge","Der Korb einer Abwesenheit: was vorher, was an die Vertretung, was ruht"],["rueckkehr","rueckkehr.html","Rückkehr","tuer",null,"Was in deiner Abwesenheit entschieden wurde und was für dich bereitliegt"]]],
   ["Verwalten",[["seiten","seiten.html","Wichtige Seiten","grid",null,"Arbeitsseiten mit Zugang"],["edit","bearbeiten.html","Bearbeiten","sliders",null,"Themen, Personen, Links pflegen"],["aufraeumen","aufraeumen.html","Aufräumen","check",null,"Jedem Eintrag einen Ausgang geben"]]]
 ];
-const GF_SUBNAV=[["board","board.html?view=board","Board","Spalten nach Ablauf, Prio, Zeitraum oder Person, verschiebbar"],["kacheln","board.html?view=kacheln","Kacheln","Gruppen als Kachelraster"],["liste","cockpit.html","Liste","Ausführliche Liste mit Details und Protokoll"],["entscheidungen","entscheidungen.html","Entscheidungen","Entscheidungslog, Protokolle der Besprechungen, Wochenmail"]];
+const GF_SUBNAV=[["board","board.html?view=board","Board","Spalten nach Ablauf, Prio, Zeitraum oder Person, verschiebbar"],["kacheln","board.html?view=kacheln","Kacheln","Gruppen als Kachelraster"],["liste","cockpit.html","Liste","Ausführliche Liste mit Details und Protokoll"]];
 function gfNavMode(){
   if(window.matchMedia("(max-width:1023px)").matches) return "drawer";
   let s=null; try{ s=localStorage.getItem("gf_nav"); }catch(e){}
@@ -393,7 +423,7 @@ function gfTextModal(title, text, opts={}){
   m.onclick=e=>{ if(e.target===m) m.classList.remove("open"); };
   m.querySelector("[data-copy]").onclick=()=>gfCopy(text);
   /* V17: Protokoll verschickt zählt (5 Taler, einmal je Protokoll), serverseitig eindeutig über den Betreff */
-  if(/Protokoll/i.test(subject)){ const a=m.querySelector('a[href^="mailto:"]'); if(a) a.addEventListener("click",()=>{ gfApi("score_event",{kind:"protokoll", ref:subject}).catch(()=>{}); }); }
+  if(GF_SPIEL && /Protokoll/i.test(subject)){ const a=m.querySelector('a[href^="mailto:"]'); if(a) a.addEventListener("click",()=>{ gfApi("score_event",{kind:"protokoll", ref:subject}).catch(()=>{}); }); }
   return m;
 }
 function gfFmtDay(d){ return new Date(d).toLocaleDateString("de-DE",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"}); }
@@ -412,9 +442,11 @@ function gfProtocolText(meta, log, openTopics){
   const grp=(key,label,fmt)=>{ const items=log.filter(e=>e.outcome===key); if(!items.length) return; L.push(label); items.forEach((e,i)=>L.push(fmt(e,i+1))); L.push(""); };
   grp("entschieden","Entscheidungen",(e,i)=>`${i}. ${e.title}: ${e.decision||"offen"}${e.next_action?`
    Nächster Schritt: ${e.next_action}`:""}${e.owner?` (Verantwortung: ${e.owner})`:""}`);
+  grp("uebersprungen","Übersprungen",(e)=>`- ${e.title}`);
   grp("in_klaerung","In Klärung",(e)=>`- ${e.title}${e.next_action?`: ${e.next_action}`:""}${e.owner?` (${e.owner})`:""}`);
   grp("erledigt","Erledigt",(e)=>`- ${e.title}`);
-  grp("vertagt","Vertagt",(e)=>`- ${e.title}${e.until?` → ${gfFmtShort(e.until)}`:""}`);
+  grp("vertagt","Vertagt",(e)=>`- ${e.title}${e.until?` bis ${gfFmtShort(e.until)}`:""}`);
+  grp("abgegeben","Abgegeben",(e)=>`- ${e.title}${e.an?` an ${e.an}`:""}`);
   grp("besprochen","Besprochen ohne Beschluss",(e)=>`- ${e.title}${e.next_action?`: ${e.next_action}`:""}`);
   if(openTopics&&openTopics.length){ L.push(`Offen geblieben (zu besprechen): ${openTopics.length}`); openTopics.slice(0,12).forEach(t=>L.push(`- ${t.title}${t.priority==="hoch"?" (hoch)":""}`)); if(openTopics.length>12) L.push(`- … und ${openTopics.length-12} weitere`); L.push(""); }
   L.push(`Erstellt mit Kompass · kompass.wildehabitate.de`);

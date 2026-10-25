@@ -149,3 +149,10 @@ am genauen Commit prüfen. Zusammenarbeit, die es nicht gibt, wird nicht behaupt
 5. **Offen V33b:** schreibende Wirkungsprobe als Alex und Lea, vollständige Testbereinigung einschließlich der Reste aus Cowork und neutrale Formulierung des Systemeintrags „Das Hohe Haus“ ohne Nutzungszahlen je Person. Produktionsschreibzugriffe auf `gfweekly_sa_*` sind in dieser Sitzung gesperrt; Alex' Freigabe steht in `FRAGEN_FUER_MORGEN.md`.
 6. **V33d:** Push und Live-Prüfung: siehe V33d. Einzelheiten und Prüfgrenzen in `docs/TECHNIKSTAND.md`, Abschnitt V33 So arbeiten wir.
 
+### WP-S1 · Stufe 1 · Entscheiden können
+
+- **Auftrag:** `docs/PAKET-STUFE-1-ENTSCHEIDUNGEN.md`, Abschnitte 1 bis 8, entschieden von Alex am 25.10.2026. Ersetzt das Paket „Aufräumen entlasten und GF-Check“ (Fassung 2), aus dem Teil B (Postfach-Regel) und Teil D (Schrift-Tokens) übernommen sind.
+- **Zuständig:** Claude Code, Branch `stufe-1/entscheidungen` von `origin/main` (`2f709ba`).
+- **Prüfer:** Codex CLI, read-only, je Runde ein eigener Worktree am eingefrorenen Commit nach `docs/reviews/STUFE1-pruefauftrag.md`, höchstens drei Runden; Ergebnisse `docs/reviews/STUFE1-runde-N.md`, Antworten `STUFE1-antwort-N.md`.
+- **Stand:** siehe `docs/TECHNIKSTAND.md`, Abschnitt „Stufe 1“, und `docs/STAND-STUFE-1.md`.
+

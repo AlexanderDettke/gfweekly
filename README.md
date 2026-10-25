@@ -1,5 +1,11 @@
 # Kompass (vormals Das Hohe Haus, davor GF Weekly)
 
+> **Stand 25.10.2026: Stufe 1 · Entscheiden können** (Branch `stufe-1/entscheidungen`). Neue Seite „Entscheidungen“ (Gruppe Heute): die offenen
+> Entscheidungen der GF als Frage mit Frist und Herkunft aus Vorhaben-Punkten, Themen und Kandidaten; entscheiden, vertagen, abgeben, Rückgängig.
+> Die Besprechung arbeitet diese Liste ab. Korb „Ohne Vorhaben“ auf Vorhaben. Spielschicht aus (`GF_SPIEL`). Tabelle `hh_entscheidungen`
+> (Migration angewendet), Modul `supabase/functions/gfweekly/entscheidungen.ts`. Auftrag und Prüfweg: `docs/PAKET-STUFE-1-ENTSCHEIDUNGEN.md`,
+> Stand in fünf Kategorien: `docs/TECHNIKSTAND.md` und `docs/STAND-STUFE-1.md`.
+
 > **Stand 25.10.2026: Verkauf 2027 auf „Für dich“** (live, main `301d495`). Unter „Deine 5 Minuten heute“ eine Kachel je Festival:
 > Tickets gegen Ziel, Trend zur Vorwoche, „im Plan“ oder „unter Plan“ nach Tempo; Klick öffnet die Handeingabe mit den letzten fünf Ständen.
 > Tabellen `hh_verkauf_ziel` und `hh_verkauf_stand` (Migration angewendet), Actions `verkauf_list` und `verkauf_set` in `supabase/functions/gfweekly/verkauf.ts`.

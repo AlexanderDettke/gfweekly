@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Kompass · Vorhaben</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=40" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=40" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=40" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=40" />
-<link rel="stylesheet" href="/assets/styles.css?v=40" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=41" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=41" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=41" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=41" />
+<link rel="stylesheet" href="/assets/styles.css?v=41" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -53,14 +53,18 @@
     <section id="vhMain" class="vh-main" aria-label="Vorhaben" aria-live="polite"><div class="loading">lädt …</div></section>
     <aside id="vhAkte" class="vh-akte" aria-label="Akte" hidden></aside>
   </div>
+
+  <!-- Stufe 1 (25.10.2026), Abschnitt 4 · Korb: Kandidaten und Themen ohne Vorhaben, Vorschlag des Laufs, zuordnen, neues Vorhaben, verwerfen, archivieren. -->
+  <section class="fd en-korb" id="vhKorb" aria-label="Ohne Vorhaben">
+    <div class="fd-h"><h2>Ohne Vorhaben</h2><span class="fd-n" id="vhKorbN"></span><span class="line"></span><button type="button" class="btn btn-sm btn-brand" id="vhKorbAlle" hidden>Alle Vorschläge übernehmen</button></div>
+    <div class="fd-list" id="vhKorbL"><div class="loading">lädt …</div></div>
+  </section>
 </div>
 
 <button type="button" class="vh-fab" id="vhFab" aria-label="Einwurf: etwas eintragen"><span aria-hidden="true">+</span> Einwurf</button>
 <div class="modal-back" id="vhModal"></div>
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=40"></script>
-<script src="/assets/game.js?v=40"></script>
-<script src="/assets/eggs.js?v=40" defer></script>
+<script src="/assets/core.js?v=41"></script>
 <script>
 /* V31 · Vorhaben: eine Seite, drei Ansichten (Woche, Board, Liste), die Akte rechts (ab 1024 px) oder als Blatt.
    Liest vorhaben_list und vorhaben_get, schreibt über vorhaben_save, punkt_*, verlauf_status, vorhaben_verknuepfen,
@@ -790,8 +794,66 @@ async function laden(still){
   DATA=d; renderKopf(); renderSteuer(); renderMain(); gfVhBadge();
   await erl; if(lauf!==LADE_LAUF) return; renderSteuer(); if(FILTER==="erledigt") renderMain();
 }
+/* ---------- Korb „Ohne Vorhaben“ (Stufe 1) ---------- */
+let KORB=null, KORB_LAUF=0, KORB_WAHL=null;   // KORB_WAHL: Kennung des Eintrags, dessen Chip-Reihe offen ist
+const KORB_ART={ kandidat:"Kandidat", thema:"Thema" };
+async function ladeKorb(){
+  const lauf=++KORB_LAUF;
+  try{ const d=await gfApi("korb_list",{}); if(lauf!==KORB_LAUF) return; KORB=d; renderKorb(); }
+  catch(e){ if(e.auth) throw e; if(lauf!==KORB_LAUF) return; gfLadefehler($("#vhKorbL"), e, {titel:"Der Korb ließ sich nicht laden."}); }
+}
+function renderKorb(){
+  const L=KORB.eintraege||[]; const mit=L.filter(x=>x.vorschlag_id);
+  $("#vhKorbN").textContent=L.length?String(L.length):"";
+  const alle=$("#vhKorbAlle"); alle.hidden=!mit.length; alle.textContent=`Alle Vorschläge übernehmen (${mit.length})`;
+  if(!L.length){ $("#vhKorbL").innerHTML=`<p class="fd-empty">Alles ist einem Vorhaben zugeordnet.</p>`; return; }
+  $("#vhKorbL").innerHTML=L.map(x=>{
+    const offen=KORB_WAHL===x.id;
+    return `<article class="fd-row en-korb-z" data-id="${x.id}" data-kind="${x.kind}">
+      <div class="fd-main">
+        <div class="fd-title">${x.url?`<a href="${gfEsc(x.url)}"${/^https?:/.test(x.url)?' target="_blank" rel="noopener"':""}>${gfEsc(x.titel)}</a>`:gfEsc(x.titel)}</div>
+        <div class="fd-note">${KORB_ART[x.kind]}${x.quelle?` · ${gfEsc(x.quelle)}`:""}${x.datum?` · ${gfFmtShort(x.datum)}`:""}${x.gate?` · Ausgang ${gfEsc(x.gate)}`:""}${x.vorschlag_id?` · <span class="zst"><i aria-hidden="true">●</i>Vorschlag: ${gfEsc(x.vorschlag_titel)}</span>`:""}</div>
+        <div class="en-korb-wahl"${offen?"":" hidden"} id="kw-${x.id}"><span class="fd-muted">Zuordnen zu:</span> <div class="fchips" role="group" aria-label="Vorhaben wählen">${(KORB.vorhaben||[]).map(v=>`<button type="button" class="chip" data-zu="${v.id}">${gfEsc(v.title)}</button>`).join("")}</div></div>
+      </div>
+      <div class="en-btns">
+        ${x.vorschlag_id?`<button type="button" class="btn btn-sm btn-primary" data-k="vorschlag">Zuordnen: ${gfEsc(x.vorschlag_titel)}</button>`:`<button type="button" class="btn btn-sm btn-primary" data-k="waehlen" aria-expanded="${offen}" aria-controls="kw-${x.id}">Zuordnen</button>`}
+        ${x.vorschlag_id?`<button type="button" class="btn btn-sm" data-k="waehlen" aria-expanded="${offen}" aria-controls="kw-${x.id}">Anderes</button>`:""}
+        <button type="button" class="btn btn-sm" data-k="neu">Neues Vorhaben</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-k="${x.kind==="kandidat"?"verwerfen":"archivieren"}">${x.kind==="kandidat"?"Verwerfen":"Archivieren"}</button>
+      </div>
+    </article>`; }).join("");
+}
+async function korbAktion(x, aktion, vorhaben_id, ausl){
+  const knoepfe=[...document.querySelectorAll(`.en-korb-z[data-id="${CSS.escape(x.id)}"] button`)]; knoepfe.forEach(b=>b.disabled=true);
+  const p={ kind:x.kind, id:x.id, aktion, by:gfWho() }; if(vorhaben_id) p.vorhaben_id=vorhaben_id;
+  if(aktion==="neu"){ const t=prompt("Titel des neuen Vorhabens:", x.titel); if(t===null){ knoepfe.forEach(b=>b.disabled=false); return; } p.titel=t.trim(); if(p.titel.length<3){ gfToast("Der Titel braucht mindestens drei Zeichen.",{fehler:true}); knoepfe.forEach(b=>b.disabled=false); return; } }
+  try{
+    const d=await gfApi("korb_set",p);
+    gfToast(aktion==="verwerfen"?"Verworfen":aktion==="archivieren"?"Archiviert":`Zugeordnet: ${d.vorhaben?d.vorhaben.title:""}${d.angelegt?" (neu angelegt)":""}`);
+    KORB_WAHL=null; await Promise.all([ladeKorb(), d.angelegt?laden(true):Promise.resolve()]);
+    const n=$("#vhKorbL .en-korb-z button"); if(n) n.focus(); else $("#vhKorb h2").setAttribute("tabindex","-1"), $("#vhKorb h2").focus();
+  }catch(e){ knoepfe.forEach(b=>b.disabled=false); gfToast((e.konflikt?"":"Nicht gespeichert: ")+(e.message||"Verbindung"),{fehler:true}); if(e.konflikt) ladeKorb(); }
+}
+$("#vhKorbL").addEventListener("click",e=>{
+  const z=e.target.closest(".en-korb-z"); if(!z||!KORB) return; const x=(KORB.eintraege||[]).find(y=>y.id===z.dataset.id); if(!x) return;
+  const zu=e.target.closest("[data-zu]"); if(zu){ korbAktion(x,"zuordnen",zu.dataset.zu,zu); return; }
+  const b=e.target.closest("[data-k]"); if(!b) return;
+  if(b.dataset.k==="vorschlag") return korbAktion(x,"zuordnen",x.vorschlag_id,b);
+  if(b.dataset.k==="waehlen"){ KORB_WAHL=KORB_WAHL===x.id?null:x.id; renderKorb(); const w=document.getElementById("kw-"+x.id); if(w&&!w.hidden) w.querySelector(".chip")?.focus(); else document.querySelector(`.en-korb-z[data-id="${CSS.escape(x.id)}"] [data-k="waehlen"]`)?.focus(); return; }
+  korbAktion(x,b.dataset.k,null,b);
+});
+$("#vhKorbAlle").onclick=async()=>{
+  const mit=(KORB?.eintraege||[]).filter(x=>x.vorschlag_id); if(!mit.length) return;
+  if(!confirm(`${mit.length} ${mit.length===1?"Eintrag":"Einträge"} dem jeweils vorgeschlagenen Vorhaben zuordnen?`)) return;
+  const b=$("#vhKorbAlle"); b.disabled=true; let ok=0, fehl=[];
+  for(const x of mit){ try{ await gfApi("korb_set",{ kind:x.kind, id:x.id, aktion:"zuordnen", vorhaben_id:x.vorschlag_id, by:gfWho() }); ok++; }catch(e){ fehl.push(x.titel); } }
+  b.disabled=false; gfToast(fehl.length?`${ok} zugeordnet, ${fehl.length} nicht: ${fehl.join(", ")}`:`${ok} zugeordnet`,{fehler:!!fehl.length});
+  await ladeKorb();
+};
+
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("vorhaben");
+  ladeKorb().catch(()=>{});
   await laden();
   const v=Q.get("v"); if(v){ const treffer=DATA?.vorhaben.find(x=>x.slug===v||x.id===v)||ERL?.find(x=>x.slug===v||x.id===v); oeffneAkte(treffer?treffer.slug:v,{ tab:TAB }); }
 });

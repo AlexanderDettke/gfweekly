@@ -46,6 +46,9 @@ if [ -n "$PGLITE_MODUL" ]; then node pruefung/organisation-db-probe.mjs; node pr
 echo "\n== Verkauf 2027: Rechenregeln und Eingaben (ohne Backend; Wirkung mit GF_PW) =="
 node pruefung/verkauf-probe.mjs | tail -1
 
+echo "\n== Stufe 1: Entscheidungen (Rechenregeln und Eingaben; Wirkung mit GF_PW) =="
+node pruefung/entscheidungen-probe.mjs | tail -1
+
 echo "\n== Wächter (statische Prüfungen) =="
 WAECHTER_OHNE_FRISCHE=1 node pruefung/waechter.mjs
 
@@ -61,7 +64,7 @@ cat > pruefung/letzte-abnahme.json <<JSON
   "stand": "$STAND",
   "commit": "$(git rev-parse HEAD)",
   "datum": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "laeufe": ["tokens", "farbscan", "kontrast", "matrix", "schirme (Oberfläche)", "bedienung (Oberfläche)", "kommunikation", "organisationsentscheidungen", "webstandard (Oberfläche)", "verkauf (Rechenregeln)", "waechter"],
+  "laeufe": ["tokens", "farbscan", "kontrast", "matrix", "schirme (Oberfläche)", "bedienung (Oberfläche)", "kommunikation", "organisationsentscheidungen", "webstandard (Oberfläche)", "verkauf (Rechenregeln)", "entscheidungen (Rechenregeln)", "waechter"],
   "ungeprueft": "Wirkung in der Datenbank, Asana-Lebenszyklus, Nebenläufigkeit, verborgene Oberflächenteile"
 }
 JSON

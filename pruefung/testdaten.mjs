@@ -126,7 +126,7 @@ export const KORB_SAAT = {
    zuruecksetzen() stellt den Saatstand wieder her; die Bedienprüfung ruft das vor jedem Fall. */
 export let KORB = JSON.parse(JSON.stringify(KORB_SAAT));
 export let NEUE = [];
-export function zuruecksetzen(){ KORB = JSON.parse(JSON.stringify(KORB_SAAT)); NEUE = []; if (typeof vhZuruecksetzen === 'function') vhZuruecksetzen(); vkZuruecksetzen(); }
+export function zuruecksetzen(){ KORB = JSON.parse(JSON.stringify(KORB_SAAT)); NEUE = []; if (typeof vhZuruecksetzen === 'function') vhZuruecksetzen(); vkZuruecksetzen(); enZuruecksetzen(); }
 const zeileVon = (id) => Object.values(KORB).flat().find(r => r.id === id);
 const vorgangVon = (z) => z && z.kind === 'thema'
   ? { id:z.ref_id, gate: z.vertretung ? 'alex' : 'lea', owner_backup: z.vertretung || null } : null;
@@ -606,3 +606,92 @@ Object.assign(ANTWORT, {
     return { gespeichert:zeile, ...vkListe() };
   },
 });
+
+/* ===== Stufe 1 (25.10.2026): Entscheidungsliste, Besprechung darauf, Korb. Die Rechenregeln kommen aus der Edge Function,
+   die Antworten spiegeln hh_entscheidungen und die Funktionen der Migration 20261025150500 (Status, Rückweg, Konflikt). ===== */
+import { enRechne, enFilter, enSetEingabe } from '../supabase/functions/gfweekly/entscheidungen.ts';
+const enZeile = (o) => ({ id:o.id, quelle_art:o.art, quelle_id:o.qid||o.id+'-q', vorhaben_id:o.vh||null, frage:o.frage, frage_form:!!o.form, frage_von:o.form?(o.von||'lauf'):null,
+  frist:o.frist||null, frist_quelle:o.frist?(o.fq||o.art):null, vorschlag:o.vorschlag||null, status:o.status||'offen', ergebnis:o.ergebnis||null,
+  entschieden_am:o.entschieden_am||null, entschieden_von:o.entschieden_von||null, vertagt_bis:o.vertagt_bis||null, abgegeben_an:o.an||null,
+  created_by:'kompass', run_id:null, rueckweg:o.rueckweg||null, rueckweg_at:o.rueckweg_at||null, created_at:zeit(-3), updated_at:o.updated_at||zeit(-1),
+  herkunft:{ art:o.art, titel:o.titel||o.frage, text:o.text||null, url:o.url||null, datum:zeit(-3), quelle:o.quelle||null, fehlt:false },
+  vorhaben:o.vh?{ id:o.vh, slug:o.vh.replace(/^vh-/,''), title:(VORHABEN.find(v=>v.id===o.vh)||{}).title||o.vh, status:'aktiv' }:null });
+const EN_SAAT = () => [
+  enZeile({ id:'en1', art:'punkt', qid:'p-gehalt', vh:'vh-helge', frage:'Entscheidung zu Gehalt, Start 01/2027, Proof in Q4', frist:tag(66), vorschlag:'Rollenbeschreibung mit Befugnissen und Zielen', text:'Vorschlag liegt seit September vor.', url:'vorhaben.html?v=helge' }),
+  enZeile({ id:'en2', art:'thema', qid:'t-xceed', vh:'vh-xceed', frage:'Schließen wir mit Xceed ab oder suchen wir weiter Partner?', form:true, frist:tag(1), vorschlag:'Vor der nächsten GF-Runde lesen und entscheiden', titel:'Entscheidungsgrundlage: Xceed-Abschluss, Rückfall und Partnersuche', text:'Drei Seiten Entscheidungsgrundlage im Thema.', url:'board.html?topic=t-xceed' }),
+  enZeile({ id:'en3', art:'kandidat', qid:'n3', frage:'Aufsichtsrat verlangt bis 02.11. Auskunft zu Darlehen', frist:tag(8), text:'Mail des Aufsichtsrats mit drei Fragen.', url:'https://example.org/ar', quelle:'Mail vom Aufsichtsrat' }),
+  enZeile({ id:'en4', art:'thema', qid:'t1', frage:'Bürgschaft für die Straße übernehmen?', frist:tag(-2), vorschlag:'Nur mit Deckel 20.000 Euro', url:'board.html?topic=t1' }),
+  enZeile({ id:'en5', art:'thema', qid:'t-unreif1', frage:'Bebauungsplan und Geländesicherung', url:'board.html?topic=t-unreif1' }),
+  enZeile({ id:'en6', art:'thema', qid:'t-unreif2', frage:'Merch, Merch Bundles', url:'board.html?topic=t-unreif2' }),
+  enZeile({ id:'en7', art:'punkt', qid:'p-ohne', vh:'vh-xceed', frage:'Auszahlung ab Monat 1 schriftlich', vorschlag:'Bürgschaftstext einarbeiten und an XCeed senden', url:'vorhaben.html?v=xceed' }),
+  enZeile({ id:'en8', art:'thema', qid:'t-vertagt', frage:'Saalmiete für das Winterfest verhandeln?', status:'vertagt', vertagt_bis:tag(-1), frist:tag(-1), fq:'hand', vorschlag:'Angebot von Hand einholen', url:'board.html?topic=t-vertagt' }),
+  enZeile({ id:'en9', art:'thema', qid:'t-ent', frage:'Gastro-Partner für 2027 bestätigen?', status:'entschieden', ergebnis:'Wir bleiben beim bisherigen Gastro-Partner.', entschieden_am:zeit(-1), entschieden_von:'Alex', rueckweg:{aktion:'entscheiden'}, rueckweg_at:zeit(-0.1), url:'board.html?topic=t-ent' }),
+  enZeile({ id:'en10', art:'kandidat', qid:'n-abg', frage:'Helferplanung: Budget für Verpflegung freigeben?', status:'abgegeben', an:'lea', form:true, von:'Alex', rueckweg:{aktion:'abgeben'}, rueckweg_at:zeit(-0.2) }),
+  enZeile({ id:'en11', art:'thema', qid:'t-heute', frage:'Shuttle-Anbieter heute festlegen?', frist:tag(0), vorschlag:'Anbieter B, günstigster mit Nachtfahrt', url:'board.html?topic=t-heute' }),
+];
+export let EN_ZEILEN = EN_SAAT();
+export const EN_SCHALTER = { listeFehler:false, setFehler:false, konflikt:false, korbFehler:false };
+export const EN_KORB_SAAT = () => ({
+  eintraege: [
+    { kind:'kandidat', id:'n-haerting', titel:'Härting: letzte Mahnung klären, Zahlung oder Vereinbarung', text:'Mahnung vom 20.10.', datum:zeit(-1), gate:'lea', gate_frist:null, quelle:'Mail Härting', url:'https://example.org/haerting', vorschlag_id:'vh-liquiditaet', vorschlag_titel:'Liquidität viertes Quartal' },
+    { kind:'kandidat', id:'n-korb2', titel:'Anfrage Schulklasse für Juni', text:'Lehrerin fragt nach 30 Plätzen.', datum:zeit(-2), gate:'warten', gate_frist:null, quelle:'Mail', url:null, vorschlag_id:null, vorschlag_titel:null },
+    { kind:'thema', id:'t-korb', titel:'Neue Support-Stelle Booking/Programm', text:'Seit 35 Tagen unbewegt.', datum:zeit(-35), gate:null, gate_frist:null, quelle:null, url:'board.html?topic=t-korb', vorschlag_id:null, vorschlag_titel:null },
+  ],
+  vorhaben: VORHABEN.filter(v => v.status !== 'erledigt').map(v => ({ id:v.id, slug:v.slug, title:v.title, status:v.status, gruppe:v.gruppe })),
+});
+export let KORB_DATEN = EN_KORB_SAAT();
+export function enZuruecksetzen(){ EN_ZEILEN = EN_SAAT(); KORB_DATEN = EN_KORB_SAAT(); Object.assign(EN_SCHALTER, { listeFehler:false, setFehler:false, konflikt:false, korbFehler:false }); }
+const enFinde = (p) => { const e = EN_ZEILEN.find(x => x.id === p.id); if (!e) return { __status:404, error:'Entscheidung gibt es nicht' }; return e; };
+const enPerson = (p) => { const s = String(p.by || '').toLowerCase(); if (s.includes('lea')) return 'Lea'; if (s.includes('alex')) return 'Alex'; return null; };
+function enListe(p) {
+  if (EN_SCHALTER.listeFehler) return { __status:500, error:'Verbindung unterbrochen' };
+  const status = (p && p.status) || 'offen';
+  const { alle, zaehler } = enRechne(EN_ZEILEN, heute);
+  const letzte = alle.filter(e => e.status === 'entschieden').sort((a, b) => String(b.entschieden_am || '').localeCompare(String(a.entschieden_am || '')))[0] || null;
+  return { heute, status, sync:(p && p.sync === false) ? null : { eingefuegt:0, aktualisiert:0, hinfaellig:0, wieder_offen:0 }, zaehler, eintraege:enFilter(alle, status, heute), gesamt:alle.length,
+    zuletzt_entschieden: letzte ? { id:letzte.id, frage:letzte.frage, ergebnis:letzte.ergebnis, entschieden_am:letzte.entschieden_am, entschieden_von:letzte.entschieden_von } : null };
+}
+function enAktion(p, wie) {
+  if (EN_SCHALTER.setFehler) { EN_SCHALTER.setFehler = false; return { __status:500, error:'Verbindung unterbrochen' }; }
+  if (EN_SCHALTER.konflikt) { EN_SCHALTER.konflikt = false; return { __status:409, error:'Die Quelle ist inzwischen erledigt oder weitergegeben; bitte neu laden' }; }
+  const by = enPerson(p); if (!by) return { __status:400, error:'by muss Alex oder Lea sein' };
+  const e = enFinde(p); if (e.__status) return e;
+  const eigen = { status:e.status, ergebnis:e.ergebnis, entschieden_am:e.entschieden_am, entschieden_von:e.entschieden_von, frist:e.frist, frist_quelle:e.frist_quelle, vertagt_bis:e.vertagt_bis, abgegeben_an:e.abgegeben_an };
+  if (wie === 'entscheiden') { const erg = String(p.ergebnis || '').trim(); if (erg.length < 5) return { __status:400, error:'Ergebnis fehlt (ein Satz, mindestens fünf Zeichen)' };
+    if (e.status === 'entschieden') return { ok:true, geaendert:false, entscheidung:e };
+    Object.assign(e, { status:'entschieden', ergebnis:erg, entschieden_am:zeit(0), entschieden_von:by }); }
+  if (wie === 'vertagen') { const bis = String(p.bis || ''); if (!/^\d{4}-\d{2}-\d{2}$/.test(bis)) return { __status:400, error:'bis: Datum als JJJJ-MM-TT' }; if (bis < heute) return { __status:400, error:'Vertagen braucht ein Datum ab heute' };
+    Object.assign(e, { status:'vertagt', vertagt_bis:bis, frist:bis, frist_quelle:'hand' }); }
+  if (wie === 'abgeben') { const an = String(p.an || ''); if (!['alex','lea','team'].includes(an)) return { __status:400, error:'an: alex, lea oder team' }; Object.assign(e, { status:'abgegeben', abgegeben_an:an }); }
+  if (wie === 'zurueck') { if (!e.rueckweg) return { __status:409, error:'Nichts zum Zurücknehmen' }; Object.assign(e, e.rueckweg.eigen || { status:'offen' }); e.rueckweg = null; e.rueckweg_at = null; e.updated_at = zeit(0); return { ok:true, entscheidung:e }; }
+  e.rueckweg = { aktion:wie, eigen }; e.rueckweg_at = zeit(0); e.updated_at = zeit(0);
+  return { ok:true, geaendert:true, entscheidung:e };
+}
+Object.assign(ANTWORT, {
+  entscheidungen_list: (p) => enListe(p),
+  entscheidung_set: (p) => { const by = enPerson(p); if (!by) return { __status:400, error:'by muss Alex oder Lea sein' }; const e = enFinde(p); if (e.__status) return e;
+    let patch; try { patch = enSetEingabe(p, heute); } catch (x) { return { __status:x.status || 400, error:x.message }; }
+    if (patch.frage !== undefined) patch.frage_von = by; Object.assign(e, patch, { updated_at:zeit(0) }); return { ok:true, entscheidung:e }; },
+  entscheidung_entscheiden: (p) => enAktion(p, 'entscheiden'),
+  entscheidung_vertagen: (p) => enAktion(p, 'vertagen'),
+  entscheidung_abgeben: (p) => enAktion(p, 'abgeben'),
+  entscheidung_zurueck: (p) => enAktion(p, 'zurueck'),
+  korb_list: () => EN_SCHALTER.korbFehler ? { __status:500, error:'Verbindung unterbrochen' } : { ...KORB_DATEN, zaehler:{ gesamt:KORB_DATEN.eintraege.length, kandidaten:KORB_DATEN.eintraege.filter(x => x.kind === 'kandidat').length, themen:KORB_DATEN.eintraege.filter(x => x.kind === 'thema').length, mit_vorschlag:KORB_DATEN.eintraege.filter(x => x.vorschlag_id).length } },
+  korb_set: (p) => {
+    const by = enPerson(p); if (!by) return { __status:400, error:'by muss Alex oder Lea sein' };
+    const i = KORB_DATEN.eintraege.findIndex(x => x.id === p.id && x.kind === p.kind); if (i < 0) return { __status:409, error:'Der Eintrag ist inzwischen einem Vorhaben zugeordnet; bitte neu laden' };
+    const x = KORB_DATEN.eintraege[i];
+    if (p.aktion === 'verwerfen' && p.kind !== 'kandidat') return { __status:400, error:'verwerfen gilt für Kandidaten; Themen werden archiviert' };
+    if (p.aktion === 'archivieren' && p.kind !== 'thema') return { __status:400, error:'archivieren gilt für Themen; Kandidaten werden verworfen' };
+    if (p.aktion === 'verwerfen' || p.aktion === 'archivieren') { KORB_DATEN.eintraege.splice(i, 1); return { ok:true, aktion:p.aktion, item:{ id:x.id } }; }
+    let vh = null, angelegt = false;
+    if (p.aktion === 'neu') { const titel = String(p.titel || '').trim(); if (titel.length < 3) return { __status:400, error:'titel fehlt' }; vh = { id:'vh-neu-' + KORB_DATEN.vorhaben.length, slug:'neu-' + KORB_DATEN.vorhaben.length, title:titel, status:'aktiv', gruppe:'sonstiges' }; KORB_DATEN.vorhaben.push(vh); angelegt = true; }
+    else { vh = KORB_DATEN.vorhaben.find(v => v.id === p.vorhaben_id); if (!vh) return { __status:404, error:'Vorhaben gibt es nicht' }; }
+    KORB_DATEN.eintraege.splice(i, 1);
+    return { ok:true, aktion:p.aktion, item:{ id:x.id, title:x.titel, vorhaben_id:vh.id }, vorhaben:{ id:vh.id, slug:vh.slug, title:vh.title }, angelegt, verlauf_id:'v-korb' };
+  },
+  checkin: () => ({ ok:true, first:false, streak:3, gains:[], state:null }),
+  session_start: (p) => ({ session:{ id:'s-neu', started_at:zeit(0), participants:p.participants||'Alex, Lea', started_by:p.started_by||'Alex', title:p.title||'Besprechung' } }),
+  session_end: (p) => ({ session:{ id:p.id, ended_at:zeit(0), protocol:p.protocol||'' }, gains:[] }),
+});
+for (const a of ['entscheidung_set','entscheidung_entscheiden','entscheidung_vertagen','entscheidung_abgeben','entscheidung_zurueck','korb_set']) SCHREIBEND.add(a);
