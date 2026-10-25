@@ -1,6 +1,6 @@
 -- Kompass · Stufe 2, Korrekturen nach Codex-Runde 1 (26.10.2026, docs/reviews/STUFE2-runde-1.md):
 -- 1. hh_entscheidung_umhaengen prüft die Zielquelle (vorhanden, offen, bei der GF) und p_by (Befund 1).
--- 2. hh_entscheidung_zurueck stellt bei Themen archived und archiv_grund, bei Kandidaten archiviert_at wieder her (Befund 2).
+-- 2. hh_entscheidung_zurueck (Fassung aus 20261025163000 mit Vergleichsstand und 409) stellt bei Themen archived und archiv_grund, bei Kandidaten archiviert_at wieder her (Befund 2).
 -- 3. hh_entscheidungen_sammelaktion „hinfällig“ bricht bei erledigter, archivierter oder fehlender Quelle mit PT409 ab (Befund 6).
 -- 4. hh_absence_end_s2: Ende und Korbabschluss in einer Transaktion (Befund 5), Vorschläge entfallen ohne Verlauf (Befund 4).
 -- Rückweg: die Fassungen aus 20261025150500, 20261025210000 und 20261025220000 erneut anwenden; drop function public.hh_absence_end_s2(uuid,text);
@@ -48,12 +48,20 @@ declare
   v_by text := public.hh_en_person(p_by);
   v_o jsonb;
   v_eig jsonb;
+  v_jetzt jsonb;
 begin
   select * into v_e from public.hh_entscheidungen where id = p_id for update;
   if not found then raise exception 'Entscheidung gibt es nicht' using errcode = 'PT404'; end if;
   if v_e.rueckweg is null then raise exception 'Nichts zum Zurücknehmen' using errcode = 'PT409'; end if;
   if v_e.rueckweg_at < now() - interval '24 hours' then raise exception 'Rückgängig geht nur innerhalb von 24 Stunden' using errcode = 'PT409'; end if;
   v_o := v_e.rueckweg->'original'; v_eig := v_e.rueckweg->'eigen';
+  -- Quelle sperren und mit dem Stand nach der Aktion vergleichen: hat jemand sie seither geändert, kein stilles Überschreiben.
+  perform public.hh_en_quelle_eignung(v_e.quelle_art, v_e.quelle_id);
+  v_jetzt := public.hh_en_original(v_e.quelle_art, v_e.quelle_id);
+  if v_jetzt is null then raise exception 'Die Quelle gibt es nicht mehr; Rückgängig nicht möglich' using errcode = 'PT409'; end if;
+  if (v_e.rueckweg ? 'nach') and v_jetzt is distinct from v_e.rueckweg->'nach' then
+    raise exception 'Die Quelle wurde seit der Aktion geändert; Rückgängig nicht möglich, bitte von Hand nachsehen' using errcode = 'PT409';
+  end if;
 
   if v_e.quelle_art = 'punkt' then
     update public.hh_vorhaben_punkte set
@@ -64,15 +72,15 @@ begin
     update public.gfweekly_topics set
       board_lane = coalesce(v_o->>'board_lane', board_lane), status = coalesce(v_o->>'status', status), decision = coalesce(v_o->>'decision', ''),
       resolved_at = (v_o->>'resolved_at')::timestamptz, gate = v_o->>'gate', gate_by = v_o->>'gate_by', gate_at = (v_o->>'gate_at')::timestamptz,
-      gate_frist = (v_o->>'gate_frist')::date, last_discussed = (v_o->>'last_discussed')::date,
-      archived = coalesce((v_o->>'archived')::boolean, archived), archiv_grund = case when v_o ? 'archiv_grund' then v_o->>'archiv_grund' else archiv_grund end,
-      updated_at = now()
+      gate_frist = (v_o->>'gate_frist')::date, last_discussed = (v_o->>'last_discussed')::date, updated_at = now(),
+      archived = coalesce((v_o->>'archived')::boolean, archived), archiv_grund = case when v_o ? 'archiv_grund' then v_o->>'archiv_grund' else archiv_grund end
      where id = v_e.quelle_id;
   else
     update public.gfweekly_news set
       status = coalesce(v_o->>'status', status), decided_by = coalesce(v_o->>'decided_by', ''), decided_at = (v_o->>'decided_at')::timestamptz,
       archiv_grund = v_o->>'archiv_grund', gate = v_o->>'gate', gate_by = v_o->>'gate_by', gate_at = (v_o->>'gate_at')::timestamptz,
-      gate_frist = (v_o->>'gate_frist')::date, archiviert_at = case when v_o ? 'archiviert_at' then (v_o->>'archiviert_at')::timestamptz else archiviert_at end
+      gate_frist = (v_o->>'gate_frist')::date,
+      archiviert_at = case when v_o ? 'archiviert_at' then (v_o->>'archiviert_at')::timestamptz else archiviert_at end
      where id = v_e.quelle_id;
   end if;
   if (v_e.rueckweg->>'verlauf_id') is not null then delete from public.hh_vorhaben_verlauf where id = (v_e.rueckweg->>'verlauf_id')::uuid; end if;

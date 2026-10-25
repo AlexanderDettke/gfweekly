@@ -18,6 +18,8 @@ Migration `20261026000000_stufe2_runde1.sql` (angewendet am 26.10.2026) und im C
 | 11 | mittel | bestätigt | Der Dialog „Nicht jetzt“ auf der Liste belegt den ersten Montag nach vier Wochen vor (wie die Datenbankregel). |
 | 12 | mittel | bestätigt | „Für dich“ nimmt keine Kandidaten mit `relevance hoch` mehr in die fünf Minuten; Kandidaten gehören in den Korb auf Vorhaben. |
 
+Nachtrag zu Befund 2: die erste Fassung der Korrektur hatte `hh_entscheidung_zurueck` aus der Stufe-1-Grundmigration statt aus `20261025163000` (mit Vergleichsstand und 409) abgeleitet; die Stufe-1-Wirkungsprobe fand es (4 Befunde), die Migration ist auf die richtige Grundlage gesetzt und erneut angewendet, beide Proben danach vollständig grün.
+
 Empfehlungen: negative Fälle (1, 2, 5) und Bilanz-Rücknahme sind in `pruefung/stufe2-probe.mjs`; `docs/STAND-STUFE-2.md` entsteht nach dem Push.
 Nebenbefund aus der Abnahme nach Runde 1: die Suchfelder (`board.html`, `cockpit.html`, `seiten.html`) zeigten den Fokusring nur am Rahmen,
 nicht am Feld; seit Stufe 2 erreicht die Tastaturprobe sie innerhalb ihrer Schrittzahl. Ring jetzt am Feld (`.search input:focus-visible`).

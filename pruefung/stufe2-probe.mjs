@@ -43,7 +43,7 @@ else {
   const sql = (text) => {
     const leer = fs.mkdtempSync(path.join(os.tmpdir(), 's2-probe-')); const f = path.join(leer, 'q.sql'); fs.writeFileSync(f, text);
     const r = spawnSync('npx', ['--yes', 'supabase', 'db', 'query', '--linked', '--project-ref', 'bnfmupnmqyrcltrphfak', '-f', f], { cwd: leer, stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' });
-    if (r.status !== 0) return { fehler: (r.stderr || r.stdout || '').slice(0, 300) };
+    if (r.status !== 0) return { fehler: ((r.stdout || '') + ' ' + (r.stderr || '')).replace(/\s+/g, ' ').slice(0, 600) };   // die Fehlermeldung steht im JSON auf stdout, stderr meldet nur die Anmeldung
     try { const s = r.stdout; return JSON.parse(s.slice(s.indexOf('{'))); } catch (e) { return { fehler: 'keine JSON-Antwort' }; }
   };
   const aufraeumen = () => {
