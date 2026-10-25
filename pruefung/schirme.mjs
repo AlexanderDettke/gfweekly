@@ -224,8 +224,8 @@ for (const thema of THEMES) {
       }, kern);
       if (befund.tor) meldungen.push('Tor blieb zu');
       if (!befund.app) meldungen.push('Seiteninhalt blieb verborgen');
-      if (befund.nav !== 20) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 20 Haupteinträgen)');   // 20 mit Vorstandsbüro (22.10.2026)
-      if (befund.unternav !== 4) meldungen.push('Unternavigation unvollständig (' + befund.unternav + ' von 4 Einträgen)');
+      if (befund.nav !== 21) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 21 Haupteinträgen)');   // 21 mit Entscheidungen in Heute (Stufe 1, 25.10.2026)
+      if (befund.unternav !== 3) meldungen.push('Unternavigation unvollständig (' + befund.unternav + ' von 3 Einträgen)');   // Entscheidungen nicht mehr unter Themen
       if (befund.fehltext.length) meldungen.push('Fehlermeldung auf der Seite: ' + befund.fehltext.join(', '));
       if (befund.kern < 0) meldungen.push('Kerninhalt ' + kern + ' fehlt im Aufbau');
       else if (befund.kern < 20) meldungen.push('Kerninhalt ' + kern + ' blieb leer (' + befund.kern + ' Zeichen)');
