@@ -9,7 +9,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODUL || 'playwright');
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ANTWORT, FALLBACK, SCHREIBEND, TPA, zuruecksetzen, SCHALTER, VORHABEN, VK_SCHALTER } from './testdaten.mjs';
+import { ANTWORT, FALLBACK, SCHREIBEND, TPA, zuruecksetzen, SCHALTER, VORHABEN, VK_SCHALTER, THEMEN } from './testdaten.mjs';
 
 const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'site');
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8',
@@ -204,7 +204,7 @@ console.log('\n== Lückenfilter im Board (Befund 7.4) ==');
     karten === 2 && titel.includes('Zeltwiese') && titel.includes('Gastro-Partner'), `${karten} Karten: ${titel.slice(0,90)}`);
   pruefe('der Personenschalter ist sichtbar und trägt den Namen',
     (await p.locator('#owWrap').innerText()).includes('Lea'));
-  await p.locator('#lueckeOn').uncheck(); await p.waitForTimeout(250);
+  await p.locator('#filterBtn').click(); await p.locator('#lueckeOn').uncheck(); await p.waitForTimeout(250);
   const ohneLuecke = await p.locator('.bcard').count();
   pruefe('ohne Lückenhaken stehen genau Leas drei Themen da', ohneLuecke === 3, `${ohneLuecke} Karten`);
   await p.locator('#owOn').uncheck(); await p.waitForTimeout(250);
@@ -357,6 +357,98 @@ console.log('\n== Vorhaben (V31b): Ansichten, Akte, Punkt, Ball ==');
   const vk = letzte('vorhaben_verknuepfen');
   pruefe('Zuordnung lösen schickt den gesehenen Bezug', vk && vk.nutzlast.vorhaben_id === null && vk.nutzlast.expect_vorhaben_id === 'vh-xceed', JSON.stringify(vk && vk.nutzlast));
   await r.close();
+}
+
+console.log('\n== Board aufgeräumt und Mehrfachauswahl (23.10.2026) ==');
+{
+  frisch();
+  const saat = JSON.stringify(THEMEN);
+  const jetzt = Date.now(), alt = new Date(jetzt - 30 * 86400000).toISOString();
+  THEMEN.push({ id:'t6', title:'Erledigtes Probethema', context:'', priority:'mittel', status:'erledigt', kind:'einmalig', board_lane:'erledigt', lane_order:1, owner:'Alex', created_at:alt, updated_at:alt, archived:false },
+              { id:'t7', title:'Sehr langer Probetitel, der auf der Karte nach zwei Zeilen abgeschnitten wird, damit das Board ruhig bleibt und man mehr Karten auf einen Blick sieht', context:'', priority:'niedrig', status:'offen', kind:'einmalig', board_lane:'zu_besprechen', lane_order:9, owner:'Lea', next_action:'Ein sehr langer nächster Schritt, der auf eine Zeile gekürzt wird und trotzdem im Tooltip vollständig steht', created_at:alt, updated_at:alt, archived:false });
+  const b = await seite('/board.html'); await b.waitForTimeout(500);
+  pruefe('Erledigt startet als schmaler Streifen mit Zahl, ohne Karten', await b.locator('.lane-zu[data-col="erledigt"]').count() === 1 && await b.locator('.lane[data-col="erledigt"] .bcard').count() === 0 && /Erledigt\s*1/.test(await b.locator('.lane-zu').innerText()));
+  await b.locator('.lane-zu [data-erl="auf"]').click(); await b.waitForTimeout(200);
+  pruefe('„anzeigen“ klappt Erledigt auf', await b.locator('.lane[data-col="erledigt"] .bcard').count() === 1);
+  await b.locator('[data-erl="zu"]').click(); await b.waitForTimeout(200);
+  const k = b.locator('.bcard[data-id="t7"]');
+  pruefe('Kompakte Karte: Titel höchstens zwei Zeilen, ganzer Titel im Tooltip, nächster Schritt eine Zeile', await k.evaluate(el => { const t = el.querySelector('.bt'); const lh = parseFloat(getComputedStyle(t).lineHeight); return t.getBoundingClientRect().height <= lh * 2 + 2 && /damit das Board ruhig bleibt/.test(t.title); })
+    && await k.evaluate(el => { const n = el.querySelector('.bn-1'); return n && n.getBoundingClientRect().height < 30; }));
+  pruefe('„still seit 30 T“ nur bei stillen Themen, keine Alterszahl bei frischen', /still seit 30 T/.test(await k.innerText()) && !/\d+ T\b/.test(await b.locator('.bcard[data-id="t2"]').innerText()));
+  pruefe('Kopfzeile ruhig: Filter im Menü, keine doppelten Knöpfe im Kopf', await b.locator('#filterPop').isHidden() && await b.locator('#hero a.btn').count() === 0);
+  /* Auswählen: zwei Karten, erledigen, Rückgängig */
+  await b.locator('#waehlenBtn').click(); await b.waitForTimeout(150);
+  await b.locator('.bcard[data-id="t1"]').click(); await b.locator('.bcard[data-id="t7"]').click(); await b.waitForTimeout(100);
+  pruefe('Auswahl: Leiste zeigt „2 ausgewählt“, Karten markiert, Klick öffnet keine Details', /2 ausgewählt/.test(await b.locator('#selN').innerText()) && await b.locator('.bcard.gewaehlt').count() === 2 && !(await b.locator('#panel.open').count()));
+  await b.locator('#selBar [data-sel="erledigt"]').click(); await b.waitForTimeout(400);
+  const se = letzte('themen_sammeln');
+  pruefe('Erledigt schickt beide Themen mit gesehenem Stand, als Alex', se && se.nutzlast.aktion === 'erledigt' && se.nutzlast.items.length === 2 && se.nutzlast.items.every(x => x.expect && x.expect.board_lane && x.expect.updated_at) && se.nutzlast.by === 'Alex', JSON.stringify(se && se.nutzlast).slice(0, 200));
+  pruefe('danach: Karten in Erledigt, Hinweis „2 Themen erledigt · Rückgängig“', await b.locator('.lane-zu').count() === 1 && /Erledigt\s*3/.test(await b.locator('.lane-zu').innerText()) && /2 Themen erledigt/.test(await b.locator('#selRueck').innerText()));
+  await b.locator('#selRueckK').click(); await b.waitForTimeout(500);
+  const ru = letzte('themen_sammeln');
+  pruefe('Rückgängig setzt beide mit dem Stand davor zurück', ru && ru.nutzlast.items.length === 2 && ru.nutzlast.items.every(x => x.aktion === 'zuruecksetzen' && x.wert && x.wert.board_lane === 'zu_besprechen') && await b.locator('.lane[data-col="zu_besprechen"] .bcard[data-id="t1"]').count() === 1, JSON.stringify(ru && ru.nutzlast).slice(0, 200));
+  /* Verschieben und Weitergeben über die Menüs, Alle in einer Spalte */
+  await b.locator('[data-sel-alle="in_klaerung"]').click(); await b.waitForTimeout(100);
+  await b.locator('[data-selmenu="verschieben"]').click(); await b.locator('.sel-pop [data-wert="woche"]').click(); await b.waitForTimeout(300);
+  const vs = letzte('themen_sammeln');
+  pruefe('„alle“ in einer Spalte und Verschieben auf nächste Woche', vs && vs.nutzlast.aktion === 'verschieben' && /^\d{4}-\d{2}-\d{2}$/.test(vs.nutzlast.wert) && vs.nutzlast.items.length === 1, JSON.stringify(vs && vs.nutzlast).slice(0, 160));
+  await b.locator('.bcard[data-id="t1"]').click(); await b.locator('[data-selmenu="weitergeben"]').click(); await b.locator('.sel-pop [data-wert="lea"]').click(); await b.waitForTimeout(300);
+  const wg = letzte('themen_sammeln');
+  pruefe('Weitergeben an Lea setzt den Pförtner', wg && wg.nutzlast.aktion === 'weitergeben' && wg.nutzlast.wert === 'lea');
+  /* Konflikt: ein Thema inzwischen woanders → Hinweis nennt es, das andere wird gespeichert */
+  await b.locator('.bcard[data-id="t5"]').click(); await b.locator('.bcard[data-id="t1"]').click(); await b.waitForTimeout(100);
+  THEMEN.find(x => x.id === 't5').board_lane = 'in_klaerung';
+  await b.locator('#selBar [data-sel="in_bearbeitung"]').click(); await b.waitForTimeout(400);
+  pruefe('Konflikt: „1 nicht gespeichert (inzwischen geändert …)“, das andere gespeichert', /1 Thema in Bearbeitung · 1 nicht gespeichert \(inzwischen geändert/.test(await b.locator('#selRueck').innerText()), await b.locator('#selRueck').innerText());
+  /* Zwei Aktionen hintereinander: ein Rückgängig nimmt beide zurück. Frisch beginnen: Auswahl neu, alte Rückwege abgelaufen. */
+  await b.locator('#selEnde').click(); await b.waitForTimeout(10500); await b.locator('#waehlenBtn').click(); await b.waitForTimeout(150);
+  await b.locator('.bcard[data-id="t1"]').click(); await b.locator('#selBar [data-sel="in_bearbeitung"]').click(); await b.waitForTimeout(300);
+  await b.locator('.bcard[data-id="t7"]').click(); await b.locator('#selBar [data-sel="erledigt"]').click(); await b.waitForTimeout(300);
+  pruefe('Rückgängig-Hinweis verdeckt die Auswahlleiste nicht', await b.evaluate(() => { const r = document.getElementById('selRueck').getBoundingClientRect(), l = document.getElementById('selBar').getBoundingClientRect(); return r.bottom <= l.top; }));
+  pruefe('zweite Aktion: Hinweis sagt, dass Rückgängig auch die vorige zurücknimmt', /auch die vorige Aktion/.test(await b.locator('#selRueck').innerText()), await b.locator('#selRueck').innerText());
+  await b.locator('#selRueckK').click(); await b.waitForTimeout(500);
+  const zw = letzte('themen_sammeln');
+  pruefe('Rückgängig setzt beide Themen auf den Stand vor der ersten Aktion', zw && zw.nutzlast.items.length >= 2 && zw.nutzlast.items.every(x => x.aktion === 'zuruecksetzen')
+    && THEMEN.find(x => x.id === 't7').board_lane === 'zu_besprechen' && ['zu_besprechen','in_klaerung'].includes(THEMEN.find(x => x.id === 't1').board_lane), JSON.stringify(zw && zw.nutzlast.items.map(x => [x.id, x.wert.board_lane])));
+  /* Zuklappen nimmt ausgewählte erledigte Karten aus der Auswahl. */
+  await b.locator('.lane-zu [data-erl="auf"]').click(); await b.waitForTimeout(150);
+  await b.locator('.lane[data-col="erledigt"] .bcard').first().click(); await b.waitForTimeout(80);
+  await b.locator('[data-erl="zu"]').click(); await b.waitForTimeout(150);
+  pruefe('Zuklappen leert die Auswahl der verdeckten Karten', /0 ausgewählt/.test(await b.locator('#selN').innerText()), await b.locator('#selN').innerText());
+  /* Auswahl gilt für das Sichtbare: Ansichtswechsel leert sie; Kontrollkästchen tragen den Titel als Namen. */
+  await b.locator('.bcard[data-id="t1"]').click(); await b.waitForTimeout(80);
+  pruefe('Kontrollkästchen mit Namen „… auswählen“', /Vertrag mit dem Landkreis verlängern auswählen/.test(await b.locator('.bcard[data-id="t1"] .sel-cb').getAttribute('aria-label')));
+  await b.locator('#groupSegs [data-g="prio"]').click(); await b.waitForTimeout(150);
+  pruefe('Ansichtswechsel leert die Auswahl', /0 ausgewählt/.test(await b.locator('#selN').innerText()));
+  await b.locator('#groupSegs [data-g="ablauf"]').click(); await b.waitForTimeout(150);
+  await b.locator('#selEnde').click(); await b.waitForTimeout(150);
+  pruefe('„Fertig“ beendet die Auswahl, Karten öffnen wieder Details', await b.locator('#selBar').isHidden() && await b.locator('.sel-cb').count() === 0);
+  await b.close();
+  /* Link auf ein archiviertes Thema: Hinweis statt Leere, „Wieder öffnen“ holt es zurück. */
+  THEMEN.push({ id:'t8', title:'Archiviertes Probethema', context:'', priority:'mittel', status:'erledigt', kind:'einmalig', board_lane:'erledigt', lane_order:2, owner:'Alex', created_at:alt, updated_at:alt, archived:true, archiv_grund:'erledigt-14' });
+  let a = await seite('/board.html?topic=t8'); await a.waitForTimeout(600);
+  pruefe('Link auf archiviertes Thema zeigt „Im Archiv“ mit Grund', /Im Archiv/.test(await a.locator('#tidyModal').innerText()) && /nach 14 Tagen ins Archiv/.test(await a.locator('#tidyModal').innerText()));
+  await a.keyboard.press('Escape'); await a.waitForTimeout(150);
+  pruefe('Escape schließt den Archivdialog, die Seite bleibt bedienbar', !(await a.locator('#tidyModal.open').count()) && await a.evaluate(() => ![...document.body.children].some(e => e.inert)));
+  await a.close();
+  const a2 = await seite('/board.html?topic=t8'); await a2.waitForTimeout(600);
+  a = a2;
+  await a.locator('#arZurueck').click(); await a.waitForTimeout(500);
+  const za = letzte('themen_sammeln');
+  pruefe('„Wieder öffnen“ holt es offen ins Board zurück', za && za.nutzlast.items[0].aktion === 'zuruecksetzen' && za.nutzlast.items[0].wert.archived === false && za.nutzlast.items[0].wert.board_lane === 'zu_besprechen' && await a.locator('#panel.open').count() === 1, JSON.stringify(za && za.nutzlast).slice(0, 200));
+  await a.close();
+  const h = await ctx.newPage(); await h.setViewportSize({ width:390, height:844 }); h.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
+  await h.goto(BASE + '/board.html'); await h.waitForTimeout(700);
+  await h.locator('#waehlenBtn').click(); await h.locator('.bcard').first().click(); await h.waitForTimeout(150);
+  const bb = await h.locator('#selBar').boundingBox();
+  pruefe('Handy 390 px: Leiste unten in voller Breite, keine waagrechte Rollleiste', bb && bb.width >= 340 && bb.y + bb.height <= 844 && await h.evaluate(() => document.documentElement.scrollWidth <= 390), JSON.stringify(bb));
+  await h.locator('[data-selmenu="weitergeben"]').click(); await h.waitForTimeout(100);
+  const pb = await h.locator('.sel-pop[data-pop="weitergeben"]').boundingBox();
+  pruefe('Handy 390 px: Menü „Weitergeben“ liegt ganz im Bild', pb && pb.x >= 0 && pb.x + pb.width <= 390 && pb.y >= 0, JSON.stringify(pb));
+  await h.keyboard.press('Escape'); await h.waitForTimeout(80);
+  pruefe('Escape schließt das Menü und gibt den Fokus an „Weitergeben“ zurück', await h.evaluate(() => document.activeElement?.dataset?.selmenu === 'weitergeben'));
+  await h.close();
+  THEMEN.splice(0, THEMEN.length, ...JSON.parse(saat));
 }
 
 console.log('\n== Kompass, Deine 5 Minuten heute (22.10.2026) ==');

@@ -7,11 +7,11 @@
 <meta name="theme-color" content="#171d18" />
 <title>Kompass · Entscheidungen</title>
 <meta name="description" content="Entscheidungslog, Protokolle und Wochenmail der Geschäftsleitung, Wilde Möhre. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=39" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=39" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=39" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=39" />
-<link rel="stylesheet" href="/assets/styles.css?v=39" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=40" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=40" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=40" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=40" />
+<link rel="stylesheet" href="/assets/styles.css?v=40" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -57,9 +57,9 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=39"></script>
-<script src="/assets/game.js?v=39"></script>
-<script src="/assets/eggs.js?v=39" defer></script>
+<script src="/assets/core.js?v=40"></script>
+<script src="/assets/game.js?v=40"></script>
+<script src="/assets/eggs.js?v=40" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 let DEC=[], SESS=[], TOPICS=[], MS=[], CYC=null, Q="", RANGE=90, EDITING=null;
@@ -114,7 +114,7 @@ function row(x){
   return `<article class="drow" data-id="${x.id}">
     <div class="dd"><b>${gfFmtShort(x.decided_at)}</b>${x.decided_by?`<span>${gfEsc(x.decided_by)}</span>`:""}</div>
     <div class="db">
-      <div class="dt">${t?`<a href="board.html?topic=${t.id}">${gfEsc(x.topic_title||t.title)}</a>`:gfEsc(x.topic_title||"Ohne Thema")}${t&&t.board_lane==="erledigt"?` <span class="pill s-erledigt">erledigt</span>`:""}</div>
+      <div class="dt">${x.topic_id?`<a href="board.html?topic=${encodeURIComponent(x.topic_id)}">${gfEsc(x.topic_title||t?.title||"Thema")}</a>`:gfEsc(x.topic_title||"Ohne Thema")}${t&&t.board_lane==="erledigt"?` <span class="pill s-erledigt">erledigt</span>`:x.topic_id&&!t?` <span class="pill">im Archiv</span>`:""}</div>
       <div class="dx">${gfClamp(x.decision,"d"+x.id,240)}</div>
       ${x.next_action||x.owner?`<div class="dn">${x.next_action?`<b>Nächster Schritt:</b> ${gfEsc(x.next_action)}`:""}${x.owner?` <span class="muted">· ${gfEsc(x.owner)}</span>`:""}</div>`:""}
     </div>

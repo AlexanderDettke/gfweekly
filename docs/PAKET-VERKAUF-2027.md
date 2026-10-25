@@ -148,4 +148,4 @@ Offen für Alex: den Schlüssel bei partners@xceed.me anfragen (der Vertrag ist 
 - Schritt 5 erledigt: Codex-Review drei Runden (`534c7d3`: 4 Befunde, `a318c90`: 4 Befunde, `6222ed0`: 3 Befunde), alle bestätigt und behoben. Die Korrekturen nach Runde 3 sind getestet, aber nicht erneut von Codex geprüft (höchstens drei Runden).
 - Schritt 6 erledigt: Push `8c35752..301d495` durch Alexander. Live-Prüfung auf kompass.wildehabitate.de bei 1440 und 390 px, dunkel und hell: Dateien mit `?v=39`, fünf Kacheln, Kopf „0 von 21.000 Tickets“, mobil zwei Kacheln je Zeile, kein waagrechter Überlauf, Dialog öffnet mit Fokus auf Tickets und schließt mit Escape, keine Konsolenfehler, nichts gespeichert.
 
-Offen: echte Stände eintragen (Alex, Lea), Stufe 2 nach dem XCeed-Schlüssel, `paket/blick-board` vor seinem Push auf `?v=40`.
+Offen: echte Stände eintragen (Alex, Lea), Stufe 2 nach dem XCeed-Schlüssel, `paket/blick-board` vor seinem Push auf `?v=40` (am 25.10. als `paket/blick-board-auf-main` vorbereitet).

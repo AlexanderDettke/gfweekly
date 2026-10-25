@@ -238,7 +238,24 @@ export const ANTWORT = {
     { id:'a', name:'Alex', email:'alex@example.org', role:'GF', team:'GF', active:true, assignable:true, sort_order:1 },
     { id:'l', name:'Lea', email:'lea@example.org', role:'GF', team:'GF', active:true, assignable:true, sort_order:2 },
     { id:'m', name:'Merle', email:'merle@example.org', role:'Büro', team:'Team', active:true, assignable:true, sort_order:3 } ] },
-  list: { topics: THEMEN },
+  list: () => ({ topics: THEMEN.filter(t => !t.archived) }),
+  topic_get: (p) => { const t = THEMEN.find(x => x.id === p.id); return t ? { topic: t } : { __status:404, error:'Thema gibt es nicht' }; },
+  /* 23.10.2026 · Mehrfachauswahl wie hh_themen_sammeln: je Thema ok oder Konflikt, Stand davor, keine Taler. */
+  themen_sammeln: (p) => { const ergebnis = (p.items||[]).map(it => {
+    const t = THEMEN.find(x => x.id === it.id); if (!t) return { id:it.id, ok:false, grund:'Thema gibt es nicht' };
+    const aktion = it.aktion || p.aktion, wert = it.wert !== undefined ? it.wert : p.wert;
+    if (it.expect && it.expect.board_lane !== undefined && it.expect.board_lane !== t.board_lane) return { id:t.id, ok:false, grund:'inzwischen verschoben', konflikt:true };
+    if (it.expect && it.expect.updated_at !== undefined && it.expect.updated_at !== t.updated_at) return { id:t.id, ok:false, grund:'inzwischen geändert', konflikt:true };
+    if (t.archived && aktion !== 'zuruecksetzen') return { id:t.id, ok:false, grund:'inzwischen archiviert', konflikt:true };
+    const vorher = { board_lane:t.board_lane, status:t.status, resolved_at:t.resolved_at||null, next_suggested:t.next_suggested||null, gate:t.gate||null, gate_by:t.gate_by||null, gate_at:t.gate_at||null, archived:!!t.archived, archiv_grund:t.archiv_grund||null };
+    if (aktion === 'erledigt') Object.assign(t, { board_lane:'erledigt', status:'erledigt' });
+    if (aktion === 'in_bearbeitung') Object.assign(t, { board_lane:'in_klaerung', status:'in_klaerung' });
+    if (aktion === 'verschieben') t.next_suggested = wert || null;
+    if (aktion === 'weitergeben') Object.assign(t, { gate:wert, gate_by:p.by });
+    if (aktion === 'archivieren') Object.assign(t, { archived:true, archiv_grund:'hand' });
+    if (aktion === 'zuruecksetzen') Object.assign(t, wert);
+    t.updated_at = new Date().toISOString();
+    return { id:t.id, ok:true, vorher, thema:{ ...t } }; }); return { ok:ergebnis.filter(x => x.ok).length, gesamt:ergebnis.length, ergebnis }; },
   links_all: { links:[ { id:'l1', item_id:'t1', title:'Vertragsentwurf', type:'drive', url:'https://example.org/v', description:'', added_by:'Alex', created_at:zeit(-10) } ] },
   sites_list: { categories:[ { id:'c1', key:'arbeit', label:'Arbeiten', sort_order:1 }, { id:'c2', key:'technik', label:'Technik', sort_order:2 } ],
     sites:[ { id:'s1', name:'Kompass', url:'https://kompass.wildehabitate.de', category:'arbeit', purpose:'Cockpit der GF', notes:'', login_user:'', login_password:'', login_note:'', status:'aktiv', preview:'', sort_order:1 },
@@ -473,7 +490,7 @@ export const SCHREIBEND = new Set(['wahl','freigabe','begruendung','log_verknuep
   'session_start','session_end','session_delete','ritual_toggle','ritual_save','ritual_delete','milestone_save','milestone_delete','news_update','news_accept','news_delete',
   'people_save','people_delete','link_add','link_delete','sites_save','sites_delete','category_save','gate_set','gate_set_many','inbox_promote','inbox_reject','tidy_suggest',
   'absence_end','absence_tick','deputies_set','handover_build','handover_dossier','handover_log_add','launch_set',
-  'handover_set_many','vorhaben_save','punkt_save','punkt_toggle','punkt_delete','verlauf_add','verlauf_status','vorhaben_verknuepfen','einwurf_verwerfen','vorschlag_stand','vorhaben_abschliessen','vorhaben_wiedereroeffnen']);
+  'handover_set_many','vorhaben_save','punkt_save','punkt_toggle','punkt_delete','verlauf_add','verlauf_status','vorhaben_verknuepfen','einwurf_verwerfen','vorschlag_stand','vorhaben_abschliessen','vorhaben_wiedereroeffnen','themen_sammeln']);
 
 /* Je Seite: Kerninhalt, der nach dem Laden gefuellt sein muss (Text laenger als 20 Zeichen).
    Ohne diese Probe wuerde eine leer gebliebene Seite als bestanden durchgehen, weil gfGate das Tor schon vorher versteckt. */

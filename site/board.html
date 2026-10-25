@@ -7,11 +7,11 @@
 <meta name="theme-color" content="#171d18" />
 <title>Kompass · Themen · Board</title>
 <meta name="description" content="Themen der Geschäftsleitung als Board, Kacheln oder Liste. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=39" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=39" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=39" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=39" />
-<link rel="stylesheet" href="/assets/styles.css?v=39" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=40" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=40" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=40" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=40" />
+<link rel="stylesheet" href="/assets/styles.css?v=40" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -42,9 +42,16 @@
       <button class="seg" data-g="person">Person</button>
     </div>
     <label class="chk" id="owWrap" hidden><input type="checkbox" id="owOn" checked> <span id="owName">Person</span></label>
-    <label class="chk"><input type="checkbox" id="lueckeOn" /> nur Lücken</label>
-    <label class="chk"><input type="checkbox" id="showRec" /> wiederkehrende zeigen</label>
-    <label class="chk"><input type="checkbox" id="showDone" /> erledigte zeigen</label>
+    <!-- 23.10.2026: Filter in einem Menü statt vier Haken in der Leiste; aktive Filter zählt der Knopf. -->
+    <div class="bb-filter">
+      <button type="button" class="btn btn-sm btn-ghost" id="filterBtn" aria-expanded="false" aria-controls="filterPop">Filter <span class="nbadge" id="filterN" hidden></span></button>
+      <div class="bb-pop" id="filterPop" role="group" aria-label="Filter" hidden>
+        <label class="chk"><input type="checkbox" id="lueckeOn" /> nur Lücken (ohne Satz oder nächsten Schritt)</label>
+        <label class="chk"><input type="checkbox" id="showRec" /> wiederkehrende zeigen</label>
+        <label class="chk"><input type="checkbox" id="showDone" /> erledigte in allen Ansichten zeigen</label>
+      </div>
+    </div>
+    <button type="button" class="btn btn-sm btn-ghost" id="waehlenBtn" aria-pressed="false" title="Mehrere Themen auswählen und gemeinsam erledigen, verschieben, weitergeben oder archivieren">Auswählen</button>
     <button class="btn btn-sm btn-brand" id="newTopic">＋ Thema</button>
     <button class="btn btn-sm btn-brand" id="tidyAll" title="Themen, deren Text noch Marker wie „Titel:“, „Vorschlag:“ oder „Quelle:“ enthält">Aufräumen <span class="nbadge" id="tidyCount" hidden></span></button>
     <a class="btn btn-sm btn-primary" id="meetBtn" href="besprechung.html" title="Agenda der GF auf der Seite Besprechung">Besprechung</a>
@@ -65,10 +72,23 @@
 
 <div class="toast" id="toast"></div>
 <div class="modal-back" id="tidyModal"></div>
+<!-- 23.10.2026: Leiste der Mehrfachauswahl und Hinweis mit Rückgängig für die ganze Auswahl -->
+<div class="sel-bar" id="selBar" role="region" aria-label="Auswahl" hidden>
+  <span class="sel-n" id="selN" role="status">0 ausgewählt</span>
+  <button type="button" class="btn btn-sm btn-primary" data-sel="erledigt">✓ Erledigt</button>
+  <button type="button" class="btn btn-sm btn-brand" data-sel="in_bearbeitung">◐ In Bearbeitung</button>
+  <div class="sel-w"><button type="button" class="btn btn-sm btn-brand" data-selmenu="verschieben" aria-expanded="false">⏱ Verschieben</button>
+    <div class="bb-pop sel-pop" data-pop="verschieben" hidden><button type="button" data-sel="verschieben" data-wert="morgen">Morgen</button><button type="button" data-sel="verschieben" data-wert="woche">Nächste Woche</button><button type="button" data-sel="verschieben" data-wert="monat">In einem Monat</button><label class="sel-datum">Datum <input type="date" id="selDatum"></label><button type="button" data-sel="verschieben" data-wert="datum">Auf dieses Datum</button></div></div>
+  <div class="sel-w"><button type="button" class="btn btn-sm btn-brand" data-selmenu="weitergeben" aria-expanded="false">→ Weitergeben</button>
+    <div class="bb-pop sel-pop" data-pop="weitergeben" hidden><button type="button" data-sel="weitergeben" data-wert="alex">An Alex</button><button type="button" data-sel="weitergeben" data-wert="lea">An Lea</button><button type="button" data-sel="weitergeben" data-wert="gf">An die GF gemeinsam</button><button type="button" data-sel="weitergeben" data-wert="team">Ans Team</button></div></div>
+  <button type="button" class="btn btn-sm btn-brand" data-sel="archivieren">▣ Archivieren</button>
+  <button type="button" class="btn btn-sm btn-ghost" id="selEnde">Fertig</button>
+</div>
+<div class="toast sel-rueck" id="selRueck" role="status"></div>
 
-<script src="/assets/core.js?v=39"></script>
-<script src="/assets/game.js?v=39"></script>
-<script src="/assets/eggs.js?v=39" defer></script>
+<script src="/assets/core.js?v=40"></script>
+<script src="/assets/game.js?v=40"></script>
+<script src="/assets/eggs.js?v=40" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const LANES=[["zu_besprechen","Zu besprechen","var(--accent)"],["in_klaerung","In Klärung","var(--warn)"],["entschieden","Entschieden · nächster Schritt","var(--info)"],["erledigt","Erledigt","var(--pos)"]];
@@ -88,6 +108,9 @@ let SHOW_REC=localStorage.getItem("gf_board_rec")==="1", SHOW_DONE=localStorage.
 let Q=(params.get("q")||"").trim().toLowerCase(), DRAG=null, UNDO=null, UNDO_T=null;
 let OWNER=(params.get("owner")||params.get("person")||"").trim(), OWNER_ON=!!OWNER;
 let LUECKE=params.get("luecke")==="1";
+/* 23.10.2026 · Erledigt-Spalte im Ablauf zugeklappt (gf_board_erl), Mehrfachauswahl (WAEHLEN, SEL). */
+let ERL_AUF=(()=>{ try{ return localStorage.getItem("gf_board_erl")==="1"; }catch(e){ return false; } })();
+let WAEHLEN=false, SEL_LAEUFT=false; const SEL=new Set();
 function istLuecke(t){ return !(t.short_description||"").trim() || !(t.next_action||"").trim(); }
 /* Dieselbe Regel wie uebernahme_stat in der Edge Function: Verantwortung der Person oder ihr Ausgang.
    whoNorm macht aus „Alexander Dettke“ Alex und aus allem Übrigen Team. */
@@ -121,16 +144,19 @@ function visible(){ return TOPICS.filter(t=>!t.archived && (SHOW_REC||t.kind!=="
   && (!LUECKE||istLuecke(t))); }
 
 /* ---- Karte ---- */
+/* 23.10.2026 · Kompakte Karte: Titel höchstens zwei Zeilen (ganzer Titel als Tooltip und in den Details), darunter eine
+   Zeile nächster Schritt oder Entscheidung. „still seit …“ nur, wenn sich ein Thema drei Wochen nicht bewegt hat. */
+function stillTage(t){ return Math.floor((NOW-new Date(t.updated_at||t.created_at))/86400000); }
 function card(t){
-  const age=ageDays(t); const stale=t.status!=="erledigt"&&age>28;
-  const who=t.owner||t.delegate_to||"";
-  return `<article class="bcard ${t.kind==="recurring"?"rec":""} ${stale?"stale":""}" draggable="true" data-id="${t.id}" tabindex="0">
-    <div class="bm"><span class="pill p-${t.priority}">${t.priority}</span>${t.kind==="recurring"?`<span class="pill kindtag">wiederkehrend</span>`:""}${GROUP!=="ablauf"?`<span class="pill s-${t.status}">${LANES.find(l=>l[0]===t.board_lane)?.[1].split(" ·")[0]||ST[t.status]}</span>`:""}</div>
-    <div class="bt">${gfEsc(t.title)}</div>
-    ${t.short_description?`<div class="bn">${gfClamp(t.short_description,"b"+t.id+"s",120)}</div>`:""}
-    ${t.next_action&&t.board_lane!=="erledigt"?`<div class="bn"><b>Nächster Schritt:</b> ${gfClamp(t.next_action,"b"+t.id+"n",120)}</div>`:""}
-    ${t.decision&&t.board_lane==="entschieden"?`<div class="bn"><b>Entscheidung:</b> ${gfClamp(t.decision,"b"+t.id+"d",120)}</div>`:""}
-    <div class="bf"><span>${who?gfEsc(who):""}${t.next_suggested?` · ${new Date(t.next_suggested+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}`:""}</span><span class="bf-r"><button class="mv" data-mv="${t.id}" title="Verschieben nach …" aria-label="„${gfEsc(t.title)}“ verschieben oder umsortieren" aria-haspopup="true" aria-expanded="false">⇄</button><span class="age" title="Alter des Themas">${age} T</span></span></div>
+  const still=t.board_lane!=="erledigt"?stillTage(t):0; const stale=still>21;
+  const who=t.owner||t.delegate_to||"", titel=(t.title||"").trim()||"(ohne Titel)";
+  const zeile=t.board_lane==="entschieden"&&t.decision?`Entschieden: ${t.decision}`:t.next_action&&t.board_lane!=="erledigt"?`→ ${t.next_action}`:"";
+  const an=SEL.has(t.id);
+  return `<article class="bcard ${t.kind==="recurring"?"rec":""} ${stale?"stale":""}${WAEHLEN?" waehlbar":""}${an?" gewaehlt":""}" draggable="${WAEHLEN?"false":"true"}" data-id="${t.id}" tabindex="${WAEHLEN?"-1":"0"}">
+    <div class="bm">${WAEHLEN?`<input type="checkbox" class="sel-cb" ${an?"checked":""} aria-label="${gfEsc(titel)} auswählen">`:""}<span class="pill p-${t.priority}">${t.priority}</span>${t.kind==="recurring"?`<span class="pill kindtag">wiederkehrend</span>`:""}${GROUP!=="ablauf"?`<span class="pill s-${t.status}">${LANES.find(l=>l[0]===t.board_lane)?.[1].split(" ·")[0]||ST[t.status]}</span>`:""}</div>
+    <div class="bt" title="${gfEsc(titel)}">${gfEsc(titel)}</div>
+    ${zeile?`<div class="bn bn-1" title="${gfEsc(zeile)}">${gfEsc(zeile)}</div>`:""}
+    <div class="bf"><span>${who?gfEsc(who):""}${t.next_suggested?` · ${new Date(t.next_suggested+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}`:""}</span><span class="bf-r"><button class="mv" data-mv="${t.id}" title="Verschieben nach …" aria-label="„${gfEsc(titel)}“ verschieben oder umsortieren" aria-haspopup="true" aria-expanded="false"${WAEHLEN?" hidden":""}>⇄</button>${stale?`<span class="age" title="Seit ${still} Tagen nicht bewegt">still seit ${still} T</span>`:""}</span></div>
   </article>`;
 }
 
@@ -143,8 +169,14 @@ function render(){
   const cols=columns(visible());
   const total=cols.reduce((n,c)=>n+c.items.length,0);
   if(VIEW==="board"){
-    $("#view").innerHTML=`<div class="board">${cols.map(c=>`<section class="lane" data-col="${gfEsc(c.key)}">
+    /* Erledigt im Ablauf als schmaler Streifen: hierher ziehen erledigt weiter, „anzeigen“ klappt auf. */
+    const zu=c=>GROUP==="ablauf" && c.key==="erledigt" && !ERL_AUF && !SHOW_DONE;
+    $("#view").innerHTML=`<div class="board${cols.some(zu)?" mit-zu":""}">${cols.map(c=>zu(c)?`<section class="lane lane-zu" data-col="${gfEsc(c.key)}" aria-label="Erledigt, ${c.items.length} Themen, zugeklappt">
       <div class="lane-h"><span class="bar" style="--c:${c.color}"></span>${laneIco(c.key)}${gfEsc(c.label)}<span class="n">${c.items.length}</span></div>
+      <button type="button" class="btn btn-sm btn-ghost lane-auf" data-erl="auf">anzeigen</button>
+      <p class="lane-hint">Hierher ziehen heißt erledigt. Nach 14 Tagen wandern erledigte Themen ins Archiv.</p>
+    </section>`:`<section class="lane" data-col="${gfEsc(c.key)}">
+      <div class="lane-h"><span class="bar" style="--c:${c.color}"></span>${laneIco(c.key)}${gfEsc(c.label)}<span class="n">${c.items.length}</span>${WAEHLEN&&c.items.length?`<button type="button" class="lane-alle" data-sel-alle="${gfEsc(c.key)}">alle</button>`:""}${GROUP==="ablauf"&&c.key==="erledigt"&&ERL_AUF&&!SHOW_DONE?`<button type="button" class="lane-alle" data-erl="zu">zuklappen</button>`:""}</div>
       ${c.items.map(card).join("")||`<div class="empty-lane">hierher ziehen</div>`}
     </section>`).join("")}</div>`;
   } else {
@@ -153,9 +185,9 @@ function render(){
       <div class="tgrid">${c.items.map(card).join("")}</div>
     </section>`).join("")||`<div class="empty soft" style="text-align:center;padding:36px 22px">${window.GF_GAME?`<img class="zpic" src="${GF_GAME.icon("zustand-leer")}" alt="">`:""}<h3>Nichts zu zeigen</h3><p>Filter lockern oder ein neues Thema erfassen.</p></div>`}</div>`;
   }
-  gfStagger($("#view"),".bcard"); updateTidyCount();
+  gfStagger($("#view"),".bcard"); updateTidyCount(); renderFilterN(); renderSel();
   if(MEET){ const cid=MEET.queue[MEET.idx]; const c=document.querySelector(`.bcard[data-id="${cid}"]`); if(c) c.classList.add("is-cur"); }
-  const hp=$("#hero p"); if(hp) hp.textContent=`${total} Themen · Spalten nach ${ {ablauf:"Ablauf",prio:"Priorität",zeitraum:"Zeitraum",person:"Person"}[GROUP] } · ziehen zum Verschieben, antippen für Details`;
+  const hp=$("#hero p"); if(hp) hp.textContent=`${total} Themen · Spalten nach ${ {ablauf:"Ablauf",prio:"Priorität",zeitraum:"Zeitraum",person:"Person"}[GROUP] } · `+(WAEHLEN?"Auswahl: antippen hakt an, unten gemeinsam handeln":"ziehen zum Verschieben, antippen für Details");
   bind();
 }
 
@@ -194,10 +226,10 @@ function showUndo(id,before){
 
 function bind(){
   document.querySelectorAll(".bcard").forEach(el=>{
-    el.addEventListener("dragstart",e=>{ DRAG=el.dataset.id; el.classList.add("dragging"); e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",DRAG); });
+    el.addEventListener("dragstart",e=>{ if(WAEHLEN){ e.preventDefault(); return; } DRAG=el.dataset.id; el.classList.add("dragging"); e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",DRAG); });
     el.addEventListener("dragend",()=>{ el.classList.remove("dragging"); document.querySelectorAll(".lane.over").forEach(l=>l.classList.remove("over")); });
-    el.addEventListener("click",e=>{ if(e.target.closest(".c-more")) return; if(e.target.closest(".mv")){ e.stopPropagation(); openMovePop(el.dataset.id, e.target.closest(".mv")); return; } if(MEET && MEET.queue.includes(el.dataset.id)){ MEET.idx=MEET.queue.indexOf(el.dataset.id); saveMeet(); renderMeet(); $("#meet").scrollIntoView({behavior:"smooth",block:"start"}); return; } openPanel(el.dataset.id); });
-    el.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target===el) openPanel(el.dataset.id); });   /* B-02: Enter auf ⇄ oder „mehr“ öffnet nicht zusätzlich die Details */
+    el.addEventListener("click",e=>{ if(WAEHLEN){ if(e.target.closest(".sel-cb")) e.preventDefault(); waehle(el.dataset.id); return; } if(e.target.closest(".c-more")) return; if(e.target.closest(".mv")){ e.stopPropagation(); openMovePop(el.dataset.id, e.target.closest(".mv")); return; } if(MEET && MEET.queue.includes(el.dataset.id)){ MEET.idx=MEET.queue.indexOf(el.dataset.id); saveMeet(); renderMeet(); $("#meet").scrollIntoView({behavior:"smooth",block:"start"}); return; } openPanel(el.dataset.id); });
+    el.addEventListener("keydown",e=>{ if(WAEHLEN&&(e.key==="Enter"||e.key===" ")&&(e.target===el||e.target.classList.contains("sel-cb"))){ e.preventDefault(); waehle(el.dataset.id); return; } if(e.key==="Enter"&&e.target===el) openPanel(el.dataset.id); });   /* B-02: Enter auf ⇄ oder „mehr“ öffnet nicht zusätzlich die Details */
   });
   document.querySelectorAll(".lane").forEach(l=>{
     l.addEventListener("dragover",e=>{ e.preventDefault(); l.classList.add("over"); });
@@ -286,7 +318,8 @@ async function closePanel(force){
 window.addEventListener("beforeunload",e=>{ if(OPEN && P_DIRTY){ savePanel({silent:true}); e.preventDefault(); e.returnValue=""; } });
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden" && OPEN && P_DIRTY) savePanel({silent:true}); });
 $("#pClose").onclick=()=>closePanel(); $("#panelBack").onclick=()=>closePanel();
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ const tm=document.getElementById("tidyModal"); if(tm&&tm.classList.contains("open")){ tm.classList.remove("open"); return; } closePanel(); } if(e.key==="/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); $("#q").focus(); } });
+let ARCHIV_ZU=null;
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&ARCHIV_ZU){ ARCHIV_ZU(); return; } if(e.key==="Escape"&&!$("#filterPop").hidden){ filterZu(true); return; } if(e.key==="Escape"&&[...document.querySelectorAll(".sel-pop")].some(p=>!p.hidden)){ const p=[...document.querySelectorAll(".sel-pop")].find(x=>!x.hidden); selMenuZu(); document.querySelector(`[data-selmenu="${p.dataset.pop}"]`)?.focus(); return; } if(e.key==="Escape"){ const tm=document.getElementById("tidyModal"); if(tm&&tm.classList.contains("open")){ tm.classList.remove("open"); return; } closePanel(); } if(e.key==="/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); $("#q").focus(); } });
 
 /* ---- Bereinigen (V15): Marker im Text → Felder ---- */
 function tidyCandidates(){ return TOPICS.filter(t=>!t.archived && (SHOW_DONE||t.board_lane!=="erledigt") && gfTidyTopic(t)); }
@@ -335,10 +368,112 @@ function openTidyAll(){
 $("#tidyAll").onclick=openTidyAll;
 
 /* ---- Steuerung ---- */
-$("#groupSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; GROUP=b.dataset.g; localStorage.setItem("gf_board_group",GROUP); render(); };
-$("#showRec").onchange=e=>{ SHOW_REC=e.target.checked; localStorage.setItem("gf_board_rec",SHOW_REC?"1":"0"); render(); };
-$("#showDone").onchange=e=>{ SHOW_DONE=e.target.checked; localStorage.setItem("gf_board_done",SHOW_DONE?"1":"0"); render(); };
-$("#q").oninput=e=>{ Q=e.target.value.trim().toLowerCase(); render(); };
+$("#groupSegs").onclick=e=>{ const b=e.target.closest(".seg"); if(!b) return; auswahlLeeren(); GROUP=b.dataset.g; localStorage.setItem("gf_board_group",GROUP); render(); };
+$("#showRec").onchange=e=>{ auswahlLeeren(); SHOW_REC=e.target.checked; localStorage.setItem("gf_board_rec",SHOW_REC?"1":"0"); render(); };
+$("#showDone").onchange=e=>{ auswahlLeeren(); SHOW_DONE=e.target.checked; localStorage.setItem("gf_board_done",SHOW_DONE?"1":"0"); render(); };
+/* ---- 23.10.2026 · Filtermenü ---- */
+function renderFilterN(){ const n=[LUECKE,SHOW_REC,SHOW_DONE].filter(Boolean).length; const b=$("#filterN"); b.textContent=n; b.hidden=!n; }
+function filterZu(fokus){ $("#filterPop").hidden=true; $("#filterBtn").setAttribute("aria-expanded","false"); if(fokus) $("#filterBtn").focus(); }
+$("#filterBtn").onclick=e=>{ e.stopPropagation(); const auf=$("#filterPop").hidden; $("#filterPop").hidden=!auf; $("#filterBtn").setAttribute("aria-expanded",String(auf)); if(auf) $("#filterPop input")?.focus(); };
+document.addEventListener("click",e=>{ if(!e.target.closest(".bb-filter")) filterZu(false); if(!e.target.closest(".sel-w")) selMenuZu(); });
+$("#view").addEventListener("click",e=>{
+  const er=e.target.closest("[data-erl]"); if(er){ e.stopPropagation(); ERL_AUF=er.dataset.erl==="auf"; try{ localStorage.setItem("gf_board_erl",ERL_AUF?"1":"0"); }catch(x){} render(); fokusNach(`[data-erl="${ERL_AUF?"zu":"auf"}"]`); return; }
+  const al=e.target.closest("[data-sel-alle]"); if(al){ e.stopPropagation(); const ids=[...document.querySelectorAll(`.lane[data-col="${CSS.escape(al.dataset.selAlle)}"] .bcard`)].map(c=>c.dataset.id);
+    if(SEL_LAEUFT) return; const alleDrin=ids.every(id=>SEL.has(id)); ids.forEach(id=>alleDrin?SEL.delete(id):SEL.add(id)); render(); fokusNach(`[data-sel-alle="${CSS.escape(al.dataset.selAlle)}"]`); }
+});
+
+/* ---- 23.10.2026 · Link auf ein archiviertes Thema: lesbarer Hinweis mit „Zurück ins Board“ statt ins Leere ---- */
+async function archivHinweis(id){
+  let t; try{ t=(await gfApi("topic_get",{id})).topic; }catch(e){ gfToast("Dieses Thema gibt es nicht mehr: "+(e.message||"Verbindung")); return; }
+  if(!t.archived){ TOPICS.push(t); render(); openPanel(t.id); return; }
+  const m=$("#tidyModal"), frei=gfModalAuf?gfModalAuf(m):()=>{};
+  const grund=t.archiv_grund&&/^erledigt-/.test(t.archiv_grund)?"Es war erledigt und ist nach 14 Tagen ins Archiv gewandert.":t.archiv_grund==="hand"?"Es wurde von Hand archiviert.":"Es ist archiviert.";
+  m.innerHTML=`<div class="modal vh-dlg" role="dialog" aria-modal="true" aria-labelledby="arH"><div class="modal-h"><h3 id="arH">Im Archiv</h3><button class="icon-btn" data-x aria-label="Schließen">✕</button></div>
+    <div class="vh-dlg-b"><p class="vh-dlg-t"><b>${gfEsc(t.title||"(ohne Titel)")}</b><br>${grund}${t.decision?` Entscheidung: ${gfEsc(t.decision)}`:""}</p></div>
+    <div class="modal-f"><button class="btn btn-brand" data-x>Schließen</button><button class="btn btn-primary" id="arZurueck" style="margin-left:auto">${t.board_lane==="erledigt"?"Wieder öffnen":"Zurück ins Board"}</button></div></div>`;
+  m.classList.add("open");
+  const zu=()=>{ m.classList.remove("open"); m.innerHTML=""; ARCHIV_ZU=null; frei(); };
+  ARCHIV_ZU=zu;
+  m.querySelectorAll("[data-x]").forEach(b=>b.onclick=zu); m.onclick=e=>{ if(e.target===m) zu(); };
+  /* Erledigtes kommt wieder offen zurück, sonst nähme es der nächste Archivlauf gleich wieder. */
+  const wert=t.board_lane==="erledigt"?{ archived:false, archiv_grund:null, board_lane:"zu_besprechen", status:"offen", resolved_at:null }:{ archived:false, archiv_grund:null };
+  $("#arZurueck").onclick=async()=>{ try{ const r=await gfApi("themen_sammeln",{ items:[{ id:t.id, aktion:"zuruecksetzen", wert, expect:{ updated_at:t.updated_at } }], by:gfWho() });
+      const e1=(r.ergebnis||[])[0]; if(!e1||!e1.ok){ gfToast("Nicht zurückgeholt: "+(e1?.konflikt?"inzwischen geändert, bitte neu laden":(e1?.grund||"unbekannt")),{fehler:true}); return; }
+      zu(); const d=await gfApi("list"); TOPICS=d.topics||[]; render(); openPanel(t.id); gfToast("Zurück im Board"); }
+    catch(e){ gfToast("Nicht zurückgeholt: "+(e.message||"Verbindung"),{fehler:true}); } };
+  setTimeout(()=>$("#arZurueck")?.focus(),40);
+}
+
+/* ---- 23.10.2026 · Mehrfachauswahl: anhaken, unten handeln, Rückgängig für alle ---- */
+function renderSel(){
+  const bar=$("#selBar"); bar.hidden=!WAEHLEN; document.documentElement.classList.toggle("board-waehlen",WAEHLEN);
+  if(WAEHLEN) requestAnimationFrame(()=>document.documentElement.style.setProperty("--selbar-h", bar.offsetHeight+"px"));
+  $("#waehlenBtn").setAttribute("aria-pressed",String(WAEHLEN)); $("#waehlenBtn").textContent=WAEHLEN?"Auswahl beenden":"Auswählen";
+  /* Ausgewählt bleibt nur, was als Karte zu sehen ist (zugeklappt, gefiltert oder archiviert fällt heraus). */
+  for(const id of [...SEL]) if(!document.querySelector(`.bcard[data-id="${CSS.escape(id)}"]`)) SEL.delete(id);
+  $("#selN").textContent=SEL.size===1?"1 ausgewählt":`${SEL.size} ausgewählt`;
+  bar.querySelectorAll("[data-sel],[data-selmenu]").forEach(b=>{ if(!b.closest(".sel-pop")) b.disabled=!SEL.size||SEL_LAEUFT; });
+  $("#selEnde").disabled=SEL_LAEUFT;
+}
+function waehle(id){ if(SEL_LAEUFT) return; SEL.has(id)?SEL.delete(id):SEL.add(id); const c=document.querySelector(`.bcard[data-id="${CSS.escape(id)}"]`);
+  if(c){ c.classList.toggle("gewaehlt",SEL.has(id)); const cb=c.querySelector(".sel-cb"); if(cb) cb.checked=SEL.has(id); } renderSel(); }
+/* Nach dem Neuzeichnen den Fokus auf das gleichwertige Element setzen (das alte ist ersetzt). */
+function fokusNach(selektor){ requestAnimationFrame(()=>{ const el=document.querySelector(selektor); if(el) el.focus(); }); }
+/* Auswahl gilt für das, was man sieht: ein Wechsel von Ansicht, Filter oder Suche leert sie. */
+function auswahlLeeren(){ if(WAEHLEN && SEL.size){ SEL.clear(); gfToast("Auswahl geleert, weil sich die Ansicht geändert hat"); } }
+function selMenuZu(){ document.querySelectorAll(".sel-pop").forEach(p=>p.hidden=true); document.querySelectorAll("[data-selmenu]").forEach(b=>b.setAttribute("aria-expanded","false")); }
+$("#waehlenBtn").onclick=()=>{ WAEHLEN=!WAEHLEN; if(!WAEHLEN) SEL.clear(); mvZu(false); render(); };
+$("#selEnde").onclick=()=>{ WAEHLEN=false; SEL.clear(); render(); $("#waehlenBtn").focus(); };
+$("#selBar").addEventListener("click",async e=>{
+  const m=e.target.closest("[data-selmenu]"); if(m){ e.stopPropagation(); const p=$(`.sel-pop[data-pop="${m.dataset.selmenu}"]`); const auf=p.hidden; selMenuZu(); p.hidden=!auf; m.setAttribute("aria-expanded",String(auf)); if(auf) p.querySelector("button")?.focus(); return; }
+  const b=e.target.closest("[data-sel]"); if(!b||!SEL.size||SEL_LAEUFT) return;
+  let wert=null; const aktion=b.dataset.sel;
+  if(aktion==="verschieben"){ const d=new Date(today); const w=b.dataset.wert;
+    if(w==="morgen") d.setDate(d.getDate()+1); else if(w==="woche") d.setDate(d.getDate()+7); else if(w==="monat") d.setMonth(d.getMonth()+1);
+    else { const v=$("#selDatum").value; if(!v){ gfToast("Bitte ein Datum wählen"); $("#selDatum").focus(); return; } wert=v; }
+    if(!wert) wert=iso(d); }
+  if(aktion==="weitergeben") wert=b.dataset.wert;
+  if(aktion==="archivieren" && !confirm(`${SEL.size} ${SEL.size===1?"Thema":"Themen"} archivieren? Sie verschwinden aus dem Board; Rückgängig geht 10 Sekunden lang.`)) return;
+  selMenuZu(); await sammeln(aktion, wert, [...SEL]);
+});
+const SEL_WORT={erledigt:"erledigt",in_bearbeitung:"in Bearbeitung",verschieben:"verschoben",weitergeben:"weitergegeben",archivieren:"archiviert"};
+let SEL_T=null, RUECK=[];   // Rückwege der Sammelaktionen der letzten 10 Sekunden, jüngste zuletzt
+async function sammeln(aktion, wert, ids){
+  const items=ids.map(id=>{ const t=TOPICS.find(x=>x.id===id); return { id, expect:{ board_lane:t?.board_lane, updated_at:t?.updated_at } }; });
+  $("#selBar").setAttribute("aria-busy","true"); SEL_LAEUFT=true; renderSel();
+  let r;
+  try{ r=await gfApi("themen_sammeln",{ items, aktion, wert, by:gfWho() }); }
+  catch(e){ gfToast("Nicht gespeichert: "+(e.message||"Verbindung"),{fehler:true}); return; }
+  finally{ $("#selBar").removeAttribute("aria-busy"); SEL_LAEUFT=false; renderSel(); }
+  const gut=(r.ergebnis||[]).filter(x=>x.ok), schlecht=(r.ergebnis||[]).filter(x=>!x.ok);
+  for(const x of gut){ const i=TOPICS.findIndex(t=>t.id===x.id); if(i<0) continue; if(x.thema?.archived) TOPICS.splice(i,1); else Object.assign(TOPICS[i],x.thema); SEL.delete(x.id); }
+  render();
+  zeigeRueck(gut, schlecht, SEL_WORT[aktion]||aktion);
+}
+function zeigeRueck(gut, schlecht, wort){
+  const h=$("#selRueck");
+  /* Ein laufendes Rückgängig der vorigen Aktion nicht durch eine Meldung ohne eigenen Rückweg verdrängen. */
+  if(!gut.length && h.classList.contains("show") && $("#selRueckK")){ gfToast(`Nichts ${wort}: ${[...new Set(schlecht.map(x=>x.konflikt?"inzwischen geändert, bitte neu laden":x.grund))].join("; ")}`,{fehler:true}); return; }
+  clearTimeout(SEL_T);
+  if(gut.length) RUECK.push(gut); 
+  const fehl=schlecht.length?` · ${schlecht.length} nicht gespeichert (${[...new Set(schlecht.map(x=>x.konflikt?"inzwischen geändert, bitte neu laden":x.grund))].join("; ")})`:"";
+  const mehr=RUECK.length>1?` (Rückgängig nimmt auch die ${RUECK.length-1===1?"vorige Aktion":(RUECK.length-1)+" vorigen Aktionen"} zurück)`:"";
+  h.innerHTML=`<span>${gut.length} ${gut.length===1?"Thema":"Themen"} ${gfEsc(wort)}${gfEsc(fehl)}${gfEsc(mehr)}</span>${RUECK.length?`<button type="button" class="btn btn-sm btn-ghost" id="selRueckK">Rückgängig</button>`:""}`;
+  h.classList.add("show");
+  SEL_T=setTimeout(()=>{ h.classList.remove("show"); h.innerHTML=""; RUECK=[]; }, RUECK.length?10000:8000);
+  const k=$("#selRueckK"); if(!k) return;
+  k.onclick=async()=>{ k.disabled=true; clearTimeout(SEL_T);
+    /* Jüngste Aktion zuerst zurück; je Thema der Stand davor der ältesten Aktion, die es geändert hat. */
+    const alle=RUECK.slice().reverse().flat(), seen=new Map();
+    for(const x of alle) seen.set(x.id, { vorher:x.vorher, nach:seen.has(x.id)?seen.get(x.id).nach:x.thema?.updated_at });
+    const items=[...seen.entries()].map(([id,v])=>({ id, aktion:"zuruecksetzen", wert:v.vorher, expect:{ updated_at:v.nach } }));
+    RUECK=[];
+    try{ const r=await gfApi("themen_sammeln",{ items, by:gfWho() }); const ok=(r.ergebnis||[]).filter(x=>x.ok).length, nein=(r.gesamt||0)-ok;
+      const d=await gfApi("list"); TOPICS=d.topics||[]; render();
+      h.classList.remove("show"); h.innerHTML=""; gfToast(nein?`${ok} zurückgesetzt, ${nein} inzwischen geändert`:`${ok} ${ok===1?"Thema":"Themen"} zurückgesetzt`);
+    }catch(e){ k.disabled=false; h.querySelector("span").textContent=`Rückgängig hat nicht geklappt (${e.message||"Verbindung"}). Noch einmal?`; SEL_T=setTimeout(()=>{ h.classList.remove("show"); h.innerHTML=""; },30000); } };
+}
+$("#q").oninput=e=>{ auswahlLeeren(); Q=e.target.value.trim().toLowerCase(); render(); };
 if(Q) $("#q").value=Q;
 if(OWNER){
   /* Der Filter aus der Kachel soll zeigen, was die Kachel gezählt hat: die zählt auch wiederkehrende und
@@ -346,9 +481,9 @@ if(OWNER){
   $("#owWrap").hidden=false; $("#owName").textContent="nur "+OWNER; $("#owOn").checked=true;
   SHOW_REC=true; SHOW_DONE=true; $("#showRec").checked=true; $("#showDone").checked=true;
 }
-$("#owOn").onchange=e=>{ OWNER_ON=e.target.checked; render(); };
+$("#owOn").onchange=e=>{ auswahlLeeren(); OWNER_ON=e.target.checked; render(); };
 $("#lueckeOn").checked=LUECKE;
-$("#lueckeOn").onchange=e=>{ LUECKE=e.target.checked; render(); };
+$("#lueckeOn").onchange=e=>{ auswahlLeeren(); LUECKE=e.target.checked; render(); };
 $("#newTopic").onclick=async()=>{ const title=prompt("Neues Thema (Titel):"); if(!title) return; try{ const d=await gfApi("add",{title,priority:"mittel",created_by:gfWho(),board_lane:"zu_besprechen"}); TOPICS.push(d.topic); render(); openPanel(d.topic.id); }catch(e){ gfToast("Fehler: "+e.message); } };
 
 /* ---- Verschieben per Menü (Touch, Tastatur) ---- */
@@ -500,9 +635,9 @@ async function endMeet(){
 
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("themen"); gfMountSubnav(VIEW);
-  gfMountHero(VIEW==="board"?"lagerfeuer":"karten", VIEW==="board"?"Board":"Kacheln", "lädt …", {compact:true, aside:`<a class="btn btn-sm" href="capture.html">Thema erfassen</a><a class="btn btn-sm" href="besprechung.html">Zur Besprechung</a>`});
+  gfMountHero(VIEW==="board"?"lagerfeuer":"karten", VIEW==="board"?"Board":"Kacheln", "lädt …", {compact:true, slim:true});   /* 23.10.2026: schmales Kopfbild; Erfassen und Besprechung stehen schon in Leiste und Navigation */
   $("#view").innerHTML=`<div class="board">${LANES.map(()=>`<section class="lane">${gfSkeleton(2,"")}</section>`).join("")}</div>`;
-  try{ const [d,p]=await Promise.all([gfApi("list"), gfLoadPeople()]); TOPICS=d.topics||[]; PEOPLE=p||[]; render(); renderMeet(); const tid=params.get("topic"); if(tid) openPanel(tid); if(params.get("meeting")==="1" && !MEET) location.href="besprechung.html"; }
+  try{ const [d,p]=await Promise.all([gfApi("list"), gfLoadPeople()]); TOPICS=d.topics||[]; PEOPLE=p||[]; render(); renderMeet(); const tid=params.get("topic"); if(tid){ if(TOPICS.some(x=>x.id===tid)) openPanel(tid); else archivHinweis(tid); } if(params.get("meeting")==="1" && !MEET) location.href="besprechung.html"; }
   catch(e){ gfLadefehler($("#view"), e);   /* B-07: Ursache, nächster Schritt, Kopfzeile nicht mehr „lädt …“ */ }
 });
 </script>
