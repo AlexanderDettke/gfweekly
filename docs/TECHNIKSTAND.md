@@ -1,6 +1,6 @@
 ## Verkauf 2027 auf „Für dich“ (25.10.2026)
 
-Auftrag, Lesart, Abweichungen und Prüfweg: `docs/PAKET-VERKAUF-2027.md` (Abschnitt 0 und 2). Stufe 1 gebaut; Stufe 2 (XCeed Partner Tickets API) wartet auf den Schlüssel.
+Auftrag, Lesart, Abweichungen und Prüfweg: `docs/PAKET-VERKAUF-2027.md` (Abschnitt 0 und 2). Stufe 1 live seit 25.10.2026 (main `301d495`, Edge Function deployt, Live-Prüfung bestanden); Stufe 2 (XCeed Partner Tickets API) wartet auf den Schlüssel.
 
 Datenbank, Migration `20261024223230_hh_verkauf` (angewendet am 25.10.2026 per `db query --linked`, Fernhistorie mit derselben Kennung): `hh_verkauf_ziel` (Ziel, Minimalfall, VVK-Start, Festivalbeginn, Verweis `event_id` auf `vvp_events` ohne Fremdschlüssel; Seed 2027 mit fünf Festivals, Ziele zusammen 21.000) und `hh_verkauf_stand` (Stichtag, Tickets, Umsatz in Cent, Quelle `hand`, `xceed_api` oder `xceed_mail`, Notiz, Person; eindeutig je Festival, Saison, Stichtag und Quelle). RLS an ohne Policies, Rechte nur für `service_role`. Rückweg im Kopf der Migration. Drei Werte der Vorgabe weichen von `vvp_events` ab (Fluidity VVK-Start, Lusatia VVK-Start, Draußenbande Festivalbeginn); geseedet ist die Vorgabe, die Tabelle steht im Paket.
 

@@ -142,8 +142,10 @@ Offen für Alex: den Schlüssel bei partners@xceed.me anfragen (der Vertrag ist 
 ### Stand des Prüfwegs (25.10.2026)
 
 - Schritt 1 erledigt: Migration in zurückgerollter Transaktion geprüft, angewendet, Seed zurückgelesen (5 Zeilen, 21.000).
-- Schritt 2 offen: Der Deploy der Edge Function wurde im Auto-Modus als Produktionsdeploy gesperrt; Alexander deployt selbst. Live-Stand vorher geprüft: byte-gleich mit `paket/blick-board` (`aac38da`); die Repo-Datei ist dieser Stand plus die Verkauf-Teile.
-- Schritt 3 lokal erledigt (Rechenregeln und Eingaben, 25 Proben); die Wirkung gegen das echte Backend folgt nach dem Deploy mit `GF_PW`.
+- Schritt 2 erledigt: Deploy aus `301d495` am 25.10.2026 auf Anweisung von Alexander (`--use-api`), `ping` meldet `version` 40, alle fünf Live-Dateien per `cmp` gleich dem Repo. Live-Stand vorher geprüft: byte-gleich mit `paket/blick-board` (`aac38da`); die Repo-Datei ist dieser Stand plus die Verkauf-Teile.
+- Schritt 3 erledigt: Rechenregeln und Eingaben (25 Proben) und nach dem Deploy die Wirkung gegen das echte Backend, zusammen 34 Proben in Ordnung; der Teststand `draussenbande` mit Notiz „Test“ ist gelöscht und zurückgelesen.
 - Schritt 4 erledigt: `pruefung/abnahme.sh` bestanden, davon 29 Bedienproben „Verkauf 2027“.
 - Schritt 5 erledigt: Codex-Review drei Runden (`534c7d3`: 4 Befunde, `a318c90`: 4 Befunde, `6222ed0`: 3 Befunde), alle bestätigt und behoben. Die Korrekturen nach Runde 3 sind getestet, aber nicht erneut von Codex geprüft (höchstens drei Runden).
-- Schritt 6 offen: Push durch Alexander, danach Live-Prüfung.
+- Schritt 6 erledigt: Push `8c35752..301d495` durch Alexander. Live-Prüfung auf kompass.wildehabitate.de bei 1440 und 390 px, dunkel und hell: Dateien mit `?v=39`, fünf Kacheln, Kopf „0 von 21.000 Tickets“, mobil zwei Kacheln je Zeile, kein waagrechter Überlauf, Dialog öffnet mit Fokus auf Tickets und schließt mit Escape, keine Konsolenfehler, nichts gespeichert.
+
+Offen: echte Stände eintragen (Alex, Lea), Stufe 2 nach dem XCeed-Schlüssel, `paket/blick-board` vor seinem Push auf `?v=40`.
