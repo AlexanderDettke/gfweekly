@@ -240,18 +240,23 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
   async function laufBilanz(t: Any) {
     const wochen = Math.max(1, Math.min(12, parseInt(t.wochen) || 4));
     const seit = new Date(Date.now() - wochen * 7 * 86400000).toISOString();
-    const [pk, vl, kd, en] = await Promise.all([
-      admin.from('hh_vorhaben_punkte').select('erledigt_at,erledigt_by').eq('erledigt_by', 'lauf').gte('erledigt_at', seit),
+    /* Erledigungen und Rücknahmen als Ereignisse im Verlauf (bleiben nach Rückgängig erhalten, Runde 1 Befund 10): der Lauf erledigt über
+       hh_punkt_toggle (Eintrag „Punkt erledigt: …“, created_by lauf), Rückgängig schreibt source_ref rueckgaengig:lauf:<eintrag>. Verfall und
+       Verwerfen zählen nach der Woche des Eintrags, weil der Verlauf keinen Änderungszeitpunkt führt. */
+    const [pk, vl, kd, en, rz] = await Promise.all([
+      admin.from('hh_vorhaben_verlauf').select('created_at').eq('created_by', 'lauf').eq('art', 'system').like('text', 'Punkt erledigt:%').gte('created_at', seit),
       admin.from('hh_vorhaben_verlauf').select('created_at,status,created_by').in('created_by', ['lauf','Abgleich','Lauf']).gte('created_at', seit),
       admin.from('gfweekly_news').select('created_at,status').eq('kind', 'kandidat').gte('created_at', seit),
       admin.from('hh_entscheidungen').select('updated_at,frage_von').eq('frage_von', 'lauf').gte('updated_at', seit),
+      admin.from('hh_vorhaben_verlauf').select('created_at').like('source_ref', 'rueckgaengig:lauf:%').gte('created_at', seit),
     ]);
-    for (const r of [pk, vl, kd, en]) if (r.error) throw r.error;
+    for (const r of [pk, vl, kd, en, rz]) if (r.error) throw r.error;
     const woche = (d: string) => { const x = new Date(d); const t0 = new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate())); const tag = t0.getUTCDay() || 7; t0.setUTCDate(t0.getUTCDate() + 4 - tag); const j1 = new Date(Date.UTC(t0.getUTCFullYear(), 0, 1)); return `${t0.getUTCFullYear()}-W${String(Math.ceil((((t0.getTime() - j1.getTime()) / 86400000) + 1) / 7)).padStart(2, '0')}`; };
     const W: Record<string, Any> = {};
-    const z = (w: string, k: string) => { W[w] = W[w] || { woche: w, erledigt: 0, verlauf: 0, verlauf_bestaetigt: 0, verlauf_vorschlag: 0, verlauf_verworfen: 0, verlauf_verfallen: 0, kandidaten: 0, kandidaten_uebernommen: 0, kandidaten_verworfen: 0, kandidaten_archiviert: 0, fragen: 0 }; W[w][k]++; };
-    for (const r of (pk.data || []) as Any[]) z(woche(r.erledigt_at), 'erledigt');
-    for (const r of (vl.data || []) as Any[]) { const w = woche(r.created_at); z(w, 'verlauf'); z(w, 'verlauf_' + r.status); }
+    const z = (w: string, k: string) => { W[w] = W[w] || { woche: w, erledigt: 0, zurueckgenommen: 0, verlauf: 0, verlauf_bestaetigt: 0, verlauf_vorschlag: 0, verlauf_verworfen: 0, verlauf_verfallen: 0, kandidaten: 0, kandidaten_uebernommen: 0, kandidaten_verworfen: 0, kandidaten_archiviert: 0, fragen: 0 }; W[w][k]++; };
+    for (const r of (pk.data || []) as Any[]) z(woche(r.created_at), 'erledigt');
+    for (const r of (rz.data || []) as Any[]) z(woche(r.created_at), 'zurueckgenommen');
+    for (const r of (vl.data || []) as Any[]) { const w = woche(r.created_at); z(w, 'verlauf'); z(w, 'verlauf_' + r.status); }   // verlauf zählt auch die System-Einträge der Erledigungen
     for (const r of (kd.data || []) as Any[]) { const w = woche(r.created_at); z(w, 'kandidaten'); if (['uebernommen','verworfen','archiviert'].includes(r.status)) z(w, 'kandidaten_' + r.status); }
     for (const r of (en.data || []) as Any[]) z(woche(r.updated_at), 'fragen');
     const zeilen = Object.values(W).sort((a: Any, b: Any) => String(b.woche).localeCompare(String(a.woche)));
@@ -261,12 +266,19 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
 
   /* Stufe 2 · Rückkehr: Lagebild über den Zeitraum der Abwesenheit nach Phase (Entschieden, Bewegt, Wartet auf dich) und nach Menschen. */
   const PHASEN = ['launch', 'formatpartner', 'systembau', 'sonstiges'];
+  /* Zeitversatz Berlins an einem Kalendertag (+01:00 oder +02:00), damit die Tagesgrenzen auch um den Zeitwechsel stimmen (Runde 1, Befund 9). */
+  const berlinVersatz = (tag: string) => {
+    try {
+      const teil = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Berlin', timeZoneName: 'longOffset' }).formatToParts(new Date(tag + 'T12:00:00Z')).find(p => p.type === 'timeZoneName')?.value || '';
+      const m = teil.match(/([+-]\d\d:\d\d)/); return m ? m[1] : '+01:00';
+    } catch { return '+01:00'; }
+  };
   async function rueckkehrLage(t: Any) {
     const aid = (t.absence_id ?? '').toString(); if (!EN_UUID.test(aid)) throw new EnFehler('absence_id fehlt');
     const { data: ab, error: e0 } = await admin.from('gfweekly_absences').select('*').eq('id', aid).maybeSingle();
     if (e0) throw e0; if (!ab) throw new EnFehler('Abwesenheit gibt es nicht', 404);
     const person = whoNorm(ab.person); const heute = heuteBerlin();
-    const von = ab.von as string; const bis = (ab.bis || heute) as string; const bisIso = bis + 'T23:59:59+02:00'; const vonIso = von + 'T00:00:00+02:00';
+    const von = ab.von as string; const bis = (ab.bis || heute) as string; const bisIso = bis + 'T23:59:59' + berlinVersatz(bis); const vonIso = von + 'T00:00:00' + berlinVersatz(von);
     const [vh, pk, vl, en, dec, ho] = await Promise.all([
       admin.from('hh_vorhaben').select('id,slug,title,status,phase,fokus,ball,ball_name,stand,naechster_schritt,frist').in('status', ['aktiv','pausiert']),
       admin.from('hh_vorhaben_punkte').select('id,vorhaben_id,titel,wer,frist,erledigt,erledigt_at,erledigt_by,stand,quelle,updated_at'),
@@ -302,11 +314,11 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
       wartet.push({ art: 'korb', id: z.id, text: z.title, frist: null, wer: person, status: z.ampel, vorhaben_id: z.ref_id, vorhaben: V.get(z.ref_id).title, slug: V.get(z.ref_id).slug, phase: phaseVon(z.ref_id) });
     for (const w of wartet) bloecke[w.phase].wartet.push(w);
     for (const b of Object.values(bloecke)) (b as Any).wartet.sort((a: Any, c: Any) => (a.frist || '9999').localeCompare(c.frist || '9999'));
-    /* Nach Menschen: offene Punkte aller aktiven Vorhaben und offene Entscheidungen, gruppiert nach wer. */
+    /* Nach Menschen: offene Punkte aller aktiven Vorhaben, offene und vertagte Entscheidungen (GF gemeinsam) und abgegebene (Person), gruppiert nach wer. */
     const menschen: Record<string, Any[]> = {};
     const wer = (w: string | null) => { const s = (w || '').trim(); if (!s) return 'offen'; if (istGF(s)) return 'GF gemeinsam'; return s.split(/[,&]|\bund\b|\bmit\b/)[0].trim().split(' ')[0] || s; };
     for (const p of punkte.filter(x => !x.erledigt && V.has(x.vorhaben_id))) { const k = wer(p.wer); (menschen[k] = menschen[k] || []).push({ art: 'punkt', id: p.id, text: p.titel, frist: p.frist, vorhaben: V.get(p.vorhaben_id).title, slug: V.get(p.vorhaben_id).slug, phase: phaseVon(p.vorhaben_id) }); }
-    for (const e of E.filter(x => x.status === 'abgegeben')) { const k = e.abgegeben_an === 'team' ? 'Team' : whoNorm(e.abgegeben_an); (menschen[k] = menschen[k] || []).push({ art: 'entscheidung', id: e.id, text: e.frage, frist: e.frist, vorhaben: V.get(e.vorhaben_id)?.title || null, slug: V.get(e.vorhaben_id)?.slug || null, phase: phaseVon(e.vorhaben_id) }); }
+    for (const e of E.filter(x => x.status === 'abgegeben' || x.status === 'offen' || x.status === 'vertagt')) { const k = e.status !== 'abgegeben' ? 'GF gemeinsam' : (e.abgegeben_an === 'team' ? 'Team' : whoNorm(e.abgegeben_an)); (menschen[k] = menschen[k] || []).push({ art: 'entscheidung', id: e.id, text: e.frage, frist: e.frist, vorhaben: V.get(e.vorhaben_id)?.title || null, slug: V.get(e.vorhaben_id)?.slug || null, phase: phaseVon(e.vorhaben_id) }); }
     const reihen = ['Lea', 'Alex', 'GF gemeinsam'];
     const nachMenschen = Object.entries(menschen).map(([name, eintraege]) => ({ name, eintraege })).sort((a, b) => { const ia = reihen.indexOf(a.name), ib = reihen.indexOf(b.name); return (ia < 0 ? 9 : ia) - (ib < 0 ? 9 : ib) || b.eintraege.length - a.eintraege.length; });
     const zaehler = { entschieden: Object.values(bloecke).reduce((n, b: Any) => n + b.entschieden.length, 0), bewegt: proVh.size, wartet: wartet.length, tage: Math.max(1, Math.round((Date.parse(bis) - Date.parse(von)) / 86400000) + 1) };

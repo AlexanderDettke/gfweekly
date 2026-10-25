@@ -164,7 +164,7 @@ console.log('\n== Rückkehr (Stufe 2: Lagebild nach Phasen und Menschen) ==');
   pruefe('Phasenblöcke in der Reihenfolge Launch, Formatpartner, Weiteres (Systembau leer, nicht gezeigt)', ph.join('|') === 'Launch|Formatpartner|Weiteres', ph.join('|'));
   const launch = p.locator('#phasen .rk2-phase').first();
   pruefe('Launch: Entschieden mit Ergebnis und Person, Bewegt mit Akte-Link und Verlauf, Wartet mit Knopf', /Gastro-Partner/.test(await launch.locator('.rk2-col').nth(0).innerText()) && /Alex/.test(await launch.locator('.rk2-col').nth(0).innerText()) && (await launch.locator('.rk2-col').nth(1).locator('a[href="vorhaben.html?v=xceed&tab=verlauf"]').count()) === 1 && (await launch.locator('.rk2-col').nth(1).locator('.rk-vl li').count()) >= 1);
-  pruefe('Nach Menschen: Lea zuerst (Punkt und abgegebene Entscheidung), dann Alex, dann die übrigen', (await p.locator('#menschen .rk2-mensch h3').allInnerTexts()).map(x => x.trim().split(/\s+\d/)[0]).slice(0, 3).join('|') === 'Lea|Alex|Niclaas' && (await p.locator('#menschen .rk2-mensch').first().locator('li').count()) === 2, (await p.locator('#menschen .rk2-mensch h3').allInnerTexts()).join('|'));
+  pruefe('Nach Menschen: Lea zuerst (Punkt und abgegebene Entscheidung), dann Alex, dann GF gemeinsam (offene Entscheidungen), dann die übrigen', (await p.locator('#menschen .rk2-mensch h3').allInnerTexts()).map(x => x.trim().split(/\s+\d/)[0]).slice(0, 4).join('|') === 'Lea|Alex|GF gemeinsam|Niclaas' && (await p.locator('#menschen .rk2-mensch').first().locator('li').count()) === 2, (await p.locator('#menschen .rk2-mensch h3').allInnerTexts()).join('|'));
   await p.locator('#rkBriefEdit').click(); await p.waitForTimeout(200);
   await p.locator('#rkT').fill('Launch: Draußenbande ist gestartet, Xceed ist entschieden.'); await p.locator('#rkModal [type="submit"]').click(); await p.waitForTimeout(400);
   const bf = letzte('rueckkehr_brief_set');
@@ -1155,7 +1155,7 @@ console.log('\n== Stufe 2: Vorschlagsfrist, Mehrfachauswahl, Akte-Chips, Überga
   pruefe('zwei ausgewählt, Knöpfe frei', /2 ausgewählt/.test(await p.locator('#enSelN').innerText()) && !(await p.locator('#enSel [data-sel="nicht_jetzt"]').isDisabled()));
   await p.locator('#enSel [data-sel="nicht_jetzt"]').click(); await p.waitForTimeout(200);
   const std = await p.locator('#enBis').inputValue();
-  pruefe('„Nicht jetzt“ öffnet ein Blatt mit Datum (Standard in vier Wochen)', std === new Date(Date.now() + 28 * 86400000).toLocaleDateString('sv-SE'), std);
+  pruefe('„Nicht jetzt“ öffnet ein Blatt mit Datum (Standard erster Montag nach vier Wochen, wie die Datenbankregel)', std === (() => { const d = new Date(new Date(Date.now() + 28 * 86400000).toLocaleDateString('sv-SE') + 'T00:00:00Z'); const w = d.getUTCDay() || 7; d.setUTCDate(d.getUTCDate() + (8 - w) % 7); return d.toISOString().slice(0, 10); })(), std);
   await p.locator('#enModal [type="submit"]').click(); await p.waitForTimeout(500);
   const sa = letzte('entscheidungen_sammelaktion');
   pruefe('Sammelaktion sendet beide Kennungen mit gesehenem Stand, Zeilen verschwinden, Auswahl beendet', sa && sa.nutzlast.aktion === 'nicht_jetzt' && sa.nutzlast.items.length === 2 && sa.nutzlast.items.every(x => x.expect_updated_at) && await p.locator('.en-row[data-id="en4"]').count() === 0 && await p.locator('#enSel.show').count() === 0 && /2 Entscheidungen Nicht jetzt bis/.test(await p.locator('#enRueck').innerText()));
@@ -1192,7 +1192,15 @@ console.log('\n== Stufe 2: Vorschlagsfrist, Mehrfachauswahl, Akte-Chips, Überga
   pruefe('Übergabe: Zeile hat „Erledigt“', await z.locator('[data-act="erledigt"]').count() === 1);
   await z.locator('[data-act="erledigt"]').click(); await u.waitForTimeout(400);
   const hs = letzte('handover_set');
-  pruefe('Erledigt setzt handover_set status erledigt', hs && hs.nutzlast.status === 'erledigt' && hs.nutzlast.by === 'Alex');
+  pruefe('Erledigt an einer Themen-Zeile setzt nur handover_set status erledigt', hs && hs.nutzlast.status === 'erledigt' && hs.nutzlast.by === 'Alex' && !letzte('vorhaben_abschliessen'));
+  await u.evaluate(() => { FILTER.nurVorschlag = false; renderList(); }); await u.waitForTimeout(200);   // die Vorhaben-Zeile hv1 ist schon bestätigt
+  const vz = u.locator('.ub-row').filter({ has: u.locator('.k', { hasText: /^Vorhaben/ }) }).first();
+  if (await vz.count()) {
+    let frage = ''; u.once('dialog', d => { frage = d.message(); });   // seite() bestätigt Dialoge schon, hier nur den Text merken
+    await vz.locator('[data-act="erledigt"]').click(); await u.waitForTimeout(500);
+    const va = letzte('vorhaben_abschliessen'), hs2 = letzte('handover_set');
+    pruefe('Erledigt an einer Vorhaben-Zeile: Rückfrage nennt Gegenstand und Folge, vorhaben_abschliessen mit punkte_mit, dann Korbzeile erledigt', /abschließen\?/.test(frage) && /Offene Punkte/.test(frage) && va && va.nutzlast.punkte_mit === true && va.nutzlast.by === 'Alex' && hs2 && hs2.nutzlast.status === 'erledigt' && hs2.nutzlast.id !== hs.nutzlast.id, JSON.stringify([frage, va && va.nutzlast, hs2 && hs2.nutzlast]).slice(0, 300));
+  } else pruefe('Testdaten: Korb abs-1 hat eine Vorhaben-Zeile', false, 'keine Vorhaben-Zeile im Korb');
   await u.close();
   frisch();
   const i = await seite('/index.html'); await i.waitForTimeout(300);

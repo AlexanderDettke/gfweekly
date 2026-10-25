@@ -461,6 +461,10 @@ function score(item: any, absence: any, heute: string = heuteBerlin()){
   let regel = '';
   if (stufe === 'kurz' && f !== 3) { ampel = 'ruht'; regel = 'Kurze Abwesenheit: nichts wird umgehängt, die Wache zeigt nur Fristen.'; }
   else if (stufe === 'lang' && ampel === 'gelb') { regel = 'Lange Abwesenheit: ab Tag 15 entscheidet die Vertretung gelbe Punkte ohne Einspruchsfrist.'; }
+  /* Stufe 2 (Abschnitt 5.3): „vor der Abreise“ nur, wenn ein offener Punkt eine Frist vor der Abreise trägt (Punktfristen setzen Personen);
+     eine Vorhabenfrist oder ein überfälliges Datum allein ergibt „ruht“, die Wache zeigt die Frist trotzdem. */
+  if (ampel === 'vorher' && item.kind === 'vorhaben' && !(item.punkte || []).some((p: any) => p.frist && absence.von && p.frist < absence.von)) {
+    ampel = 'ruht'; regel = 'Keine Punktfrist vor der Abreise: nichts muss vorher erledigt sein, das Vorhaben ruht.'; }
 
   const luecke = u >= 2;
   const satz = `${CLUSTER_TEXT[cluster]}, weil ${gruende.join('; ')} (Z${z} F${f} U${u} G${g}).`;
@@ -1925,22 +1929,11 @@ Deno.serve(async (req: Request) => {
       /* v38 (Review 31d, Runde 3): Ende, Rückgabe der Themen und der Vorhaben-Bälle und Protokoll in einer Transaktion
          (hh_absence_end). Scheitert etwas, bleibt die Abwesenheit, wie sie war. Asana wird danach archiviert. */
       if (!t.id) return json({ error:'id fehlt' },400);
-      const r = await vhRpc('hh_absence_end', { p_id: t.id, p_by: whoNorm(t.by ?? WHO) });
-      /* Stufe 2 (Abschnitt 5): bestätigte, nicht erledigte Korbzeilen gelten als liegen geblieben: ein Verlaufseintrag am Vorhaben, die Zeile
-         wird entfallen; danach zeigen Für dich und Besprechung keine Marke „Vertretung“ mehr. Unbestätigte Vorschläge waren nie Arbeit der
-         Vertretung und bekommen keinen Verlaufseintrag (sonst stünde in jeder Akte mit Ball GF eine Zeile je Testabwesenheit). */
-      let liegen = 0;
-      try {
-        const { data: offen } = await admin.from('gfweekly_handover').select('id,kind,ref_id,title,ampel').eq('absence_id', t.id).eq('status', 'bestaetigt');
-        for (const z of (offen || [])) {
-          if (z.kind === 'vorhaben' && VH_UUID.test(z.ref_id)) {
-            await admin.from('hh_vorhaben_verlauf').insert({ vorhaben_id: z.ref_id, art: 'system', wer: whoNorm(t.by ?? WHO), status: 'bestaetigt', created_by: 'kompass',
-              text: `In der Abwesenheit von ${whoNorm(r.absence?.person)} liegen geblieben (Korb ${z.ampel || 'offen'}): ${z.title || ''}`.slice(0, 500), source_ref: `abwesenheit:${t.id}:liegen:${z.id}` });
-            liegen++;
-          }
-          await admin.from('gfweekly_handover').update({ status: 'entfallen', updated_at: new Date().toISOString() }).eq('id', z.id);
-        }
-      } catch (e) { console.warn('absence_end Korb', e); }
+      /* Stufe 2 (Abschnitt 5, Runde 1 Befund 4 und 5): Ende, Rückgabe und Korbabschluss in einer Transaktion (hh_absence_end_s2). Bestätigte,
+         nicht erledigte Korbzeilen gelten als liegen geblieben (Verlaufseintrag am Vorhaben), unbestätigte Vorschläge entfallen ohne Eintrag;
+         danach zeigen Für dich und Besprechung keine Marke „Vertretung“ mehr. */
+      const r = await vhRpc('hh_absence_end_s2', { p_id: t.id, p_by: whoNorm(t.by ?? WHO) });
+      const liegen = Number(r.liegen_geblieben || 0);
       const archiviert = await asanaArchivieren(r.absence);
       return json({ absence: r.absence, asana_archiviert: archiviert, vorhaben_zurueck: r.vorhaben_zurueck || [], themen: r.themen, liegen_geblieben: liegen });
     }

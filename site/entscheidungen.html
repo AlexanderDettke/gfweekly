@@ -286,7 +286,7 @@ $("#enSel").addEventListener("click",e=>{ const b=e.target.closest("[data-sel]")
 function sammel(aktion){
   const ids=[...SEL]; const n=ids.length;
   if(aktion==="nicht_jetzt"){
-    const std=gfAddDays(gfIsoTag(),28);
+    const std=(()=>{ const t=gfAddDays(gfIsoTag(),28); const d=new Date(t+"T00:00:00Z"); const w=d.getUTCDay()||7; return gfAddDays(t,(8-w)%7); })();   // erster Montag nach vier Wochen, wie die Datenbankregel
     const m=blatt("Nicht jetzt", `<p class="modal-intro">${n} ${n===1?"Entscheidung":"Entscheidungen"} vertagen. Sie kommen am Stichtag wieder in die Liste.</p><form class="en-form" id="enF" novalidate><div class="fld"><label for="enBis">Bis</label><input id="enBis" type="date" value="${std}" min="${gfIsoTag()}" required></div>${FUSS("Nicht jetzt")}</form>`, "#enBis");
     m.querySelector("#enF").onsubmit=ev=>{ ev.preventDefault(); const bis=m.querySelector("#enBis").value; if(!bis||bis<gfIsoTag()){ m.querySelector("#enErr").textContent="Bitte ein Datum ab heute wählen."; return; } sammelSenden(ids,"nicht_jetzt",bis,m); };
   } else if(aktion==="abgeben"){

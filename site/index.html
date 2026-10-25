@@ -295,9 +295,7 @@ function fd5Anstehend(){
   /* Per Pförtner an jemand anderen gegeben: nicht mehr meins. */
   const woanders=new Set((GL?.items||[]).filter(x=>x.kind!=="thema"&&x.gate&&x.gate!==me&&x.gate!=="gf").map(x=>x.id));
   const fremd=x=>woanders.has(x.id) || (x.gate&&x.gate!==me&&x.gate!=="gf");   // auch ohne Pförtnerliste am Kandidaten selbst erkennbar
-  for(const x of (KAND||[]).filter(x=>x.relevance==="hoch"&&x.created_at>=grenze&&!fremd(x))){
-    if(out.some(o=>o.k==="kd:"+x.id)) continue;
-    out.push({ k:"kd:"+x.id, t:x.title||"", note:"Kandidat „hoch“ in den Neuigkeiten", href:"neuigkeiten.html#fokus", art:"Neuigkeit", rang:5 }); }
+  /* Stufe 2 (Abschnitt 2): keine Einschätzung des Laufs („Kandidat hoch“) mehr in den fünf Minuten; Kandidaten gehören in den Korb auf Vorhaben. */
   return out.sort((a,b)=>a.rang-b.rang||a.t.localeCompare(b.t,"de"));
 }
 function render5(){
@@ -497,7 +495,7 @@ gfGate(async()=>{
   let laufGeladen=false;
   $("#fdLauf").addEventListener("toggle",async()=>{ if(!$("#fdLauf").open||laufGeladen) return; laufGeladen=true;
     try{ const d=await gfApi("lauf_bilanz",{wochen:4}); const s=d.summe||{}; $("#fdLaufN").textContent=d.trefferquote!=null?`Trefferquote ${d.trefferquote} %`:"";
-      $("#fdLaufL").innerHTML=`<p class="fd-note">Letzte vier Wochen: ${s.erledigt||0} Punkte vom Lauf erledigt, ${s.verlauf||0} Verlaufseinträge (${s.verlauf_vorschlag||0} Vorschläge, ${s.verlauf_verworfen||0} verworfen, ${s.verlauf_verfallen||0} verfallen), ${s.kandidaten||0} Kandidaten angelegt (${s.kandidaten_uebernommen||0} übernommen, ${s.kandidaten_verworfen||0} verworfen, ${s.kandidaten_archiviert||0} archiviert), ${s.fragen||0} Fragen formuliert.</p>
+      $("#fdLaufL").innerHTML=`<p class="fd-note">Letzte vier Wochen: ${s.erledigt||0} Punkte vom Lauf erledigt (${s.zurueckgenommen||0} zurückgenommen), ${s.verlauf||0} Verlaufseinträge (${s.verlauf_vorschlag||0} Vorschläge, ${s.verlauf_verworfen||0} verworfen, ${s.verlauf_verfallen||0} verfallen), ${s.kandidaten||0} Kandidaten angelegt (${s.kandidaten_uebernommen||0} übernommen, ${s.kandidaten_verworfen||0} verworfen, ${s.kandidaten_archiviert||0} archiviert), ${s.fragen||0} Fragen formuliert.</p>
         <table class="fd-tab"><thead><tr><th>Woche</th><th>erledigt</th><th>Verlauf</th><th>Kandidaten</th><th>übernommen</th><th>Fragen</th></tr></thead><tbody>${(d.wochen||[]).map(w=>`<tr><td>${gfEsc(w.woche)}</td><td>${w.erledigt}</td><td>${w.verlauf}</td><td>${w.kandidaten}</td><td>${w.kandidaten_uebernommen||0}</td><td>${w.fragen}</td></tr>`).join("")||`<tr><td colspan="6">Noch keine Zahlen.</td></tr>`}</tbody></table>`; }
     catch(e){ laufGeladen=false; gfLadefehler($("#fdLaufL"), e, {titel:"Die Bilanz ließ sich nicht laden."}); } });
   try{ await load(); }catch(e){ $("#fdEntL").innerHTML=`<div class="empty">Konnte nicht laden: ${gfEsc(e.message||"Verbindung")}</div>`; }

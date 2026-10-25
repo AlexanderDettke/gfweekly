@@ -96,9 +96,21 @@ else {
     pruefe('falscher Empfänger 400, leere Liste 400', sa2.status === 400 && sa3.status === 400, [sa2.status, sa3.status].join(','));
     const rz = await api('entscheidung_zurueck', { id: eA2.id, by: 'Alex' });
     pruefe('Rückgängig der Sammelaktion: Zeile wieder offen', rz.status === 200 && rz.d.entscheidung.status === 'offen', JSON.stringify(rz.d).slice(0, 200));
+    /* Hinfällig am Thema und Rückgängig stellt das Archiv wieder her (Runde 1, Befund 2) */
+    const th1 = await api('entscheidungen_sammelaktion', { items: [{ id: eT2.id }], aktion: 'hinfaellig', by: 'Lea' });
+    const tq1 = sql(`select archived, archiv_grund from public.gfweekly_topics where id = '${K.thema}';`);
+    const th2 = await api('entscheidung_zurueck', { id: eT2.id, by: 'Lea' });
+    const tq2 = sql(`select archived, archiv_grund from public.gfweekly_topics where id = '${K.thema}';`);
+    const th3 = await api('entscheidungen_sammelaktion', { items: [{ id: eT2.id }], aktion: 'hinfaellig', by: 'Lea' });
+    pruefe('Hinfällig archiviert das Thema (Grund hinfaellig); Rückgängig macht es wieder offen und löscht den Archivgrund', th1.status === 200 && th1.d.ok === 1 && tq1.rows?.[0]?.archived === true && tq1.rows[0].archiv_grund === 'hinfaellig' && th2.status === 200 && th2.d.entscheidung.status === 'offen' && tq2.rows?.[0]?.archived === false && tq2.rows[0].archiv_grund === null, JSON.stringify([th1.d?.ergebnis?.[0]?.grund, tq1.rows, th2.d?.error, tq2.rows]).slice(0, 300));
+    const th4 = await api('entscheidung_zurueck', { id: eT2.id, by: 'Lea' });
+    pruefe('Hinfällig nach Rückgängig erneut möglich, danach wieder zurück (Rückweg vollständig)', th3.status === 200 && th3.d.ok === 1 && th4.status === 200 && th4.d.entscheidung.status === 'offen', JSON.stringify([th3.d?.ergebnis?.[0], th4.d]).slice(0, 200));
     /* Auflösung: Thema wird Punkt B, Entscheidung wandert mit (hh_entscheidung_umhaengen) */
     const pb = await api('punkt_save', { vorhaben_id: K.vorhaben, titel: M + ' Punkt B (aus Thema)', wer: 'GF gemeinsam', by: 'Alex', quelle: 'thema:' + K.thema });   // wer GF: ein Punkt bei Lea allein wäre keine GF-Quelle mehr, die Entscheidung würde hinfällig
     K.punktB = pb.d?.punkt?.id || null;
+    const umF = sql(`select public.hh_entscheidung_umhaengen('${eT2.id}', 'punkt', '00000000-0000-0000-0000-000000000000', 'Alex');`);
+    const umA = sql(`select public.hh_entscheidung_umhaengen('${eT2.id}', 'punkt', '${K.punktA}', 'Alex');`);   // Punkt A ist zu dem Zeitpunkt offen, aber schon Quelle einer anderen Entscheidung
+    pruefe('Umhängen auf eine fehlende Quelle oder eine schon belegte Quelle wird abgelehnt (Runde 1, Befund 1)', /neue Quelle gibt es nicht/.test(umF.fehler || '') && /schon eine Entscheidung/.test(umA.fehler || ''), JSON.stringify([umF, umA]).slice(0, 300));
     const um = sql(`select public.hh_entscheidung_umhaengen('${eT2.id}', 'punkt', '${K.punktB}', 'Alex') as r; update public.gfweekly_topics set archived = true, archiv_grund = 'stufe2:punkt' where id = '${K.thema}'; select quelle_art, quelle_id, status, vorhaben_id from public.hh_entscheidungen where id = '${eT2.id}';`);
     const l3 = await api('entscheidungen_list', { status: 'alle' });
     const eB = meine(l3).find(e => e.quelle_id === K.punktB);
@@ -121,6 +133,8 @@ else {
     const lr0 = await api('lauf_rueckgaengig', { id: vid, by: 'Helge' });
     const lr = await api('lauf_rueckgaengig', { id: vid, by: 'Alex' });
     const lr2 = await api('lauf_rueckgaengig', { id: vid, by: 'Alex' });
+    const bil2 = await api('lauf_bilanz', { wochen: 1 });
+    pruefe('Bilanz nach Rückgängig: Erledigung bleibt als Ereignis gezählt, Rücknahme eigens ausgewiesen (Runde 1, Befund 10)', bil2.status === 200 && (bil2.d.summe?.erledigt || 0) >= 1 && (bil2.d.summe?.zurueckgenommen || 0) >= 1, JSON.stringify(bil2.d?.summe).slice(0, 200));
     const lq = sql(`select p.erledigt, (select count(*) from public.hh_vorhaben_verlauf x where x.punkt_id = p.id and x.created_by = 'lauf' and x.status = 'verworfen') as verworfen, (select status from public.hh_entscheidungen e where e.quelle_id = p.id) as en from public.hh_vorhaben_punkte p where p.id = '${K.punktB}';`);
     pruefe('Rückgängig aus der Akte: fremde Person 400, Punkt wieder offen, zwei Lauf-Einträge verworfen, Entscheidung wieder offen, zweiter Versuch 409', lr0.status === 400 && lr.status === 200 && lr.d.verworfen === 2 && lr2.status === 409 && lq.rows?.[0]?.erledigt === false && Number(lq.rows[0].verworfen) === 2 && lq.rows[0].en === 'offen', JSON.stringify([lr0.status, lr.d, lr2.status, lq.rows]).slice(0, 300));
     /* Korb nur Vorhaben, Übergabe Erledigt, Rückkehr-Lagebild */
@@ -132,16 +146,17 @@ else {
     const fremd = zeilen.filter(z => z.kind !== 'vorhaben');
     const meineZeile = zeilen.find(z => z.ref_id === K.vorhaben);
     pruefe('Korb der Testabwesenheit: nur Vorhaben (keine Themen, keine Kandidaten), Testvorhaben mit Frist im Fenster ist dabei', ab.status === 200 && !!K.absence && hb.status === 200 && hl.status === 200 && fremd.length === 0 && !!meineZeile, JSON.stringify([ab.status, hb.status, hl.status, fremd.length, zeilen.length, meineZeile]).slice(0, 300));
-    const hs = meineZeile ? await api('handover_set', { id: meineZeile.id, status: 'erledigt', by: 'Alex' }) : { status: 0 };
-    const hsq = K.absence ? sql(`select status from public.gfweekly_handover where id = '${meineZeile?.id}';`) : {};
-    pruefe('Übergabe: Zeile auf Erledigt gesetzt', hs.status === 200 && hsq.rows?.[0]?.status === 'erledigt', JSON.stringify([hs.d, hsq.rows]).slice(0, 200));
+    const hs = meineZeile ? await api('handover_set', { id: meineZeile.id, status: 'bestaetigt', ampel: 'gelb', by: 'Alex' }) : { status: 0 };
+    const hsq = K.absence ? sql(`select status, ampel from public.gfweekly_handover where id = '${meineZeile?.id}';`) : {};
+    pruefe('Übergabe: Testzeile bestätigt (gelb), damit sie beim Ende als liegen geblieben zählt', hs.status === 200 && hsq.rows?.[0]?.status === 'bestaetigt', JSON.stringify([hs.d?.error, hsq.rows]).slice(0, 200));
     const rl = K.absence ? await api('rueckkehr_lage', { absence_id: K.absence }) : { status: 0 };
     const rb = K.absence ? await api('rueckkehr_brief_set', { absence_id: K.absence, text: 'Probe-Brief (Test)', by: 'Lea' }) : { status: 0 };
     const rl2 = K.absence ? await api('rueckkehr_lage', { absence_id: K.absence }) : { status: 0 };
     const rl404 = await api('rueckkehr_lage', { absence_id: '00000000-0000-0000-0000-000000000000' });
     pruefe('Rückkehr-Lagebild: vier Phasen in fester Reihenfolge, nach Menschen, Brief schreiben und lesen, unbekannte Abwesenheit 404', rl.status === 200 && (rl.d.phasen || []).map(p => p.phase).join(',') === 'launch,formatpartner,systembau,sonstiges' && Array.isArray(rl.d.nach_menschen) && rb.status === 200 && rl2.d?.brief === 'Probe-Brief (Test)' && rl404.status === 404, JSON.stringify([rl.status, rl.d?.zaehler, rb.d, rl404.status]).slice(0, 300));
     const ae = K.absence ? await api('absence_end', { id: K.absence, by: 'Alex' }) : { status: 0 };
-    pruefe('Willkommen zurück: Abwesenheit beendet, nichts liegen geblieben (Testzeile erledigt, unbestätigte Vorschläge zählen nicht)', ae.status === 200 && (ae.d.liegen_geblieben || 0) === 0, JSON.stringify(ae.d).slice(0, 200));
+    const aq = K.absence ? sql(`select (select count(*) from public.hh_vorhaben_verlauf where source_ref = 'abwesenheit:${K.absence}:liegen:${meineZeile?.id}') as verlauf, (select count(*) from public.gfweekly_handover where absence_id = '${K.absence}' and status in ('vorschlag','bestaetigt')) as offen, (select count(*) from public.hh_vorhaben_verlauf where source_ref like 'abwesenheit:${K.absence}:liegen:%') as alle;`) : {};
+    pruefe('Willkommen zurück: beendet, genau die bestätigte Testzeile liegen geblieben (ein Verlaufseintrag), unbestätigte Vorschläge entfallen ohne Eintrag, keine offene Korbzeile mehr', ae.status === 200 && ae.d.liegen_geblieben === 1 && Number(aq.rows?.[0]?.verlauf) === 1 && Number(aq.rows[0].alle) === 1 && Number(aq.rows[0].offen) === 0 && ae.d.absence?.status === 'beendet', JSON.stringify([ae.d?.liegen_geblieben, ae.d?.entfallen, aq.rows, ae.d?.error]).slice(0, 300));
   } catch (e) {
     fehler++; console.log('  FEHLT  Ausnahme in der Wirkungsprobe · ' + (e.stack || e.message).slice(0, 400));
   } finally {

@@ -1810,8 +1810,11 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 .ws-vh{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important;border:0!important}
 /* B-08, G-02: Eingabefelder zeigen den Tastaturfokus als Umrandung, nicht nur als Randfarbe */
 input:not([type=hidden]):focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--focus)!important;outline-offset:1px}
-.search:focus-within,.stepper:focus-within{outline:2px solid var(--focus);outline-offset:1px}
-.search input:focus-visible,.stepper input:focus-visible{outline:none!important}
+.stepper:focus-within{outline:2px solid var(--focus);outline-offset:1px}
+.stepper input:focus-visible{outline:none!important}
+/* Stufe 2: der Ring sitzt am Suchfeld selbst, nicht am Rahmen (Tastaturprobe misst das fokussierte Element). */
+.search:focus-within{outline:none}
+.search input:focus-visible{outline:none!important;box-shadow:var(--ring);border-radius:var(--radius-s)}
 /* B-03, G-02: Platzhalter bleiben lesbar und sind nur ein Beispiel, keine Bezeichnung */
 ::placeholder{color:var(--text-2);opacity:1}
 /* G-03: eigenständige Bedienelemente mindestens 44 px; kleine Symbole bekommen eine größere Trefferfläche */
