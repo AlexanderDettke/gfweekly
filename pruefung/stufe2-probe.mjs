@@ -61,6 +61,8 @@ else {
   const heute = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Berlin' });
   const plus = (n) => { const d = new Date(heute + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   const meine = (l) => (l.d?.eintraege || []).filter(e => [K.punktA, K.punktB, K.thema].includes(e.quelle_id));
+  const frisch = async (qid) => ((await api('entscheidungen_list', { status: 'alle' })).d?.eintraege || []).find(e => e.quelle_id === qid);
+  const item = async (qid) => { const e = await frisch(qid); return { id: e.id, expect_updated_at: e.updated_at }; };
   try {
     const ping = await api('ping', {});
     pruefe('Edge Function mit Stufe 2 (ping version ≥ 42)', ping.status === 200 && ping.d.version >= 42, JSON.stringify(ping.d));
@@ -105,17 +107,18 @@ else {
     const sa = await api('entscheidungen_sammelaktion', { items: [{ id: eA2.id, expect_updated_at: eA2.updated_at }, { id: eT2.id, expect_updated_at: '2020-01-01T00:00:00Z' }], aktion: 'nicht_jetzt', by: 'Alex' });
     const montag = (() => { const d = new Date(heute + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 28); const w = d.getUTCDay() || 7; d.setUTCDate(d.getUTCDate() + (8 - w) % 7); return d.toISOString().slice(0, 10); })();
     pruefe('Sammelaktion nicht jetzt: eine Zeile vertagt bis zum ersten Montag nach vier Wochen, die veraltete als Konflikt je Zeile', sa.status === 200 && sa.d.ok === 1 && sa.d.gesamt === 2 && sa.d.wert === montag && sa.d.ergebnis.find(r => r.id === eT2.id)?.konflikt === true && sa.d.ergebnis.find(r => r.id === eA2.id)?.entscheidung?.status === 'vertagt', JSON.stringify(sa.d).slice(0, 300));
-    const sa2 = await api('entscheidungen_sammelaktion', { items: [{ id: eA2.id }], aktion: 'abgeben', wert: 'helge', by: 'Alex' });
+    const sa2 = await api('entscheidungen_sammelaktion', { items: [await item(K.punktA)], aktion: 'abgeben', wert: 'helge', by: 'Alex' });
     const sa3 = await api('entscheidungen_sammelaktion', { items: [], aktion: 'nicht_jetzt', by: 'Alex' });
-    pruefe('falscher Empfänger 400, leere Liste 400', sa2.status === 400 && sa3.status === 400, [sa2.status, sa3.status].join(','));
+    const sa4 = await api('entscheidungen_sammelaktion', { items: [{ id: eA2.id }], aktion: 'nicht_jetzt', by: 'Alex' });
+    pruefe('falscher Empfänger 400, leere Liste 400, Zeile ohne gesehenen Stand 400 (Runde 3, Befund 9)', sa2.status === 400 && sa3.status === 400 && sa4.status === 400, [sa2.status, sa3.status, sa4.status].join(','));
     const rz = await api('entscheidung_zurueck', { id: eA2.id, by: 'Alex' });
     pruefe('Rückgängig der Sammelaktion: Zeile wieder offen', rz.status === 200 && rz.d.entscheidung.status === 'offen', JSON.stringify(rz.d).slice(0, 200));
     /* Hinfällig am Thema und Rückgängig stellt das Archiv wieder her (Runde 1, Befund 2) */
-    const th1 = await api('entscheidungen_sammelaktion', { items: [{ id: eT2.id }], aktion: 'hinfaellig', by: 'Lea' });
+    const th1 = await api('entscheidungen_sammelaktion', { items: [await item(K.thema)], aktion: 'hinfaellig', by: 'Lea' });
     const tq1 = sql(`select archived, archiv_grund from public.gfweekly_topics where id = '${K.thema}';`);
     const th2 = await api('entscheidung_zurueck', { id: eT2.id, by: 'Lea' });
     const tq2 = sql(`select archived, archiv_grund from public.gfweekly_topics where id = '${K.thema}';`);
-    const th3 = await api('entscheidungen_sammelaktion', { items: [{ id: eT2.id }], aktion: 'hinfaellig', by: 'Lea' });
+    const th3 = await api('entscheidungen_sammelaktion', { items: [await item(K.thema)], aktion: 'hinfaellig', by: 'Lea' });
     pruefe('Hinfällig archiviert das Thema (Grund hinfaellig); Rückgängig macht es wieder offen und löscht den Archivgrund', th1.status === 200 && th1.d.ok === 1 && tq1.rows?.[0]?.archived === true && tq1.rows[0].archiv_grund === 'hinfaellig' && th2.status === 200 && th2.d.entscheidung.status === 'offen' && tq2.rows?.[0]?.archived === false && tq2.rows[0].archiv_grund === null, JSON.stringify([th1.d?.ergebnis?.[0]?.grund, tq1.rows, th2.d?.error, tq2.rows]).slice(0, 300));
     const th4 = await api('entscheidung_zurueck', { id: eT2.id, by: 'Lea' });
     pruefe('Hinfällig nach Rückgängig erneut möglich, danach wieder zurück (Rückweg vollständig)', th3.status === 200 && th3.d.ok === 1 && th4.status === 200 && th4.d.entscheidung.status === 'offen', JSON.stringify([th3.d?.ergebnis?.[0], th4.d]).slice(0, 200));
@@ -130,7 +133,7 @@ else {
     const eB = meine(l3).find(e => e.quelle_id === K.punktB);
     pruefe('Umhängen: Entscheidung zeigt auf Punkt B, bleibt offen nach Archivierung des Themas, Vorhaben gesetzt; keine zweite Zeile für Punkt B', um.rows?.[0]?.quelle_art === 'punkt' && um.rows[0].quelle_id === K.punktB && um.rows[0].status === 'offen' && um.rows[0].vorhaben_id === K.vorhaben && eB && eB.id === eT2.id && meine(l3).filter(e => e.quelle_id === K.punktB).length === 1 && !meine(l3).some(e => e.quelle_id === K.thema), JSON.stringify([um, eB && eB.id]).slice(0, 300));
     /* Hinfällig mit Rückweg */
-    const hf = await api('entscheidungen_sammelaktion', { items: [{ id: eA2.id }], aktion: 'hinfaellig', by: 'Lea' });
+    const hf = await api('entscheidungen_sammelaktion', { items: [await item(K.punktA)], aktion: 'hinfaellig', by: 'Lea' });
     const hq = sql(`select erledigt, erledigt_by from public.hh_vorhaben_punkte where id = '${K.punktA}';`);
     const hr = await api('entscheidung_zurueck', { id: eA2.id, by: 'Lea' });
     const hq2 = sql(`select erledigt from public.hh_vorhaben_punkte where id = '${K.punktA}';`);
@@ -178,10 +181,11 @@ else {
     if (K.absence2) await api('handover_build', { absence_id: K.absence2 });
     const hl2 = K.absence2 ? await api('handover_list', { absence_id: K.absence2 }) : { status: 0, d: {} };
     const zeile2 = (hl2.d?.items || []).find(z => z.ref_id === K.vorhaben);
-    const va = await api('vorhaben_abschliessen', { id: K.vorhaben, by: 'Alex', punkte_mit: true });
-    const he = zeile2 ? await api('handover_set', { id: zeile2.id, status: 'erledigt', by: 'Alex' }) : { status: 0 };
+    const he = zeile2 ? await api('handover_erledigt', { id: zeile2.id, by: 'Alex' }) : { status: 0 };
+    const he2 = zeile2 ? await api('handover_erledigt', { id: zeile2.id, by: 'Alex' }) : { status: 0 };
+    const va = { status: he.d?.vorhaben ? 200 : 0 };
     const eq = sql(`select (select status from public.hh_vorhaben where id = '${K.vorhaben}') as vstatus, (select status from public.gfweekly_handover where id = '${zeile2?.id}') as hstatus, (select count(*) from public.hh_vorhaben_punkte where vorhaben_id = '${K.vorhaben}' and erledigt = false) as offen;`);
-    pruefe('Erledigt an der Vorhaben-Zeile: Vorhaben erledigt (Punkte mit), Korbzeile erledigt, beide Zustände zurückgelesen', !!zeile2 && va.status === 200 && he.status === 200 && eq.rows?.[0]?.vstatus === 'erledigt' && eq.rows[0].hstatus === 'erledigt' && Number(eq.rows[0].offen) === 0, JSON.stringify([!!zeile2, va.status, he.status, he.d?.error, eq.rows]).slice(0, 300));
+    pruefe('Erledigt an der Vorhaben-Zeile (handover_erledigt, eine Transaktion): Vorhaben erledigt (Punkte mit), Korbzeile erledigt, beide Zustände zurückgelesen; zweiter Aufruf 409', !!zeile2 && va.status === 200 && he.status === 200 && he.d.item?.status === 'erledigt' && he2.status === 409 && eq.rows?.[0]?.vstatus === 'erledigt' && eq.rows[0].hstatus === 'erledigt' && Number(eq.rows[0].offen) === 0, JSON.stringify([!!zeile2, he.status, he.d?.error, he2.status, eq.rows]).slice(0, 300));
     const ae2 = K.absence2 ? await api('absence_end', { id: K.absence2, by: 'Alex' }) : { status: 0 };
     pruefe('Zweite Abwesenheit beendet: nichts liegen geblieben', ae2.status === 200 && (ae2.d.liegen_geblieben || 0) === 0, JSON.stringify([ae2.d?.liegen_geblieben, ae2.d?.entfallen, ae2.d?.error]).slice(0, 200));
   } catch (e) {

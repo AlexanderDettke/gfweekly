@@ -245,7 +245,7 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
        Verwerfen zählen nach status_at (Trigger seit Runde 2). */
     const [pk, vl, kd, en, rz] = await Promise.all([
       admin.from('hh_vorhaben_verlauf').select('created_at').eq('created_by', 'lauf').eq('art', 'system').like('text', 'Punkt erledigt:%').gte('created_at', seit),
-      admin.from('hh_vorhaben_verlauf').select('created_at,status,status_at,created_by').in('created_by', ['lauf','Abgleich','Lauf']).or(`created_at.gte.${seit},status_at.gte.${seit}`),
+      admin.from('hh_vorhaben_verlauf').select('created_at,status,status_at,created_by,tag').not('created_by', 'in', '("Alex","Lea","kompass")').or(`created_at.gte.${seit},status_at.gte.${seit}`),
       admin.from('gfweekly_news').select('created_at,status').eq('kind', 'kandidat').gte('created_at', seit),
       admin.from('hh_entscheidungen').select('updated_at,frage_von').eq('frage_von', 'lauf').gte('updated_at', seit),
       admin.from('hh_vorhaben_verlauf').select('created_at').like('source_ref', 'rueckgaengig:lauf:%').gte('created_at', seit),
@@ -253,27 +253,31 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
     for (const r of [pk, vl, kd, en, rz]) if (r.error) throw r.error;
     const woche = (d: string) => { const x = new Date(d); const t0 = new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate())); const tag = t0.getUTCDay() || 7; t0.setUTCDate(t0.getUTCDate() + 4 - tag); const j1 = new Date(Date.UTC(t0.getUTCFullYear(), 0, 1)); return `${t0.getUTCFullYear()}-W${String(Math.ceil((((t0.getTime() - j1.getTime()) / 86400000) + 1) / 7)).padStart(2, '0')}`; };
     const W: Record<string, Any> = {};
-    const z = (w: string, k: string) => { W[w] = W[w] || { woche: w, erledigt: 0, zurueckgenommen: 0, verlauf: 0, verlauf_bestaetigt: 0, verlauf_vorschlag: 0, verlauf_verworfen: 0, verlauf_verfallen: 0, kandidaten: 0, kandidaten_uebernommen: 0, kandidaten_verworfen: 0, kandidaten_archiviert: 0, fragen: 0 }; W[w][k]++; };
+    const z = (w: string, k: string) => { W[w] = W[w] || { woche: w, erledigt: 0, zurueckgenommen: 0, vorschlaege: 0, vorschlaege_uebernommen: 0, verlauf: 0, verlauf_bestaetigt: 0, verlauf_vorschlag: 0, verlauf_verworfen: 0, verlauf_verfallen: 0, kandidaten: 0, kandidaten_uebernommen: 0, kandidaten_verworfen: 0, kandidaten_archiviert: 0, fragen: 0 }; W[w][k]++; };
     for (const r of (pk.data || []) as Any[]) z(woche(r.created_at), 'erledigt');
     for (const r of (rz.data || []) as Any[]) z(woche(r.created_at), 'zurueckgenommen');
     for (const r of (vl.data || []) as Any[]) {
       /* Entstehung in der Woche des Eintrags; Verwerfen und Verfall in der Woche des Statuswechsels (status_at, Runde 2 Befund 6). */
-      if (r.created_at >= seit) { const w = woche(r.created_at); z(w, 'verlauf'); if (r.status === 'bestaetigt' || r.status === 'vorschlag') z(w, 'verlauf_' + r.status); }
+      const vorschlag = /^Vorschlag/i.test(r.tag || '') || r.status === 'vorschlag' || r.status === 'verworfen' || r.status === 'verfallen';   // Vorschläge erkennt man am tag, ihr Status wechselt später
+      if (r.created_at >= seit) { const w = woche(r.created_at); z(w, 'verlauf'); if (vorschlag) z(w, 'vorschlaege'); if (r.status === 'vorschlag') z(w, 'verlauf_vorschlag'); if (r.status === 'bestaetigt' && !vorschlag) z(w, 'verlauf_bestaetigt'); }
+      if (vorschlag && r.status === 'bestaetigt') { const t = r.status_at || r.created_at; if (t >= seit) z(woche(t), 'vorschlaege_uebernommen'); }
       if (r.status === 'verworfen' || r.status === 'verfallen') { const t = r.status_at || r.created_at; if (t >= seit) z(woche(t), 'verlauf_' + r.status); }
     }
     for (const r of (kd.data || []) as Any[]) { const w = woche(r.created_at); z(w, 'kandidaten'); if (['uebernommen','verworfen','archiviert'].includes(r.status)) z(w, 'kandidaten_' + r.status); }
     for (const r of (en.data || []) as Any[]) z(woche(r.updated_at), 'fragen');
     const zeilen = Object.values(W).sort((a: Any, b: Any) => String(b.woche).localeCompare(String(a.woche)));
     const summe = zeilen.reduce((a: Any, r: Any) => { for (const k of Object.keys(r)) if (k !== 'woche') a[k] = (a[k] || 0) + r[k]; return a; }, {} as Any);
-    return { seit, wochen: zeilen, summe, trefferquote: summe.kandidaten ? Math.round(100 * (summe.kandidaten_uebernommen || 0) / summe.kandidaten) : null };
+    /* Trefferquote: übernommene Vorschläge und Kandidaten an allen erzeugten (Paket Abschnitt 0, Kriterium a). */
+    const erzeugt = (summe.vorschlaege || 0) + (summe.kandidaten || 0);
+    return { seit, wochen: zeilen, summe, trefferquote: erzeugt ? Math.round(100 * ((summe.vorschlaege_uebernommen || 0) + (summe.kandidaten_uebernommen || 0)) / erzeugt) : null };
   }
 
   /* Stufe 2 · Rückkehr: Lagebild über den Zeitraum der Abwesenheit nach Phase (Entschieden, Bewegt, Wartet auf dich) und nach Menschen. */
   const PHASEN = ['launch', 'formatpartner', 'systembau', 'sonstiges'];
-  /* Zeitversatz Berlins an einem Kalendertag (+01:00 oder +02:00), damit die Tagesgrenzen auch um den Zeitwechsel stimmen (Runde 1, Befund 9). */
-  const berlinVersatz = (tag: string) => {
+  /* Zeitversatz Berlins zu einem Zeitpunkt (+01:00 oder +02:00), gemessen nahe der jeweiligen Tagesgrenze, damit auch der Umstellungstag stimmt (Runde 1 Befund 9, Runde 3 Befund 8). */
+  const berlinVersatz = (zeitpunkt: string) => {
     try {
-      const teil = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Berlin', timeZoneName: 'longOffset' }).formatToParts(new Date(tag + 'T12:00:00Z')).find(p => p.type === 'timeZoneName')?.value || '';
+      const teil = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Berlin', timeZoneName: 'longOffset' }).formatToParts(new Date(zeitpunkt)).find(p => p.type === 'timeZoneName')?.value || '';
       const m = teil.match(/([+-]\d\d:\d\d)/); return m ? m[1] : '+01:00';
     } catch { return '+01:00'; }
   };
@@ -281,8 +285,10 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
     const aid = (t.absence_id ?? '').toString(); if (!EN_UUID.test(aid)) throw new EnFehler('absence_id fehlt');
     const { data: ab, error: e0 } = await admin.from('gfweekly_absences').select('*').eq('id', aid).maybeSingle();
     if (e0) throw e0; if (!ab) throw new EnFehler('Abwesenheit gibt es nicht', 404);
+    try { await rpc('hh_entscheidungen_sammeln', {}); } catch (e) { console.warn('rueckkehr_lage sammeln', e); }   // Runde 3, Befund 5: erledigte Quellen zuerst abgleichen
     const person = whoNorm(ab.person); const heute = heuteBerlin();
-    const von = ab.von as string; const bis = (ab.bis || heute) as string; const bisIso = bis + 'T23:59:59' + berlinVersatz(bis); const vonIso = von + 'T00:00:00' + berlinVersatz(von);
+    const von = ab.von as string; const bis = (ab.bis || heute) as string;
+    const bisIso = bis + 'T23:59:59' + berlinVersatz(new Date(Date.parse(bis + 'T23:59:59Z') - 2 * 3600e3).toISOString()); const vonIso = von + 'T00:00:00' + berlinVersatz(new Date(Date.parse(von + 'T00:00:00Z') - 2 * 3600e3).toISOString());
     const [vh, pk, vl, en, dec, ho] = await Promise.all([
       admin.from('hh_vorhaben').select('id,slug,title,status,phase,fokus,ball,ball_name,stand,naechster_schritt,frist'),   // auch abgeschlossene: was in der Abwesenheit geschah, zählt (Runde 2, Befund 3)
       admin.from('hh_vorhaben_punkte').select('id,vorhaben_id,titel,wer,frist,erledigt,erledigt_at,erledigt_by,stand,quelle,updated_at'),
@@ -324,6 +330,8 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
     const wer = (w: string | null) => { const s = (w || '').trim(); if (!s) return 'offen'; if (istGF(s)) return 'GF gemeinsam'; return s.split(/[,&]|\bund\b|\bmit\b/)[0].trim().split(' ')[0] || s; };
     for (const p of punkte.filter(x => !x.erledigt && aktiv(x.vorhaben_id))) { const k = wer(p.wer); (menschen[k] = menschen[k] || []).push({ art: 'punkt', id: p.id, text: p.titel, frist: p.frist, vorhaben: V.get(p.vorhaben_id).title, slug: V.get(p.vorhaben_id).slug, phase: phaseVon(p.vorhaben_id) }); }
     for (const e of E.filter(x => (x.status === 'abgegeben' || x.status === 'offen' || x.status === 'vertagt') && (!x.vorhaben_id || aktiv(x.vorhaben_id)))) { const k = e.status !== 'abgegeben' ? 'GF gemeinsam' : (e.abgegeben_an === 'team' ? 'Team' : whoNorm(e.abgegeben_an)); (menschen[k] = menschen[k] || []).push({ art: 'entscheidung', id: e.id, text: e.frage, frist: e.frist, status: e.status, abgegeben_an: e.abgegeben_an, updated_at: e.updated_at, vorhaben: V.get(e.vorhaben_id)?.title || null, slug: V.get(e.vorhaben_id)?.slug || null, phase: phaseVon(e.vorhaben_id) }); }
+    /* Runde 3, Befund 6: auch das Entschiedene und Erledigte der Abwesenheit, mit Status. */
+    for (const b of Object.values(bloecke)) for (const x of (b as Any).entschieden) { const k = wer(x.wer); (menschen[k] = menschen[k] || []).push({ art: x.art, id: x.id, text: x.text, frist: null, status: x.art === 'punkt' ? 'erledigt' : 'entschieden', am: x.am, vorhaben: x.vorhaben, slug: x.slug, phase: (b as Any).phase }); }
     const reihen = ['Lea', 'Alex', 'GF gemeinsam'];
     const nachMenschen = Object.entries(menschen).map(([name, eintraege]) => ({ name, eintraege })).sort((a, b) => { const ia = reihen.indexOf(a.name), ib = reihen.indexOf(b.name); return (ia < 0 ? 9 : ia) - (ib < 0 ? 9 : ib) || b.eintraege.length - a.eintraege.length; });
     const zaehler = { entschieden: Object.values(bloecke).reduce((n, b: Any) => n + b.entschieden.length, 0), bewegt: proVh.size, wartet: wartet.length, tage: Math.max(1, Math.round((Date.parse(bis) - Date.parse(von)) / 86400000) + 1) };
@@ -380,7 +388,9 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
         let wert: string | null = null;
         if (aktion === 'nicht_jetzt' && t.wert) { wert = gueltigerTag(t.wert); if (!wert) throw new EnFehler('wert: Datum als JJJJ-MM-TT'); if (wert < heuteBerlin()) throw new EnFehler('Datum ab heute'); }
         if (aktion === 'abgeben') { wert = (t.wert ?? '').toString().toLowerCase(); if (!['alex','lea','team'].includes(wert || '')) throw new EnFehler('wert: alex, lea oder team'); }
-        const r = await rpc('hh_entscheidungen_sammelaktion', { p_items: items.map((it: Any) => ({ id: it.id, expect_updated_at: it.expect_updated_at ?? null })), p_aktion: aktion, p_wert: wert, p_by: wer });
+        /* Runde 3, Befund 9: der gesehene Stand ist je Zeile Pflicht, sonst gäbe es keinen Konflikt je Zeile. */
+        for (const it of items) if (!it.expect_updated_at || isNaN(Date.parse(String(it.expect_updated_at)))) throw new EnFehler('expect_updated_at fehlt oder ist kein Zeitpunkt (je Zeile)');
+        const r = await rpc('hh_entscheidungen_sammelaktion', { p_items: items.map((it: Any) => ({ id: it.id, expect_updated_at: it.expect_updated_at })), p_aktion: aktion, p_wert: wert, p_by: wer });
         return json(r);
       }
       if (action === 'lauf_rueckgaengig') {

@@ -1997,6 +1997,12 @@ Deno.serve(async (req: Request) => {
       return json({ items:data, absence, gekuerzt,
         ...handoverZaehler(alle || []), gesamt: alleZahl ?? (alle || []).length });
     }
+    if (action === 'handover_erledigt') {
+      /* Stufe 2, Runde 3 Befund 1: Vorhaben abschließen (Punkte mit) und Korbzeile erledigt in einer Transaktion (hh_handover_erledigt). */
+      const by = vhBy(t); if (!t.id) return json({ error:'id fehlt' },400);
+      const r = await vhRpc('hh_handover_erledigt', { p_id: t.id, p_by: by });
+      return json({ item: r.item, vorgang: r.vorgang, vorhaben: r.vorhaben || null, punkte: r.punkte || 0 });
+    }
     if (action === 'handover_set' || action === 'handover_set_many') {
       /* v30 (Befund 7.1): Korbzeile, Vorgang und Protokoll wandern in einem Zug über die Datenbankfunktion
          hh_handover_set. Entweder alles oder nichts; eine bestätigte Zeile ohne Wirkung kann es nicht mehr geben. */

@@ -314,6 +314,13 @@ export const ANTWORT = {
     z.status = p.status || 'bestaetigt'; z.by = p.by || 'Alex';
     return { item:{ ...z }, vorgang: vorgangVon(z) };
   },
+  handover_erledigt: (p) => {
+    const z = zeileVon(p.id); if (!z) return { __status:404, error:'Korbzeile gibt es nicht' };
+    if (z.status === 'erledigt' || z.status === 'entfallen') return { __status:409, error:'Die Zeile ist schon geschlossen, bitte neu laden' };
+    let v = null; if (z.kind === 'vorhaben') { v = VORHABEN.find(x => x.id === z.ref_id) || null; if (v && ['aktiv','pausiert'].includes(v.status)) v.status = 'erledigt'; }
+    z.status = 'erledigt'; z.by = p.by || 'Alex';
+    return { item:{ ...z }, vorgang:null, vorhaben:v, punkte:0 };
+  },
   handover_set_many: (p) => {
     let n = 0; const misslungen = [];
     for (const it of (p.items || [])) {
@@ -488,7 +495,7 @@ export const VH_ANTWORT = {
 
 export const FALLBACK = { ok:true, items:[], topics:[], gains:[] };
 // Schreibende Aktionen darf der Lauf beantworten, ohne dass die Testdaten sie kennen; alles andere ist ein Testfehler.
-export const SCHREIBEND = new Set(['wahl','freigabe','begruendung','log_verknuepfen','rolle','tor','add','update','delete','capture','capture_many','checkin','score_event','decision_add','decision_update','decision_delete',
+export const SCHREIBEND = new Set(['handover_erledigt', 'wahl','freigabe','begruendung','log_verknuepfen','rolle','tor','add','update','delete','capture','capture_many','checkin','score_event','decision_add','decision_update','decision_delete',
   'session_start','session_end','session_delete','ritual_toggle','ritual_save','ritual_delete','milestone_save','milestone_delete','news_update','news_accept','news_delete',
   'people_save','people_delete','link_add','link_delete','sites_save','sites_delete','category_save','gate_set','gate_set_many','inbox_promote','inbox_reject','tidy_suggest',
   'absence_end','absence_tick','deputies_set','handover_build','handover_dossier','handover_log_add','launch_set',
@@ -736,6 +743,7 @@ Object.assign(ANTWORT, {
     for (const pk of vhPunkte.filter(x => !x.erledigt && (x.wer || '').toLowerCase().includes(person.toLowerCase()))) bl[phase(pk.vorhaben_id)].wartet.push({ art:'punkt', id:pk.id, text:pk.titel, frist:pk.frist, wer:pk.wer, status:'offen', vorhaben:V[pk.vorhaben_id] && V[pk.vorhaben_id].title, slug:V[pk.vorhaben_id] && V[pk.vorhaben_id].slug, phase:phase(pk.vorhaben_id) });
     const menschen = {}; for (const pk of vhPunkte.filter(x => !x.erledigt)) { const k = /^gf/i.test(pk.wer||'') ? 'GF gemeinsam' : (pk.wer||'offen').split(/[,&]| und /)[0].trim(); (menschen[k] = menschen[k] || []).push({ art:'punkt', id:pk.id, text:pk.titel, frist:pk.frist, vorhaben:V[pk.vorhaben_id] && V[pk.vorhaben_id].title, slug:V[pk.vorhaben_id] && V[pk.vorhaben_id].slug, phase:phase(pk.vorhaben_id) }); }
     for (const e of EN_ZEILEN.filter(x => x.status === 'abgegeben' || x.status === 'offen' || x.status === 'vertagt')) { const k = e.status !== 'abgegeben' ? 'GF gemeinsam' : (e.abgegeben_an === 'team' ? 'Team' : (e.abgegeben_an === 'lea' ? 'Lea' : 'Alex')); (menschen[k] = menschen[k] || []).push({ art:'entscheidung', id:e.id, text:e.frage, frist:e.frist, status:e.status, abgegeben_an:e.abgegeben_an, vorhaben:e.vorhaben && e.vorhaben.title, slug:e.vorhaben && e.vorhaben.slug, phase:phase(e.vorhaben_id) }); }
+    for (const b of Object.values(bl)) for (const x of b.entschieden) { const k = /^gf/i.test(x.wer||'') ? 'GF gemeinsam' : (x.wer||'offen'); (menschen[k] = menschen[k] || []).push({ art:x.art, id:x.id, text:x.text, frist:null, status:x.art === 'punkt' ? 'erledigt' : 'entschieden', vorhaben:x.vorhaben, slug:x.slug, phase:b.phase }); }
     const reihen = ['Lea','Alex','GF gemeinsam'];
     const nach_menschen = Object.entries(menschen).map(([name, eintraege]) => ({ name, eintraege })).sort((x, y) => { const ia = reihen.indexOf(x.name), ib = reihen.indexOf(y.name); return (ia < 0 ? 9 : ia) - (ib < 0 ? 9 : ib) || y.eintraege.length - x.eintraege.length; });
     const wartet = Object.values(bl).reduce((n, b) => n + b.wartet.length, 0);

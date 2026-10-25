@@ -1203,8 +1203,8 @@ console.log('\n== Stufe 2: Vorschlagsfrist, Mehrfachauswahl, Akte-Chips, Überga
   if (await vz.count()) {
     let frage = ''; u.once('dialog', d => { frage = d.message(); });   // seite() bestätigt Dialoge schon, hier nur den Text merken
     await vz.locator('[data-act="erledigt"]').click(); await u.waitForTimeout(500);
-    const va = letzte('vorhaben_abschliessen'), hs2 = letzte('handover_set');
-    pruefe('Erledigt an einer Vorhaben-Zeile: Rückfrage nennt Gegenstand und Folge, vorhaben_abschliessen mit punkte_mit, dann Korbzeile erledigt', /abschließen\?/.test(frage) && /Offene Punkte/.test(frage) && va && va.nutzlast.punkte_mit === true && va.nutzlast.by === 'Alex' && hs2 && hs2.nutzlast.status === 'erledigt' && hs2.nutzlast.id !== hs.nutzlast.id, JSON.stringify([frage, va && va.nutzlast, hs2 && hs2.nutzlast]).slice(0, 300));
+    const he = letzte('handover_erledigt');
+    pruefe('Erledigt an einer Vorhaben-Zeile: Rückfrage nennt Gegenstand und Folge, ein Aufruf handover_erledigt (Vorhaben und Zeile in einer Transaktion), Zeile danach erledigt', /abschließen\?/.test(frage) && /Offene Punkte/.test(frage) && he && he.nutzlast.id === 'hv1' && he.nutzlast.by === 'Alex' && !letzte('vorhaben_abschliessen') && (await u.locator('.ub-row[data-id="hv1"] [data-act="erledigt"]').count()) === 0, JSON.stringify([frage, he && he.nutzlast]).slice(0, 300));
   } else pruefe('Testdaten: Korb abs-1 hat eine Vorhaben-Zeile', false, 'keine Vorhaben-Zeile im Korb');
   await u.close();
   frisch();

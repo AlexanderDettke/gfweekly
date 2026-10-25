@@ -194,15 +194,16 @@ function dossierHtml(x){
       ${x.kind==="vorhaben"?`<a class="btn btn-sm btn-brand" href="${akteLink(x)}">Akte öffnen</a>`:""}
     </div>`;
 }
-/* Stufe 2 (Abschnitt 5.2): „Erledigt“ an einer Vorhaben-Zeile schließt das Vorhaben (vorhaben_abschliessen, offene Punkte mit) und dann die Korbzeile;
+/* Stufe 2 (Abschnitt 5.2): „Erledigt“ an einer Vorhaben-Zeile schließt Vorhaben (offene Punkte mit) und Korbzeile in einer Transaktion (handover_erledigt);
    an anderen Zeilen nur die Korbzeile. Rückfrage nennt Gegenstand und Folge. */
 async function erledigt(x, knopf){
   if(!x){ return; }
   if(x.kind==="vorhaben"){
     const ok=confirm(`„${x.title||"Vorhaben"}“ als erledigt abschließen? Offene Punkte werden abgehakt, die Akte wandert zu „Erledigt“ (dort gibt es „Wieder öffnen“).`);
     if(!ok){ knopf.disabled=false; return; }
-    try{ await gfApi("vorhaben_abschliessen",{ id:x.ref_id, by:gfWho(), punkte_mit:true }); }
-    catch(err){ knopf.disabled=false; gfToast("Nicht abgeschlossen: "+(err.message||"Verbindung")); return; }
+    try{ const d=await gfApi("handover_erledigt",{ id:x.id, by:gfWho() }); const i=ITEMS.findIndex(y=>y.id===x.id); if(i>=0&&d.item) ITEMS[i]=d.item; await zaehlerNeu(); renderList(); gfToast(`Vorhaben abgeschlossen (${d.punkte||0} Punkte), Zeile erledigt`); }
+    catch(err){ knopf.disabled=false; gfToast("Nicht abgeschlossen: "+(err.message||"Verbindung")); }
+    return;
   }
   await setzen(x.id,{ status:"erledigt" });
 }
