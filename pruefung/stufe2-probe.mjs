@@ -97,7 +97,7 @@ else {
     const rz = await api('entscheidung_zurueck', { id: eA2.id, by: 'Alex' });
     pruefe('Rückgängig der Sammelaktion: Zeile wieder offen', rz.status === 200 && rz.d.entscheidung.status === 'offen', JSON.stringify(rz.d).slice(0, 200));
     /* Auflösung: Thema wird Punkt B, Entscheidung wandert mit (hh_entscheidung_umhaengen) */
-    const pb = await api('punkt_save', { vorhaben_id: K.vorhaben, titel: M + ' Punkt B (aus Thema)', wer: 'Lea', by: 'Alex', quelle: 'thema:' + K.thema });
+    const pb = await api('punkt_save', { vorhaben_id: K.vorhaben, titel: M + ' Punkt B (aus Thema)', wer: 'GF gemeinsam', by: 'Alex', quelle: 'thema:' + K.thema });   // wer GF: ein Punkt bei Lea allein wäre keine GF-Quelle mehr, die Entscheidung würde hinfällig
     K.punktB = pb.d?.punkt?.id || null;
     const um = sql(`select public.hh_entscheidung_umhaengen('${eT2.id}', 'punkt', '${K.punktB}', 'Alex') as r; update public.gfweekly_topics set archived = true, archiv_grund = 'stufe2:punkt' where id = '${K.thema}'; select quelle_art, quelle_id, status, vorhaben_id from public.hh_entscheidungen where id = '${eT2.id}';`);
     const l3 = await api('entscheidungen_list', { status: 'alle' });
@@ -141,7 +141,7 @@ else {
     const rl404 = await api('rueckkehr_lage', { absence_id: '00000000-0000-0000-0000-000000000000' });
     pruefe('Rückkehr-Lagebild: vier Phasen in fester Reihenfolge, nach Menschen, Brief schreiben und lesen, unbekannte Abwesenheit 404', rl.status === 200 && (rl.d.phasen || []).map(p => p.phase).join(',') === 'launch,formatpartner,systembau,sonstiges' && Array.isArray(rl.d.nach_menschen) && rb.status === 200 && rl2.d?.brief === 'Probe-Brief (Test)' && rl404.status === 404, JSON.stringify([rl.status, rl.d?.zaehler, rb.d, rl404.status]).slice(0, 300));
     const ae = K.absence ? await api('absence_end', { id: K.absence, by: 'Alex' }) : { status: 0 };
-    pruefe('Willkommen zurück: Abwesenheit beendet, nichts liegen geblieben (Zeile war erledigt)', ae.status === 200 && (ae.d.liegen_geblieben || 0) === 0, JSON.stringify(ae.d).slice(0, 200));
+    pruefe('Willkommen zurück: Abwesenheit beendet, nichts liegen geblieben (Testzeile erledigt, unbestätigte Vorschläge zählen nicht)', ae.status === 200 && (ae.d.liegen_geblieben || 0) === 0, JSON.stringify(ae.d).slice(0, 200));
   } catch (e) {
     fehler++; console.log('  FEHLT  Ausnahme in der Wirkungsprobe · ' + (e.stack || e.message).slice(0, 400));
   } finally {

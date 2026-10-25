@@ -1926,11 +1926,12 @@ Deno.serve(async (req: Request) => {
          (hh_absence_end). Scheitert etwas, bleibt die Abwesenheit, wie sie war. Asana wird danach archiviert. */
       if (!t.id) return json({ error:'id fehlt' },400);
       const r = await vhRpc('hh_absence_end', { p_id: t.id, p_by: whoNorm(t.by ?? WHO) });
-      /* Stufe 2 (Abschnitt 5): offene Korbzeilen (Vorschlag oder bestätigt, nicht erledigt) gelten als liegen geblieben: ein Verlaufseintrag
-         am Vorhaben, die Zeile wird entfallen; danach zeigen Für dich und Besprechung keine Marke „Vertretung“ mehr. */
+      /* Stufe 2 (Abschnitt 5): bestätigte, nicht erledigte Korbzeilen gelten als liegen geblieben: ein Verlaufseintrag am Vorhaben, die Zeile
+         wird entfallen; danach zeigen Für dich und Besprechung keine Marke „Vertretung“ mehr. Unbestätigte Vorschläge waren nie Arbeit der
+         Vertretung und bekommen keinen Verlaufseintrag (sonst stünde in jeder Akte mit Ball GF eine Zeile je Testabwesenheit). */
       let liegen = 0;
       try {
-        const { data: offen } = await admin.from('gfweekly_handover').select('id,kind,ref_id,title,ampel').eq('absence_id', t.id).in('status', ['vorschlag','bestaetigt']);
+        const { data: offen } = await admin.from('gfweekly_handover').select('id,kind,ref_id,title,ampel').eq('absence_id', t.id).eq('status', 'bestaetigt');
         for (const z of (offen || [])) {
           if (z.kind === 'vorhaben' && VH_UUID.test(z.ref_id)) {
             await admin.from('hh_vorhaben_verlauf').insert({ vorhaben_id: z.ref_id, art: 'system', wer: whoNorm(t.by ?? WHO), status: 'bestaetigt', created_by: 'kompass',

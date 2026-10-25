@@ -99,7 +99,7 @@ else {
     pruefe('sammeln ist idempotent, auch gleichzeitig: beide Aufrufe 200, gleiche Gesamtzahl, Testpunkt und Testthema je einmal', l1.status === 200 && l2.status === 200 && l1.d.gesamt === l2.d.gesamt && meine(l1).length === 2 && meine(l2).length === 2, `${l1.status}/${l2.status} ${l1.d?.gesamt} / ${l2.d?.gesamt}, ${meine(l2).length}`);
     const eP = meine(l2).find(e => e.quelle_art === 'punkt'), eT = meine(l2).find(e => e.quelle_art === 'thema');
     pruefe('Punkt: Frage = Titel, Frist aus dem Punkt, Vorhaben aufgelöst, Link zur Akte', eP && eP.frage === M + ' Punkt' && eP.frist === plus(3) && eP.frist_quelle === 'punkt' && eP.vorhaben?.id === K.vorhaben && /^vorhaben\.html\?v=/.test(eP.herkunft?.url || ''), JSON.stringify(eP).slice(0, 300));
-    pruefe('Thema: Frist aus gate_frist, Zustand diese Woche, reif, Link zum Thema', eT && eT.frist === plus(1) && ['heute', 'woche'].includes(eT.zustand) && eT.reif && eT.herkunft?.url === `board.html?topic=${K.thema}`, JSON.stringify(eT).slice(0, 300));
+    pruefe('Thema: gate_frist nur als Vorschlag (Stufe 2), keine Frist, Zustand ohne, nicht reif, Link zum Thema', eT && eT.frist === null && eT.frist_vorschlag === plus(1) && eT.zustand === 'ohne' && !eT.reif && eT.herkunft?.url === `board.html?topic=${K.thema}`, JSON.stringify(eT).slice(0, 300));
     /* Fehlerzustand */
     const f1 = await api('entscheidung_entscheiden', { id: eP.id, ergebnis: '  ', by: 'Alex' });
     const f2 = await api('entscheidung_entscheiden', { id: eP.id, ergebnis: 'Probe Ergebnis', by: 'Helge' });
