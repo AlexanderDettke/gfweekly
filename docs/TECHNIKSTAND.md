@@ -33,11 +33,11 @@ Grenzen: Die Lauf-Regeln sind als Datei abgelegt, nicht eingespielt; bis dahin e
 
 | Kategorie | Stand |
 | --- | --- |
-| Umgesetzt | Ja, Abschnitte 1 bis 7 (Auflösung live am 25.10.2026) |
-| Technisch geprüft | wird nach der Abnahme und der Wirkungsprobe eingetragen |
-| Unabhängig geprüft | wird nach den Codex-Runden eingetragen |
-| Veröffentlicht | wird nach Deploy und Push eingetragen |
-| Fachlich angenommen | Nein. Steht aus, bis Alex und Lea die Testaufgabe aus Abschnitt 9 gemacht haben |
+| Umgesetzt | Ja, Abschnitte 1 bis 7; Auflösung der Themen und Kandidaten live am 25.10.2026; Endstand `426a98c` (Branch `stufe-2/ein-behaelter`, nach `main` gepusht am 26.10.2026) |
+| Technisch geprüft | Ja: `pruefung/abnahme.sh` vollständig am Endstand (`pruefung/letzte-abnahme.json`), Bedienproben 322, Schirme 112 Bilder ohne Meldung, Webstandard ohne harte Befunde; Wirkungsprobe Stufe 2 gegen das echte Backend 28 von 28 und Stufe 1 50 von 50 mit der deployten Function |
+| Unabhängig geprüft | Teilweise: drei Codex-Runden (`a2a7acb`, `30636f2`, `d06a707`) mit 12, 8 und 10 Befunden, alle behoben; die Korrekturen nach Runde 3 (Migration `20261026030000`, Commit `426a98c`) sind nicht mehr unabhängig geprüft, nur durch die Proben |
+| Veröffentlicht | Ja: Edge Function im Endstand `426a98c` (Deploy per `--use-api` aus dieser Sitzung, Live-Dateien per `cmp` gleich, `ping` 42); Seiten mit `?v=42` über Netlify nach dem Push nach `main`; Migrationen bis `20261026030000` angewendet |
+| Fachlich angenommen | Nein. Steht aus, bis Alex und Lea die Testaufgabe aus Abschnitt 9 gemacht haben (Lea: Rückkehrseite lesen, drei Entscheidungen aus „Nach Menschen“ verteilen, „Willkommen zurück“; Alex: Liste mit Fokus, Mehrfachauswahl „Nicht jetzt“, Übergabe „Erledigt“) |
 
 ## Stufe 1 · Entscheiden können (25.10.2026)
 
