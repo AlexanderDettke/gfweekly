@@ -38,10 +38,10 @@ Grenzen: Ziele der Erstbefüllung sind Titel, keine Fragen, bis der Lauf E1 läu
 
 | Kategorie | Stand |
 | --- | --- |
-| Umgesetzt | Ja, Abschnitte 1 bis 7 auf `stufe-1/entscheidungen` |
-| Technisch geprüft | siehe `docs/STAND-STUFE-1.md` (Abnahme, Probe, Live) |
-| Unabhängig geprüft | siehe `docs/STAND-STUFE-1.md` (Codex-Runden) |
-| Veröffentlicht | siehe `docs/STAND-STUFE-1.md` |
+| Umgesetzt | Ja, Abschnitte 1 bis 7; auf `main` seit `83f73d5` (25.10.2026) |
+| Technisch geprüft | Ja: `pruefung/abnahme.sh` an `48090da`; Wirkungsprobe gegen das echte Backend 44 und 47 Proben mit dem Deploy aus Runde 1 (`81cb76e`), Live-Prüfung der vier Seiten bestanden |
+| Unabhängig geprüft | Teilweise: drei Codex-Runden (`fd6c992`, `7f45cca`, `2a44724`) mit 9, 4 und 6 Befunden, alle behoben; die Korrekturen nach Runde 3 sind nicht mehr unabhängig geprüft |
+| Veröffentlicht | Seiten ja (Netlify, `?v=41`); Edge Function im Stand `81cb76e`, Endstand `48090da` wartet auf den Deploy durch Alexander |
 | Fachlich angenommen | Nein. Steht aus, bis Alex und Lea die Testaufgabe aus Abschnitt 9 gemacht haben (am Handy in unter fünf Minuten: Liste lesen, zwei Entscheidungen treffen, eine vertagen, eine abgeben, Besprechung starten und beenden) |
 
 ## Verkauf 2027 auf „Für dich“ (25.10.2026)
