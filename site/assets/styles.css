@@ -2025,6 +2025,10 @@ summary{min-height:var(--ziel-min);box-sizing:border-box}
 .en-form .modal-f{padding:var(--s-4) 0 var(--s-12)}
 .en-err{margin:0;color:var(--warn);font-size:var(--fs-sm)} .en-err:empty{display:none}
 .meet-form .en-err{padding:0}
+.ci-karte{position:fixed;right:var(--s-16);bottom:calc(var(--s-16) + env(safe-area-inset-bottom,0px));z-index:70;display:flex;align-items:center;gap:var(--s-12);max-width:calc(100vw - 32px);padding:var(--s-12) var(--s-16);background:var(--surface);border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);box-shadow:var(--shadow);font-size:var(--fs-sm)}
+.ci-karte .ci-k-t{display:flex;align-items:center;gap:var(--s-8);min-width:0} .ci-karte .ci-k-t div{display:flex;flex-direction:column} .ci-karte b{font-size:var(--fs-title)} .ci-karte span{color:var(--text-2)}
+.ci-karte .av{width:32px;height:32px;border-radius:50%}
+.ci-karte .btn{min-height:var(--ziel-min)}
 .en-korb{margin-top:var(--s-24)}
 .en-korb-z{align-items:start}
 .en-korb-z .en-btns{justify-content:flex-start}

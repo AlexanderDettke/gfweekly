@@ -660,7 +660,7 @@ function enAktion(p, wie) {
   if (wie === 'entscheiden' && p.session_id) e.session_id = p.session_id;
   const eigen = { status:e.status, ergebnis:e.ergebnis, entschieden_am:e.entschieden_am, entschieden_von:e.entschieden_von, frist:e.frist, frist_quelle:e.frist_quelle, vertagt_bis:e.vertagt_bis, abgegeben_an:e.abgegeben_an };
   if (wie === 'entscheiden') { const erg = String(p.ergebnis || '').trim(); if (erg.length < 5) return { __status:400, error:'Ergebnis fehlt (ein Satz, mindestens fünf Zeichen)' };
-    if (e.status === 'entschieden') return { ok:true, geaendert:false, entscheidung:e };
+    if (e.status === 'entschieden') return e.ergebnis === erg ? { ok:true, geaendert:false, entscheidung:e } : { __status:409, error:`Schon entschieden (${e.entschieden_von||''}): „${e.ergebnis}“; bitte neu laden` };
     Object.assign(e, { status:'entschieden', ergebnis:erg, entschieden_am:zeit(0), entschieden_von:by }); }
   if (wie === 'vertagen') { const bis = String(p.bis || ''); if (!/^\d{4}-\d{2}-\d{2}$/.test(bis)) return { __status:400, error:'bis: Datum als JJJJ-MM-TT' }; if (bis < heute) return { __status:400, error:'Vertagen braucht ein Datum ab heute' };
     Object.assign(e, { status:'vertagt', vertagt_bis:bis, frist:bis, frist_quelle:'hand' }); }
@@ -692,7 +692,7 @@ Object.assign(ANTWORT, {
     KORB_DATEN.eintraege.splice(i, 1);
     return { ok:true, aktion:p.aktion, item:{ id:x.id, title:x.titel, vorhaben_id:vh.id }, vorhaben:{ id:vh.id, slug:vh.slug, title:vh.title }, angelegt, verlauf_id:'v-korb' };
   },
-  checkin: () => ({ ok:true, first:false, streak:3, gains:[], state:null }),
+  checkin: (p) => p && p.ohne_spiel ? { ok:true, first:true, streak:3 } : { ok:true, first:false, streak:3, gains:[], state:null },
   session_start: (p) => ({ session:{ id:'s-neu', started_at:zeit(0), participants:p.participants||'Alex, Lea', started_by:p.started_by||'Alex', title:p.title||'Besprechung' } }),
   session_end: (p) => ({ session:{ id:p.id, ended_at:zeit(0), protocol:p.protocol||'' }, gains:[] }),
 });

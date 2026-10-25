@@ -959,6 +959,13 @@ console.log('\n== Stufe 1: Entscheidungsliste, Besprechung darauf, Korb, Spielsc
   pruefe('Navigation: Entscheidungen in „Heute“ direkt nach Für dich, nicht mehr unter Themen', await p.evaluate(() => { const a = [...document.querySelectorAll('.sb-nav .sb-group')][0].querySelectorAll('a'); return a[0].dataset.k === 'start' && a[1].dataset.k === 'entscheidungen' && !document.querySelector('#subnavSlot a[data-sk="entscheidungen"]'); }));
   pruefe('Spielschicht aus: kein game.js, kein Talerbalken, GF_SPIEL false', await p.evaluate(() => GF_SPIEL === false && !document.querySelector('script[src*="game.js"]') && !document.getElementById('gameBar') && !window.GF_GAME));
   pruefe('Check-in wird mit gesetztem Tagesschlüssel nicht gesendet', !letzte('checkin'));
+  /* Der Startskript setzt den Tagesschlüssel bei jedem Laden; deshalb Schlüssel entfernen und den Personenwechsel auslösen, der den Check-in anstößt. */
+  await p.evaluate(() => { const d = new Date(); const t = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); localStorage.removeItem('gf_ci_Alex_'+t); document.dispatchEvent(new CustomEvent('gf-who',{ detail:'Alex' })); });
+  await p.waitForTimeout(600);
+  const ci = letzte('checkin');
+  pruefe('frischer Tagesschlüssel: Check-in ohne Spielschicht gesendet (ohne_spiel), Karte mit Gruß und Serie, ohne Taler', ci && ci.nutzlast.ohne_spiel === true && ci.nutzlast.who === 'Alex' && await p.locator('#gfCiKarte').count() === 1 && /Tag 3 in Folge/.test(await p.locator('#gfCiKarte').innerText()) && !/Taler/.test(await p.locator('#gfCiKarte').innerText()), JSON.stringify(ci && ci.nutzlast));
+  await p.locator('#gfCiKarte [data-x]').click(); await p.waitForTimeout(100);
+  pruefe('„Weiter“ schließt die Karte; der Tagesschlüssel ist gesetzt', await p.locator('#gfCiKarte').count() === 0 && await p.evaluate(() => { const d = new Date(); const t = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); return localStorage.getItem('gf_ci_Alex_'+t) === '1'; }));
   pruefe('vier Kacheln: offen 9, diese Woche 4, mit Vorschlag 6, überfällig 2', await p.evaluate(() => [...document.querySelectorAll('#enKk .kk .ht-num')].map(x => x.textContent.trim()).join(',')) === '9,4,6,2');
   const abschn = await p.evaluate(() => [...document.querySelectorAll('#enListe .en-sec-h')].map(h => h.firstChild.textContent.trim()));
   pruefe('Abschnitte nach Fristzustand in der Reihenfolge Überfällig, Diese Woche, Nächste zwei Wochen, Später, Ohne Frist', abschn.join('|') === 'Überfällig|Diese Woche|Nächste zwei Wochen|Später|Ohne Frist', abschn.join('|'));

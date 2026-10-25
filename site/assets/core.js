@@ -194,6 +194,19 @@ function gfGate(onReady){
   if(GF_SPIEL){ lade("/assets/game.js"); lade("/assets/eggs.js",true); }
   else document.addEventListener("DOMContentLoaded",()=>{ const h=document.getElementById("habitat"); if(h) h.hidden=true; });
 })();
+/* Check-in-Karte ohne Spielangaben: Gruß, Tag in Folge, Schließen. Schließt sich nach 9 s von selbst, außer bei „Bewegung reduzieren“,
+   Zeiger oder Fokus in der Karte (Webapp Standard G-06, wie die früheren Spielkarten). */
+function gfCheckinKarte(w, n){
+  let k=document.getElementById("gfCiKarte"); if(k) k.remove();
+  const h=new Date().getHours(); const gruss=h<11?"Guten Morgen":h<18?"Guten Tag":"Guten Abend";
+  k=document.createElement("section"); k.id="gfCiKarte"; k.className="ci-karte"; k.setAttribute("role","status"); k.setAttribute("aria-label","Check-in");
+  k.innerHTML=`<div class="ci-k-t">${gfAvatarTag(w,"av")}<div><b>${gruss}, ${gfEsc(w)}.</b><span>${n>1?`Tag ${n} in Folge.`:"Schön, dass du da bist."}</span></div></div><button type="button" class="btn btn-sm btn-ghost" data-x aria-label="Check-in schließen">Weiter</button>`;
+  document.body.appendChild(k);
+  const zu=()=>{ clearTimeout(t); k.remove(); }; k.querySelector("[data-x]").onclick=zu;
+  const ruhig=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let t=null; const plan=()=>{ if(ruhig) return; clearTimeout(t); t=setTimeout(()=>{ if(!k.matches(":hover")&&!k.contains(document.activeElement)) k.remove(); else plan(); },9000); };
+  k.addEventListener("mouseenter",()=>clearTimeout(t)); k.addEventListener("mouseleave",plan); k.addEventListener("focusout",plan); plan();
+}
 let _gfCiLaeuft=false;
 async function gfCheckin(){
   if(GF_SPIEL||_gfCiLaeuft||!gfPW()) return;
@@ -202,10 +215,9 @@ async function gfCheckin(){
   if(done) return;
   _gfCiLaeuft=true;
   try{
-    const d=await gfApi("checkin",{who:w, local_day:day, hour:new Date().getHours()});
+    const d=await gfApi("checkin",{who:w, local_day:day, hour:new Date().getHours(), ohne_spiel:true});
     try{ localStorage.setItem(key,"1"); }catch(e){}
-    if(d&&d.first){ const h=new Date().getHours(); const gruss=h<11?"Guten Morgen":h<18?"Guten Tag":"Guten Abend"; const n=d.streak||1;
-      gfToast(`${gruss}, ${w}. ${n>1?`Tag ${n} in Folge.`:"Schön, dass du da bist."}`); }
+    if(d&&d.first) gfCheckinKarte(w, d.streak||1);
   }catch(e){}
   _gfCiLaeuft=false;
 }

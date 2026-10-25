@@ -220,13 +220,14 @@ async function streakFor(who: string, day: string){
   while(days.has(cur)){ n++; list.push(cur); let prev=addDays(cur,-1); while(isWeekend(prev) && !days.has(prev)) prev=addDays(prev,-1); cur=prev; }
   return { streak:n, days:list };
 }
-async function doCheckin(gains: Gain[], who: string, day: string, hour: number){
+async function doCheckin(gains: Gain[], who: string, day: string, hour: number, ohneSpiel=false){
   const w=whoNorm(who); if(w==='Team') return { first:false, streak:0 };
   const { error } = await admin.from('gfweekly_checkins').insert({ who:w, day, hour });
   const first = !error; if(error && (error as any).code!=='23505') throw error;
-  if(first) await award(gains,'einchecken',w,'checkin',`${w}:${day}`,day);
+  /* Stufe 1 (25.10.2026): ohne Spielschicht nur der Tag und die Serie, keine Taler. */
+  if(first && !ohneSpiel) await award(gains,'einchecken',w,'checkin',`${w}:${day}`,day);
   const { streak, days } = await streakFor(w, day);
-  if(first){ const start=days[days.length-1]; for(const n of [3,7,14,30]) if(streak===n) await award(gains,`serie_${n}`,w,'serie',`${w}:${start}:${n}`,day); if(streak>30 && streak%30===0) await award(gains,'serie_30',w,'serie',`${w}:${days[days.length-1]}:${streak}`,day,0,`${streak} Tage`); }
+  if(first && !ohneSpiel){ const start=days[days.length-1]; for(const n of [3,7,14,30]) if(streak===n) await award(gains,`serie_${n}`,w,'serie',`${w}:${start}:${n}`,day); if(streak>30 && streak%30===0) await award(gains,'serie_30',w,'serie',`${w}:${days[days.length-1]}:${streak}`,day,0,`${streak} Tage`); }
   return { first, streak };
 }
 /* Tages- und Wochenziel */
@@ -1944,6 +1945,7 @@ Deno.serve(async (req: Request) => {
     /* ----- v22: Habitat-Punkte ----- */
     if (action === 'checkin') {
       const hour = Math.max(0, Math.min(23, parseInt(t.hour) || new Date().getHours()));
+      if (t.ohne_spiel === true) { const r = await doCheckin(gains, WHO, DAY, hour, true); return json({ ok:true, first:r.first, streak:r.streak }); }   // Stufe 1: Gruß ohne Taler, Ziele, Abzeichen
       const r = await doCheckin(gains, WHO, DAY, hour);
       if (r.first) { await checkGoals(gains, WHO, DAY); await checkBadges(gains, WHO, DAY, { streak:r.streak }); }
       const state = await scoreState(WHO, DAY);

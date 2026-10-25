@@ -115,6 +115,8 @@ else {
     const rk = await api('entscheidung_zurueck', { id: eP.id, by: 'Alex' });
     pruefe('zurück nach Änderung am Original: 409, nichts überschrieben (Runde 1, Befund 1)', rk.status === 409 && sql(`select wer from public.hh_vorhaben_punkte where id = '${K.punkt}';`).rows?.[0]?.wer === 'Lea', JSON.stringify(rk.d));
     await api('punkt_save', { id: K.punkt, wer: 'GF gemeinsam', by: 'Alex' });
+    const e2b = await api('entscheidung_entscheiden', { id: eP.id, ergebnis: 'Ein anderes Ergebnis (Test)', by: 'Alex' });
+    pruefe('zweiter Aufruf mit anderem Ergebnis: 409, gespeichert bleibt das erste (Runde 2, Befund 1)', e2b.status === 409 && /Schon entschieden/.test(e2b.d?.error || ''), JSON.stringify(e2b.d));
     const r1 = await api('entscheidung_zurueck', { id: eP.id, by: 'Alex' });
     const q2 = sql(`select p.erledigt, (select count(*) from public.hh_vorhaben_verlauf v where v.punkt_id = p.id and v.art = 'entscheidung') as verlauf from public.hh_vorhaben_punkte p where p.id = '${K.punkt}';`);
     pruefe('zurück: Punkt wieder offen, Verlaufseintrag entfernt, Status offen', r1.status === 200 && r1.d.entscheidung.status === 'offen' && q2.rows?.[0]?.erledigt === false && Number(q2.rows[0].verlauf) === 0, JSON.stringify(q2).slice(0, 200));
@@ -125,6 +127,11 @@ else {
     const tg = await api('topic_get', { id: K.thema });
     const q3 = sql(`select count(*) as n, max(session_id::text) as s from public.gfweekly_decisions where topic_id = '${K.thema}';`);
     pruefe('Thema entscheiden: board_lane entschieden, decision, ein Beschluss mit der Sitzungskennung (Runde 1, Befund 4)', e3.status === 200 && tg.d?.topic?.board_lane === 'entschieden' && tg.d.topic.decision === 'Probe Thema entschieden (Test)' && Number(q3.rows?.[0]?.n) === 1 && !!K.session && q3.rows[0].s === K.session, JSON.stringify([tg.d?.topic?.board_lane, q3.rows]).slice(0, 200));
+    await api('themen_sammeln', { items: [{ id: K.thema, aktion: 'archivieren' }], by: 'Alex' });
+    const rz = await api('entscheidung_zurueck', { id: eT.id, by: 'Alex' });
+    const q3b = sql(`select count(*) as n from public.gfweekly_decisions where topic_id = '${K.thema}';`);
+    pruefe('Thema nach dem Entscheiden archiviert: Rückgängig 409, Beschluss bleibt (Runde 2, Befund 2)', rz.status === 409 && Number(q3b.rows?.[0]?.n) === 1, JSON.stringify(rz.d));
+    await api('themen_sammeln', { items: [{ id: K.thema, aktion: 'zuruecksetzen', wert: { archived: false, archiv_grund: null } }], by: 'Alex' });
     const r2 = await api('entscheidung_zurueck', { id: eT.id, by: 'Alex' });
     const tg2 = await api('topic_get', { id: K.thema });
     const q4 = sql(`select count(*) as n from public.gfweekly_decisions where topic_id = '${K.thema}';`);
@@ -163,6 +170,8 @@ else {
     pruefe('Korb zuordnen: vorhaben_id gesetzt, ein Verlaufseintrag; zweiter Aufruf 409 ohne zweiten Eintrag', k2.status === 200 && k3.status === 409 && q6.rows?.[0]?.zu === true && Number(q6.rows[0].verlauf) === 1, JSON.stringify([k2.status, k3.status, q6]).slice(0, 200));
     const k4 = await api('korb_set', { kind: 'kandidat', id: K.kandidat, aktion: 'verwerfen', by: 'Lea' });
     pruefe('Korb verwerfen: Kandidat verworfen, nicht mehr im Korb', k4.status === 200 && k4.d.item.status === 'verworfen' && !((await api('korb_list', {})).d.eintraege || []).some(x => x.id === K.kandidat));
+    const k6 = await api('korb_set', { kind: 'kandidat', id: K.kandidat, aktion: 'zuordnen', vorhaben_id: K.vorhaben, by: 'Lea' });
+    pruefe('Korb: verworfener Kandidat lässt sich nicht mehr zuordnen (409, Runde 2 Befund 3)', k6.status === 409, String(k6.status));
     const k5 = await api('korb_set', { kind: 'kandidat', id: K.kandidat, aktion: 'archivieren', by: 'Lea' });
     pruefe('Korb: archivieren für Kandidaten abgelehnt (400)', k5.status === 400);
     /* Hinfällig bei archivierter Quelle */
@@ -171,7 +180,7 @@ else {
     pruefe('Entscheiden auf eine inzwischen archivierte Quelle: 409 (Runde 1, Befund 2)', alt.status === 409, String(alt.status));
     const l6 = await api('entscheidungen_list', { status: 'alle' });
     const eT3 = (l6.d?.eintraege || []).find(e => e.id === eT.id);
-    pruefe('Thema archiviert: Zeile hinfällig (nicht mehr in alle), Punkt bleibt offen', ar.status === 200 && !eT3 && (l6.d?.eintraege || []).some(e => e.id === eP.id && e.status === 'offen'), JSON.stringify(eT3).slice(0, 160));
+    pruefe('Thema archiviert: Zeile hinfällig (nicht mehr in alle), Punkt bleibt offen', ar.status === 200 && !eT3 && (l6.d?.eintraege || []).some(e => e.id === eP.id && e.status === 'offen'), JSON.stringify(eT3 || null).slice(0, 160));
     const q7 = sql(`select status from public.hh_entscheidungen where id = '${eT.id}';`);
     pruefe('hinfällig steht so in der Tabelle', q7.rows?.[0]?.status === 'hinfaellig', JSON.stringify(q7).slice(0, 120));
     /* Hinfällig und zurück: Punkt auf Lea umschreiben, dann wieder GF */
