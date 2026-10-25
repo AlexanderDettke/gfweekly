@@ -462,16 +462,24 @@ function zeigeRueck(gut, schlecht, wort){
   h.classList.add("show");
   SEL_T=setTimeout(()=>{ h.classList.remove("show"); h.innerHTML=""; RUECK=[]; }, RUECK.length?10000:8000);
   const k=$("#selRueckK"); if(!k) return;
+  /* Die Rückwege werden beim ersten Klick einmal berechnet und bleiben bis zur bestätigten Rücknahme; „Noch einmal?“ schickt
+     dieselben. War die Rücknahme trotz fehlender Antwort schon durch, meldet die Konfliktprüfung (updated_at) die Themen als geändert. */
+  let items=null;
   k.onclick=async()=>{ k.disabled=true; clearTimeout(SEL_T);
-    /* Jüngste Aktion zuerst zurück; je Thema der Stand davor der ältesten Aktion, die es geändert hat. */
-    const alle=RUECK.slice().reverse().flat(), seen=new Map();
-    for(const x of alle) seen.set(x.id, { vorher:x.vorher, nach:seen.has(x.id)?seen.get(x.id).nach:x.thema?.updated_at });
-    const items=[...seen.entries()].map(([id,v])=>({ id, aktion:"zuruecksetzen", wert:v.vorher, expect:{ updated_at:v.nach } }));
+    if(!items){
+      /* Jüngste Aktion zuerst zurück; je Thema der Stand davor der ältesten Aktion, die es geändert hat. */
+      const alle=RUECK.slice().reverse().flat(), seen=new Map();
+      for(const x of alle) seen.set(x.id, { vorher:x.vorher, nach:seen.has(x.id)?seen.get(x.id).nach:x.thema?.updated_at });
+      items=[...seen.entries()].map(([id,v])=>({ id, aktion:"zuruecksetzen", wert:v.vorher, expect:{ updated_at:v.nach } }));
+    }
+    let r;
+    try{ r=await gfApi("themen_sammeln",{ items, by:gfWho() }); }
+    catch(e){ k.disabled=false; h.querySelector("span").textContent=`Rückgängig hat nicht geklappt (${e.message||"Verbindung"}). Noch einmal?`; SEL_T=setTimeout(()=>{ h.classList.remove("show"); h.innerHTML=""; RUECK=[]; },30000); return; }
     RUECK=[];
-    try{ const r=await gfApi("themen_sammeln",{ items, by:gfWho() }); const ok=(r.ergebnis||[]).filter(x=>x.ok).length, nein=(r.gesamt||0)-ok;
-      const d=await gfApi("list"); TOPICS=d.topics||[]; render();
-      h.classList.remove("show"); h.innerHTML=""; gfToast(nein?`${ok} zurückgesetzt, ${nein} inzwischen geändert`:`${ok} ${ok===1?"Thema":"Themen"} zurückgesetzt`);
-    }catch(e){ k.disabled=false; h.querySelector("span").textContent=`Rückgängig hat nicht geklappt (${e.message||"Verbindung"}). Noch einmal?`; SEL_T=setTimeout(()=>{ h.classList.remove("show"); h.innerHTML=""; },30000); } };
+    const ok=(r.ergebnis||[]).filter(x=>x.ok).length, nein=(r.gesamt||0)-ok;
+    h.classList.remove("show"); h.innerHTML=""; gfToast(nein?`${ok} zurückgesetzt, ${nein} inzwischen geändert`:`${ok} ${ok===1?"Thema":"Themen"} zurückgesetzt`);
+    try{ const d=await gfApi("list"); TOPICS=d.topics||[]; render(); }
+    catch(e){ gfToast(`Zurückgesetzt, aber das Board lädt nicht neu (${e.message||"Verbindung"}). Bitte die Seite neu laden.`,{fehler:true}); } };
 }
 $("#q").oninput=e=>{ auswahlLeeren(); Q=e.target.value.trim().toLowerCase(); render(); };
 if(Q) $("#q").value=Q;

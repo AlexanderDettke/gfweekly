@@ -406,8 +406,15 @@ console.log('\n== Board aufgeräumt und Mehrfachauswahl (23.10.2026) ==');
   await b.locator('.bcard[data-id="t7"]').click(); await b.locator('#selBar [data-sel="erledigt"]').click(); await b.waitForTimeout(300);
   pruefe('Rückgängig-Hinweis verdeckt die Auswahlleiste nicht', await b.evaluate(() => { const r = document.getElementById('selRueck').getBoundingClientRect(), l = document.getElementById('selBar').getBoundingClientRect(); return r.bottom <= l.top; }));
   pruefe('zweite Aktion: Hinweis sagt, dass Rückgängig auch die vorige zurücknimmt', /auch die vorige Aktion/.test(await b.locator('#selRueck').innerText()), await b.locator('#selRueck').innerText());
+  /* Störung beim Rückgängig: „Noch einmal?“ schickt dieselben Rückwege (vorher leere Auswahl, Befund Review 25.10.2026). */
+  SCHALTER.sammelnFehler = true; erwarteterFehler = true;
+  await b.locator('#selRueckK').click(); await b.waitForTimeout(500);
+  erwarteterFehler = false;
+  const st = letzte('themen_sammeln');
+  pruefe('Störung beim Rückgängig: Hinweis bleibt mit „Noch einmal?“', await b.locator('#selRueck.show #selRueckK').isEnabled() && /Noch einmal/.test(await b.locator('#selRueck').innerText()), await b.locator('#selRueck').innerText());
   await b.locator('#selRueckK').click(); await b.waitForTimeout(500);
   const zw = letzte('themen_sammeln');
+  pruefe('zweiter Versuch schickt dieselben Rückwege, nicht leer', st && zw && zw.nutzlast.items.length >= 2 && JSON.stringify(zw.nutzlast.items) === JSON.stringify(st.nutzlast.items), JSON.stringify(zw && zw.nutzlast.items.length));
   pruefe('Rückgängig setzt beide Themen auf den Stand vor der ersten Aktion', zw && zw.nutzlast.items.length >= 2 && zw.nutzlast.items.every(x => x.aktion === 'zuruecksetzen')
     && THEMEN.find(x => x.id === 't7').board_lane === 'zu_besprechen' && ['zu_besprechen','in_klaerung'].includes(THEMEN.find(x => x.id === 't1').board_lane), JSON.stringify(zw && zw.nutzlast.items.map(x => [x.id, x.wert.board_lane])));
   /* Zuklappen nimmt ausgewählte erledigte Karten aus der Auswahl. */
