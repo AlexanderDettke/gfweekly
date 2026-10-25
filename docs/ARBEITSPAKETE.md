@@ -156,3 +156,10 @@ am genauen Commit prüfen. Zusammenarbeit, die es nicht gibt, wird nicht behaupt
 - **Prüfer:** Codex CLI, read-only, je Runde ein eigener Worktree am eingefrorenen Commit nach `docs/reviews/STUFE1-pruefauftrag.md`, höchstens drei Runden; Ergebnisse `docs/reviews/STUFE1-runde-N.md`, Antworten `STUFE1-antwort-N.md`.
 - **Stand:** siehe `docs/TECHNIKSTAND.md`, Abschnitt „Stufe 1“, und `docs/STAND-STUFE-1.md`.
 
+### WP-S2 · Stufe 2 · Ein Behälter
+
+- **Auftrag:** `docs/PAKET-STUFE-2-EIN-BEHAELTER.md`, Abschnitte 1 bis 8 und 12, entschieden von Alex am 25.10.2026 (Mail an Lea mit den drei Phasen; „ohne meine Freigaben, auch Push und Pull automatisch“).
+- **Zuständig:** Claude Code, Branch `stufe-2/ein-behaelter` von `origin/main` (`4bced15`). Deploy, Push, Pull und die Auflösung der Produktionszeilen führt die Sitzung selbst aus (Freigaberegeln in `~/gfweekly/.claude/settings.local.json`).
+- **Prüfer:** Codex CLI, read-only, je Runde ein eigener Worktree am eingefrorenen Commit nach `docs/reviews/STUFE2-pruefauftrag.md`, höchstens drei Runden; Ergebnisse `docs/reviews/STUFE2-runde-N.md`, Antworten `STUFE2-antwort-N.md`.
+- **Stand:** siehe `docs/TECHNIKSTAND.md`, Abschnitt „Stufe 2“, und `docs/STAND-STUFE-2.md`.
+

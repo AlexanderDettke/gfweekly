@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Kompass · Übergabe</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=41" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=41" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=41" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=41" />
-<link rel="stylesheet" href="/assets/styles.css?v=41" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=42" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=42" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=42" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=42" />
+<link rel="stylesheet" href="/assets/styles.css?v=42" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -50,7 +50,7 @@
 
 <div class="modal-back" id="modal"></div>
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=41"></script>
+<script src="/assets/core.js?v=42"></script>
 <script>
 /* V24b · Übergabe: der Korb einer Abwesenheit auf einen Blick. Oben die vier Quadranten als Filter,
    darunter jede Zeile mit Quadrant, Frist, den vier Achsen der Matrix (mit Begründung im Titel),
@@ -142,6 +142,7 @@ function zeile(x){
       ${x.luecke?gfZustand("warn","Stand fehlt"):""}
       ${x.status!=="vorschlag"?gfZustand("ok",x.status==="bestaetigt"?"bestätigt":x.status):gfZustand("offen","Vorschlag")}
       <span class="ub-achsen" title="${gfEsc(x.begruendung||"")}"><span title="Zeitdruck">Z${x.z}</span><span title="Folgen bei Stillstand">F${x.f}</span><span title="Übertragbarkeit">U${x.u}</span><span title="Entscheidungsgewicht">G${x.g}</span></span>
+      ${x.status!=="erledigt"&&x.status!=="entfallen"?`<button type="button" class="btn btn-sm btn-brand" data-act="erledigt" title="Vor der Abreise erledigt: Zeile abschließen">Erledigt</button>`:""}
       <button class="icon-btn" data-act="auf" aria-label="Dossier zeigen"><span class="chev" aria-hidden="true"></span></button>
     </div>
     <div class="ub-r2">
@@ -226,6 +227,7 @@ async function alleUebernehmen(){
 $("#list").addEventListener("click",async e=>{
   const row=e.target.closest(".ub-row"); if(!row) return;
   const id=row.dataset.id, x=ITEMS.find(i=>i.id===id); if(!x) return;
+  const erl=e.target.closest('[data-act="erledigt"]'); if(erl){ const id=erl.closest(".ub-row").dataset.id; erl.disabled=true; setzen(id,{ status:"erledigt" }); return; }
   const auf=e.target.closest('[data-act="auf"]');
   if(auf){ const d=row.querySelector(".ub-doss"); const zu=d.hidden; d.innerHTML=dossierHtml(x); d.hidden=!zu; row.classList.toggle("open",zu); return; }
   const doss=e.target.closest('[data-act="doss"]');

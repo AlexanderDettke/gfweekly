@@ -153,25 +153,29 @@ console.log('\n== Abwesenheit anlegen ==');
   await p.close();
 }
 
-console.log('\n== Rückkehr ==');
+console.log('\n== Rückkehr (Stufe 2: Lagebild nach Phasen und Menschen) ==');
 {
   frisch();
   const p = await seite('/rueckkehr.html?id=abs-3');
-  pruefe('Begrüßung mit Namen', (await p.locator('#kopf h2').innerText()).includes('Willkommen zurück'));
-  pruefe('vier Kacheln, die vierte zählt Asana', await p.locator('#kpis .kk').count() === 4
-    && (await p.locator('#kpis .kk').last().innerText()).includes('Asana'));
-  pruefe('Entscheidungen tragen den Vermerk in Vertretung',
-    (await p.locator('#entList .rk-row').first().innerText()).includes('in Vertretung für dich'));
-  const wartet = await p.locator('#warList .rk-row').count();
-  pruefe('was auf dich wartet, steht getrennt', wartet === 2, `${wartet} Zeilen`);
-  await p.locator('#warList [data-act="back"]').first().click(); await p.waitForTimeout(500);
-  const zurueck = letzte('handover_zurueck');
-  pruefe('Übernehmen ruft handover_zurueck, eine Aktion für Zeile und Thema', !!zurueck && !!zurueck.nutzlast.id);
-  pruefe('die Zeile verschwindet aus „wartet auf dich“', await p.locator('#warList .rk-row').count() === 1);
-  pruefe('kein update mit Feldern, die das Backend gar nicht kennt', !letzte('update'));
+  pruefe('Begrüßung mit Namen und Zeitraum', (await p.locator('#kopf h2').innerText()).includes('Willkommen zurück, Alex') && /Abwesend vom/.test(await p.locator('#kopf').innerText()));
+  pruefe('drei Kacheln: entschieden, bewegt, wartet', await p.locator('#kpis .kk').count() === 3 && (await p.locator('#kpis .kk').last().innerText()).includes('warten auf dich'));
+  pruefe('Brief fehlt: Hinweis statt Leere, Bearbeiten möglich', /Noch kein Brief/.test(await p.locator('#rkBrief').innerText()) && !(await p.locator('#rkBriefEdit').isHidden()));
+  const ph = await p.evaluate(() => [...document.querySelectorAll('#phasen .rk2-phase h2 .en-phase')].map(x => x.textContent.trim()));
+  pruefe('Phasenblöcke in der Reihenfolge Launch, Formatpartner, Weiteres (Systembau leer, nicht gezeigt)', ph.join('|') === 'Launch|Formatpartner|Weiteres', ph.join('|'));
+  const launch = p.locator('#phasen .rk2-phase').first();
+  pruefe('Launch: Entschieden mit Ergebnis und Person, Bewegt mit Akte-Link und Verlauf, Wartet mit Knopf', /Gastro-Partner/.test(await launch.locator('.rk2-col').nth(0).innerText()) && /Alex/.test(await launch.locator('.rk2-col').nth(0).innerText()) && (await launch.locator('.rk2-col').nth(1).locator('a[href="vorhaben.html?v=xceed&tab=verlauf"]').count()) === 1 && (await launch.locator('.rk2-col').nth(1).locator('.rk-vl li').count()) >= 1);
+  pruefe('Nach Menschen: Lea zuerst (Punkt und abgegebene Entscheidung), dann Alex, dann die übrigen', (await p.locator('#menschen .rk2-mensch h3').allInnerTexts()).map(x => x.trim().split(/\s+\d/)[0]).slice(0, 3).join('|') === 'Lea|Alex|Niclaas' && (await p.locator('#menschen .rk2-mensch').first().locator('li').count()) === 2, (await p.locator('#menschen .rk2-mensch h3').allInnerTexts()).join('|'));
+  await p.locator('#rkBriefEdit').click(); await p.waitForTimeout(200);
+  await p.locator('#rkT').fill('Launch: Draußenbande ist gestartet, Xceed ist entschieden.'); await p.locator('#rkModal [type="submit"]').click(); await p.waitForTimeout(400);
+  const bf = letzte('rueckkehr_brief_set');
+  pruefe('Brief bearbeiten speichert über rueckkehr_brief_set und zeigt den Text', bf && bf.nutzlast.absence_id === 'abs-3' && /Xceed ist entschieden/.test(bf.nutzlast.text) && /Xceed ist entschieden/.test(await p.locator('#rkBrief').innerText()));
   await p.locator('#endBtn').click(); await p.waitForTimeout(500);
-  pruefe('Rückübergabe bestätigen beendet die Abwesenheit', !!letzte('absence_end'));
+  pruefe('„Willkommen zurück“ beendet die Abwesenheit (absence_end)', !!letzte('absence_end'));
   await p.close();
+  frisch(); SCHALTER.rueckkehrFehler = true; erwarteterFehler = true;
+  const r2 = await seite('/rueckkehr.html?id=abs-3'); erwarteterFehler = false; SCHALTER.rueckkehrFehler = false;
+  pruefe('Ladefehler des Lagebilds: sichtbar benannt, Beenden gesperrt', /nicht laden|Verbindung/.test(await r2.locator('#phasen').innerText()) && await r2.locator('#endBtn').isDisabled());
+  await r2.close();
 }
 
 console.log('\n== Asana ohne Token ==');
@@ -715,17 +719,9 @@ console.log('\n== Für dich, Übergabe, Rückkehr (V31d) ==');
 
   frisch();
   const r = await seite('/rueckkehr.html?id=abs-3');
-  pruefe('Rückkehr hat „Deine Vorhaben zurück“', await r.locator('#vhSec').isVisible() && (await r.locator('#vhList').innerText()).includes('Ball zurück bei Alex'));
-  pruefe('mit den Einträgen seit Beginn der Abwesenheit', (await r.locator('#vhList').innerText()).includes('Tranche bestätigt'));
-  pruefe('Rückübergabe ist bedienbar, sobald die Vorhaben geladen sind', !(await r.locator('#endBtn').isDisabled()));
+  pruefe('Rückkehr zeigt bewegte Vorhaben mit Verlauf seit Beginn der Abwesenheit (Stufe 2)', (await r.locator('#phasen').innerText()).includes('XCeed Ticketing-Vertrag') && (await r.locator('#phasen .rk-vl').first().innerText()).length > 10);
+  pruefe('Beenden ist bedienbar, sobald das Lagebild geladen ist', !(await r.locator('#endBtn').isDisabled()));
   await r.close();
-  SCHALTER.rueckkehrFehler = true; erwarteterFehler = true;
-  const r2 = await seite('/rueckkehr.html?id=abs-3');
-  pruefe('Ladefehler: Hinweis mit Neuladen, Rückübergabe gesperrt', (await r2.locator('#vhList').innerText()).includes('noch einmal laden') && await r2.locator('#endBtn').isDisabled());
-  SCHALTER.rueckkehrFehler = false;
-  await r2.locator('#vhNochmal').click(); await r2.waitForTimeout(400);
-  pruefe('nach erfolgreichem Neuladen wieder bedienbar', !(await r2.locator('#endBtn').isDisabled()));
-  erwarteterFehler = false; await r2.close();
 
   /* Übergabe-Dialog als Lea: Feierabend, dann Urlaub mit der laufenden Abwesenheit. */
   frisch();
@@ -966,12 +962,14 @@ console.log('\n== Stufe 1: Entscheidungsliste, Besprechung darauf, Korb, Spielsc
   pruefe('frischer Tagesschlüssel: Check-in ohne Spielschicht gesendet (ohne_spiel), Karte mit Gruß und Serie, ohne Taler', ci && ci.nutzlast.ohne_spiel === true && ci.nutzlast.who === 'Alex' && await p.locator('#gfCiKarte').count() === 1 && /Tag 3 in Folge/.test(await p.locator('#gfCiKarte').innerText()) && !/Taler/.test(await p.locator('#gfCiKarte').innerText()), JSON.stringify(ci && ci.nutzlast));
   await p.locator('#gfCiKarte [data-x]').click(); await p.waitForTimeout(100);
   pruefe('„Weiter“ schließt die Karte; der Tagesschlüssel ist gesetzt', await p.locator('#gfCiKarte').count() === 0 && await p.evaluate(() => { const d = new Date(); const t = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); return localStorage.getItem('gf_ci_Alex_'+t) === '1'; }));
-  pruefe('vier Kacheln: offen 9, diese Woche 4, mit Vorschlag 6, überfällig 2', await p.evaluate(() => [...document.querySelectorAll('#enKk .kk .ht-num')].map(x => x.textContent.trim()).join(',')) === '9,4,6,2');
+  pruefe('vier Kacheln: offen 9, diese Woche 4, im Fokus 3, überfällig 2', await p.evaluate(() => [...document.querySelectorAll('#enKk .kk .ht-num')].map(x => x.textContent.trim()).join(',')) === '9,4,3,2', await p.evaluate(() => [...document.querySelectorAll('#enKk .kk .ht-num')].map(x => x.textContent.trim()).join(',')));
   const abschn = await p.evaluate(() => [...document.querySelectorAll('#enListe .en-sec-h')].map(h => h.firstChild.textContent.trim()));
-  pruefe('Abschnitte nach Fristzustand in der Reihenfolge Überfällig, Diese Woche, Nächste zwei Wochen, Später, Ohne Frist', abschn.join('|') === 'Überfällig|Diese Woche|Nächste zwei Wochen|Später|Ohne Frist', abschn.join('|'));
+  pruefe('Abschnitte: Fokus zuerst (Stufe 2), dann Überfällig, Diese Woche, Nächste zwei Wochen', abschn.join('|') === 'Fokus|Überfällig|Diese Woche|Nächste zwei Wochen', abschn.join('|'));
+  pruefe('Fokus nach Phase: Launch (Xceed, Auszahlung) vor Formatpartner (Gehalt Helge)', await p.evaluate(() => [...document.querySelectorAll('.en-fokus .en-row')].map(r => r.dataset.id).join(',')) === 'en2,en7,en1', await p.evaluate(() => [...document.querySelectorAll('.en-fokus .en-row')].map(r => r.dataset.id).join(',')));
+  pruefe('Phasenmarke in der Herkunft', (await p.locator('.en-row[data-id="en2"] .en-her .en-phase').textContent()).trim() === 'Launch');
   pruefe('„Noch keine Frage“ eingeklappt mit Zähler 2', await p.locator('#enUnreif:not([open]) summary .fd-n').innerText() === '2');
-  const erste = p.locator('#enListe .en-row').first();
-  pruefe('erste Zeile: überfällige Frage mit Herkunft, Fristzustand und Vorschlag', /Bürgschaft/.test(await erste.locator('.en-q').innerText()) && /Thema/.test(await erste.locator('.en-her').innerText()) && /überfällig/.test(await erste.locator('.en-her').innerText()) && /Vorschlag:/.test(await erste.locator('.en-vs').innerText()));
+  const erste = p.locator('.en-row[data-id="en4"]');
+  pruefe('überfällige Zeile: Frage mit Herkunft, Fristzustand und Vorschlag', /Bürgschaft/.test(await erste.locator('.en-q').innerText()) && /Thema/.test(await erste.locator('.en-her').innerText()) && /überfällig/.test(await erste.locator('.en-her').innerText()) && /Vorschlag:/.test(await erste.locator('.en-vs').innerText()));
   pruefe('wieder fällige vertagte Entscheidung steht in der Liste mit Marke', /wieder fällig/.test(await p.locator('.en-row[data-id="en8"] .en-her').innerText()));
   pruefe('je Zeile drei Knöpfe: Entschieden, Vertagen, Abgeben', (await erste.locator('.en-btns .btn').allInnerTexts()).join('|') === 'Entschieden|Vertagen|Abgeben');
   await p.locator('.en-row[data-id="en1"] .en-q').click(); await p.waitForTimeout(100);
@@ -1063,28 +1061,31 @@ console.log('\n== Stufe 1: Entscheidungsliste, Besprechung darauf, Korb, Spielsc
   frisch();
   const b = await seite('/besprechung.html'); await b.waitForTimeout(400);
   pruefe('Besprechung: Kopfzeile „Heute: n Entscheidungen, k überfällig, m diese Woche“', /Heute: 9 Entscheidungen, 2 überfällig, 2 diese Woche/.test(await b.locator('#bsTop').innerText()), await b.locator('#bsTop').innerText());
-  pruefe('Agenda = Entscheidungsliste in deren Reihenfolge, überfällig zuerst', await b.locator('#bsAgL .bs-row').count() === 9 && /Bürgschaft/.test(await b.locator('#bsAgL .bs-row').first().locator('.bs-q').innerText()));
+  pruefe('Agenda = Entscheidungsliste, Fokus zuerst (Xceed), dann der Rest ab Überfällig', await b.locator('#bsAgL .bs-row').count() === 9 && /Xceed/.test(await b.locator('#bsAgL .bs-row').first().locator('.bs-q').innerText()) && /Bürgschaft/.test(await b.locator('#bsAgL .bs-row').nth(3).locator('.bs-q').innerText()));
   pruefe('alte Themen-Knöpfe gibt es in der Agenda nicht mehr', await b.locator('[data-o="in_klaerung"],[data-o="uebernommen"],[data-o="warten"]').count() === 0);
   await b.locator('#bsMat summary').click(); await b.waitForTimeout(150);   // zu: innerText der Klappe wäre leer
   pruefe('Material-Klappe leer, weil alle Einträge mit Ausgang GF (t1, n3) eine Entscheidungszeile haben', await b.locator('#bsMat summary').count() === 1 && await b.locator('#bsMatL .fd-row').count() === 0 && /Nichts ohne Entscheidung/.test(await b.locator('#bsMatL').innerText()), await b.locator('#bsMatL').innerText());
   await b.locator('#meetBtn').click(); await b.waitForTimeout(500);
-  pruefe('Besprechung starten: session_start, Timer, erster Punkt mit drei Knöpfen plus Überspringen', !!letzte('session_start') && await b.locator('#meetTimer').count() === 1 && (await b.locator('#meet .meet-btns .btn').allInnerTexts()).join('|') === 'Entschieden|Vertagen|Abgeben|Überspringen');
+  pruefe('Besprechung starten: session_start, Timer, erster Punkt mit Entschieden, Vertagen, Abgeben, Nicht jetzt, Überspringen', !!letzte('session_start') && await b.locator('#meetTimer').count() === 1 && (await b.locator('#meet .meet-btns .btn').allInnerTexts()).join('|') === 'Entschieden|Vertagen|Abgeben|Nicht jetzt|Überspringen', (await b.locator('#meet .meet-btns .btn').allInnerTexts()).join('|'));
   await b.locator('#meet [data-o="entschieden"]').click(); await b.waitForTimeout(100);
   pruefe('Entschieden ohne Ergebnis: Hinweis, nichts gesendet', /Ergebnis/.test(await b.locator('#mErr').innerText()) && !letzte('entscheidung_entscheiden'));
-  await b.locator('#mErg').fill('Bürgschaft nur mit Deckel.'); await b.locator('#meet [data-o="entschieden"]').click(); await b.waitForTimeout(400);
+  await b.locator('#mErg').fill('Wir schließen mit Xceed ab.'); await b.locator('#meet [data-o="entschieden"]').click(); await b.waitForTimeout(400);
   const e1 = letzte('entscheidung_entscheiden');
-  pruefe('Entschieden in der Besprechung schreibt über entscheidung_entscheiden mit session_id und geht weiter', e1 && e1.nutzlast.id === 'en4' && e1.nutzlast.ergebnis === 'Bürgschaft nur mit Deckel.' && e1.nutzlast.session_id === 's-neu' && await b.locator('#meet .meet-cur').getAttribute('data-key') === 'en:en8');
+  pruefe('Entschieden in der Besprechung schreibt über entscheidung_entscheiden mit session_id und geht weiter (Fokus zuerst: en2, dann en7)', e1 && e1.nutzlast.id === 'en2' && e1.nutzlast.ergebnis === 'Wir schließen mit Xceed ab.' && e1.nutzlast.session_id === 's-neu' && await b.locator('#meet .meet-cur').getAttribute('data-key') === 'en:en7');
   await b.locator('#meet [data-o="vertagt"]').click(); await b.waitForTimeout(400);
   const v1 = letzte('entscheidung_vertagen');
-  pruefe('Vertagen in der Besprechung mit Standard plus 7 Tage', v1 && v1.nutzlast.id === 'en8' && v1.nutzlast.bis === new Date(Date.now() + 7 * 86400000).toLocaleDateString('sv-SE'));
+  pruefe('Vertagen in der Besprechung mit Standard plus 7 Tage', v1 && v1.nutzlast.id === 'en7' && v1.nutzlast.bis === new Date(Date.now() + 7 * 86400000).toLocaleDateString('sv-SE'));
   await b.locator('#meet .chip[data-v="team"]').click(); await b.locator('#meet [data-o="abgegeben"]').click(); await b.waitForTimeout(400);
   const a1 = letzte('entscheidung_abgeben');
-  pruefe('Abgeben ins Team', a1 && a1.nutzlast.id === 'en11' && a1.nutzlast.an === 'team');
+  pruefe('Abgeben ins Team', a1 && a1.nutzlast.id === 'en1' && a1.nutzlast.an === 'team');
+  await b.locator('#meet [data-o="nicht_jetzt"]').click(); await b.waitForTimeout(400);
+  const nj = letzte('entscheidungen_sammelaktion');
+  pruefe('„Nicht jetzt“ vertagt über die Sammelaktion auf den Standardtermin (Stufe 2)', nj && nj.nutzlast.aktion === 'nicht_jetzt' && nj.nutzlast.items.length === 1 && nj.nutzlast.items[0].id === 'en4' && !nj.nutzlast.wert, JSON.stringify(nj && nj.nutzlast));
   await b.locator('#meet [data-o="skip"]').click(); await b.waitForTimeout(200);
-  pruefe('Überspringen geht ohne Speichern weiter', await b.locator('#meet .meet-cur').getAttribute('data-key') === 'en:en3' && (await b.locator('#bsAgL .bs-row.is-done').count()) === 4);
+  pruefe('Überspringen geht ohne Speichern weiter', await b.locator('#meet .meet-cur').getAttribute('data-key') === 'en:en11' && (await b.locator('#bsAgL .bs-row.is-done').count()) === 5);
   await b.locator('#meetEnd').click(); await b.waitForTimeout(500);
   const se = letzte('session_end');
-  pruefe('Beenden: Protokoll nennt Frage, Ergebnis, Vertagt bis, Abgegeben an, Übersprungen', se && /Entscheidungen\n1\. Bürgschaft[^\n]*: Bürgschaft nur mit Deckel\./.test(se.nutzlast.protocol) && /Vertagt\n- Saalmiete[^\n]* bis \d\d\.\d\d\.\d{4}/.test(se.nutzlast.protocol) && /Abgegeben\n- Shuttle[^\n]* an Team/.test(se.nutzlast.protocol) && /Übersprungen\n- Schließen wir mit Xceed/.test(se.nutzlast.protocol) && /Offen geblieben \(zu besprechen\): 6/.test(se.nutzlast.protocol), se && se.nutzlast.protocol.slice(0, 400));
+  pruefe('Beenden: Protokoll nennt Frage, Ergebnis, Vertagt bis (auch Nicht jetzt), Abgegeben an, Übersprungen', se && /Entscheidungen\n1\. Schließen wir mit Xceed[^\n]*: Wir schließen mit Xceed ab\./.test(se.nutzlast.protocol) && /Vertagt\n- Auszahlung ab Monat 1[^\n]* bis \d\d\.\d\d\.\d{4}\n- Bürgschaft[^\n]* bis \d\d\.\d\d\.\d{4}/.test(se.nutzlast.protocol) && /Abgegeben\n- Entscheidung zu Gehalt[^\n]* an Team/.test(se.nutzlast.protocol) && /Übersprungen\n- Saalmiete für das Winterfest/.test(se.nutzlast.protocol) && /Offen geblieben \(zu besprechen\): 5/.test(se.nutzlast.protocol), se && se.nutzlast.protocol.slice(0, 500));
   pruefe('Protokollfenster offen, Besprechung beendet', await b.locator('#gfModal.open').count() === 1 && await b.locator('#meet[hidden]').count() === 1);
   await b.close();
   /* Material: fehlt die Entscheidungszeile zu n3 (abgegeben zählt als erfasst, fehlend nicht), steht der Kandidat im Material. */
@@ -1103,7 +1104,7 @@ console.log('\n== Stufe 1: Entscheidungsliste, Besprechung darauf, Korb, Spielsc
   frisch();
   const p = await seite('/index.html'); await p.waitForTimeout(400);
   pruefe('Für dich: „Deine Entscheidung“ aus entscheidungen_list, höchstens fünf, „und 4 weitere“ auf die Liste', await p.locator('#fdEntL .fd-row').count() === 5 && /und 4 weitere/.test(await p.locator('#fdEntL .fd-more').innerText()) && (await p.locator('#fdEntL .fd-more').getAttribute('href')) === 'entscheidungen.html' && !(await p.locator('#fdMeet').isHidden()));
-  pruefe('Für dich: erste Zeile ist die überfällige Frage mit Herkunft', /Bürgschaft/.test(await p.locator('#fdEntL .fd-row').first().innerText()) && /Thema/.test(await p.locator('#fdEntL .fd-row').first().locator('.fd-who').innerText()));
+  pruefe('Für dich: erste Zeile ist aus dem Fokus (Launch, Xceed), die überfällige Bürgschaft folgt nach dem Fokus', /Xceed/.test(await p.locator('#fdEntL .fd-row').first().innerText()) && /Launch/.test(await p.locator('#fdEntL .fd-row').first().locator('.fd-who').innerText()) && /Bürgschaft/.test(await p.locator('#fdEntL .fd-row').nth(3).innerText()));
   await p.close();
 }
 {
@@ -1135,6 +1136,70 @@ console.log('\n== Stufe 1: Entscheidungsliste, Besprechung darauf, Korb, Spielsc
   await p2.locator('.en-korb-z[data-id="n-haerting"] [data-k="verwerfen"]').click(); await p2.waitForTimeout(400);
   pruefe('Kandidat verwerfen über den Korb', letzte('korb_set').nutzlast.aktion === 'verwerfen');
   await p2.close();
+}
+
+console.log('\n== Stufe 2: Vorschlagsfrist, Mehrfachauswahl, Akte-Chips, Übergabe, Lauf-Bilanz (25.10.2026) ==');
+{
+  frisch();
+  const p = await seite('/entscheidungen.html');
+  await p.locator('#enUnreif summary').click(); await p.waitForTimeout(150);
+  const fv = p.locator('.en-row[data-id="en5"] .en-fv');
+  pruefe('Datum aus der Quelle steht als „Vorschlag: bis … übernehmen“, nicht als Frist', await fv.count() === 1 && /Vorschlag: bis/.test(await fv.innerText()) && /ohne Frist/.test(await p.locator('.en-row[data-id="en5"] .en-her').innerText()));
+  await fv.click(); await p.waitForTimeout(500);
+  const fs = letzte('entscheidung_set');
+  pruefe('Übernehmen setzt die Frist von Hand mit gesehenem Stand', fs && fs.nutzlast.id === 'en5' && fs.nutzlast.frist === EN_ZEILEN.find(x => x.id === 'en5').frist && fs.nutzlast.frist_quelle === undefined && !!fs.nutzlast.expect_updated_at && /Nächste zwei Wochen/.test(await p.locator('#enListe').innerText()));
+  /* Mehrfachauswahl: Nicht jetzt für zwei, Rückgängig gesammelt */
+  await p.locator('#enWaehlen').click(); await p.waitForTimeout(150);
+  pruefe('Auswählen zeigt Kontrollkästchen mit Namen und die Auswahlleiste', await p.locator('.en-row.waehlbar .en-cb').count() >= 8 && /auswählen$/.test(await p.locator('.en-row[data-id="en4"] .en-cb').getAttribute('aria-label')) && await p.locator('#enSel.show').count() === 1 && await p.locator('#enSel [data-sel]').first().isDisabled());
+  await p.locator('.en-row[data-id="en4"] .en-cb').check(); await p.locator('.en-row[data-id="en11"] .en-cb').check(); await p.waitForTimeout(100);
+  pruefe('zwei ausgewählt, Knöpfe frei', /2 ausgewählt/.test(await p.locator('#enSelN').innerText()) && !(await p.locator('#enSel [data-sel="nicht_jetzt"]').isDisabled()));
+  await p.locator('#enSel [data-sel="nicht_jetzt"]').click(); await p.waitForTimeout(200);
+  const std = await p.locator('#enBis').inputValue();
+  pruefe('„Nicht jetzt“ öffnet ein Blatt mit Datum (Standard in vier Wochen)', std === new Date(Date.now() + 28 * 86400000).toLocaleDateString('sv-SE'), std);
+  await p.locator('#enModal [type="submit"]').click(); await p.waitForTimeout(500);
+  const sa = letzte('entscheidungen_sammelaktion');
+  pruefe('Sammelaktion sendet beide Kennungen mit gesehenem Stand, Zeilen verschwinden, Auswahl beendet', sa && sa.nutzlast.aktion === 'nicht_jetzt' && sa.nutzlast.items.length === 2 && sa.nutzlast.items.every(x => x.expect_updated_at) && await p.locator('.en-row[data-id="en4"]').count() === 0 && await p.locator('#enSel.show').count() === 0 && /2 Entscheidungen Nicht jetzt bis/.test(await p.locator('#enRueck').innerText()));
+  await p.locator('#enRueckK').click(); await p.waitForTimeout(700);
+  pruefe('Rückgängig nimmt beide zurück (zweimal entscheidung_zurueck), Zeilen wieder da', gesendet.filter(x => x.action === 'entscheidung_zurueck').length >= 2 && await p.locator('.en-row[data-id="en4"]').count() === 1 && await p.locator('.en-row[data-id="en11"]').count() === 1);
+  /* Abgeben mehrerer mit Konflikt in einer Zeile */
+  await p.locator('#enWaehlen').click(); await p.waitForTimeout(150);
+  await p.locator('.en-row[data-id="en3"] .en-cb').check(); await p.locator('.en-row[data-id="en11"] .en-cb').check();
+  EN_ZEILEN.find(x => x.id === 'en11').updated_at = new Date().toISOString();   // inzwischen geändert
+  await p.locator('#enSel [data-sel="abgeben"]').click(); await p.waitForTimeout(200);
+  await p.locator('#enModal .chip[data-v="lea"]').click(); await p.locator('#enModal [type="submit"]').click(); await p.waitForTimeout(500);
+  pruefe('Abgeben mehrerer: eine gespeichert, die geänderte als Konflikt genannt', /1 Entscheidung Abgegeben an Lea · 1 nicht gespeichert \(inzwischen geändert/.test(await p.locator('#enRueck').innerText()), await p.locator('#enRueck').innerText());
+  /* Hinfällig */
+  await p.waitForTimeout(200); await p.locator('#enWaehlen').click(); await p.waitForTimeout(150);
+  await p.locator('.en-row[data-id="en6"] .en-cb').check(); await p.locator('#enSel [data-sel="hinfaellig"]').click(); await p.waitForTimeout(200);
+  pruefe('Hinfällig fragt mit Folge nach', /Punkte werden erledigt, Themen archiviert/.test(await p.locator('#enModal').innerText()));
+  await p.locator('#enModal [type="submit"]').click(); await p.waitForTimeout(500);
+  pruefe('Hinfällig schließt die Zeile', letzte('entscheidungen_sammelaktion').nutzlast.aktion === 'hinfaellig' && await p.locator('.en-row[data-id="en6"]').count() === 0);
+  await p.close();
+}
+{
+  frisch();
+  const p = await seite('/vorhaben.html?view=board&v=xceed'); await p.waitForTimeout(500);
+  pruefe('Akte: Chips Phase (vier) und Fokus, Launch und Fokus gedrückt', await p.locator('#vhAkte [data-phase]').count() === 4 && (await p.locator('#vhAkte [data-phase="launch"]').getAttribute('aria-pressed')) === 'true' && (await p.locator('#vhAkte [data-fokus]').getAttribute('aria-pressed')) === 'true');
+  await p.locator('#vhAkte [data-phase="formatpartner"]').click(); await p.waitForTimeout(400);
+  const vp = letzte('vorhaben_phase');
+  pruefe('Phase wechseln sendet vorhaben_phase mit by, Chip springt um', vp && vp.nutzlast.id === 'vh-xceed' && vp.nutzlast.phase === 'formatpartner' && vp.nutzlast.by === 'Alex' && (await p.locator('#vhAkte [data-phase="formatpartner"]').getAttribute('aria-pressed')) === 'true');
+  await p.locator('#vhAkte [data-fokus]').click(); await p.waitForTimeout(400);
+  pruefe('Fokus abwählen sendet fokus:false', letzte('vorhaben_phase').nutzlast.fokus === false && (await p.locator('#vhAkte [data-fokus]').getAttribute('aria-pressed')) === 'false');
+  await p.close();
+  frisch();
+  const u = await seite('/uebergabe.html?id=abs-1');
+  const z = u.locator('.ub-row').first();
+  pruefe('Übergabe: Zeile hat „Erledigt“', await z.locator('[data-act="erledigt"]').count() === 1);
+  await z.locator('[data-act="erledigt"]').click(); await u.waitForTimeout(400);
+  const hs = letzte('handover_set');
+  pruefe('Erledigt setzt handover_set status erledigt', hs && hs.nutzlast.status === 'erledigt' && hs.nutzlast.by === 'Alex');
+  await u.close();
+  frisch();
+  const i = await seite('/index.html'); await i.waitForTimeout(300);
+  pruefe('Für dich: Klappe „Was der Lauf getan hat“ lädt erst beim Öffnen', await i.locator('#fdLauf:not([open])').count() === 1 && !letzte('lauf_bilanz'));
+  await i.locator('#fdLauf summary').click(); await i.waitForTimeout(400);
+  pruefe('Bilanz: Trefferquote und Tabelle je Woche', !!letzte('lauf_bilanz') && /Trefferquote 2 %/.test(await i.locator('#fdLaufN').innerText()) && await i.locator('#fdLaufL .fd-tab tbody tr').count() === 2 && /64 Kandidaten angelegt \(1 übernommen/.test(await i.locator('#fdLaufL').innerText()));
+  await i.close();
 }
 
 await browser.close();

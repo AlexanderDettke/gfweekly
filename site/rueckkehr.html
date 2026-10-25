@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Kompass · Rückkehr</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=41" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=41" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=41" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=41" />
-<link rel="stylesheet" href="/assets/styles.css?v=41" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=42" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=42" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=42" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=42" />
+<link rel="stylesheet" href="/assets/styles.css?v=42" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -31,149 +31,119 @@
   <header id="topbar"></header>
   <div id="hero"></div>
 
+  <!-- Stufe 2 (25.10.2026), Abschnitt 5 · Rückkehr: Lagebild über die Abwesenheit nach Phasen (Entschieden, Bewegt, Wartet auf dich)
+       und nach Menschen; oben der Brief, den der Lauf schreibt und Alex oder Lea ändern können. -->
   <div class="rk-kopf" id="kopf"></div>
   <div class="rk-hinweis">Der erste Vormittag gehört dir. Keine Termine, erst lesen, dann entscheiden.</div>
   <div class="kk-row" id="kpis"></div>
 
-  <section class="rk-sec" aria-label="In Vertretung entschieden">
-    <div class="sec-h"><h2>In Vertretung entschieden</h2><span class="fd-n" id="entN"></span></div>
-    <div class="rk-list" id="entList"></div>
+  <section class="rk-sec" aria-labelledby="rkBriefH">
+    <div class="sec-h"><h2 id="rkBriefH">In Kürze</h2><span class="hint" id="rkBriefHint"></span><span class="line"></span><button type="button" class="btn btn-sm btn-brand" id="rkBriefEdit" hidden>Bearbeiten</button></div>
+    <div class="rk2-brief" id="rkBrief"></div>
   </section>
 
-  <section class="rk-sec" aria-label="Für dich bereit">
-    <div class="sec-h"><h2>Für dich bereit</h2><span class="fd-n" id="warN"></span></div>
-    <div class="rk-list" id="warList"></div>
-  </section>
+  <div id="phasen"><div class="loading">lädt …</div></div>
 
-  <!-- V31d · Vorhaben, deren Ball wegen der Abwesenheit gewandert ist oder die geruht haben. -->
-  <section class="rk-sec" aria-label="Deine Vorhaben zurück" id="vhSec" hidden>
-    <div class="sec-h"><h2>Deine Vorhaben zurück</h2><span class="fd-n" id="vhN"></span></div>
-    <div class="rk-list" id="vhList"></div>
+  <section class="rk-sec" aria-labelledby="rkMenschH">
+    <div class="sec-h"><h2 id="rkMenschH">Nach Menschen</h2><span class="hint">offene Punkte und abgegebene Entscheidungen je Person</span><span class="line"></span></div>
+    <div id="menschen"></div>
   </section>
 
   <section class="rk-sec" aria-label="Abschluss">
-    <button class="btn btn-primary" id="endBtn">Rückübergabe bestätigen</button>
+    <button class="btn btn-primary" id="endBtn">Willkommen zurück: Abwesenheit beenden</button>
+    <p class="fd-note">Beendet die Abwesenheit, gibt übergebene Bälle zurück, schreibt liegen gebliebene Korbzeilen in den Verlauf der Vorhaben und nimmt die Marke „Vertretung“ von Für dich und Besprechung.</p>
   </section>
 </div>
 
-<div class="modal-back" id="modal"></div>
+<div class="modal-back" id="rkModal"></div>
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=41"></script>
+<script src="/assets/core.js?v=42"></script>
 <script>
-/* V24b · Rückkehr: was in deiner Abwesenheit entschieden wurde (nur ansehen, nichts davon wird rückgängig
-   gemacht), was weitergegeben wurde und was auf dich wartet. „Übernehmen“ holt ein Thema zurück:
-   der Ausgang geht wieder an dich, die Vertretung wird gelöscht. Am Ende die Rückübergabe. */
-const $=s=>document.querySelector(s);
-let ABSENCE=null, ITEMS=[], LOG=[];
+const $=(s,r=document)=>r.querySelector(s);
+let ABSENCE=null, LAGE=null;
+const EN_ART={ punkt:"Punkt", entscheidung:"Entscheidung", beschluss:"Beschluss", korb:"Korb" };
+function whoGleich(p){ return (p||"").toLowerCase()===gfWho().toLowerCase(); }
+function akte(slug, tab){ return slug?`vorhaben.html?v=${encodeURIComponent(slug)}${tab?"&tab="+tab:""}`:"vorhaben.html"; }
 
-/* „Gesehen" ist eine Lesebestätigung für dich selbst, kein Eingriff: sie steht im Browser, nicht in den Daten. */
-function gesehen(id){ try{ return localStorage.getItem("gf_rk_gesehen_"+id)==="1"; }catch(e){ return false; } }
-$("#entList")?.addEventListener("click",e=>{
-  const b=e.target.closest('[data-act="gesehen"]'); if(!b) return;
-  const row=b.closest(".rk-row"); try{ localStorage.setItem("gf_rk_gesehen_"+row.dataset.log,"1"); }catch(err){}
-  row.classList.add("is-gesehen"); b.textContent="gesehen";
-});
-function fmtT(at){ return new Date(at).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}); }
 function renderKopf(){
-  const a=ABSENCE;
-  $("#kopf").innerHTML=`<h2>Willkommen zurück, ${gfEsc(a.person)}</h2>
-    <div class="fd-muted">${gfEsc(a.bis?`Weg vom ${new Date(a.von+"T00:00:00").toLocaleDateString("de-DE")} bis ${new Date(a.bis+"T00:00:00").toLocaleDateString("de-DE")}`:`Weg seit ${new Date(a.von+"T00:00:00").toLocaleDateString("de-DE")}`)}</div>
-    ${a.note_rueckkehr?`<div class="ub-doss" style="margin-top:10px"><b>Briefing</b><div style="white-space:pre-wrap">${gfEsc(a.note_rueckkehr)}</div></div>`:""}`;
-}
-function renderKpis(){
-  const ent=LOG.filter(l=>l.art==="entscheidung").length;
-  const weiter=LOG.filter(l=>l.art==="weitergabe").length;
-  const wartet=ITEMS.filter(x=>(x.ampel==="ruht"||x.ampel==="rot") && x.status!=="erledigt" && x.status!=="entfallen").length;
-  const mitAsana=ITEMS.filter(x=>x.asana_gid);
-  const asanaOffen=mitAsana.filter(x=>x.status!=="erledigt").length, asanaFertig=mitAsana.filter(x=>x.status==="erledigt").length;
+  const a=ABSENCE, z=LAGE.zaehler;
+  $("#kopf").innerHTML=`<h2>Willkommen zurück, ${gfEsc(LAGE.person)}.</h2><div class="fd-muted">Abwesend vom ${gfEsc(gfFmtShort(LAGE.von))} bis ${gfEsc(gfFmtShort(LAGE.bis))} (${z.tage} Tage)${a.status==="beendet"?" · Abwesenheit ist beendet":""}</div>`;
   $("#kpis").innerHTML=[
-    gfKachel({icon:"entscheidung",value:ent,label:"in Vertretung entschieden"}),
-    gfKachel({icon:"partner",value:weiter,label:"weitergegeben"}),
-    gfKachel({icon:"frist",value:wartet,label:"für dich bereit",tone:wartet?"":"pos"}),
-    mitAsana.length?gfKachel({icon:"release",value:asanaOffen,unit:`${asanaFertig} erledigt`,label:"Asana offen",
-      title:"Aufgaben, die in Asana aus dieser Vertretung entstanden sind"}):"",
+    gfKachel({icon:"zahl", value:z.entschieden, label:"entschieden oder erledigt"}),
+    gfKachel({icon:"zahl", value:z.bewegt, label:"Vorhaben bewegt"}),
+    gfKachel({icon:"zahl", value:z.wartet, label:"warten auf dich", tone:z.wartet?"warn":""}),
   ].join("");
+  $("#endBtn").hidden = a.status==="beendet";
 }
-function renderEnt(){
-  const list=LOG.filter(l=>l.art==="entscheidung"||l.art==="weitergabe"||l.art==="erledigt");
-  $("#entN").textContent=list.length?list.length:"";
-  $("#entList").innerHTML=list.length?list.map(l=>`<article class="rk-row${gesehen(l.id)?" is-gesehen":""}" data-log="${l.id}">
-      <span class="t">${gfEsc(l.text||"")}</span>
-      ${gfZustand(l.art==="erledigt"?"ok":l.art==="weitergabe"?"info":"action", l.art==="erledigt"?"erledigt":l.art==="weitergabe"?"weitergegeben":"entschieden")}
-      <button class="btn btn-sm btn-brand" data-act="gesehen">${gesehen(l.id)?"gesehen":"Gesehen"}</button>
-      <span class="m">in Vertretung für dich, ${gfEsc(l.who||"unbekannt")}, ${gfEsc(fmtT(l.at))}</span>
-    </article>`).join("")
-    : `<div class="empty soft">In deiner Abwesenheit wurde nichts entschieden.</div>`;
+function renderBrief(){
+  const b=$("#rkBrief");
+  if(LAGE.brief){ b.textContent=LAGE.brief; $("#rkBriefHint").textContent="vom Lauf geschrieben, von Alex oder Lea änderbar"; }
+  else { b.innerHTML=`<span class="fd-muted">Noch kein Brief. Der Lauf schreibt ihn am Morgen der Rückkehr; bis dahin tragen die Blöcke darunter. Du kannst ihn auch selbst schreiben.</span>`; $("#rkBriefHint").textContent=""; }
+  $("#rkBriefEdit").hidden=false;
 }
-function renderWartet(){
-  const list=ITEMS.filter(x=>(x.ampel==="ruht"||x.ampel==="rot") && x.status!=="erledigt" && x.status!=="entfallen");
-  $("#warN").textContent=list.length?list.length:"";
-  $("#warList").innerHTML=list.length?list.map(x=>`<article class="rk-row" data-id="${x.id}">
-      <span class="t">${gfEsc(x.title||"")}</span>
-      ${gfAmpel(x.ampel)} ${gfFrist(x.frist)}
-      <button class="btn btn-sm btn-brand" data-act="back">Übernehmen</button>
-      <span class="m">${gfEsc(x.begruendung||"")}</span>
-    </article>`).join("")
-    : `<div class="empty soft">Für dich ist hier nichts mehr offen. ✓</div>`;
+function zeileEnt(x){
+  return `<li><b>${gfEsc(x.text)}</b>${x.ergebnis?`<span>${gfEsc(x.ergebnis)}</span>`:""}<small>${gfEsc(EN_ART[x.art]||x.art)}${x.vorhaben?` · <a href="${akte(x.slug)}">${gfEsc(x.vorhaben)}</a>`:""} · ${gfEsc(x.wer||"")} · ${gfEsc(gfFmtShort(x.am))}</small></li>`;
 }
-$("#warList").addEventListener("click",async e=>{
-  const b=e.target.closest('[data-act="back"]'); if(!b) return;
-  const row=b.closest(".rk-row"), id=row.dataset.id, x=ITEMS.find(i=>i.id===id); if(!x) return;
-  try{
-    const d=await gfApi("handover_zurueck",{ id, by:gfWho() });
-    Object.assign(x, d.item||{}); x.status="erledigt";
-    renderWartet(); renderKpis(); gfToast(d.thema?"Wieder bei dir":"Zurückgenommen");
-  }catch(err){ gfToast("Fehler: "+(err.message||"speichern")); }
-});
+function zeileBewegt(v){
+  return `<li><b><a href="${akte(v.slug,"verlauf")}">${gfEsc(v.title)}</a>${v.fokus?` <span class="en-phase">Fokus</span>`:""}</b><small>${v.anzahl} ${v.anzahl===1?"Eintrag":"Einträge"} · Ball ${gfEsc(gfVhBallWort(v.ball,v.ball_name))}</small>
+    <ul class="rk-vl">${(v.verlauf||[]).map(e=>`<li>${gfEsc(gfNewsWhen(e.happened_at))} · ${gfEsc(GF_VH_ART[e.art]||e.art)}${e.wer?" · "+gfEsc(e.wer):""}: ${gfEsc(gfFirstSentence(e.text,160))}</li>`).join("")}</ul></li>`;
+}
+function zeileWartet(x){
+  const f=x.frist?gfFrist(x.frist):"";
+  const akt=x.art==="entscheidung"?`<a class="btn btn-sm btn-primary" href="entscheidungen.html">Entscheiden</a>`:x.art==="punkt"?`<a class="btn btn-sm btn-brand" href="${akte(x.slug)}">Zum Punkt</a>`:`<a class="btn btn-sm btn-brand" href="${akte(x.slug)}">Zur Akte</a>`;
+  return `<li><b>${gfEsc(x.text)}</b><small>${gfEsc(EN_ART[x.art]||x.art)}${x.status&&x.status!=="offen"?` · ${gfEsc(x.status)}`:""}${x.vorhaben?` · ${gfEsc(x.vorhaben)}`:""} · ${gfEsc(x.wer||"")} ${f}</small>${akt}</li>`;
+}
+function renderPhasen(){
+  const bl=(LAGE.phasen||[]).filter(p=>p.entschieden.length||p.bewegt.length||p.wartet.length);
+  if(!bl.length){ $("#phasen").innerHTML=`<p class="fd-empty">In der Abwesenheit hat sich in den Vorhaben nichts bewegt, nichts wurde entschieden, nichts wartet.</p>`; return; }
+  $("#phasen").innerHTML=bl.map(p=>`<section class="rk2-phase" aria-labelledby="rkP-${p.phase}">
+      <h2 id="rkP-${p.phase}"><span class="en-phase">${gfEsc(GF_PHASE[p.phase]||p.phase)}</span><span class="fd-n">${p.entschieden.length+p.bewegt.length+p.wartet.length}</span></h2>
+      <div class="rk2-cols">
+        <div class="rk2-col"><h3>Entschieden</h3>${p.entschieden.length?`<ul>${p.entschieden.map(zeileEnt).join("")}</ul>`:`<p class="fd-empty">nichts</p>`}</div>
+        <div class="rk2-col"><h3>Bewegt</h3>${p.bewegt.length?`<ul>${p.bewegt.map(zeileBewegt).join("")}</ul>`:`<p class="fd-empty">nichts</p>`}</div>
+        <div class="rk2-col"><h3>Wartet auf dich</h3>${p.wartet.length?`<ul>${p.wartet.map(zeileWartet).join("")}</ul>`:`<p class="fd-empty">nichts</p>`}</div>
+      </div></section>`).join("");
+}
+function renderMenschen(){
+  const M=LAGE.nach_menschen||[];
+  $("#menschen").innerHTML=M.length?M.map(m=>`<div class="rk2-mensch"><h3>${gfEsc(m.name)} <span class="fd-n">${m.eintraege.length}</span></h3><div class="rk2-cols"><div class="rk2-col" style="grid-column:1/-1"><ul>${m.eintraege.slice(0,12).map(x=>`<li><b>${gfEsc(x.text)}</b><small>${gfEsc(EN_ART[x.art]||x.art)}${x.vorhaben?` · <a href="${akte(x.slug)}">${gfEsc(x.vorhaben)}</a>`:""} · ${gfEsc(GF_PHASE[x.phase]||"")} ${x.frist?gfFrist(x.frist):""}</small></li>`).join("")}${m.eintraege.length>12?`<li><small>und ${m.eintraege.length-12} weitere in den Akten</small></li>`:""}</ul></div></div></div>`).join("")
+    : `<p class="fd-empty">Keine offenen Punkte.</p>`;
+}
+function renderAll(){ renderKopf(); renderBrief(); renderPhasen(); renderMenschen(); }
+
+$("#rkBriefEdit").onclick=()=>{
+  const m=$("#rkModal");
+  m.innerHTML=`<div class="modal en-modal" role="dialog" aria-modal="true" aria-labelledby="rkMT"><div class="modal-h"><h3 id="rkMT">Brief zur Rückkehr</h3><button type="button" class="icon-btn" data-x aria-label="Schließen">✕</button></div>
+    <form class="en-form" id="rkF" novalidate><div class="fld ffull"><label for="rkT">Fünf bis acht Sätze: je Phase, was geschah und was offen ist</label><textarea id="rkT" rows="10">${gfEsc(LAGE.brief||"")}</textarea></div><p class="en-err" id="rkErr" role="alert"></p><div class="modal-f"><button type="submit" class="btn btn-primary">Speichern</button><button type="button" class="btn btn-brand" data-x>Abbrechen</button></div></form></div>`;
+  gfDialogAuf(m,"#rkT"); m.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>m.classList.remove("open")); m.onclick=e=>{ if(e.target===m) m.classList.remove("open"); };
+  m.querySelector("#rkF").onsubmit=async ev=>{ ev.preventDefault(); const btn=m.querySelector('[type="submit"]'); btn.disabled=true;
+    try{ const d=await gfApi("rueckkehr_brief_set",{ absence_id:ABSENCE.id, text:m.querySelector("#rkT").value, by:gfWho() }); LAGE.brief=d.brief; m.classList.remove("open"); renderBrief(); gfToast("Gespeichert"); }
+    catch(x){ btn.disabled=false; m.querySelector("#rkErr").textContent="Nicht gespeichert: "+(x.message||"Verbindung"); } };
+};
 $("#endBtn").onclick=async()=>{
-  if(!confirm("Rückübergabe bestätigen? Die Abwesenheit wird beendet und die Vertretungen werden gelöscht.")) return;
-  try{ await gfApi("absence_end",{ id:ABSENCE.id, by:gfWho() }); gfToast("Willkommen zurück"); location.href="index.html"; }
-  catch(e){ gfToast("Fehler: "+e.message); }
+  if(!confirm("Abwesenheit beenden? Bälle gehen zurück, liegen gebliebene Korbzeilen wandern in den Verlauf, die Marke „Vertretung“ verschwindet.")) return;
+  $("#endBtn").disabled=true;
+  try{ const d=await gfApi("absence_end",{ id:ABSENCE.id, by:gfWho() }); gfToast(`Willkommen zurück${d.liegen_geblieben?` · ${d.liegen_geblieben} Korbzeilen im Verlauf`:""}`); setTimeout(()=>{ location.href="index.html"; },900); }
+  catch(e){ $("#endBtn").disabled=false; gfToast("Nicht beendet: "+(e.message||"Verbindung"),{fehler:true}); }
 };
 
 async function load(){
   const id=new URLSearchParams(location.search).get("id");
   const a=await gfApi("absence_list",{ include_test:true });
   const alle=a.absences||[];
-  ABSENCE = id ? alle.find(x=>x.id===id) : (alle.find(x=>x.status==="rueckkehr" && whoGleich(x.person)) || alle.find(x=>x.status==="rueckkehr") || alle.find(x=>whoGleich(x.person)) || alle[0]);
+  ABSENCE = id ? alle.find(x=>x.id===id) : (alle.find(x=>x.status==="rueckkehr" && whoGleich(x.person)) || alle.find(x=>x.status==="rueckkehr") || alle.find(x=>x.status==="aktiv" && whoGleich(x.person)) || alle.find(x=>x.status==="aktiv") || alle.find(x=>whoGleich(x.person)) || alle[0]);
   if(!ABSENCE){
     $("#kopf").innerHTML=`<h2>Keine Rückkehr offen</h2><div class="fd-muted">Es ist keine Abwesenheit hinterlegt, aus der jemand zurückkommt.</div>`;
-    $("#kpis").innerHTML=""; $("#endBtn").hidden=true; return;
+    $("#kpis").innerHTML=""; $("#phasen").innerHTML=""; $("#endBtn").hidden=true; return;
   }
-  const [l, p]=await Promise.all([ gfApi("handover_list",{ absence_id:ABSENCE.id }), gfApi("handover_log",{ absence_id:ABSENCE.id }).catch(()=>({log:[]})) ]);
-  ITEMS=l.items||[]; LOG=p.log||[];
-  renderKopf(); renderKpis(); renderEnt(); renderWartet();
-  await ladeVorhaben();
+  try{ LAGE=await gfApi("rueckkehr_lage",{ absence_id:ABSENCE.id }); }
+  catch(e){ if(e.auth) throw e; gfLadefehler($("#phasen"), e, {titel:"Das Lagebild ließ sich nicht laden."}); $("#endBtn").disabled=true; $("#endBtn").title="Erst das Lagebild laden"; return; }
+  renderAll();
 }
-/* V31d · „Deine Vorhaben zurück“: je Vorhaben, ob der Ball zurück ist oder noch bei der Vertretung liegt (Rückgabe mit
-   der Rückübergabe), und was seit Beginn der Abwesenheit im Verlauf steht, höchstens fünf Einträge, der Rest in der Akte. */
-const zeileVl=x=>`<li>${gfEsc(gfNewsWhen(x.happened_at))} · ${gfEsc(GF_VH_ART[x.art]||x.art)}${x.wer?" · "+gfEsc(x.wer):""}: ${gfEsc(x.text)}</li>`;
-async function ladeVorhaben(){
-  $("#vhSec").hidden=false; $("#vhList").innerHTML=`<div class="loading" role="status">lädt …</div>`;
-  /* Bestätigen erst, wenn „Deine Vorhaben zurück“ zu sehen ist. */
-  const end=$("#endBtn"); end.disabled=true; end.title="Erst laden die Vorhaben";
-  let d; try{ d=await gfApi("vorhaben_rueckkehr",{ absence_id:ABSENCE.id }); }
-  catch(e){ $("#vhList").innerHTML=`<div class="empty soft" role="alert">Die Vorhaben ließen sich nicht laden: ${gfEsc(e.message||"Verbindung")}. Vor der Rückübergabe bitte <button type="button" class="btn btn-sm btn-ghost" id="vhNochmal">noch einmal laden</button></div>`;
-    $("#vhNochmal").onclick=ladeVorhaben; end.title="Die Vorhaben ließen sich nicht laden, bitte erst neu laden"; return; }
-  end.disabled=false; end.title="";
-  const l=d.vorhaben||[]; $("#vhN").textContent=l.length||"";
-  if(!l.length){ $("#vhList").innerHTML=`<div class="empty soft">Kein Vorhaben ist wegen dieser Abwesenheit gewandert oder hat geruht.</div>`; return; }
-  const z=k=>l.filter(k).length;
-  const kurz=`<p class="fd-muted">${d.gekuerzt?"Nicht alle Einträge geladen. ":""}${z(v=>v.zurueck)} zurückgegeben · ${z(v=>!v.zurueck&&v.absence_id)} noch in Vertretung · ${z(v=>v.korb&&v.korb.ampel==="ruht")} haben geruht</p>`;
-  $("#vhList").innerHTML=kurz+l.map(v=>{
-    const zurueck=v.zurueck?gfZustand("ok","Ball zurück bei "+gfVhBallWort(v.ball,v.ball_name)):v.absence_id?gfZustand("warn","noch bei "+gfVhBallWort(v.ball,v.ball_name)+", zurück mit der Rückübergabe"):gfZustand("info","Ball bei "+gfVhBallWort(v.ball,v.ball_name));
-    const ruhte=v.korb&&v.korb.ampel==="ruht"?gfZustand("offen","hat geruht"):"";
-    const e=(v.verlauf||[]);
-    return `<article class="rk-row">
-      <span class="t"><a href="vorhaben.html?v=${encodeURIComponent(v.slug)}&tab=verlauf">${gfEsc(v.title)}</a></span>${zurueck} ${ruhte}
-      <span class="m">${e.length?`${e.length} ${e.length===1?"Eintrag":"Einträge"} seit ${gfEsc(gfFmtShort(ABSENCE.von))}:`:"Seitdem nichts im Verlauf."}</span>
-      ${e.length?`<ul class="rk-vl">${e.slice(0,5).map(zeileVl).join("")}</ul>${e.length>5?`<details class="rk-mehr"><summary>${e.length-5} weitere Einträge seit Beginn der Abwesenheit</summary><ul class="rk-vl">${e.slice(5).map(zeileVl).join("")}</ul></details>`:""}`:""}
-    </article>`; }).join("");
-}
-function whoGleich(p){ return (p||"").toLowerCase()===gfWho().toLowerCase(); }
 gfGate(async()=>{
   $("#app").style.display="block"; gfMountTopbar("rueckkehr");
-  gfMountHero("ankunft","Rückkehr","Was in deiner Abwesenheit entschieden wurde, was weitergegeben wurde und was für dich bereitliegt.",{compact:true});
+  gfMountHero("ankunft","Rückkehr","Was in deiner Abwesenheit entschieden wurde, was sich bewegt hat und was auf dich wartet: nach Launch, Formatpartner und Systembau, und nach Menschen.",{compact:true});
+  document.addEventListener("gf-who",()=>load());
   await load();
 });
 </script>

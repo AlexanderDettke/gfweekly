@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Kompass · Besprechung</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=41" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=41" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=41" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=41" />
-<link rel="stylesheet" href="/assets/styles.css?v=41" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=42" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=42" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=42" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=42" />
+<link rel="stylesheet" href="/assets/styles.css?v=42" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -54,7 +54,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=41"></script>
+<script src="/assets/core.js?v=42"></script>
 <script>
 const $=s=>document.querySelector(s);
 const NOW=new Date(); const TODAY=NOW.toLocaleDateString("sv-SE");
@@ -74,7 +74,8 @@ function fristWort(e){
   if(e.zustand==="woche") return {t:`${s} · diese Woche`,tone:"warn"}; if(e.zustand==="zwei_wochen") return {t:`${s} · in ${e.tage} Tagen`,tone:"info"}; return {t:s,tone:""};
 }
 function herkunft(e){ const h=e.herkunft||{}; const t=[EN_ART[e.quelle_art]||e.quelle_art]; if(e.vorhaben) t.push(e.vorhaben.title); else if(e.quelle_art==="thema"&&h.titel&&h.titel!==e.frage) t.push(h.titel); if(h.quelle) t.push(h.quelle); return t.map(gfEsc).join(" · "); }
-function agenda(){ return ITEMS; }
+/* Stufe 2: Fokus zuerst (Phasenreihenfolge), dann der Rest in der Reihenfolge der Liste. */
+function agenda(){ const f=ITEMS.filter(x=>x.vorhaben&&x.vorhaben.fokus).sort((a,b)=>GF_PHASE_REIHE.indexOf(a.vorhaben.phase)-GF_PHASE_REIHE.indexOf(b.vorhaben.phase)); return f.concat(ITEMS.filter(x=>!f.includes(x))); }
 function fmtDur(ms){ const s=Math.floor(ms/1000); const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), x=s%60; return (h?h+":":"")+String(m).padStart(2,"0")+":"+String(x).padStart(2,"0"); }
 const FEHLT=`<span class="bs-fehlt">fehlt</span>`;
 const WORT={ entschieden:"entschieden", vertagt:"vertagt", abgegeben:"abgegeben", uebersprungen:"übersprungen" };
@@ -156,7 +157,7 @@ function renderMeet(){
   } else {
     const pos=pend.indexOf(MEET.cur); const f=fristWort(cur); const h=cur.herkunft||{};
     body=`<div class="meet-cur" data-key="${gfEsc(MEET.cur)}">
-      <div class="meet-cur-h"><span class="pill">${EN_ART[cur.quelle_art]||cur.quelle_art}</span><span class="meet-pos">Punkt ${pos+1} von ${pend.length} offen${f?` · Frist ${f.t}`:" · ohne Frist"}</span>${h.url?`<a class="btn btn-sm btn-ghost" style="margin-left:auto" href="${gfEsc(h.url)}"${/^https?:/.test(h.url)?' target="_blank" rel="noopener"':""}>${cur.quelle_art==="punkt"?"Akte":cur.quelle_art==="thema"?"Thema":"Mail"}</a>`:""}</div>
+      <div class="meet-cur-h"><span class="pill">${EN_ART[cur.quelle_art]||cur.quelle_art}</span>${cur.vorhaben&&cur.vorhaben.id?`<span class="en-phase">${gfEsc(GF_PHASE[cur.vorhaben.phase]||GF_PHASE.sonstiges)}${cur.vorhaben.fokus?" · Fokus":""}</span>`:""}<span class="meet-pos">Punkt ${pos+1} von ${pend.length} offen${f?` · Frist ${f.t}`:" · ohne Frist"}</span>${h.url?`<a class="btn btn-sm btn-ghost" style="margin-left:auto" href="${gfEsc(h.url)}"${/^https?:/.test(h.url)?' target="_blank" rel="noopener"':""}>${cur.quelle_art==="punkt"?"Akte":cur.quelle_art==="thema"?"Thema":"Mail"}</a>`:""}</div>
       <h3 class="meet-title">${gfEsc(cur.frage)}</h3>
       <p class="meet-desc">${herkunft(cur)}</p>
       ${cur.vorschlag?`<div class="meet-ctx"><b>Vorschlag:</b> ${gfEsc(cur.vorschlag)}</div>`:""}
@@ -171,6 +172,7 @@ function renderMeet(){
         <button class="btn btn-primary" data-o="entschieden">Entschieden</button>
         <button class="btn" data-o="vertagt">Vertagen</button>
         <button class="btn" data-o="abgegeben">Abgeben</button>
+        <button class="btn" data-o="nicht_jetzt" title="Vertagen auf den ersten Montag in vier Wochen">Nicht jetzt</button>
         <button class="btn btn-ghost" data-o="skip">Überspringen</button>
       </div>
     </div>`;
@@ -190,6 +192,14 @@ async function outcome(x, o){
   if(o==="entschieden"){ const erg=$("#mErg").value.trim(); if(erg.length<5){ err.textContent="Bitte das Ergebnis in einem Satz festhalten."; $("#mErg").focus(); return; } p=["entscheidung_entscheiden",{ ergebnis:erg }]; entry.decision=erg; }
   if(o==="vertagt"){ const bis=$("#mBis").value; if(!bis||bis<TODAY){ err.textContent="Bitte ein Datum ab heute wählen."; $("#mBis").focus(); return; } p=["entscheidung_vertagen",{ bis }]; entry.until=bis; }
   if(o==="abgegeben"){ const an=$("#meet input[name='an']").value; if(!an){ err.textContent="Bitte wählen: Alex, Lea oder Team."; return; } p=["entscheidung_abgeben",{ an }]; entry.an=EN_AN[an]; }
+  if(o==="nicht_jetzt"){
+    BS_LAEUFT=true; $("#meet").querySelectorAll("[data-o]").forEach(b=>b.disabled=true);
+    try{ const d=await gfApi("entscheidungen_sammelaktion",{ items:[{ id:x.id, expect_updated_at:x.updated_at }], aktion:"nicht_jetzt", by:who }); const r=(d.ergebnis||[])[0];
+      if(!r||!r.ok) throw Object.assign(new Error(r?r.grund:"unbekannt"),{ konflikt:!!(r&&r.konflikt) });
+      entry.outcome="vertagt"; entry.until=d.wert; MEET.log=MEET.log.filter(l=>l.key!==entry.key); MEET.log.push(entry); gfToast("Nicht jetzt, bis "+gfFmtShort(d.wert)); BS_LAEUFT=false; advance(); }
+    catch(e){ BS_LAEUFT=false; $("#meet").querySelectorAll("[data-o]").forEach(b=>b.disabled=false); err.textContent=(e.konflikt?"":"Nicht gespeichert: ")+(e.message||"Verbindung"); if(e.konflikt) ladeAgenda().then(renderAll); }
+    return;
+  }
   if(!p) return;
   BS_LAEUFT=true; $("#meet").querySelectorAll("[data-o]").forEach(b=>b.disabled=true);
   try{

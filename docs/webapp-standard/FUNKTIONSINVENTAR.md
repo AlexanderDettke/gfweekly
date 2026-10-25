@@ -27,6 +27,7 @@ Abschnitt 0 nennt jede Fähigkeit, die der Pilot verändert hat, mit neuer Umset
 | W-17 | Asana senden (Launch) | Rückfrage ohne Anzahl | Rückfrage nennt Festival und Anzahl aus dem Knopf | B-06 | Codeprüfung |
 | W-18 | Skript-Scrollen (Organisation, Besprechung, Neuigkeiten, Liste) | Weich trotz „Bewegung reduzieren“ | Springt sofort, wenn reduzierte Bewegung gewünscht ist | G-06 | Messung |
 | W-19 | Darstellung aller Seiten | Schrift unter 12 px, Ziele unter 44 px, Überlauf bei 320 px und 200 %, gedämpfte erledigte Karten und Abzeichen | Rollen 12/14 px, 44-px-Ziele, Umbruch, Kontrast ohne Deckkraft | G-01 bis G-05 | Messung, Schirme |
+| S2-01 | Stufe 2 (25.10.2026): Themen (Board, Kacheln, Liste), Eingabe (`capture.html`) und Aufräumen in der Navigation; Themen-Zähler; Kandidaten-Zähler | Themen und Kandidaten liefen als zweiter Behälter neben den Vorhaben; 375 Kandidaten brachten 18 Übernahmen | Einträge aus `GF_NAV` entfernt (Dateien bleiben, `board.html?topic=` als Archivansicht erreichbar); Neuigkeiten-Zähler zeigt den Korb (`korb_list`); offene Themen und Kandidaten in Punkte und Verlauf aufgelöst | – | `stufe2-probe.mjs`, Schirme (18 Haupteinträge) |
 | W-21 | Besprechung beenden (Besprechung, Board) | Bei Speicherfehler trotzdem beendet und „Gespeichert unter …“ angezeigt | Besprechung bleibt offen, Text zur Sicherung im Dialog, erneutes Beenden möglich (Server aktualisiert dieselbe Sitzung) | B-04, B-07 | Codeprüfung |
 | W-22 | Saison-Rad: Bereich schließen mit ungespeicherten Änderungen | Schloss sofort, Fehler im geschlossenen Bereich, Eingaben weg | Erst speichern, bei Fehler bleibt der Bereich mit Eingaben offen | B-04 | Codeprüfung |
 | W-23 | Liste: „heute besprochen“, Status, Priorität, Delegation | Erfolgsmeldung vor der Antwort; Fehler ohne Ursache | Erfolg erst nach Antwort, Fehler mit Ursache, Ansicht zeigt wieder den gespeicherten Stand | B-04 | Probe 11 |
@@ -102,12 +103,12 @@ Gebaut von `gfMountTopbar(active)` in jede Seite. Einträge mit Symbol, Beschrif
 
 | Gruppe | Eintrag (Schlüssel → Datei) | Zähler |
 |---|---|---|
-| Heute | Für dich (`start` → index.html) · Vorhaben (`vorhaben` → vorhaben.html) · Neuigkeiten (`neuigkeiten` → neuigkeiten.html) · Besprechung (`besprechung` → besprechung.html) | Vorhaben: `vorhaben_badge` (offene Einwürfe plus überfällige Vorhaben bei mir, `core.js:712–718`); Neuigkeiten: Kandidaten mit Status neu (`core.js:229`) |
-| Arbeiten | Themen (`themen` → board.html) mit Unternavigation Board (`board.html?view=board`), Kacheln (`board.html?view=kacheln`), Liste (cockpit.html), Entscheidungen (entscheidungen.html) · Jahr · Saison · Kommunikation · Launch · Organisation · Besetzung · So arbeiten wir (arbeiten.html) · Eingabe (capture.html) | Themen: Anzahl „zu besprechen“ (`core.js:232`); Organisation: `orgBadge`, nur befüllt, solange man auf `organisation.html` ist (`organisation.html:391`) |
+| Heute | Für dich (`start` → index.html) · Entscheidungen (`entscheidungen` → entscheidungen.html, Stufe 1) · Vorhaben (`vorhaben` → vorhaben.html) · Neuigkeiten (`neuigkeiten` → neuigkeiten.html) · Besprechung (`besprechung` → besprechung.html) | Vorhaben: `vorhaben_badge` (offene Einwürfe plus überfällige Vorhaben bei mir, `core.js:712–718`); Neuigkeiten: Kandidaten mit Status neu (`core.js:229`) |
+| Arbeiten | Vorstand (vorstand.html) · Jahr · Saison · Kommunikation · Launch · Organisation · Besetzung · So arbeiten wir (arbeiten.html) · Eingabe (capture.html) | Themen: Anzahl „zu besprechen“ (`core.js:232`); Organisation: `orgBadge`, nur befüllt, solange man auf `organisation.html` ist (`organisation.html:391`) |
 | Vertretung | Abwesenheiten (vertretung.html) · Übergabe (uebergabe.html) · Rückkehr (rueckkehr.html) | Übergabe: `uebergabeBadge` wird angelegt, aber nirgends befüllt (kein Treffer außerhalb `core.js:167`), bleibt also immer verborgen |
-| Verwalten | Wichtige Seiten (seiten.html) · Bearbeiten (bearbeiten.html) · Aufräumen (aufraeumen.html) | – |
+| Verwalten | Wichtige Seiten (seiten.html) · Bearbeiten (bearbeiten.html) | – (Aufräumen seit Stufe 2 nicht mehr verlinkt, Datei bleibt) |
 
-19 Haupteinträge plus 4 Unterpunkte. Der aktive Eintrag bekommt `aria-current="page"` (`core.js:211`).
+18 Haupteinträge, keine Unterpunkte (Stufe 2, 25.10.2026: Themen mit Unternavigation, Eingabe und Aufräumen entfernt; `GF_SUBNAV` bleibt für `board.html` und `cockpit.html`, die nur noch über Links erreichbar sind). Der aktive Eintrag bekommt `aria-current="page"` (`core.js:211`).
 
 Nicht in der Navigation: `inbox.html` (meldet sich als „themen“ an, keine eingehenden Links gefunden), `checkin.html` (Schlüssel `checkin` existiert nicht in `GF_NAV`, kein Eintrag wird aktiv, keine eingehenden Links), `saison-rad.html` und `saison-steckbriefe.html` (nur im Fußtext von `saison.html:226` bzw. `saison-steckbriefe.html:309` erwähnt, kein `href` auf sie gefunden; sie aktivieren „Saison“). Diese vier Seiten sind nur per Direktadresse erreichbar; `saison-rad.html` schreibt trotzdem voll, einschließlich Löschen.
 
@@ -300,7 +301,7 @@ Quelle: `docs/PAKET-VORHABEN-ABSCHLIESSEN.md` und `site/vorhaben.html` bei `05af
 
 ---
 
-### 3.5 board.html · Themen · Board / Kacheln
+### 3.5 board.html · Themen · Board / Kacheln (Stufe 2: nicht in der Navigation, Datei bleibt; `?topic=` als Archivansicht aus Beschlüssen)
 **Hauptaufgabe:** Alle GF-Themen als verschiebbares Spalten-Board oder als Kachelraster zeigen, filtern, verschieben und im Seitenpanel bearbeiten.
 **Darstellungsformen:** Board (Spalten), Karte (Themenkarte), Kachelraster, Seitenbereich (Detailpanel rechts), Dialog (Bereinigen, Aufräumen), Popover (Verschieben-Menü), Formular (im Panel), Besprechungsbereich (nur bei altem laufendem Besprechungsstand).
 **Navigation/Einstieg:** `gfMountTopbar("themen")`, `gfMountSubnav(VIEW)` mit `board`/`kacheln` (board.html:473). URL-Parameter: `?view=kacheln` (board.html:82), `?q=` Volltextvorbelegung (board.html:88), `?owner=` bzw. altes `?person=` Personenfilter (board.html:89), `?luecke=1` (board.html:90), `?topic=<id>` öffnet das Panel (board.html:476), `?meeting=1` leitet nach besprechung.html um (board.html:476).
@@ -335,7 +336,7 @@ Quelle: `docs/PAKET-VORHABEN-ABSCHLIESSEN.md` und `site/vorhaben.html` bei `05af
 
 ---
 
-### 3.6 cockpit.html · Themen · Liste
+### 3.6 cockpit.html · Themen · Liste (Stufe 2: nicht erreichbar, Datei bleibt)
 **Hauptaufgabe:** Alle Themen ausführlich als gefilterte Liste mit aufklappbaren Details, Delegation, Status und einem Tagesprotokoll.
 **Darstellungsformen:** Kennzahlenkacheln mit Fortschrittsring, Karten (wiederkehrende Themen, „Was als Nächstes“), Liste gruppiert nach Status, aufklappbare Details, Dropdown (Delegation), Formularzeile, Dialog (Protokoll), feste Fußleiste.
 **Navigation/Einstieg:** `gfMountTopbar("themen")`, `gfMountSubnav("liste")` (cockpit.html:94). Keine URL-Parameter.
@@ -699,7 +700,7 @@ Quelle: `docs/PAKET-VORHABEN-ABSCHLIESSEN.md` und `site/vorhaben.html` bei `05af
 
 ---
 
-### 3.18 capture.html · Eingabe
+### 3.18 capture.html · Eingabe (Stufe 2: nicht erreichbar, Datei bleibt; Eingang ist der Einwurf auf Vorhaben)
 **Hauptaufgabe:** Einen Gedanken schnell als Thema erfassen; er landet im Board unter „Zu besprechen“.
 **Darstellungsformen:** Formularkarte mit Chip-Gruppen, aufklappbarer Detailbereich, Bestätigungskarte.
 **Navigation/Einstieg:** `gfMountTopbar("capture")` (capture.html:68), Hero „kiste“ compact. Keine URL-Parameter. Fußzeile verlinkt `/inbox` und `/` als „Cockpit“ (59).
@@ -832,7 +833,7 @@ Quelle: `docs/PAKET-VORHABEN-ABSCHLIESSEN.md` und `site/vorhaben.html` bei `05af
 
 ---
 
-### 3.24 aufraeumen.html · Aufräumen
+### 3.24 aufraeumen.html · Aufräumen (Stufe 2: nicht erreichbar, Datei bleibt)
 **Hauptaufgabe:** Allen offenen Themen und Kandidaten einen „Ausgang“ (GF gemeinsam, Alex, Lea, Team, Plattform, Kann warten) geben, den Vorschlag des automatischen Laufs bestätigen oder korrigieren und optional eine Frist setzen.
 **Darstellungsformen:** KPI-Kacheln, Filterleiste (Chips, Checkbox), Liste von Zeilenkarten mit Chip-Reihe und Datumsfeld.
 **Navigation/Einstieg:** `gfMountTopbar("aufraeumen")` (aufraeumen.html:130), Hero „pflege“ compact (131). Keine URL-Parameter.

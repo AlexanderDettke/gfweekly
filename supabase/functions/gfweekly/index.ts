@@ -527,107 +527,10 @@ const HO_GRENZE = 2000;
    sonst überschreiben sich zwei gleichzeitige Bauten gegenseitig. */
 async function handoverItems(absence: any){
   const hoAbgeschnitten: string[] = [];
-  const person = whoNorm(absence.person), gate = absGate(absence.person);
-  const von = absence.von as string, ende = absEnde(absence), heute = heuteBerlin();
+  const von = absence.von as string, ende = absEnde(absence);
   const items: any[] = [];
-
-  const zaehle = async (name: string, q: any, geholt: number) => {
-    const { count, error } = await q;
-    if (error) throw new Error(name + ' konnten nicht gezählt werden: ' + error.message);
-    if ((count ?? 0) > geholt) hoAbgeschnitten.push(`${name} (${geholt} von ${count})`);
-  };
-  const { data: themen, error: e1 } = await admin.from('gfweekly_topics')
-    .select('id,title,short_description,context,decision,notes,next_action,owner,involved,priority,relevance,board_lane,gate,gate_frist,archived')
-    .eq('archived', false).limit(HO_GRENZE);
-  if (e1) throw new Error('Themen konnten nicht gelesen werden: '+e1.message);
-  await zaehle('Themen', admin.from('gfweekly_topics').select('id', { count:'exact', head:true }).eq('archived', false), (themen || []).length);
-  for (const x of (themen || [])) {
-    const frist = x.gate_frist || null;
-    /* Fenster der Abwesenheit. Überfälliges zählt mit, denn es bleibt liegen, solange niemand da ist. */
-    const imFenster = !!frist && frist <= ende && (frist >= von || frist < heute);
-    const meins = x.gate === gate || whoNorm(x.owner) === person;
-    if (!(meins || imFenster)) continue;
-    items.push({ kind:'thema', ref_id:x.id, title:x.title, strand:null, frist,
-      short_description:x.short_description, context:x.context, decision:x.decision, notes:x.notes, next_action:x.next_action,
-      owner:x.owner, who:[x.owner, x.involved].filter(Boolean).join(', '), involved:x.involved,
-      priority:x.priority, relevance:x.relevance, board_lane:x.board_lane, gate:x.gate });
-  }
-
-  const { data: kandidaten, error: e2 } = await admin.from('gfweekly_news')
-    .select('id,title,body,quote,relevance,strand,who,source,source_title,source_url,happened_at,gate,gate_frist')
-    .eq('kind','kandidat').eq('status','neu').eq('gate', gate).limit(HO_GRENZE);
-  if (e2) throw new Error('Kandidaten konnten nicht gelesen werden: '+e2.message);
-  await zaehle('Kandidaten', admin.from('gfweekly_news').select('id', { count:'exact', head:true })
-    .eq('kind','kandidat').eq('status','neu').eq('gate', gate), (kandidaten || []).length);
-  for (const x of (kandidaten || [])) {
-    items.push({ kind:'kandidat', ref_id:x.id, title:x.title, strand:x.strand, frist:x.gate_frist || null,
-      body:x.body, quote:x.quote, relevance:x.relevance, who:x.who, source:x.source, source_title:x.source_title,
-      source_url:x.source_url, gate:x.gate });
-  }
-
-  const { data: meilen, error: e3 } = await admin.from('gfweekly_milestones')
-    .select('id,title,description,date_from,date_to,zeitraum,strand,owner,status,archived')
-    .eq('archived', false).not('status','in','("erreicht","abgesagt")').limit(HO_GRENZE);
-  if (e3) throw new Error('Meilensteine konnten nicht gelesen werden: '+e3.message);
-  await zaehle('Meilensteine', admin.from('gfweekly_milestones').select('id', { count:'exact', head:true })
-    .eq('archived', false).not('status','in','("erreicht","abgesagt")'), (meilen || []).length);
-  for (const x of (meilen || [])) {
-    const frist = x.date_from || null;
-    if (!frist || frist < von || frist > ende) continue;
-    items.push({ kind:'meilenstein', ref_id:x.id, title:x.title, strand:x.strand, frist,
-      context:x.description, zeitraum:x.zeitraum, owner:x.owner, who:x.owner, status:x.status, priority:null, gate:null });
-  }
-
-  const { data: phasen, error: e6 } = await admin.from('gfweekly_cycle_phases').select('key,label,months,lead');
-  if (e6) throw new Error('Phasen konnten nicht gelesen werden: '+e6.message);
-  const monate = new Set<number>();
-  for (let d = von; d <= ende; d = addDays(d, 1)) monate.add(parseInt(d.slice(5,7)));
-  const fuehrt = (lead: unknown) => (lead ?? '').toString().split(/[,;/]| und /i).map(x => x.trim()).filter(Boolean)
-    .some(n => whoNorm(n) === person && (person === 'Alex' || person === 'Lea'));
-  const meinePhasen = (phasen || []).filter((p: any) => fuehrt(p.lead) && (p.months || []).some((m: number) => monate.has(m)));
-  if (meinePhasen.length) {
-    const { data: rituale, error: e7 } = await admin.from('gfweekly_rituals').select('id,phase_key,title,hint,active')
-      .in('phase_key', meinePhasen.map((p: any) => p.key)).eq('active', true).limit(HO_GRENZE);
-    if (e7) throw new Error('Rituale konnten nicht gelesen werden: '+e7.message);
-    await zaehle('Rituale', admin.from('gfweekly_rituals').select('id', { count:'exact', head:true })
-      .in('phase_key', meinePhasen.map((p: any) => p.key)).eq('active', true), (rituale || []).length);
-    for (const x of (rituale || [])) {
-      items.push({ kind:'ritual', ref_id:x.id, title:x.title, strand:null, frist:null, context:x.hint,
-        phase:(meinePhasen.find((p: any)=>p.key===x.phase_key)||{}).label, owner:absence.person, who:absence.person, gate:null });
-    }
-  }
-
-  const { data: partner, error: e4 } = await admin.from('hh_partner_stand')
-    .select('partner_id,name,lane,stage,owner,next_action,target_on,waiting_for,signal,overdue').limit(HO_GRENZE);
-  if (e4) throw new Error('Partnerstand konnte nicht gelesen werden: '+e4.message);
-  await zaehle('Partner', admin.from('hh_partner_stand').select('partner_id', { count:'exact', head:true }), (partner || []).length);
-  for (const x of (partner || [])) {
-    const mein = whoNorm(x.owner) === person || (x.owner || '').toLowerCase() === 'together';
-    if (!mein) continue;
-    const frist = x.target_on || null;
-    const passt = x.overdue || (!!frist && frist >= von && frist <= ende);
-    if (!passt) continue;
-    items.push({ kind:'partner', ref_id:String(x.partner_id), title:x.name, strand:'wwp', frist,
-      next_action:x.next_action, waiting_for:x.waiting_for, signal:x.signal, stage:x.stage, owner:x.owner, who:x.owner, gate:null });
-  }
-
-  /* Einen Tag Rand holen und dann nach dem Berliner Kalendertag filtern: UTC-Grenzen schneiden sonst
-     Termine am Rand ab oder nehmen fremde mit. */
-  const { data: termine, error: e5 } = await admin.from('gfweekly_news')
-    .select('id,title,body,who,happened_at,source_url,source_title,strand,source_ref')
-    .eq('source','kalender').neq('status','archiviert').gte('happened_at', addDays(von,-1)+'T00:00:00Z').lte('happened_at', addDays(ende,1)+'T23:59:59Z').limit(HO_GRENZE);
-  if (e5) throw new Error('Termine konnten nicht gelesen werden: '+e5.message);
-  await zaehle('Termine', admin.from('gfweekly_news').select('id', { count:'exact', head:true })
-    .eq('source','kalender').neq('status','archiviert').gte('happened_at', addDays(von,-1)+'T00:00:00Z').lte('happened_at', addDays(ende,1)+'T23:59:59Z'),
-    (termine || []).length);
-  for (const x of (termine || [])) {
-    const tag = new Date(x.happened_at).toLocaleDateString('sv-SE', { timeZone:'Europe/Berlin' });
-    if (tag < von || tag > ende) continue;
-    if (whoNorm(x.who) !== person && !(x.who || '').toLowerCase().includes(person.toLowerCase())) continue;
-    const kennung = (x.source_ref || '').startsWith('cal:') ? x.source_ref : 'cal:' + x.id;
-    items.push({ kind:'termin', ref_id:kennung, title:x.title, strand:x.strand, frist:tag,
-      body:x.body, who:vornamen(x.who), source_url:x.source_url, gate:null });
-  }
+  /* Stufe 2 (25.10.2026, Abschnitt 5): Der Korb enthält nur noch Vorhaben mit ihren offenen Punkten. Themen, Kandidaten, Meilensteine,
+     Rituale, Partner und Termine werden nicht mehr eingesammelt; ihre Zeilen aus früheren Abwesenheiten bleiben in der Tabelle. */
   /* v38 (V31): Vorhaben mit Ball bei der abwesenden Person oder bei der GF mit Frist im Fenster. */
   items.push(...await vhHandoverItems(absence, von, ende));
   /* Ein Vorgang, eine Zeile: derselbe Termin kann als mehrere Neuigkeiten vorliegen. */
@@ -1408,11 +1311,11 @@ Deno.serve(async (req: Request) => {
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:41, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY'), kommTabelleConfigured: !!Deno.env.get('GOOGLE_DIENSTKONTO_JSON') });
+    if (action === 'ping') return json({ ok:true, version:42, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY'), kommTabelleConfigured: !!Deno.env.get('GOOGLE_DIENSTKONTO_JSON') });
     /* V32 Kommunikation */
     if (typeof action === 'string' && action.startsWith('komm_')) return await KOMM.handle(action, t, WHO);
     if (action === 'verkauf_list' || action === 'verkauf_set') return await VERKAUF.handle(action, t);
-    if (typeof action === 'string' && (action === 'entscheidungen_list' || action.startsWith('entscheidung_') || action === 'korb_list' || action === 'korb_set')) return await ENTSCHEIDUNGEN.handle(action, t);
+    if (typeof action === 'string' && (action === 'entscheidungen_list' || action === 'entscheidungen_sammelaktion' || action.startsWith('entscheidung_') || action === 'korb_list' || action === 'korb_set' || action === 'vorhaben_phase' || action === 'lauf_bilanz' || action === 'lauf_rueckgaengig' || action === 'rueckkehr_lage' || action === 'rueckkehr_brief_set')) return await ENTSCHEIDUNGEN.handle(action, t);
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
         .order('created_at', { ascending: true });
@@ -2023,8 +1926,22 @@ Deno.serve(async (req: Request) => {
          (hh_absence_end). Scheitert etwas, bleibt die Abwesenheit, wie sie war. Asana wird danach archiviert. */
       if (!t.id) return json({ error:'id fehlt' },400);
       const r = await vhRpc('hh_absence_end', { p_id: t.id, p_by: whoNorm(t.by ?? WHO) });
+      /* Stufe 2 (Abschnitt 5): offene Korbzeilen (Vorschlag oder bestätigt, nicht erledigt) gelten als liegen geblieben: ein Verlaufseintrag
+         am Vorhaben, die Zeile wird entfallen; danach zeigen Für dich und Besprechung keine Marke „Vertretung“ mehr. */
+      let liegen = 0;
+      try {
+        const { data: offen } = await admin.from('gfweekly_handover').select('id,kind,ref_id,title,ampel').eq('absence_id', t.id).in('status', ['vorschlag','bestaetigt']);
+        for (const z of (offen || [])) {
+          if (z.kind === 'vorhaben' && VH_UUID.test(z.ref_id)) {
+            await admin.from('hh_vorhaben_verlauf').insert({ vorhaben_id: z.ref_id, art: 'system', wer: whoNorm(t.by ?? WHO), status: 'bestaetigt', created_by: 'kompass',
+              text: `In der Abwesenheit von ${whoNorm(r.absence?.person)} liegen geblieben (Korb ${z.ampel || 'offen'}): ${z.title || ''}`.slice(0, 500), source_ref: `abwesenheit:${t.id}:liegen:${z.id}` });
+            liegen++;
+          }
+          await admin.from('gfweekly_handover').update({ status: 'entfallen', updated_at: new Date().toISOString() }).eq('id', z.id);
+        }
+      } catch (e) { console.warn('absence_end Korb', e); }
       const archiviert = await asanaArchivieren(r.absence);
-      return json({ absence: r.absence, asana_archiviert: archiviert, vorhaben_zurueck: r.vorhaben_zurueck || [], themen: r.themen });
+      return json({ absence: r.absence, asana_archiviert: archiviert, vorhaben_zurueck: r.vorhaben_zurueck || [], themen: r.themen, liegen_geblieben: liegen });
     }
     if (action === 'deputies_list') {
       let q = admin.from('gfweekly_deputies').select('*').order('person').order('sort');

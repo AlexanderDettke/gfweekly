@@ -7,11 +7,11 @@
 <meta name="theme-color" content="#171d18" />
 <title>Kompass · Entscheidungen</title>
 <meta name="description" content="Offene Entscheidungen der Geschäftsführung, Wilde Möhre: entscheiden, vertagen, abgeben. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=41" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=41" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=41" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=41" />
-<link rel="stylesheet" href="/assets/styles.css?v=41" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=42" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=42" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=42" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=42" />
+<link rel="stylesheet" href="/assets/styles.css?v=42" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -37,10 +37,20 @@
 
   <div class="en-steuer">
     <div class="fchips" role="group" aria-label="Filter" id="enFilter"></div>
+    <button type="button" class="btn btn-sm btn-brand" id="enWaehlen" aria-pressed="false">Auswählen</button>
     <span class="en-stand" id="enStand" role="status"></span>
   </div>
 
   <div id="enListe" aria-live="polite"><div class="loading">lädt …</div></div>
+
+  <!-- Stufe 2 · Mehrfachauswahl: Nicht jetzt, Abgeben, Hinfällig für mehrere Zeilen; Rückgängig gesammelt. -->
+  <div class="en-sel" id="enSel" role="region" aria-label="Auswahl">
+    <span class="en-sel-n" id="enSelN">0 ausgewählt</span>
+    <button type="button" class="btn btn-sm btn-primary" data-sel="nicht_jetzt">Nicht jetzt</button>
+    <button type="button" class="btn btn-sm" data-sel="abgeben">Abgeben</button>
+    <button type="button" class="btn btn-sm" data-sel="hinfaellig">Hinfällig</button>
+    <button type="button" class="btn btn-sm btn-ghost" id="enSelEnde">Auswahl beenden</button>
+  </div>
 
   <div class="en-rueck" id="enRueck" role="status" aria-live="polite"></div>
 
@@ -74,10 +84,10 @@
 <div class="modal-back" id="enModal"></div>
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=41"></script>
+<script src="/assets/core.js?v=42"></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
-let EN=null, EN_FILTER="offen", EN_LAUF=0, EN_OFFEN=new Set();
+let EN=null, EN_FILTER="offen", EN_LAUF=0, EN_OFFEN=new Set(), SEL=new Set(), SEL_AN=false, SEL_LAEUFT=false;
 const today=new Date(); today.setHours(0,0,0,0);
 function iso(d){ return gfIsoTag(d); }
 function daysAgo(n){ const d=new Date(today); d.setDate(d.getDate()-n); return d; }
@@ -95,10 +105,17 @@ function fristWort(e){
 }
 function herkunft(e){
   const h=e.herkunft||{}; const teile=[EN_ART[e.quelle_art]||e.quelle_art];
-  if(e.vorhaben) teile.push(e.vorhaben.title); else if(e.quelle_art==="thema" && h.titel && h.titel!==e.frage) teile.push(h.titel);
+  if(e.vorhaben&&e.vorhaben.title) teile.push(e.vorhaben.title); else if(e.quelle_art==="thema" && h.titel && h.titel!==e.frage) teile.push(h.titel);
   if(h.quelle) teile.push(h.quelle);
   if(h.datum) teile.push("vom "+gfFmtShort(h.datum));
-  return teile.map(gfEsc).join(" · ");
+  const phase=e.vorhaben&&e.vorhaben.id?`<span class="en-phase">${gfEsc(GF_PHASE[e.vorhaben.phase]||GF_PHASE.sonstiges)}</span> `:"";
+  return phase+teile.map(gfEsc).join(" · ");
+}
+/* Stufe 2: ein Datum aus der Quelle (gate_frist eines Themas oder Kandidaten) ist kein Fristzustand, nur ein Vorschlag; ein Klick übernimmt es. */
+function fristVorschlag(e){
+  if(e.frist||!e.frist_vorschlag||!(e.status==="offen"||e.status==="vertagt")) return "";
+  const d=e.frist_vorschlag.slice(8,10)+"."+e.frist_vorschlag.slice(5,7)+".";
+  return ` · <button type="button" class="en-fv" data-act="frist_uebernehmen" title="Vorschlag aus der Quelle als Frist übernehmen">Vorschlag: bis ${d} übernehmen</button>`;
 }
 function quelleLink(e){
   const h=e.herkunft||{}; if(!h.url) return "";
@@ -121,7 +138,7 @@ function renderKacheln(){
   $("#enKk").innerHTML=[
     gfKachel({icon:"zahl", value:z.offen||0, label:"offen", btn:`data-f="offen"`}),
     gfKachel({icon:"zahl", value:z.diese_woche||0, label:"diese Woche", tone:z.diese_woche?"warn":"", btn:`data-f="offen"`}),
-    gfKachel({icon:"zahl", value:z.mit_vorschlag||0, label:"mit Vorschlag", btn:`data-f="offen"`}),
+    gfKachel({icon:"zahl", value:(EN.eintraege||[]).filter(e=>e.faellig&&e.vorhaben&&e.vorhaben.fokus).length, label:"im Fokus", tone:"pos", btn:`data-f="offen"`}),
     gfKachel({icon:"zahl", value:z.ueberfaellig||0, label:"überfällig", tone:z.ueberfaellig?"crit":"", btn:`data-f="offen"`}),
   ].join("");
   $("#enStand").textContent=`Stand ${new Date().toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}${EN.sync&&EN.sync.eingefuegt?` · ${EN.sync.eingefuegt} neu aus den Quellen`:""}`;
@@ -145,8 +162,12 @@ function renderListe(){
     $("#enListe").innerHTML=`<p class="fd-empty">${leer}</p>`; return;
   }
   if(EN_FILTER!=="offen"){ $("#enListe").innerHTML=`<div class="en-list${EN_FILTER==="entschieden"?" en-dim":""}">${L.map(zeile).join("")}</div>`; bind(); return; }
-  const gruppen=new Map(); for(const e of L){ const k=abschnitt(e); if(!gruppen.has(k)) gruppen.set(k,[]); gruppen.get(k).push(e); }
+  /* Stufe 2: zuerst der Fokus (Vorhaben, die gerade tragen), nach Phase geordnet, dann die Abschnitte nach Fristzustand für den Rest. */
+  const fokus=L.filter(e=>e.reif&&e.vorhaben&&e.vorhaben.fokus).sort((a,b)=>GF_PHASE_REIHE.indexOf(a.vorhaben.phase)-GF_PHASE_REIHE.indexOf(b.vorhaben.phase)||(a.frist||"9999").localeCompare(b.frist||"9999"));
+  const rest=L.filter(e=>!fokus.includes(e));
+  const gruppen=new Map(); for(const e of rest){ const k=abschnitt(e); if(!gruppen.has(k)) gruppen.set(k,[]); gruppen.get(k).push(e); }
   let html="";
+  if(fokus.length) html+=`<section class="en-sec en-fokus" aria-labelledby="enS-fokus"><h2 class="en-sec-h" id="enS-fokus">Fokus <span class="fd-n">${fokus.length}</span><span class="en-sec-hint">Launch, Formatpartner, Systembau: die Vorhaben, die gerade tragen</span></h2><div class="en-list">${fokus.map(zeile).join("")}</div></section>`;
   for(const [k,label] of EN_ABSCHNITT){ const items=gruppen.get(k); if(!items||!items.length) continue;
     html+=`<section class="en-sec" aria-labelledby="enS-${k}"><h2 class="en-sec-h" id="enS-${k}">${label} <span class="fd-n">${items.length}</span></h2><div class="en-list">${items.map(zeile).join("")}</div></section>`; }
   const u=gruppen.get("unreif")||[];
@@ -160,10 +181,12 @@ function zeile(e){
     :e.status==="vertagt"?gfZustand(e.wieder_faellig?"warn":"offen",`vertagt bis ${gfFmtShort(e.vertagt_bis)}${e.wieder_faellig?" · wieder fällig":""}`):"";
   const rueck=!!e.rueckweg_at && (Date.now()-new Date(e.rueckweg_at).getTime())<86400000 && e.status!=="offen";
   const aktiv=e.status==="offen"||e.status==="vertagt";   // abgegebene zuerst zurückholen (Rückgängig) oder Ausgang wieder GF
-  return `<article class="en-row${e.reif?"":" en-row-unreif"}${offen?" auf":""}" data-id="${e.id}">
+  const waehlbar=SEL_AN&&aktiv;
+  return `<article class="en-row${e.reif?"":" en-row-unreif"}${offen?" auf":""}${waehlbar?" waehlbar":""}${SEL.has(e.id)?" gewaehlt":""}" data-id="${e.id}">
+    ${waehlbar?`<input type="checkbox" class="en-cb" aria-label="${gfEsc(e.frage)} auswählen" ${SEL.has(e.id)?"checked":""}>`:""}
     <div class="en-main">
       <button type="button" class="en-q" aria-expanded="${offen}" aria-controls="enD-${e.id}">${gfEsc(e.frage)}</button>
-      <div class="en-her">${herkunft(e)} · ${fristWort(e)}${status?` · ${status}`:""}${e.frage_von==="lauf"?` · <span class="fd-muted">Frage vom Lauf</span>`:""}</div>
+      <div class="en-her">${herkunft(e)} · ${fristWort(e)}${fristVorschlag(e)}${status?` · ${status}`:""}${e.frage_von==="lauf"?` · <span class="fd-muted">Frage vom Lauf</span>`:""}</div>
       ${e.vorschlag?`<div class="en-vs"><b>Vorschlag:</b> ${gfEsc(e.vorschlag)}</div>`:""}
       ${e.status==="entschieden"&&e.ergebnis?`<div class="en-vs"><b>Ergebnis:</b> ${gfEsc(e.ergebnis)}</div>`:""}
       <div class="en-det" id="enD-${e.id}"${offen?"":" hidden"}>
@@ -179,6 +202,7 @@ function zeile(e){
 function bind(){
   $("#enListe").querySelectorAll(".en-q").forEach(b=>b.onclick=()=>{ const row=b.closest(".en-row"); const id=row.dataset.id; const d=document.getElementById("enD-"+id); const auf=d.hidden; d.hidden=!auf; row.classList.toggle("auf",auf); b.setAttribute("aria-expanded",String(auf)); if(auf) EN_OFFEN.add(id); else EN_OFFEN.delete(id); });
   $("#enListe").querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>{ const id=b.closest(".en-row").dataset.id; const e=(EN.eintraege||[]).find(x=>x.id===id); if(!e) return; aktion(e, b.dataset.act, b); });
+  $("#enListe").querySelectorAll(".en-cb").forEach(c=>c.onchange=()=>{ const row=c.closest(".en-row"); if(c.checked) SEL.add(row.dataset.id); else SEL.delete(row.dataset.id); row.classList.toggle("gewaehlt",c.checked); renderSel(); });
   const u=$("#enUnreif"); if(u) u.addEventListener("toggle",()=>{ if(u.open) EN_OFFEN.add("unreif"); else EN_OFFEN.delete("unreif"); });
 }
 
@@ -192,6 +216,7 @@ function blatt(titel, inner, fokus){
 const FUSS=(wort)=>`<p class="en-err" id="enErr" role="alert"></p><div class="modal-f"><button type="submit" class="btn btn-primary">${wort}</button><button type="button" class="btn btn-brand" data-x>Abbrechen</button></div>`;
 function aktion(e, act, ausl){
   if(act==="zurueck") return zurueck(e, ausl);
+  if(act==="frist_uebernehmen"){ ausl.disabled=true; return gfApi("entscheidung_set",{ id:e.id, by:gfWho(), frist:e.frist_vorschlag, expect_updated_at:e.updated_at }).then(()=>{ gfToast("Frist übernommen: "+gfFmtShort(e.frist_vorschlag)); return load(true); }).catch(x=>{ ausl.disabled=false; gfToast((x.konflikt?"":"Nicht gespeichert: ")+(x.message||"Verbindung"),{fehler:true}); if(x.konflikt) load(true); }); }
   const frage=`<p class="modal-intro en-modal-q">${gfEsc(e.frage)}</p>`;
   if(act==="entschieden"){
     const m=blatt("Entschieden", `${frage}<form class="en-form" id="enF" novalidate><div class="fld ffull"><label for="enErg">Ergebnis, ein Satz</label><textarea id="enErg" rows="3" required placeholder="Was ist entschieden? Mit Betrag, Datum oder Name, wenn es sie gibt."></textarea></div>${FUSS("Entschieden")}</form>`, "#enErg");
@@ -208,7 +233,7 @@ function aktion(e, act, ausl){
     m.querySelector("#enF").onsubmit=ev=>{ ev.preventDefault(); const an=m.querySelector('input[name="an"]').value; if(!an){ m.querySelector("#enErr").textContent="Bitte wählen: Alex, Lea oder Team."; return; } senden(e,"entscheidung_abgeben",{an},m); };
   }
   if(act==="edit"){
-    const m=blatt("Frage, Frist, Vorschlag", `<form class="en-form" id="enF" novalidate><div class="fld ffull"><label for="enFr">Frage</label><textarea id="enFr" rows="2" required>${gfEsc(e.frage)}</textarea></div><div class="fld"><label for="enFt">Frist</label><input id="enFt" type="date" value="${e.frist||""}"></div><div class="fld ffull"><label for="enVs">Vorschlag</label><textarea id="enVs" rows="2">${gfEsc(e.vorschlag||"")}</textarea></div>${FUSS("Speichern")}</form>`, "#enFr");
+    const m=blatt("Frage, Frist, Vorschlag", `<form class="en-form" id="enF" novalidate><div class="fld ffull"><label for="enFr">Frage</label><textarea id="enFr" rows="2" required>${gfEsc(e.frage)}</textarea></div><div class="fld"><label for="enFt">Frist${!e.frist&&e.frist_vorschlag?` <span class="fd-muted">(Vorschlag aus der Quelle: ${gfFmtShort(e.frist_vorschlag)})</span>`:""}</label><input id="enFt" type="date" value="${e.frist||""}"></div><div class="fld ffull"><label for="enVs">Vorschlag</label><textarea id="enVs" rows="2">${gfEsc(e.vorschlag||"")}</textarea></div>${FUSS("Speichern")}</form>`, "#enFr");
     m.querySelector("#enF").onsubmit=async ev=>{ ev.preventDefault(); const p={ id:e.id, by:gfWho(), expect_updated_at:e.updated_at }; const fr=m.querySelector("#enFr").value.trim(), ft=m.querySelector("#enFt").value, vs=m.querySelector("#enVs").value.trim();
       if(fr.length<3){ m.querySelector("#enErr").textContent="Die Frage braucht mindestens drei Zeichen."; return; }
       if(fr!==e.frage) p.frage=fr; if((e.frist||"")!==ft) p.frist=ft||null; if((e.vorschlag||"")!==vs) p.vorschlag=vs||null;
@@ -247,7 +272,55 @@ async function zurueck(e, ausl){
   try{ await gfApi("entscheidung_zurueck",{ id:e.id, by:gfWho() }); gfToast("Zurückgenommen"); await load(true); }
   catch(x){ ausl.disabled=false; gfToast("Rückgängig hat nicht geklappt: "+(x.message||"Verbindung"),{fehler:true}); }
 }
-$("#enFilter").addEventListener("click",e=>{ const b=e.target.closest("[data-filter]"); if(!b) return; EN_FILTER=b.dataset.filter; renderFilter(); $("#enListe").innerHTML=`<div class="loading">lädt …</div>`; load(true); });
+/* ---- Mehrfachauswahl (Stufe 2) ---- */
+function renderSel(){
+  const n=SEL.size; $("#enSelN").textContent=`${n} ausgewählt`;
+  $("#enSel").classList.toggle("show", SEL_AN);
+  $("#enSel").querySelectorAll("[data-sel]").forEach(b=>b.disabled=!n||SEL_LAEUFT);
+  $("#enWaehlen").setAttribute("aria-pressed",String(SEL_AN)); $("#enWaehlen").textContent=SEL_AN?"Auswahl läuft …":"Auswählen";
+}
+function auswahlEnde(){ SEL_AN=false; SEL.clear(); renderSel(); renderListe(); }
+$("#enWaehlen").onclick=()=>{ if(SEL_AN){ auswahlEnde(); return; } SEL_AN=true; renderSel(); renderListe(); $("#enListe .en-cb")?.focus(); };
+$("#enSelEnde").onclick=auswahlEnde;
+$("#enSel").addEventListener("click",e=>{ const b=e.target.closest("[data-sel]"); if(!b||!SEL.size||SEL_LAEUFT) return; sammel(b.dataset.sel); });
+function sammel(aktion){
+  const ids=[...SEL]; const n=ids.length;
+  if(aktion==="nicht_jetzt"){
+    const std=gfAddDays(gfIsoTag(),28);
+    const m=blatt("Nicht jetzt", `<p class="modal-intro">${n} ${n===1?"Entscheidung":"Entscheidungen"} vertagen. Sie kommen am Stichtag wieder in die Liste.</p><form class="en-form" id="enF" novalidate><div class="fld"><label for="enBis">Bis</label><input id="enBis" type="date" value="${std}" min="${gfIsoTag()}" required></div>${FUSS("Nicht jetzt")}</form>`, "#enBis");
+    m.querySelector("#enF").onsubmit=ev=>{ ev.preventDefault(); const bis=m.querySelector("#enBis").value; if(!bis||bis<gfIsoTag()){ m.querySelector("#enErr").textContent="Bitte ein Datum ab heute wählen."; return; } sammelSenden(ids,"nicht_jetzt",bis,m); };
+  } else if(aktion==="abgeben"){
+    const m=blatt("Abgeben", `<p class="modal-intro">${n} ${n===1?"Entscheidung":"Entscheidungen"} abgeben.</p><form class="en-form" id="enF" novalidate><div class="fld"><label>An</label>${gfChips("an",[["alex","Alex"],["lea","Lea"],["team","Team"]],"",{label:"An wen"})}</div>${FUSS("Abgeben")}</form>`, ".chip");
+    m.querySelectorAll(".fchips .chip").forEach(c=>c.onclick=()=>gfChipsSet(m.querySelector('input[name="an"]'), c.dataset.v));
+    m.querySelector("#enF").onsubmit=ev=>{ ev.preventDefault(); const an=m.querySelector('input[name="an"]').value; if(!an){ m.querySelector("#enErr").textContent="Bitte wählen: Alex, Lea oder Team."; return; } sammelSenden(ids,"abgeben",an,m); };
+  } else {
+    const m=blatt("Hinfällig", `<p class="modal-intro">${n} ${n===1?"Entscheidung":"Entscheidungen"} als hinfällig schließen: Punkte werden erledigt, Themen archiviert, Kandidaten verworfen. Rückgängig geht 24 Stunden.</p><form class="en-form" id="enF" novalidate>${FUSS("Hinfällig")}</form>`, '[type="submit"]');
+    m.querySelector("#enF").onsubmit=ev=>{ ev.preventDefault(); sammelSenden(ids,"hinfaellig",null,m); };
+  }
+}
+async function sammelSenden(ids, aktion, wert, m){
+  const btn=m.querySelector('[type="submit"]'); btn.disabled=true; SEL_LAEUFT=true; renderSel();
+  const items=ids.map(id=>{ const e=(EN.eintraege||[]).find(x=>x.id===id); return { id, expect_updated_at:e?e.updated_at:null }; });
+  let d;
+  try{ d=await gfApi("entscheidungen_sammelaktion",{ items, aktion, wert, by:gfWho() }); }
+  catch(x){ SEL_LAEUFT=false; btn.disabled=false; renderSel(); m.querySelector("#enErr").textContent="Nicht gespeichert: "+(x.message||"Verbindung"); return; }
+  m.classList.remove("open"); SEL_LAEUFT=false;
+  const gut=(d.ergebnis||[]).filter(x=>x.ok), schlecht=(d.ergebnis||[]).filter(x=>!x.ok);
+  const wort={ nicht_jetzt:`Nicht jetzt bis ${gfFmtShort(d.wert)}`, abgeben:`Abgegeben an ${EN_AN[wert]||wert}`, hinfaellig:"Hinfällig" }[aktion];
+  zeigeRueckMehrere(gut.map(x=>x.id), `${gut.length} ${gut.length===1?"Entscheidung":"Entscheidungen"} ${wort}${schlecht.length?` · ${schlecht.length} nicht gespeichert (${[...new Set(schlecht.map(x=>x.konflikt?"inzwischen geändert, bitte neu laden":x.grund))].join("; ")})`:""}`);
+  auswahlEnde(); await load(true);
+}
+/* Rückgängig für mehrere: dieselben Kennungen, nacheinander über entscheidung_zurueck; der Knopf ist während der Rücknahme gesperrt. */
+function zeigeRueckMehrere(ids, text){
+  const h=$("#enRueck"); clearTimeout(RUECK_T);
+  h.innerHTML=`<span>${gfEsc(text)}</span>${ids.length?`<button type="button" class="btn btn-sm btn-ghost" id="enRueckK">Rückgängig</button>`:""}`; h.classList.add("show");
+  RUECK_T=setTimeout(()=>{ h.classList.remove("show"); h.innerHTML=""; },10000);
+  const k=$("#enRueckK"); if(!k) return; let laeuft=false;
+  k.onclick=async()=>{ if(laeuft) return; laeuft=true; k.disabled=true; clearTimeout(RUECK_T);
+    let ok=0, fehl=[]; for(const id of ids){ try{ await gfApi("entscheidung_zurueck",{ id, by:gfWho() }); ok++; }catch(x){ fehl.push(x.message||"Verbindung"); } }
+    h.classList.remove("show"); h.innerHTML=""; gfToast(fehl.length?`${ok} zurückgenommen, ${fehl.length} nicht (${[...new Set(fehl)].join("; ")})`:`${ok} zurückgenommen`,{fehler:!!fehl.length}); await load(true); };
+}
+$("#enFilter").addEventListener("click",e=>{ const b=e.target.closest("[data-filter]"); if(!b) return; EN_FILTER=b.dataset.filter; renderFilter(); $("#enListe").innerHTML=`<div class="loading">lädt …</div>`; auswahlEnde(); load(true); });
 $("#enKk").addEventListener("click",e=>{ const b=e.target.closest("[data-f]"); if(!b) return; if(EN_FILTER!=="offen"){ EN_FILTER="offen"; renderFilter(); load(true); } else $("#enListe").scrollIntoView({behavior:"smooth",block:"start"}); });
 
 /* ---- Klappe: Beschlüsse (bisheriges Entscheidungslog), Protokolle, Wochenmail ---- */

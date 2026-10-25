@@ -10,11 +10,11 @@
 <meta property="og:title" content="Kompass · Geschäftsführung der Wilden Habitate" />
 <meta property="og:description" content="Strategie, Entscheidungen & Check-ins der Geschäftsleitung, Wilde Möhre." />
 <meta property="og:image" content="assets/og-image.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=41" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=41" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=41" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=41" />
-<link rel="stylesheet" href="/assets/styles.css?v=41" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=42" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=42" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=42" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=42" />
+<link rel="stylesheet" href="/assets/styles.css?v=42" />
 <link rel="stylesheet" href="/assets/vorstand.css?v=2" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
@@ -85,12 +85,18 @@
     <div class="fd-h"><h2>Nächste Fristen</h2><span class="line"></span><a class="btn btn-sm btn-ghost" href="jahr.html">Jahr →</a></div>
     <div class="fd-list" id="fdFrL"></div>
   </section>
+
+  <!-- Stufe 2 (Abschnitt 6) · Lauf-Bilanz: Zahlen, keine Grafik; lädt erst beim Öffnen. -->
+  <details class="en-klappe" id="fdLauf">
+    <summary><span>Was der Lauf getan hat</span><span class="fd-n" id="fdLaufN"></span></summary>
+    <div id="fdLaufL"><div class="loading">lädt …</div></div>
+  </details>
 </div>
 
 <div class="modal-back" id="vkModal"></div>
 <button type="button" class="vh-fab" id="fdFab" aria-label="Einwurf: etwas eintragen"><span aria-hidden="true">+</span> Einwurf</button>
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=41-vorstand2"></script>
+<script src="/assets/core.js?v=42-vorstand2"></script>
 <script src="/assets/vorstand.js?v=2"></script>
 <script>
 /* V22c · Für dich. Für den Blick zwischendurch, am Handy, in unter einer Minute.
@@ -168,7 +174,9 @@ document.getElementById("fdSeitOk").addEventListener("click",()=>{ if(SEIT?.geku
 const EN_ART={ punkt:"Vorhaben-Punkt", thema:"Thema", kandidat:"Kandidat" };
 function renderEnt(){
   if(!ENL){ $("#fdEntL").innerHTML=`<p class="fd-empty">Die Entscheidungen ließen sich gerade nicht laden. Später noch einmal.</p>`; $("#fdEntN").textContent=""; $("#fdMeet").hidden=true; return; }
-  const items=ENL.eintraege||[];
+  /* Stufe 2: Fokus zuerst (Launch, Formatpartner, Systembau), dann der Rest in der Reihenfolge der Liste. */
+  const alle=ENL.eintraege||[]; const fok=alle.filter(x=>x.vorhaben&&x.vorhaben.fokus).sort((a,b)=>GF_PHASE_REIHE.indexOf(a.vorhaben.phase)-GF_PHASE_REIHE.indexOf(b.vorhaben.phase));
+  const items=fok.concat(alle.filter(x=>!fok.includes(x)));
   $("#fdEntN").textContent=items.length?`${items.length}`:"";
   $("#fdMeet").hidden=!items.length;
   if(!items.length){
@@ -177,7 +185,7 @@ function renderEnt(){
   }
   const show=items.slice(0,5), rest=items.length-show.length;
   $("#fdEntL").innerHTML=show.map(x=>{
-    const f=fristWord(x.frist); const her=[EN_ART[x.quelle_art]||x.quelle_art, x.vorhaben?x.vorhaben.title:null].filter(Boolean).join(" · ");
+    const f=fristWord(x.frist); const her=[x.vorhaben&&x.vorhaben.id?GF_PHASE[x.vorhaben.phase]||GF_PHASE.sonstiges:null, EN_ART[x.quelle_art]||x.quelle_art, x.vorhaben&&x.vorhaben.title?x.vorhaben.title:null].filter(Boolean).join(" · ");
     return `<a class="fd-row" href="entscheidungen.html">
       <div class="fd-main"><div class="fd-title">${gfEsc(x.frage||"")}</div>${x.vorschlag?`<div class="fd-note">Vorschlag: ${gfEsc(gfFirstSentence(x.vorschlag,160))}</div>`:x.reif?"":`<div class="fd-note">noch keine Frage</div>`}</div>
       <div class="fd-side">${f?gfZustand(f.tone||"info",f.t):`<span class="fd-muted">ohne Frist</span>`}<span class="fd-who">${gfEsc(her)}</span></div>
@@ -485,6 +493,13 @@ gfGate(async()=>{
   /* Tab über Mitternacht offen gelassen: beim Zurückkommen gilt der neue Tag (neue Runde). */
   document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && new Date().toLocaleDateString("sv-SE")!==TODAY) location.reload(); });
   loadVk().catch(()=>{});
+  /* Lauf-Bilanz nur auf Wunsch laden (eine Abfrage über vier Wochen). */
+  let laufGeladen=false;
+  $("#fdLauf").addEventListener("toggle",async()=>{ if(!$("#fdLauf").open||laufGeladen) return; laufGeladen=true;
+    try{ const d=await gfApi("lauf_bilanz",{wochen:4}); const s=d.summe||{}; $("#fdLaufN").textContent=d.trefferquote!=null?`Trefferquote ${d.trefferquote} %`:"";
+      $("#fdLaufL").innerHTML=`<p class="fd-note">Letzte vier Wochen: ${s.erledigt||0} Punkte vom Lauf erledigt, ${s.verlauf||0} Verlaufseinträge (${s.verlauf_vorschlag||0} Vorschläge, ${s.verlauf_verworfen||0} verworfen, ${s.verlauf_verfallen||0} verfallen), ${s.kandidaten||0} Kandidaten angelegt (${s.kandidaten_uebernommen||0} übernommen, ${s.kandidaten_verworfen||0} verworfen, ${s.kandidaten_archiviert||0} archiviert), ${s.fragen||0} Fragen formuliert.</p>
+        <table class="fd-tab"><thead><tr><th>Woche</th><th>erledigt</th><th>Verlauf</th><th>Kandidaten</th><th>übernommen</th><th>Fragen</th></tr></thead><tbody>${(d.wochen||[]).map(w=>`<tr><td>${gfEsc(w.woche)}</td><td>${w.erledigt}</td><td>${w.verlauf}</td><td>${w.kandidaten}</td><td>${w.kandidaten_uebernommen||0}</td><td>${w.fragen}</td></tr>`).join("")||`<tr><td colspan="6">Noch keine Zahlen.</td></tr>`}</tbody></table>`; }
+    catch(e){ laufGeladen=false; gfLadefehler($("#fdLaufL"), e, {titel:"Die Bilanz ließ sich nicht laden."}); } });
   try{ await load(); }catch(e){ $("#fdEntL").innerHTML=`<div class="empty">Konnte nicht laden: ${gfEsc(e.message||"Verbindung")}</div>`; }
 });
 </script>

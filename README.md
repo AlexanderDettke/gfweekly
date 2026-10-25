@@ -1,5 +1,13 @@
 # Kompass (vormals Das Hohe Haus, davor GF Weekly)
 
+> **Stand 25.10.2026: Stufe 2 · Ein Behälter** (Branch `stufe-2/ein-behaelter`). Themen und Kandidaten sind aufgelöst: 53 Themen und 35
+> Kandidaten wurden Punkte oder Verlaufseinträge an Vorhaben (Archiv `archiv_grund 'stufe2:*'`), Themen, Eingabe und Aufräumen sind aus der
+> Navigation; Entscheidungen hängen an Punkten. Fristen nur von Person oder Punkt (Datum aus der Quelle ist ein Vorschlag). Vorhaben haben
+> Phase (Launch, Formatpartner, Systembau, Weiteres) und Fokus; Fokus steht zuerst. Mehrfachauswahl (Nicht jetzt, Abgeben, Hinfällig).
+> Rückkehr als Lagebild nach Phasen und Menschen mit Brief; Korb nur Vorhaben, Übergabe mit „Erledigt“. Der Lauf erledigt Punkte selbst
+> (`created_by 'lauf'`, Rückgängig 7 Tage in der Akte), Bilanz „Was der Lauf getan hat“. Auftrag: `docs/PAKET-STUFE-2-EIN-BEHAELTER.md`,
+> Lauf-Wortlaut `docs/auftraege/STUFE2-LAEUFE.md`, Stand: `docs/TECHNIKSTAND.md` und `docs/STAND-STUFE-2.md`.
+
 > **Stand 25.10.2026: Stufe 1 · Entscheiden können** (Branch `stufe-1/entscheidungen`). Neue Seite „Entscheidungen“ (Gruppe Heute): die offenen
 > Entscheidungen der GF als Frage mit Frist und Herkunft aus Vorhaben-Punkten, Themen und Kandidaten; entscheiden, vertagen, abgeben, Rückgängig.
 > Die Besprechung arbeitet diese Liste ab. Korb „Ohne Vorhaben“ auf Vorhaben. Spielschicht aus (`GF_SPIEL`). Tabelle `hh_entscheidungen`

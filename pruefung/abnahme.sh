@@ -49,6 +49,9 @@ node pruefung/verkauf-probe.mjs | tail -1
 echo "\n== Stufe 1: Entscheidungen (Rechenregeln und Eingaben; Wirkung mit GF_PW) =="
 node pruefung/entscheidungen-probe.mjs | tail -1
 
+echo "\n== Stufe 2: ein Behälter (Rechenregeln, Navigation; Wirkung mit GF_PW) =="
+node pruefung/stufe2-probe.mjs | tail -1
+
 echo "\n== Wächter (statische Prüfungen) =="
 WAECHTER_OHNE_FRISCHE=1 node pruefung/waechter.mjs
 
@@ -64,7 +67,7 @@ cat > pruefung/letzte-abnahme.json <<JSON
   "stand": "$STAND",
   "commit": "$(git rev-parse HEAD)",
   "datum": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "laeufe": ["tokens", "farbscan", "kontrast", "matrix", "schirme (Oberfläche)", "bedienung (Oberfläche)", "kommunikation", "organisationsentscheidungen", "webstandard (Oberfläche)", "verkauf (Rechenregeln)", "entscheidungen (Rechenregeln)", "waechter"],
+  "laeufe": ["tokens", "farbscan", "kontrast", "matrix", "schirme (Oberfläche)", "bedienung (Oberfläche)", "kommunikation", "organisationsentscheidungen", "webstandard (Oberfläche)", "verkauf (Rechenregeln)", "entscheidungen (Rechenregeln)", "stufe 2 (Rechenregeln, Navigation)", "waechter"],
   "ungeprueft": "Wirkung in der Datenbank, Asana-Lebenszyklus, Nebenläufigkeit, verborgene Oberflächenteile"
 }
 JSON

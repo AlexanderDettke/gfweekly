@@ -2047,3 +2047,32 @@ summary{min-height:var(--ziel-min);box-sizing:border-box}
   .en-stand{margin-left:0}
   .en-korb-z{grid-template-columns:1fr}
 }
+
+/* ===========================================================
+   Stufe 2 · Ein Behälter (25.10.2026, docs/PAKET-STUFE-2-EIN-BEHAELTER.md). Nur Tokens.
+   Fokus-Abschnitt und Phasenmarke in der Entscheidungsliste, Mehrfachauswahl (.en-sel), Rückkehr-Lagebild (.rk2-*), Akte-Chips.
+   =========================================================== */
+.en-phase{display:inline-block;font-size:var(--stufe-1);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--text-2);background:var(--fill);border-radius:var(--radius-s);padding:1px var(--s-8)}
+.en-fokus .en-sec-h{color:var(--text)} .en-fokus .en-sec-h::before{content:"●";color:var(--accent);margin-right:var(--s-4)}
+.en-fv{font:inherit;font-size:var(--fs-sm);color:var(--link);padding:0;min-height:0;text-decoration:underline;cursor:pointer}
+.en-fv:focus-visible{outline:none;box-shadow:var(--ring);border-radius:var(--radius-s)}
+.en-row.waehlbar{grid-template-columns:auto minmax(0,1fr) auto}
+.en-cb{width:22px;height:22px;margin:var(--s-8) 0 0;accent-color:var(--accent)}
+.en-row.gewaehlt{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.en-sel{position:sticky;bottom:var(--s-16);z-index:45;display:none;align-items:center;gap:var(--s-8);flex-wrap:wrap;margin:var(--s-16) 0;padding:var(--s-12) var(--s-16);background:var(--surface);border:var(--rahmen) solid var(--border-strong);border-radius:var(--radius-m);box-shadow:var(--shadow)}
+.en-sel.show{display:flex} .en-sel .en-sel-n{font-weight:600;font-variant-numeric:tabular-nums;margin-right:var(--s-4)} .en-sel .btn{min-height:var(--ziel-min)}
+.rk2-brief{padding:var(--s-12) var(--s-16);background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);margin:0 0 var(--s-16);font-size:var(--fs-body);line-height:1.5;max-width:var(--lesebreite);white-space:pre-line}
+.rk2-brief textarea{width:100%;min-height:160px;border:var(--rahmen) solid var(--line);border-radius:var(--radius-m);padding:var(--s-8);background:var(--surface-2);font:inherit}
+.rk2-phase{margin:0 0 var(--s-24)}
+.rk2-phase h2{display:flex;align-items:center;gap:var(--s-8);margin:0 0 var(--s-8);font-size:var(--fs-title)}
+.rk2-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-12)}
+.rk2-col h3{margin:0 0 var(--s-8);font-size:var(--fs-sm);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--text-2)}
+.rk2-col ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--s-8)}
+.rk2-col li{padding:var(--s-8) var(--s-12);background:var(--surface);border:var(--rahmen) solid var(--border);border-radius:var(--radius-m);font-size:var(--fs-sm);line-height:1.45}
+.rk2-col li b{display:block;font-size:var(--fs-body);font-weight:600;color:var(--text)} .rk2-col li small{color:var(--text-2)}
+.rk2-col li .btn{margin-top:var(--s-8)}
+.fd-tab{width:100%;border-collapse:collapse;font-size:var(--fs-sm);font-variant-numeric:tabular-nums} .fd-tab th,.fd-tab td{text-align:left;padding:var(--s-4) var(--s-8);border-bottom:var(--rahmen) solid var(--line-soft)} .fd-tab th{color:var(--text-2);font-weight:600}
+.rk2-mensch{margin:0 0 var(--s-16)} .rk2-mensch h3{margin:0 0 var(--s-8);font-size:var(--fs-title)}
+.vh-a-phase{display:flex;align-items:center;gap:var(--s-8);flex-wrap:wrap;margin:0 0 var(--s-12)} .vh-a-phase .fd-muted{font-size:var(--fs-sm)}
+@media(max-width:900px){ .rk2-cols{grid-template-columns:1fr} }
+@media(max-width:600px){ .en-row.waehlbar{grid-template-columns:auto minmax(0,1fr)} .en-sel .btn{flex:1 1 auto} }

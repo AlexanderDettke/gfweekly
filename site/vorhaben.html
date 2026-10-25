@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Kompass · Vorhaben</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=41" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=41" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=41" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=41" />
-<link rel="stylesheet" href="/assets/styles.css?v=41" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=42" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=42" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=42" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=42" />
+<link rel="stylesheet" href="/assets/styles.css?v=42" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -64,7 +64,7 @@
 <button type="button" class="vh-fab" id="vhFab" aria-label="Einwurf: etwas eintragen"><span aria-hidden="true">+</span> Einwurf</button>
 <div class="modal-back" id="vhModal"></div>
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=41"></script>
+<script src="/assets/core.js?v=42"></script>
 <script>
 /* V31 · Vorhaben: eine Seite, drei Ansichten (Woche, Board, Liste), die Akte rechts (ab 1024 px) oder als Blatt.
    Liest vorhaben_list und vorhaben_get, schreibt über vorhaben_save, punkt_*, verlauf_status, vorhaben_verknuepfen,
@@ -240,6 +240,14 @@ function renderMain(){
   $("#vhMain").innerHTML= FILTER==="erledigt" ? renderErledigt(liste) : VIEW==="board" ? renderBoard(liste) : VIEW==="liste" ? renderListe(liste) : renderWoche(liste);
   gfStagger($("#vhMain"), ".vh-card,.vh-l-z,.vh-erl-z");
 }
+/* Stufe 2: Phase und Fokus in der Akte (nur Alex, Lea); Antwort trägt das Vorhaben, Verlaufseintrag kommt vom Server. */
+$("#vhAkte").addEventListener("click",async e=>{
+  const ph=e.target.closest("[data-phase]"), fo=e.target.closest("[data-fokus]"); if(!ph&&!fo||!AKTE) return;
+  const p={ id:AKTE.vorhaben.id, by:gfWho() }; if(ph) p.phase=ph.dataset.phase; if(fo) p.fokus=fo.dataset.fokus==="1";
+  const knopf=ph||fo; knopf.disabled=true;
+  try{ const d=await gfApi("vorhaben_phase",p); Object.assign(AKTE.vorhaben, d.vorhaben||{}); const i=DATA.vorhaben.findIndex(x=>x.id===AKTE.vorhaben.id); if(i>=0) Object.assign(DATA.vorhaben[i], d.vorhaben||{}); renderAkte(); gfToast(p.phase?"Phase: "+GF_PHASE[p.phase]:(p.fokus?"Im Fokus":"Nicht mehr im Fokus")); }
+  catch(x){ knopf.disabled=false; gfToast("Nicht gespeichert: "+(x.message||"Verbindung"),{fehler:true}); }
+});
 $("#vhMain").addEventListener("click",e=>{
   if(e.target.closest("[data-erl-neu]")){ ERL_FEHLER=""; renderMain(); ladenErledigt().then(()=>{ renderSteuer(); renderMain(); }); return; }
   if(e.target.closest("[data-filter-reset]")){ filterSetzen("alle"); renderSteuer(); renderMain(); return; }
@@ -362,6 +370,7 @@ function renderAkte(){
       <div class="vh-k"><span>Frist</span><b>${f?gfEsc(gfVhTag(f)):"keine"}</b><small>${gfEsc(v.frist_text||(f&&f!==v.frist?"aus einem Punkt":""))}</small></div>
       <div class="vh-k"><span>Punkte</span><b>${fertig.length} von ${d.punkte.length}</b><small>${offen.length?offen.length+" offen":"alles erledigt"}</small></div>
     </div>
+    ${zu?"":`<div class="vh-a-phase" role="group" aria-label="Phase und Fokus"><span class="fd-muted">Phase</span><div class="fchips compact">${GF_PHASE_REIHE.map(k=>`<button type="button" class="chip${(v.phase||"sonstiges")===k?" on":""}" data-phase="${k}" aria-pressed="${(v.phase||"sonstiges")===k}">${GF_PHASE[k]}</button>`).join("")}</div><button type="button" class="chip${v.fokus?" on":""}" data-fokus="${v.fokus?"0":"1"}" aria-pressed="${!!v.fokus}" title="Trägt gerade: steht in Liste, Besprechung und Für dich zuerst">Fokus</button></div>`}
     ${(v.konflikt||"").trim()?`<div class="vh-a-konf">${markeHtml(["warn","⚠","Konflikt"])} ${gfEsc(v.konflikt)}</div>`:""}
     ${d.einwuerfe.length&&!zu?`<button type="button" class="vh-warte klein" data-einwurf-akte>${gfZustand("warn", d.einwuerfe.length===1?"1 Einwurf wartet":d.einwuerfe.length+" Einwürfe warten")} zu diesem Vorhaben. Öffnen</button>`:""}
     <label class="vh-schritt"><span>Nächster Schritt${ENTWURF[v.id+"|naechster_schritt"]!==undefined?` <em class="vh-entwurf">nicht gespeichert, gespeichert ist: ${gfEsc(v.naechster_schritt||"leer")}</em>`:""}</span><textarea rows="2" data-feld="naechster_schritt" maxlength="1000" ${zu?"readonly":`placeholder="Was passiert als Nächstes?"`}>${gfEsc(ENTWURF[v.id+"|naechster_schritt"]??v.naechster_schritt??"")}</textarea></label>
@@ -414,6 +423,12 @@ function vorschlagKnopf(e){
   if(/^Vorschlag: Stand/i.test(tag)) return `<button type="button" class="btn btn-sm btn-primary" data-vstatus="bestaetigt" data-id="${e.id}">Nur in den Verlauf übernehmen (Stand von Hand)</button>`;
   return `<button type="button" class="btn btn-sm btn-primary" data-vstatus="bestaetigt" data-id="${e.id}">In den Verlauf übernehmen</button>`;
 }
+/* Stufe 2, Abschnitt 6: eine Erledigung durch den Lauf lässt sich 7 Tage lang in der Akte zurücknehmen (ein Knopf je Lauf-Eintrag). */
+function laufRueckgaengig(e,d){
+  if(e.created_by!=="lauf"||!e.punkt_id||e.status!=="bestaetigt"||!/^Punkt erledigt/.test(e.text||"")) return false;
+  if((Date.now()-new Date(e.created_at).getTime())>7*86400000||offenZu(d.vorhaben)) return false;
+  const p=(d.punkte||[]).find(x=>x.id===e.punkt_id); return !!(p&&p.erledigt&&p.erledigt_by==="lauf");
+}
 function verlauf(d){
   /* Ohne gemerkten Besuch gelten die letzten 24 Stunden (wie „Seit du zuletzt da warst“ auf Für dich). */
   const seen=gfVhSeen()||new Date(Date.now()-86400000).toISOString();
@@ -422,6 +437,7 @@ function verlauf(d){
       <div class="vh-e-k">${gfEsc(gfNewsWhen(e.happened_at))} · <b>${gfEsc(GF_VH_ART[e.art]||e.art)}</b>${e.wer?" · "+gfEsc(e.wer):""}${e.tag?` · <span class="vh-e-tag">${gfEsc(e.tag)}</span>`:""}${e.status==="vorschlag"?` ${markeHtml(["warn","●","Vorschlag"])}`:""}</div>
       <div class="vh-e-t">${gfEsc(e.text)}${e.source_url?` <a href="${gfEsc(e.source_url)}" target="_blank" rel="noopener">Quelle ↗</a>`:""}</div>
       ${e.status==="vorschlag"&&!offenZu(d.vorhaben)?`<div class="vh-e-a">${vorschlagKnopf(e)}<button type="button" class="btn btn-sm btn-ghost" data-vstatus="verworfen" data-id="${e.id}">Verwerfen</button></div>`:""}
+      ${laufRueckgaengig(e,d)?`<div class="vh-e-a"><button type="button" class="btn btn-sm btn-ghost" data-lauf-rueck="${e.id}">Rückgängig (vom Lauf erledigt)</button></div>`:""}
     </li>`;
   return `<div class="fchips compact vh-vlf" role="group" aria-label="Verlauf filtern">${[["alle","Alles"],["entscheidungen","Nur Entscheidungen"],["neu","Seit meinem letzten Besuch"]].map(([k,l])=>`<button type="button" class="chip${VL_FILTER===k?" on":""}" aria-pressed="${VL_FILTER===k}" data-vlf="${k}">${l}</button>`).join("")}</div>
     ${VL_FILTER==="neu"?`<p class="vh-sync">Seit ${gfEsc(gfNewsWhen(seen))}${gfVhSeen()?" (zuletzt „Alles gesehen“ auf Für dich)":" (letzte 24 Stunden)"}</p>`:""}
@@ -454,6 +470,9 @@ $("#vhAkte").addEventListener("click",async e=>{
   const vlf=e.target.closest("[data-vlf]"); if(vlf){ VL_FILTER=vlf.dataset.vlf; renderAkte(); return; }
   if(e.target.closest("[data-einwurf-akte]")){ if(!offenZu(AKTE.vorhaben)) einwurf({ vorhaben_id:AKTE.vorhaben.id }); return; }
   const bc=e.target.closest("[data-ball-akte]"); if(bc){ const v=AKTE.vorhaben; if(bc.dataset.ballAkte==="team"||bc.dataset.ballAkte==="extern") ballWaehlen(v, bc.dataset.ballAkte); else if(bc.dataset.ballAkte!==v.ball) await ballSetzen(v, bc.dataset.ballAkte, null); if(AKTE_SLUG) oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); return; }
+  const lr=e.target.closest("[data-lauf-rueck]"); if(lr){ lr.disabled=true;
+    try{ await gfApi("lauf_rueckgaengig",{ id:lr.dataset.laufRueck, by:gfWho() }); gfToast("Punkt wieder offen, Lauf-Eintrag verworfen"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
+    catch(err){ lr.disabled=false; gfToast("Nicht zurückgenommen: "+(err.message||"Verbindung")); } return; }
   const vs=e.target.closest("[data-vstatus]"); if(vs){ vs.disabled=true;
     try{ const r=await gfApi("verlauf_status",{ id:vs.dataset.id, status:vs.dataset.vstatus, by:gfWho() }); gfToast(vs.dataset.vstatus==="bestaetigt"?(r.angewendet?.geaendert?"Übernommen, Punkt abgehakt":"Übernommen"):"Verworfen"); await oeffneAkte(AKTE_SLUG,{tabKeep:true,still:true}); laden(true); }
     catch(err){ vs.disabled=false; gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); } return; }

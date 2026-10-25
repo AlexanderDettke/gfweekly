@@ -12,6 +12,9 @@ const GF_FN = "https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/gfweekly";
    game.js und eggs.js (Taler, Lagerplatz, Flammen, Abzeichen, Habitat-Punkte, Überraschungen), gfTextModal zählt verschickte Protokolle
    und der Abschnitt #habitat auf jahr.html erscheint. Tabellen und Bilder bleiben unberührt; nur diese eine Konstante schaltet. */
 const GF_SPIEL=false;
+/* Stufe 2 (25.10.2026): Phasen nach Alex (Mail an Lea): Launch, Formatpartner, Systembau; alles andere „Weiteres“. Reihenfolge = Sortierung. */
+const GF_PHASE={ launch:"Launch", formatpartner:"Formatpartner", systembau:"Systembau", sonstiges:"Weiteres" };
+const GF_PHASE_REIHE=["launch","formatpartner","systembau","sonstiges"];
 
 /* ---- session helpers ---- */
 function gfPW(){ return sessionStorage.getItem("gf_pw") || ""; }
@@ -234,7 +237,8 @@ function gfLadefehler(el, e, opts={}){
 }
 
 /* ---- Seitenleiste (V18): links, einklappbar zur Symbolleiste, am Handy als Schublade hinter einer schmalen Kopfzeile.
-   Gruppen: Heute (Für dich, Neuigkeiten, Besprechung) · Arbeiten (Themen mit Board/Kacheln/Liste/Entscheidungen, Eingabe) · Verwalten (Wichtige Seiten, Bearbeiten).
+   Gruppen: Heute (Für dich, Entscheidungen, Vorhaben, Neuigkeiten, Besprechung) · Arbeiten · Vertretung · Verwalten (Wichtige Seiten, Bearbeiten).
+   Stufe 2 (25.10.2026): Themen (Board, Kacheln, Liste), Eingabe und Aufräumen sind nicht mehr verlinkt; board.html?topic= bleibt als Archivansicht erreichbar.
    Unten: Habitat-Taler (game.js hängt sich an .tb-ctl), Dunkel/Hell, Person. Zustand offen/schmal in localStorage gf_nav. ---- */
 const GF_APP_NAME="Kompass";
 const GF_APP_SUB="Geschäftsführung der Wilden Habitate";
@@ -265,10 +269,10 @@ const GF_ICONS={
   wegweiser:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 5.5h10.5L18.5 8l-3 2.5H5z"/><path d="M19 13.5H8.5L5.5 16l3 2.5H19z"/></svg>'
 };
 const GF_NAV=[
-  ["Heute",[["start","index.html","Für dich","home",null,"Deine Entscheidungen, seit gestern, nächste Fristen"],["entscheidungen","entscheidungen.html","Entscheidungen","check",null,"Offene Entscheidungen der GF als Frage mit Frist: entscheiden, vertagen, abgeben"],["vorhaben","vorhaben.html","Vorhaben","wegweiser","vorhabenBadge","Woche, Board, Liste, Akte je Vorhaben"],["neuigkeiten","neuigkeiten.html","Neuigkeiten","bell","newsBadge","Ticker, Sichtungskorb, Themenlage"],["besprechung","besprechung.html","Besprechung","check",null,"Agenda der GF, abarbeiten, Protokoll"]]],
-  ["Arbeiten",[["vorstand","vorstand.html","Vorstand","pen",null,"Gemeinsame Vorstandspost der mit Freude eG: Stand, Antwortentwürfe und Asana Aufgaben"],["themen","board.html","Themen","board","themenBadge","Board, Kacheln, Liste, Entscheidungen"],["jahr","jahr.html","Jahr","cal",null,"Zyklus, Meilensteine, Rituale, Team, Plattformen, Habitat"],["saison","saison.html","Saison","rad",null,"Saison in vier Fragen: Phase und Herausforderung, wen wir haben, was sich geändert hat, wann was wie passieren kann"],["kommunikation","kommunikation.html","Kommunikation","megafon",null,"Postingplan-Standard: wer zuständig ist, wo es eng wird, was die GF entscheidet"],["launch","launch.html","Launch","fahne",null,"Launch verteilen: wer macht was bis wann für alle fünf Festivals, bestätigen und nach Asana senden"],["organisation","organisation.html","Organisation","haus","orgBadge","Haus, Operations, Formate: acht Entscheidungen, Teamaufbau, Tore der vier Stufen"],["besetzung","besetzung.html","Besetzung","leute",null,"Aus Gesprächen der Besetzungswerkstatt Aufgaben mit Person machen, je Festival und Bereich"],["arbeiten","arbeiten.html","So arbeiten wir","zwei",null,"Ist-Aufnahme, Umfrage und Systeme: wie wir heute arbeiten und was davon bleibt"],["capture","capture.html","Eingabe","pen",null,"Thema erfassen"]]],
+  ["Heute",[["start","index.html","Für dich","home",null,"Deine Entscheidungen, seit gestern, nächste Fristen"],["entscheidungen","entscheidungen.html","Entscheidungen","check",null,"Offene Entscheidungen der GF als Frage mit Frist: entscheiden, vertagen, abgeben"],["vorhaben","vorhaben.html","Vorhaben","wegweiser","vorhabenBadge","Woche, Board, Liste, Akte je Vorhaben"],["neuigkeiten","neuigkeiten.html","Neuigkeiten","bell","newsBadge","Ticker und Vorschläge des Laufs"],["besprechung","besprechung.html","Besprechung","check",null,"Agenda der GF, abarbeiten, Protokoll"]]],
+  ["Arbeiten",[["vorstand","vorstand.html","Vorstand","pen",null,"Gemeinsame Vorstandspost der mit Freude eG: Stand, Antwortentwürfe und Asana Aufgaben"],["jahr","jahr.html","Jahr","cal",null,"Zyklus, Meilensteine, Rituale, Team, Plattformen, Habitat"],["saison","saison.html","Saison","rad",null,"Saison in vier Fragen: Phase und Herausforderung, wen wir haben, was sich geändert hat, wann was wie passieren kann"],["kommunikation","kommunikation.html","Kommunikation","megafon",null,"Postingplan-Standard: wer zuständig ist, wo es eng wird, was die GF entscheidet"],["launch","launch.html","Launch","fahne",null,"Launch verteilen: wer macht was bis wann für alle fünf Festivals, bestätigen und nach Asana senden"],["organisation","organisation.html","Organisation","haus","orgBadge","Haus, Operations, Formate: acht Entscheidungen, Teamaufbau, Tore der vier Stufen"],["besetzung","besetzung.html","Besetzung","leute",null,"Aus Gesprächen der Besetzungswerkstatt Aufgaben mit Person machen, je Festival und Bereich"],["arbeiten","arbeiten.html","So arbeiten wir","zwei",null,"Ist-Aufnahme, Umfrage und Systeme: wie wir heute arbeiten und was davon bleibt"]]],
   ["Vertretung",[["vertretung","vertretung.html","Abwesenheiten","schild",null,"Wer ist wann weg, wer vertritt, mit welcher Vollmacht"],["uebergabe","uebergabe.html","Übergabe","tausch","uebergabeBadge","Der Korb einer Abwesenheit: was vorher, was an die Vertretung, was ruht"],["rueckkehr","rueckkehr.html","Rückkehr","tuer",null,"Was in deiner Abwesenheit entschieden wurde und was für dich bereitliegt"]]],
-  ["Verwalten",[["seiten","seiten.html","Wichtige Seiten","grid",null,"Arbeitsseiten mit Zugang"],["edit","bearbeiten.html","Bearbeiten","sliders",null,"Themen, Personen, Links pflegen"],["aufraeumen","aufraeumen.html","Aufräumen","check",null,"Jedem Eintrag einen Ausgang geben"]]]
+  ["Verwalten",[["seiten","seiten.html","Wichtige Seiten","grid",null,"Arbeitsseiten mit Zugang"],["edit","bearbeiten.html","Bearbeiten","sliders",null,"Personen, Links, Altbestand der Themen pflegen"]]]
 ];
 const GF_SUBNAV=[["board","board.html?view=board","Board","Spalten nach Ablauf, Prio, Zeitraum oder Person, verschiebbar"],["kacheln","board.html?view=kacheln","Kacheln","Gruppen als Kachelraster"],["liste","cockpit.html","Liste","Ausführliche Liste mit Details und Protokoll"]];
 function gfNavMode(){
@@ -334,10 +338,10 @@ function gfMountTopbar(active){
   gfApplyNav();
   const legacy=document.getElementById("subnav"); if(legacy){ legacy.style.display="none"; legacy.innerHTML=""; }
   /* V16: Sichtungskorb-Zähler (Kandidaten mit Status neu) an „Neuigkeiten“ */
-  if(active!=="neuigkeiten") gfApi("news_list",{kinds:["kandidat"],statuses:["neu"],limit:500}).then(d=>{ const n=(d.items||[]).length; const b=el.querySelector("#newsBadge"); if(n>0){ b.textContent=n; b.style.display="inline-flex"; b.title=n+" Kandidaten im Sichtungskorb"; } }).catch(()=>{});
+  /* Stufe 2 (Abschnitt 4.3): der Neuigkeiten-Zähler zeigt nur noch offene Vorschläge im Korb (korb_list), der Themen-Zähler ist weg. */
+  if(active!=="neuigkeiten"&&active!=="vorhaben") gfApi("korb_list").then(d=>{ const n=(d.zaehler||{}).gesamt||0; const b=el.querySelector("#newsBadge"); if(n>0){ b.textContent=n; b.style.display="inline-flex"; b.title=n+" Vorschläge im Korb"; } }).catch(()=>{});
   /* V31: offene Einwürfe plus Vorhaben mit Ball bei mir und Zustand überfällig, auch auf der Vorhaben-Seite selbst. */
   gfVhBadge();
-  if(active!=="themen") gfApi("list").then(d=>{ const n=(d.topics||[]).filter(t=>t.board_lane==="zu_besprechen" && t.kind!=="recurring").length; const b=el.querySelector("#themenBadge"); if(n>0){ b.textContent=n; b.style.display="inline-flex"; b.title=n+" Themen zu besprechen"; } }).catch(()=>{});
 }
 
 /* ---- Unternavigation „Themen“ (V18): sitzt als Einrückung unter „Themen“ in der Seitenleiste; hier wird nur der aktive Punkt markiert ---- */

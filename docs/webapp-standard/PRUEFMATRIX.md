@@ -96,6 +96,19 @@ Die Proben fanden während der Umsetzung zwei echte Fehler, die dann behoben wur
 | Korb | drei Einträge, Vorschlag als Marke, Zuordnen zum Vorschlag, Chip-Reihe, Archivieren, Neues Vorhaben, Verwerfen, „Alle Vorschläge übernehmen“ mit Zähler | Bedienprobe, `entscheidungen-probe.mjs` (Wirkung) |
 | Spielschicht | kein game.js, kein `#gameBar`, `GF_SPIEL` false, Check-in mit Tagesschlüssel nicht gesendet | Bedienprobe |
 
+### 3b. Bedienproben Stufe 2 (25.10.2026, `pruefung/bedienung.mjs`, Gruppen „Rückkehr (Stufe 2)“ und „Stufe 2“; Wirkung `pruefung/stufe2-probe.mjs`)
+
+| Probe | Erwartung | Beleg |
+| --- | --- | --- |
+| Vorschlagsfrist | Datum aus der Quelle steht als Knopf „Vorschlag: bis … übernehmen“, nicht als Frist; Übernehmen sendet `entscheidung_set` mit `expect_updated_at`, Quelle hand | Bedienprobe, `stufe2-probe.mjs` |
+| Fokus zuerst | Abschnitt Fokus vor Überfällig, Reihenfolge Launch, Formatpartner, Systembau, dann Frist; Phasenmarke in der Herkunft; Besprechung und Für dich gleich | Bedienprobe |
+| Mehrfachauswahl | Auswählen zeigt Kontrollkästchen und Leiste; Nicht jetzt mit Datum (Standard vier Wochen), Abgeben, Hinfällig mit Rückfrage; Konflikt je Zeile benannt; Rückgängig nimmt alle zurück | Bedienprobe, `stufe2-probe.mjs` (Konflikt, Rückweg) |
+| Akte | Chips Phase (vier) und Fokus senden `vorhaben_phase`; „Rückgängig (vom Lauf erledigt)“ nur an Lauf-Einträgen bis 7 Tage | Bedienprobe, `stufe2-probe.mjs` (`lauf_rueckgaengig`) |
+| Übergabe | je Zeile „Erledigt“ (`handover_set status erledigt`); Korb nur Vorhaben | Bedienprobe, `stufe2-probe.mjs` |
+| Rückkehr | Begrüßung, drei Kacheln, Brief (fehlt: Hinweis; bearbeiten über `rueckkehr_brief_set`), Phasenblöcke Launch, Formatpartner, Weiteres mit Entschieden, Bewegt, Wartet; Nach Menschen Lea, Alex, übrige; „Willkommen zurück“; Ladefehler sperrt Beenden | Bedienprobe, `stufe2-probe.mjs` (`rueckkehr_lage`, 404) |
+| Lauf-Bilanz | Klappe lädt erst beim Öffnen, Trefferquote und Tabelle je Woche | Bedienprobe, `stufe2-probe.mjs` |
+| Navigation | 18 Haupteinträge ohne Themen, Eingabe, Aufräumen; `board.html?topic=` erreichbar | Schirme, `stufe2-probe.mjs` |
+
 ## 4. Leistung (T-18)
 
 Zeit vom Aufruf bis zum gefüllten Kerninhalt ohne „lädt …“, Median aus fünf Läufen, gleiche Testdaten, zwei Durchgänge je Stand.

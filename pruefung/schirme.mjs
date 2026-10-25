@@ -58,7 +58,7 @@ const SEITEN = [
   ['cockpit.html', '#list'], ['entscheidungen.html', '#enListe .en-row'], ['jahr.html', '#cycle'], ['capture.html', '#form'],
   ['seiten.html', '#groups'], ['bearbeiten.html', '#itemsView'], ['aufraeumen.html', '#list'], ['checkin.html', '#agenda'],
   ['inbox.html', '#list'],
-  ['vertretung.html', '#absList'], ['uebergabe.html', '#list'], ['rueckkehr.html', '#entList'],
+  ['vertretung.html', '#absList'], ['uebergabe.html', '#list'], ['rueckkehr.html', '#phasen .rk2-phase, #phasen .fd-empty'],
   ['saison.html', '#saLage'], ['kommunikation.html', '#kmFest'], ['launch.html', '#lnAufgaben'], ['organisation.html', '#ogDecs'],
   ['vorhaben.html', '#vhMain'], ['vorhaben.html?view=board&v=xceed', '#vhAkte'], ['vorhaben.html?view=liste&v=xceed&tab=verlauf', '#vhAkte'],
   ['vorhaben.html?filter=erledigt', '.vh-erl'], ['vorhaben.html?filter=erledigt&v=saal-alt', '#vhAkte .vh-a-erl'],
@@ -224,8 +224,8 @@ for (const thema of THEMES) {
       }, kern);
       if (befund.tor) meldungen.push('Tor blieb zu');
       if (!befund.app) meldungen.push('Seiteninhalt blieb verborgen');
-      if (befund.nav !== 21) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 21 Haupteinträgen)');   // 21 mit Entscheidungen in Heute (Stufe 1, 25.10.2026)
-      if (befund.unternav !== 3) meldungen.push('Unternavigation unvollständig (' + befund.unternav + ' von 3 Einträgen)');   // Entscheidungen nicht mehr unter Themen
+      if (befund.nav !== 18) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 18 Haupteinträgen)');   // 18 ohne Themen, Eingabe, Aufräumen (Stufe 2, 25.10.2026)
+      if (befund.unternav !== 0) meldungen.push('Unternavigation unerwartet (' + befund.unternav + ' Einträge; seit Stufe 2 gibt es keinen Themen-Eintrag mehr)');   // Stufe 2 (25.10.2026)
       if (befund.fehltext.length) meldungen.push('Fehlermeldung auf der Seite: ' + befund.fehltext.join(', '));
       if (befund.kern < 0) meldungen.push('Kerninhalt ' + kern + ' fehlt im Aufbau');
       else if (befund.kern < 20) meldungen.push('Kerninhalt ' + kern + ' blieb leer (' + befund.kern + ' Zeichen)');

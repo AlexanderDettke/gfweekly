@@ -63,7 +63,7 @@ export const A2 = { id:'abs-2', person:'Alex', korb_truncated:true, korb_abgesch
   note:'aus dem Kalender', note_rueckkehr:null, created_by:'Lea', created_at:zeit(0), updated_at:zeit(0) };
 export const A3 = { id:'abs-3', person:'Alex', asana_project_gid:'1200000000000000', asana_synced_at:null, von:tag(-20), bis:tag(-1), bis_geschaetzt:null, art:'geplant', kontakt:'wochenbrief',
   kanal:null, gespraech_zeit:null, vertretung_standard:'Lea', stufe:'lang', status:'rueckkehr', test:false, note:null,
-  note_rueckkehr:'Seit '+tag(-20)+' bis '+tag(-1)+':\n2 Entscheidungen in Vertretung\n1 Weitergabe\n1 erledigter Punkt\n2 Punkte warten auf dich',
+  note_rueckkehr:null,
   created_by:'Alex', created_at:zeit(-21), updated_at:zeit(-1) };
 
 export const korbZeile = (o) => ({ id:o.id, absence_id:o.absence_id, kind:o.kind||'thema', ref_id:o.ref_id||('t'+o.id),
@@ -377,7 +377,7 @@ export const ANTWORT = {
 
 /* V31 · Vorhaben: erfundene Vorhaben in der Form von hh_vorhaben_lage, Fristen relativ zu heute, damit Woche, Board und
    Liste alle Zustände zeigen (überfällig, Ball fehlt, Konflikt, Launch, ohne Datum, Spalte mit mehr als fünf). */
-const vhZeile = (o) => ({ id:'vh-'+o.slug, slug:o.slug, title:o.title, gruppe:o.gruppe||'sonstiges', strand:null, metaphase:'Systembau, Launch und Formatpartner',
+const vhZeile = (o) => ({ id:'vh-'+o.slug, slug:o.slug, title:o.title, gruppe:o.gruppe||'sonstiges', strand:null, metaphase:'Systembau, Launch und Formatpartner', phase:o.phase||({launch:'launch',partner:'formatpartner',system:'systembau'})[o.gruppe]||'sonstiges', fokus:o.fokus!==undefined?o.fokus:(o.gruppe==='launch'||o.gruppe==='partner'||o.slug==='habitat-hub'),
   saison_row_id:o.saison?'lus':null, saison_item_id:null, ball:o.ball, ball_name:o.ball_name||null, ball_seit:zeit(-2), owner:o.owner||null,
   stand:o.stand||null, naechster_schritt:o.schritt||null, frist:o.frist||null, frist_text:o.frist_text||null, konflikt:o.konflikt||null,
   status:o.status||'aktiv', sort:o.sort||100, quellen:o.quellen||[], updated_by:'Alex', created_at:zeit(-5), updated_at:zeit(-1),
@@ -386,7 +386,7 @@ const vhZeile = (o) => ({ id:'vh-'+o.slug, slug:o.slug, title:o.title, gruppe:o.
   einwuerfe_offen:o.ew??0, vorschlaege_offen:0, zustand:o.zustand||'ruhig',
   saison:o.saison?{ label:'Lusatia', vvk_start:o.frist, item_title:'VVK-Start', item_von:o.frist, item_bis:o.frist }:null });
 export const VORHABEN = [
-  vhZeile({ slug:'xceed', title:'XCeed Ticketing-Vertrag', gruppe:'geld', ball:'lea', owner:'gf', frist:tag(10), sort:5, pg:9, pe:4, zustand:'bewegt',
+  vhZeile({ slug:'xceed', title:'XCeed Ticketing-Vertrag', gruppe:'geld', ball:'lea', owner:'gf', frist:tag(10), sort:5, pg:9, pe:4, zustand:'bewegt', phase:'launch', fokus:true,
     stand:'Alles verhandelt bis auf Bürgschaftstext und Freigabe.', schritt:'Bürgschaftstext einarbeiten und an XCeed senden', th:10, kd:32,
     quellen:[{ quelle:'Gmail Alex', at:zeit(-0.1) },{ quelle:'Neuigkeiten', at:zeit(-0.2) }] }),
   vhZeile({ slug:'liquiditaet', title:'Liquidität viertes Quartal', gruppe:'geld', ball:'lea', owner:'lea', punkt_frist:tag(3), sort:8, zustand:'bewegt', stand:'Lücke bis Jahresende.', schritt:'Zahlungsplan Oktober' }),
@@ -398,7 +398,7 @@ export const VORHABEN = [
     konflikt:'Gesprächstermin liegt in Leas Abwesenheit', schritt:'Fragen einsammeln, Termin festlegen' }),
   vhZeile({ slug:'freude-pakete', title:'Pakete und Flex-Tickets mit Freude eG', gruppe:'launch', ball:'offen', frist:tag(43), sort:40, zustand:'ball_fehlt', schritt:'Zuständigkeit festlegen', pg:3, pe:0 }),
   vhZeile({ slug:'bynature', title:'by nature · Vorverkauf', gruppe:'launch', ball:'team', ball_name:'Helge', owner:'gf', frist:tag(29), sort:30, schritt:'Ansprache-Plan' }),
-  vhZeile({ slug:'helge', title:'Rolle Helge ab 2027', gruppe:'team', ball:'gf', owner:'gf', frist:tag(89), sort:80, schritt:'Rollenbeschreibung mit Befugnissen und Zielen' }),
+  vhZeile({ slug:'helge', title:'Rolle Helge ab 2027', gruppe:'team', ball:'gf', owner:'gf', frist:tag(89), sort:80, schritt:'Rollenbeschreibung mit Befugnissen und Zielen', phase:'formatpartner', fokus:true }),
   vhZeile({ slug:'backoffice', title:'Backoffice und Buchhaltung', gruppe:'team', ball:'lea', owner:'lea', sort:90, schritt:'Entscheidung treffen' }),
   vhZeile({ slug:'booking', title:'Booking-Standards', gruppe:'team', ball:'lea', owner:'lea', sort:95, schritt:'Paket schnüren' }),
   vhZeile({ slug:'habitat-hub', title:'Habitat Hub und Aufgabenbereiche', gruppe:'system', ball:'alex', owner:'alex', frist:tag(89), sort:100, zustand:'bewegt', schritt:'Team einführen' }),
@@ -615,13 +615,14 @@ const enZeile = (o) => ({ id:o.id, quelle_art:o.art, quelle_id:o.qid||o.id+'-q',
   entschieden_am:o.entschieden_am||null, entschieden_von:o.entschieden_von||null, vertagt_bis:o.vertagt_bis||null, abgegeben_an:o.an||null,
   created_by:'kompass', run_id:null, rueckweg:o.rueckweg||null, rueckweg_at:o.rueckweg_at||null, created_at:zeit(-3), updated_at:o.updated_at||zeit(-1),
   herkunft:{ art:o.art, titel:o.titel||o.frage, text:o.text||null, url:o.url||null, datum:zeit(-3), quelle:o.quelle||null, fehlt:false },
-  vorhaben:o.vh?{ id:o.vh, slug:o.vh.replace(/^vh-/,''), title:(VORHABEN.find(v=>v.id===o.vh)||{}).title||o.vh, status:'aktiv' }:null });
+  frist_vorschlag:o.frist_vorschlag||null,
+  vorhaben:o.vh?{ id:o.vh, slug:o.vh.replace(/^vh-/,''), title:(VORHABEN.find(v=>v.id===o.vh)||{}).title||o.vh, status:'aktiv', phase:(VORHABEN.find(v=>v.id===o.vh)||{}).phase||'sonstiges', fokus:!!(VORHABEN.find(v=>v.id===o.vh)||{}).fokus }:{ id:null, slug:null, title:null, status:null, phase:'sonstiges', fokus:false } });
 const EN_SAAT = () => [
   enZeile({ id:'en1', art:'punkt', qid:'p-gehalt', vh:'vh-helge', frage:'Entscheidung zu Gehalt, Start 01/2027, Proof in Q4', frist:tag(66), vorschlag:'Rollenbeschreibung mit Befugnissen und Zielen', text:'Vorschlag liegt seit September vor.', url:'vorhaben.html?v=helge' }),
   enZeile({ id:'en2', art:'thema', qid:'t-xceed', vh:'vh-xceed', frage:'Schließen wir mit Xceed ab oder suchen wir weiter Partner?', form:true, frist:tag(1), vorschlag:'Vor der nächsten GF-Runde lesen und entscheiden', titel:'Entscheidungsgrundlage: Xceed-Abschluss, Rückfall und Partnersuche', text:'Drei Seiten Entscheidungsgrundlage im Thema.', url:'board.html?topic=t-xceed' }),
   enZeile({ id:'en3', art:'kandidat', qid:'n3', frage:'Aufsichtsrat verlangt bis 02.11. Auskunft zu Darlehen', frist:tag(8), text:'Mail des Aufsichtsrats mit drei Fragen.', url:'https://example.org/ar', quelle:'Mail vom Aufsichtsrat' }),
   enZeile({ id:'en4', art:'thema', qid:'t1', frage:'Bürgschaft für die Straße übernehmen?', frist:tag(-2), vorschlag:'Nur mit Deckel 20.000 Euro', url:'board.html?topic=t1' }),
-  enZeile({ id:'en5', art:'thema', qid:'t-unreif1', frage:'Bebauungsplan und Geländesicherung', url:'board.html?topic=t-unreif1' }),
+  enZeile({ id:'en5', art:'thema', qid:'t-unreif1', frage:'Bebauungsplan und Geländesicherung', url:'board.html?topic=t-unreif1', frist_vorschlag:tag(12) }),
   enZeile({ id:'en6', art:'thema', qid:'t-unreif2', frage:'Merch, Merch Bundles', url:'board.html?topic=t-unreif2' }),
   enZeile({ id:'en7', art:'punkt', qid:'p-ohne', vh:'vh-xceed', frage:'Auszahlung ab Monat 1 schriftlich', vorschlag:'Bürgschaftstext einarbeiten und an XCeed senden', url:'vorhaben.html?v=xceed' }),
   enZeile({ id:'en8', art:'thema', qid:'t-vertagt', frage:'Saalmiete für das Winterfest verhandeln?', status:'vertagt', vertagt_bis:tag(-1), frist:tag(-1), fq:'hand', vorschlag:'Angebot von Hand einholen', url:'board.html?topic=t-vertagt' }),
@@ -695,7 +696,52 @@ Object.assign(ANTWORT, {
     return { ok:true, aktion:p.aktion, item:{ id:x.id, title:x.titel, vorhaben_id:vh.id }, vorhaben:{ id:vh.id, slug:vh.slug, title:vh.title }, angelegt, verlauf_id:'v-korb' };
   },
   checkin: (p) => p && p.ohne_spiel ? { ok:true, first:true, streak:3 } : { ok:true, first:false, streak:3, gains:[], state:null },
+  /* Stufe 2 */
+  entscheidungen_sammelaktion: (p) => {
+    const by = enPerson(p); if (!by) return { __status:400, error:'by muss Alex oder Lea sein' };
+    const items = Array.isArray(p.items) ? p.items : []; if (!items.length) return { __status:400, error:'items: 1 bis 200 Entscheidungen' };
+    if (!['nicht_jetzt','abgeben','hinfaellig'].includes(p.aktion)) return { __status:400, error:'aktion: nicht_jetzt, abgeben oder hinfaellig' };
+    const montag = (() => { const d = new Date(Date.now() + 28 * 86400000); const t = d.getDay() || 7; d.setDate(d.getDate() + (8 - t) % 7); return d.toLocaleDateString('sv-SE'); })();
+    const wert = p.aktion === 'nicht_jetzt' ? (p.wert || montag) : p.wert;
+    const ergebnis = items.map(it => {
+      const e = EN_ZEILEN.find(x => x.id === it.id); if (!e) return { id:it.id, ok:false, grund:'Entscheidung gibt es nicht', konflikt:false };
+      if (it.expect_updated_at && it.expect_updated_at !== e.updated_at) return { id:it.id, ok:false, grund:'inzwischen geändert', konflikt:true };
+      if (!['offen','vertagt'].includes(e.status)) return { id:it.id, ok:false, grund:'nur offene oder vertagte Zeilen', konflikt:true };
+      const vorher = { status:e.status, vertagt_bis:e.vertagt_bis, frist:e.frist, frist_quelle:e.frist_quelle, abgegeben_an:e.abgegeben_an };
+      if (p.aktion === 'nicht_jetzt') Object.assign(e, { status:'vertagt', vertagt_bis:wert, frist:wert, frist_quelle:'hand' });
+      if (p.aktion === 'abgeben') Object.assign(e, { status:'abgegeben', abgegeben_an:wert });
+      if (p.aktion === 'hinfaellig') Object.assign(e, { status:'hinfaellig' });
+      e.rueckweg = { aktion:p.aktion, eigen:vorher }; e.rueckweg_at = zeit(0); e.updated_at = zeit(0);
+      return { id:it.id, ok:true, vorher, entscheidung:e };
+    });
+    return { ok:ergebnis.filter(x => x.ok).length, gesamt:items.length, aktion:p.aktion, wert, ergebnis };
+  },
+  vorhaben_phase: (p) => { const by = enPerson(p); if (!by) return { __status:400, error:'by muss Alex oder Lea sein' }; const v = VORHABEN.find(x => x.id === p.id); if (!v) return { __status:404, error:'Vorhaben gibt es nicht' };
+    if (p.phase !== undefined && p.phase !== null) v.phase = p.phase; if (p.fokus !== undefined && p.fokus !== null) v.fokus = !!p.fokus; return { vorhaben:{ ...v }, geaendert:true }; },
+  lauf_bilanz: () => ({ seit:zeit(-28), wochen:[ { woche:'2026-W43', erledigt:2, verlauf:9, verlauf_bestaetigt:3, verlauf_vorschlag:6, verlauf_verworfen:0, verlauf_verfallen:0, kandidaten:25, kandidaten_uebernommen:1, kandidaten_verworfen:5, kandidaten_archiviert:0, fragen:32 },
+    { woche:'2026-W42', erledigt:0, verlauf:14, verlauf_bestaetigt:4, verlauf_vorschlag:10, verlauf_verworfen:0, verlauf_verfallen:0, kandidaten:39, kandidaten_uebernommen:0, kandidaten_verworfen:0, kandidaten_archiviert:39, fragen:0 } ],
+    summe:{ erledigt:2, verlauf:23, verlauf_bestaetigt:7, verlauf_vorschlag:16, verlauf_verworfen:0, verlauf_verfallen:0, kandidaten:64, kandidaten_uebernommen:1, kandidaten_verworfen:5, kandidaten_archiviert:39, fragen:32 }, trefferquote:2 }),
+  rueckkehr_brief_set: (p) => { const by = enPerson(p); if (!by) return { __status:400, error:'by muss Alex oder Lea sein' }; const a = [...NEUE, A1, A2, A3].find(x => x.id === p.absence_id); if (!a) return { __status:404, error:'Abwesenheit gibt es nicht' }; a.note_rueckkehr = (p.text || '').trim() || null; return { ok:true, brief:a.note_rueckkehr, von:by }; },
+  rueckkehr_lage: (p) => {
+    if (SCHALTER.rueckkehrFehler) return { __status:500, error:'Verbindung' };
+    const a = [...NEUE, A1, A2, A3].find(x => x.id === p.absence_id); if (!a) return { __status:404, error:'Abwesenheit gibt es nicht' };
+    const person = a.person; const V = Object.fromEntries(VORHABEN.map(v => [v.id, v]));
+    const bl = {}; for (const ph of ['launch','formatpartner','systembau','sonstiges']) bl[ph] = { phase:ph, entschieden:[], bewegt:[], wartet:[] };
+    const phase = (vid) => (V[vid] && V[vid].phase) || 'sonstiges';
+    bl.launch.entschieden.push({ art:'entscheidung', id:'en9', text:'Gastro-Partner für 2027 bestätigen?', ergebnis:'Wir bleiben beim bisherigen Gastro-Partner.', wer:'Alex', am:zeit(-1), vorhaben:'Draußenbande · Vorverkauf', slug:'draussenbande' });
+    bl.launch.entschieden.push({ art:'punkt', id:'p4', text:'Entscheidung für XCeed', wer:'Alex', am:zeit(-9), vorhaben:'XCeed Ticketing-Vertrag', slug:'xceed' });
+    bl.launch.bewegt.push({ id:'vh-xceed', slug:'xceed', title:'XCeed Ticketing-Vertrag', fokus:true, ball:'lea', ball_name:null, stand:'Alles verhandelt', anzahl:4, verlauf:vhVerlauf.filter(e => e.vorhaben_id === 'vh-xceed' && e.status === 'bestaetigt').slice(0,3).map(e => ({ id:e.id, happened_at:e.happened_at, art:e.art, wer:e.wer, text:e.text })) });
+    bl.sonstiges.bewegt.push({ id:'vh-liquiditaet', slug:'liquiditaet', title:'Liquidität viertes Quartal', fokus:false, ball:'lea', ball_name:null, stand:'Lücke bis Jahresende.', anzahl:2, verlauf:[ { id:'lq1', happened_at:zeit(-2), art:'mail', wer:'Lea', text:'Zahlungsplan Oktober an die Bank geschickt.' } ] });
+    for (const e of EN_ZEILEN.filter(x => (x.status === 'abgegeben' && x.abgegeben_an === person.toLowerCase()) || x.status === 'offen')) bl[phase(e.vorhaben_id)].wartet.push({ art:'entscheidung', id:e.id, text:e.frage, frist:e.frist, wer:e.status === 'abgegeben' ? person : 'GF gemeinsam', status:e.status, vorhaben:e.vorhaben && e.vorhaben.title, slug:e.vorhaben && e.vorhaben.slug, phase:phase(e.vorhaben_id) });
+    for (const pk of vhPunkte.filter(x => !x.erledigt && (x.wer || '').toLowerCase().includes(person.toLowerCase()))) bl[phase(pk.vorhaben_id)].wartet.push({ art:'punkt', id:pk.id, text:pk.titel, frist:pk.frist, wer:pk.wer, status:'offen', vorhaben:V[pk.vorhaben_id] && V[pk.vorhaben_id].title, slug:V[pk.vorhaben_id] && V[pk.vorhaben_id].slug, phase:phase(pk.vorhaben_id) });
+    const menschen = {}; for (const pk of vhPunkte.filter(x => !x.erledigt)) { const k = /^gf/i.test(pk.wer||'') ? 'GF gemeinsam' : (pk.wer||'offen').split(/[,&]| und /)[0].trim(); (menschen[k] = menschen[k] || []).push({ art:'punkt', id:pk.id, text:pk.titel, frist:pk.frist, vorhaben:V[pk.vorhaben_id] && V[pk.vorhaben_id].title, slug:V[pk.vorhaben_id] && V[pk.vorhaben_id].slug, phase:phase(pk.vorhaben_id) }); }
+    for (const e of EN_ZEILEN.filter(x => x.status === 'abgegeben')) { const k = e.abgegeben_an === 'team' ? 'Team' : (e.abgegeben_an === 'lea' ? 'Lea' : 'Alex'); (menschen[k] = menschen[k] || []).push({ art:'entscheidung', id:e.id, text:e.frage, frist:e.frist, vorhaben:e.vorhaben && e.vorhaben.title, slug:e.vorhaben && e.vorhaben.slug, phase:phase(e.vorhaben_id) }); }
+    const reihen = ['Lea','Alex','GF gemeinsam'];
+    const nach_menschen = Object.entries(menschen).map(([name, eintraege]) => ({ name, eintraege })).sort((x, y) => { const ia = reihen.indexOf(x.name), ib = reihen.indexOf(y.name); return (ia < 0 ? 9 : ia) - (ib < 0 ? 9 : ib) || y.eintraege.length - x.eintraege.length; });
+    const wartet = Object.values(bl).reduce((n, b) => n + b.wartet.length, 0);
+    return { absence:a, person, von:a.von, bis:a.bis || heute, heute, brief:a.note_rueckkehr || null, phasen:['launch','formatpartner','systembau','sonstiges'].map(k => bl[k]), nach_menschen, zaehler:{ entschieden:2, bewegt:2, wartet, tage:12 } };
+  },
   session_start: (p) => ({ session:{ id:'s-neu', started_at:zeit(0), participants:p.participants||'Alex, Lea', started_by:p.started_by||'Alex', title:p.title||'Besprechung' } }),
   session_end: (p) => ({ session:{ id:p.id, ended_at:zeit(0), protocol:p.protocol||'' }, gains:[] }),
 });
-for (const a of ['entscheidung_set','entscheidung_entscheiden','entscheidung_vertagen','entscheidung_abgeben','entscheidung_zurueck','korb_set']) SCHREIBEND.add(a);
+for (const a of ['entscheidung_set','entscheidung_entscheiden','entscheidung_vertagen','entscheidung_abgeben','entscheidung_zurueck','korb_set','entscheidungen_sammelaktion','vorhaben_phase','rueckkehr_brief_set']) SCHREIBEND.add(a);
