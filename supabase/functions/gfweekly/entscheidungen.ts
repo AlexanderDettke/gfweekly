@@ -124,8 +124,10 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
       ids('thema').length ? admin.from('gfweekly_topics').select('id,title,context,short_description,next_action,recommendation,gate_frist,created_at,vorhaben_id,board_lane,archived').in('id', ids('thema')) : { data: [] },
       ids('kandidat').length ? admin.from('gfweekly_news').select('id,title,body,quote,source,source_title,source_url,happened_at,created_at,vorhaben_id,status').in('id', ids('kandidat')) : { data: [] },
     ]);
+    for (const r of [punkte, themen, kandidaten]) if (r.error) throw r.error;   // Runde 3, Befund 3: ein Abfragefehler ist kein „Quelle fehlt“
     for (const p of ((punkte.data || []) as Any[])) if (p.vorhaben_id) vhIds.add(p.vorhaben_id);
     const vh: Any = vhIds.size ? await admin.from('hh_vorhaben').select('id,slug,title,status,ball,naechster_schritt').in('id', [...vhIds]) : { data: [] };
+    if (vh.error) throw vh.error;
     const VH = new Map<string, Any>(((vh.data || []) as Any[]).map((v: Any) => [v.id, v]));
     const P = new Map<string, Any>(((punkte.data || []) as Any[]).map((x: Any) => [x.id, x]));
     const T = new Map<string, Any>(((themen.data || []) as Any[]).map((x: Any) => [x.id, x]));
@@ -162,6 +164,11 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
       zuletzt_entschieden: letzte ? { id: letzte.id, frage: letzte.frage, ergebnis: letzte.ergebnis, entschieden_am: letzte.entschieden_am, entschieden_von: letzte.entschieden_von } : null };
   }
 
+  /* Nach einer gelungenen Datenbankaktion ist das Nachladen kein Grund für einen Fehler (Runde 3, Befund 4). */
+  async function antwort(basis: Any, eid: string, roh: Any) {
+    try { return { ...basis, entscheidung: await eine(eid) }; }
+    catch (e) { return { ...basis, entscheidung: roh?.entscheidung ?? null, nachladen_fehler: String((e as Error).message ?? e) }; }
+  }
   async function eine(eid: string) {
     const { data, error } = await admin.from('hh_entscheidungen').select('*').eq('id', eid).maybeSingle();
     if (error) throw error; if (!data) throw new EnFehler('Entscheidung gibt es nicht', 404);
@@ -197,14 +204,14 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
     if (e0) throw e0; if (!orig) throw new EnFehler('Eintrag gibt es nicht', 404);
     if (aktion === 'verwerfen') {
       if (kind !== 'kandidat') throw new EnFehler('verwerfen gilt für Kandidaten; Themen werden archiviert');
-      const { data, error } = await admin.from('gfweekly_news').update({ status: 'verworfen', decided_by: wer, decided_at: new Date().toISOString() }).eq('id', kid).eq('status', 'neu').select('id,status').maybeSingle();
-      if (error) throw error; if (!data) throw new EnFehler('Der Kandidat ist inzwischen anders entschieden; bitte neu laden', 409);
+      const { data, error } = await admin.from('gfweekly_news').update({ status: 'verworfen', decided_by: wer, decided_at: new Date().toISOString() }).eq('id', kid).eq('status', 'neu').is('vorhaben_id', null).select('id,status').maybeSingle();
+      if (error) throw error; if (!data) throw new EnFehler('Der Kandidat ist inzwischen zugeordnet oder anders entschieden; bitte neu laden', 409);
       return { ok: true, aktion, item: data };
     }
     if (aktion === 'archivieren') {
       if (kind !== 'thema') throw new EnFehler('archivieren gilt für Themen; Kandidaten werden verworfen');
-      const { data, error } = await admin.from('gfweekly_topics').update({ archived: true, archiv_grund: 'korb', updated_at: new Date().toISOString() }).eq('id', kid).eq('archived', false).select('id,archived').maybeSingle();
-      if (error) throw error; if (!data) throw new EnFehler('Das Thema ist inzwischen archiviert; bitte neu laden', 409);
+      const { data, error } = await admin.from('gfweekly_topics').update({ archived: true, archiv_grund: 'korb', updated_at: new Date().toISOString() }).eq('id', kid).eq('archived', false).is('vorhaben_id', null).in('board_lane', ['zu_besprechen', 'in_klaerung']).select('id,archived').maybeSingle();
+      if (error) throw error; if (!data) throw new EnFehler('Das Thema ist inzwischen zugeordnet, erledigt oder archiviert; bitte neu laden', 409);
       return { ok: true, aktion, item: data };
     }
     /* Zuordnen, Anlegen und Verlaufseintrag laufen in einer Transaktion (hh_korb_zuordnen, Runde 1 Befund 3). */
@@ -235,10 +242,15 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
       if (action === 'entscheidung_set') {
         const wer = by(t); const eid = id(t); const patch = enSetEingabe(t, heuteBerlin());
         if (patch.frage !== undefined) patch.frage_von = wer;
+        /* Runde 3, Befund 1: nur bearbeitbare Zeilen, und nur vom gesehenen Stand aus (expect_updated_at). */
+        const { data: alt, error: e0 } = await admin.from('hh_entscheidungen').select('id,status,updated_at').eq('id', eid).maybeSingle();
+        if (e0) throw e0; if (!alt) throw new EnFehler('Entscheidung gibt es nicht', 404);
+        if (!['offen', 'vertagt'].includes(alt.status)) throw new EnFehler(`Die Entscheidung ist inzwischen ${alt.status}; bitte neu laden`, 409);
+        if (t.expect_updated_at && Math.abs(Date.parse(String(t.expect_updated_at)) - Date.parse(alt.updated_at)) > 1) throw new EnFehler('Die Entscheidung wurde inzwischen geändert; bitte neu laden', 409);
         patch.updated_at = new Date().toISOString();
-        const { data, error } = await admin.from('hh_entscheidungen').update(patch).eq('id', eid).select('id').maybeSingle();
-        if (error) throw error; if (!data) throw new EnFehler('Entscheidung gibt es nicht', 404);
-        return json({ ok: true, entscheidung: await eine(eid) });
+        const { data, error } = await admin.from('hh_entscheidungen').update(patch).eq('id', eid).eq('updated_at', alt.updated_at).select('id').maybeSingle();
+        if (error) throw error; if (!data) throw new EnFehler('Die Entscheidung wurde inzwischen geändert; bitte neu laden', 409);
+        return json(await antwort({ ok: true }, eid, null));
       }
       if (action === 'entscheidung_entscheiden') {
         const wer = by(t); const eid = id(t); const erg = (t.ergebnis ?? '').toString().trim();
@@ -246,25 +258,25 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
         const sitzung = (t.session_id ?? '').toString();
         if (sitzung && !EN_UUID.test(sitzung)) throw new EnFehler('session_id ist keine Kennung');
         const r = await rpc('hh_entscheidung_entscheiden', { p_id: eid, p_ergebnis: erg.slice(0, 4000), p_by: wer, p_session: sitzung || null });
-        return json({ ok: true, geaendert: !!r?.geaendert, entscheidung: await eine(eid) });
+        return json(await antwort({ ok: true, geaendert: !!r?.geaendert }, eid, r));
       }
       if (action === 'entscheidung_vertagen') {
         const wer = by(t); const eid = id(t); const bis = gueltigerTag(t.bis);
         if (!bis) throw new EnFehler('bis: Datum als JJJJ-MM-TT');
         if (bis < heuteBerlin()) throw new EnFehler('Vertagen braucht ein Datum ab heute');
         const r = await rpc('hh_entscheidung_vertagen', { p_id: eid, p_bis: bis, p_by: wer });
-        return json({ ok: true, geaendert: !!r?.geaendert, entscheidung: await eine(eid) });
+        return json(await antwort({ ok: true, geaendert: !!r?.geaendert }, eid, r));
       }
       if (action === 'entscheidung_abgeben') {
         const wer = by(t); const eid = id(t); const an = (t.an ?? '').toString().toLowerCase();
         if (!['alex', 'lea', 'team'].includes(an)) throw new EnFehler('an: alex, lea oder team');
         const r = await rpc('hh_entscheidung_abgeben', { p_id: eid, p_an: an, p_by: wer });
-        return json({ ok: true, geaendert: !!r?.geaendert, entscheidung: await eine(eid) });
+        return json(await antwort({ ok: true, geaendert: !!r?.geaendert }, eid, r));
       }
       if (action === 'entscheidung_zurueck') {
         const wer = by(t); const eid = id(t);
-        await rpc('hh_entscheidung_zurueck', { p_id: eid, p_by: wer });
-        return json({ ok: true, entscheidung: await eine(eid) });
+        const r = await rpc('hh_entscheidung_zurueck', { p_id: eid, p_by: wer });
+        return json(await antwort({ ok: true }, eid, r));
       }
       if (action === 'korb_list') return json(await korbListe());
       if (action === 'korb_set') return json(await korbSet(t));

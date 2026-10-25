@@ -1016,7 +1016,14 @@ console.log('\n== Stufe 1: Entscheidungsliste, Besprechung darauf, Korb, Spielsc
   await p.locator('#enD-en5 [data-act="edit"]').click(); await p.waitForTimeout(200);
   await p.locator('#enFr').fill('Bebauungsplan: beauftragen wir die Geländesicherung noch 2026?'); await p.locator('#enFt').fill(plus7); await p.locator('#enModal [type="submit"]').click(); await p.waitForTimeout(500);
   const st = letzte('entscheidung_set');
-  pruefe('Bearbeiten sendet nur geänderte Felder (frage, frist) mit by', st && st.nutzlast.id === 'en5' && /Geländesicherung noch 2026/.test(st.nutzlast.frage) && st.nutzlast.frist === plus7 && st.nutzlast.vorschlag === undefined && st.nutzlast.by === 'Alex');
+  pruefe('Bearbeiten sendet nur geänderte Felder (frage, frist) mit by und dem gesehenen Stand', st && st.nutzlast.id === 'en5' && /Geländesicherung noch 2026/.test(st.nutzlast.frage) && st.nutzlast.frist === plus7 && st.nutzlast.vorschlag === undefined && st.nutzlast.by === 'Alex' && !!st.nutzlast.expect_updated_at);
+  /* Veralteter Dialog: der gesehene Stand passt nicht mehr → Konflikt sichtbar, Liste lädt neu. */
+  await p.locator('.en-row[data-id="en6"] .en-q').click(); await p.waitForTimeout(100);
+  await p.locator('#enD-en6 [data-act="edit"]').click(); await p.waitForTimeout(200);
+  EN_ZEILEN.find(x => x.id === 'en6').updated_at = new Date().toISOString();
+  await p.locator('#enFr').fill('Merch: bestellen wir die Bundles für 2027?'); erwarteterFehler = true; await p.locator('#enModal [type="submit"]').click(); await p.waitForTimeout(500); erwarteterFehler = false;
+  pruefe('Bearbeiten vom veralteten Stand: Konflikt im Blatt, nichts überschrieben', /inzwischen geändert/.test(await p.locator('#enErr').innerText()) && EN_ZEILEN.find(x => x.id === 'en6').frage === 'Merch, Merch Bundles');
+  await p.keyboard.press('Escape'); await p.waitForTimeout(150);
   pruefe('die Zeile ist danach reif und steht unter „Nächste zwei Wochen“ (Frist in 7 Tagen)', await p.locator('#enS-zwei_wochen ~ .en-list .en-row[data-id="en5"]').count() === 1 && await p.locator('#enUnreif summary .fd-n').innerText() === '1');
   /* Filter Entschieden: gedämpft mit Ergebnis */
   await p.locator('#enFilter [data-filter="entschieden"]').click(); await p.waitForTimeout(400);

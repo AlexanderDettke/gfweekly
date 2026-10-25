@@ -123,6 +123,10 @@ else {
     /* Thema entscheiden: Beschluss und board_lane; zurück */
     const ss = await api('session_start', { participants: 'Alex, Lea', started_by: 'Alex', title: 'Stufe 1 Probe (Test)' });
     K.session = ss.d?.session?.id || null;
+    const sc0 = sql(`select count(*) as n from public.gfweekly_score_events;`);
+    const se = await api('session_end', { id: K.session, protocol: 'Probe (Test)', summary: [{ key: 'x', outcome: 'entschieden' }], title: 'Stufe 1 Probe (Test)' });
+    const sc1 = sql(`select count(*) as n from public.gfweekly_score_events;`);
+    pruefe('Spielschicht aus: Besprechung beenden schreibt keine Punkte (Runde 3, Befund 5)', se.status === 200 && Number(sc0.rows?.[0]?.n) === Number(sc1.rows?.[0]?.n) && (se.d?.gains || []).length === 0, `${sc0.rows?.[0]?.n} → ${sc1.rows?.[0]?.n}, gains ${(se.d?.gains || []).length}`);
     const e3 = await api('entscheidung_entscheiden', { id: eT.id, ergebnis: 'Probe Thema entschieden (Test)', by: 'Alex', session_id: K.session });
     const tg = await api('topic_get', { id: K.thema });
     const q3 = sql(`select count(*) as n, max(session_id::text) as s from public.gfweekly_decisions where topic_id = '${K.thema}';`);
@@ -157,6 +161,9 @@ else {
     const tg5 = await api('topic_get', { id: K.thema });
     pruefe('zurück nach abgeben: gate wieder gf, Punkt wieder GF gemeinsam', r3.status === 200 && r4.status === 200 && tg5.d?.topic?.gate === 'gf' && sql(`select wer from public.hh_vorhaben_punkte where id = '${K.punkt}';`).rows?.[0]?.wer === 'GF gemeinsam');
     /* entscheidung_set */
+    const s0 = await api('entscheidung_set', { id: eP.id, vorschlag: 'Nur Vorschlag von Hand (Test)', by: 'Lea' });
+    const l5a = await api('entscheidungen_list', { status: 'alle' });
+    pruefe('nur der Vorschlag von Hand: sammeln überschreibt ihn nicht (Runde 3, Befund 1)', s0.status === 200 && (l5a.d?.eintraege || []).find(e => e.id === eP.id)?.vorschlag === 'Nur Vorschlag von Hand (Test)');
     const s1 = await api('entscheidung_set', { id: eP.id, frage: 'Probe: stimmen wir dem Testpunkt zu?', vorschlag: 'Ja', by: 'Lea' });
     const l5 = await api('entscheidungen_list', { status: 'alle' });
     const eP2 = (l5.d?.eintraege || []).find(e => e.id === eP.id);
@@ -168,6 +175,8 @@ else {
     const k3 = await api('korb_set', { kind: 'thema', id: K.thema, aktion: 'zuordnen', vorhaben_id: K.vorhaben, by: 'Alex' });
     const q6 = sql(`select (select vorhaben_id from public.gfweekly_topics where id = '${K.thema}') = '${K.vorhaben}' as zu, (select count(*) from public.hh_vorhaben_verlauf where vorhaben_id = '${K.vorhaben}' and text like 'Aus dem Korb zugeordnet:%') as verlauf;`);
     pruefe('Korb zuordnen: vorhaben_id gesetzt, ein Verlaufseintrag; zweiter Aufruf 409 ohne zweiten Eintrag', k2.status === 200 && k3.status === 409 && q6.rows?.[0]?.zu === true && Number(q6.rows[0].verlauf) === 1, JSON.stringify([k2.status, k3.status, q6]).slice(0, 200));
+    const k2b = await api('korb_set', { kind: 'thema', id: K.thema, aktion: 'archivieren', by: 'Alex' });
+    pruefe('Korb: zugeordnetes Thema lässt sich nicht mehr über den Korb archivieren (409, Runde 3 Befund 2)', k2b.status === 409, String(k2b.status));
     const k4 = await api('korb_set', { kind: 'kandidat', id: K.kandidat, aktion: 'verwerfen', by: 'Lea' });
     pruefe('Korb verwerfen: Kandidat verworfen, nicht mehr im Korb', k4.status === 200 && k4.d.item.status === 'verworfen' && !((await api('korb_list', {})).d.eintraege || []).some(x => x.id === K.kandidat));
     const k6 = await api('korb_set', { kind: 'kandidat', id: K.kandidat, aktion: 'zuordnen', vorhaben_id: K.vorhaben, by: 'Lea' });

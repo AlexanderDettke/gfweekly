@@ -672,6 +672,8 @@ function enAktion(p, wie) {
 Object.assign(ANTWORT, {
   entscheidungen_list: (p) => enListe(p),
   entscheidung_set: (p) => { const by = enPerson(p); if (!by) return { __status:400, error:'by muss Alex oder Lea sein' }; const e = enFinde(p); if (e.__status) return e;
+    if (!['offen','vertagt'].includes(e.status)) return { __status:409, error:`Die Entscheidung ist inzwischen ${e.status}; bitte neu laden` };
+    if (p.expect_updated_at && p.expect_updated_at !== e.updated_at) return { __status:409, error:'Die Entscheidung wurde inzwischen geändert; bitte neu laden' };
     let patch; try { patch = enSetEingabe(p, heute); } catch (x) { return { __status:x.status || 400, error:x.message }; }
     if (patch.frage !== undefined) patch.frage_von = by; Object.assign(e, patch, { updated_at:zeit(0) }); return { ok:true, entscheidung:e }; },
   entscheidung_entscheiden: (p) => enAktion(p, 'entscheiden'),

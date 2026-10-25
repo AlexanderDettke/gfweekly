@@ -209,13 +209,13 @@ function aktion(e, act, ausl){
   }
   if(act==="edit"){
     const m=blatt("Frage, Frist, Vorschlag", `<form class="en-form" id="enF" novalidate><div class="fld ffull"><label for="enFr">Frage</label><textarea id="enFr" rows="2" required>${gfEsc(e.frage)}</textarea></div><div class="fld"><label for="enFt">Frist</label><input id="enFt" type="date" value="${e.frist||""}"></div><div class="fld ffull"><label for="enVs">Vorschlag</label><textarea id="enVs" rows="2">${gfEsc(e.vorschlag||"")}</textarea></div>${FUSS("Speichern")}</form>`, "#enFr");
-    m.querySelector("#enF").onsubmit=async ev=>{ ev.preventDefault(); const p={ id:e.id, by:gfWho() }; const fr=m.querySelector("#enFr").value.trim(), ft=m.querySelector("#enFt").value, vs=m.querySelector("#enVs").value.trim();
+    m.querySelector("#enF").onsubmit=async ev=>{ ev.preventDefault(); const p={ id:e.id, by:gfWho(), expect_updated_at:e.updated_at }; const fr=m.querySelector("#enFr").value.trim(), ft=m.querySelector("#enFt").value, vs=m.querySelector("#enVs").value.trim();
       if(fr.length<3){ m.querySelector("#enErr").textContent="Die Frage braucht mindestens drei Zeichen."; return; }
       if(fr!==e.frage) p.frage=fr; if((e.frist||"")!==ft) p.frist=ft||null; if((e.vorschlag||"")!==vs) p.vorschlag=vs||null;
-      if(Object.keys(p).length===2){ m.classList.remove("open"); return; }
+      if(Object.keys(p).length===3){ m.classList.remove("open"); return; }
       const btn=m.querySelector('[type="submit"]'); btn.disabled=true;
       try{ await gfApi("entscheidung_set",p); m.classList.remove("open"); gfToast("Gespeichert"); await load(true); }
-      catch(x){ btn.disabled=false; m.querySelector("#enErr").textContent="Nicht gespeichert: "+(x.message||"Verbindung"); } };
+      catch(x){ btn.disabled=false; m.querySelector("#enErr").textContent=(x.konflikt?"":"Nicht gespeichert: ")+(x.message||"Verbindung"); if(x.konflikt) load(true); } };
   }
 }
 /* Nach jeder Aktion verschwindet die Zeile; der Hinweis bietet 10 Sekunden Rückgängig. Die Nutzlast des Rückgängig steht fest,

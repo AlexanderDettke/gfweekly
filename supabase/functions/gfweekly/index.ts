@@ -182,7 +182,11 @@ function isoWeek(day: string): string { const d=new Date(day+'T00:00:00Z'); cons
 function addDays(day: string, n: number){ const d=new Date(day+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
 function isWeekend(day: string){ const g=new Date(day+'T00:00:00Z').getUTCDay(); return g===0||g===6; }
 /* Vergibt Taler. ref_id macht die Vergabe einmalig (je kind, ref_id, who). cap_per_day begrenzt je Person und Tag. */
+/* Stufe 1 (25.10.2026): Spielschicht aus. Mit false schreiben award und grantBadge nichts mehr in gfweekly_score_events und gfweekly_badges;
+   die Tabellen bleiben. Zurück auf true zusammen mit GF_SPIEL in site/assets/core.js. */
+const GF_SPIEL_SERVER = false;
 async function award(gains: Gain[], kind: string, who: string, refType: string, refId: string, day: string, extra=0, note=''): Promise<Gain|null> {
+  if (!GF_SPIEL_SERVER) return null;
   const rules = await scoreRules(); const r = rules[kind]; if(!r) return null;
   const w = whoNorm(who); const points = (r.points||0) + extra;
   if (r.cap_per_day) {
@@ -260,6 +264,7 @@ const BADGES: [string,string,string][] = [
   ['saatgut','Saatgut','who'],['gaertner','Gärtner','who'],['vollstaendig','Vollständig','who'],['tagesziel-serie','Tagesziel-Serie','who'],
 ];
 async function grantBadge(gains: Gain[], key: string, who: string, year: number, day: string, ref=''){
+  if (!GF_SPIEL_SERVER) return null;
   const w = BADGES.find(b=>b[0]===key)?.[2]==='who' ? whoNorm(who) : 'Team'; if(w==='Team' && BADGES.find(b=>b[0]===key)?.[2]==='who') return null;
   const { error } = await admin.from('gfweekly_badges').insert({ key, who:w, year, ref });
   if(error){ if((error as any).code==='23505') return null; throw error; }
