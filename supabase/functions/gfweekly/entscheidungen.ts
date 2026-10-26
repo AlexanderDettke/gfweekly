@@ -423,5 +423,5 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
       throw e;
     }
   }
-  return { handle };
+  return { handle, rueckkehrLage, laufBilanz };
 }

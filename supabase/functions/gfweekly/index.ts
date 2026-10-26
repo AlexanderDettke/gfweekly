@@ -2,6 +2,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { kommModul } from './komm.ts';
 import { verkaufModul } from './verkauf.ts';
 import { entscheidungenModul } from './entscheidungen.ts';
+import { laufModul } from './lauf.ts';
 
 const PASSWORD = Deno.env.get('GFWEEKLY_PASSWORD') ?? '';
 const PROJECT_URL = Deno.env.get('SUPABASE_URL')!;
@@ -1297,6 +1298,8 @@ const KOMM = kommModul({ admin, json, heuteBerlin, whoNorm, launchFestivals, lau
 /* 25.10.2026 · Verkauf 2027 je Festival auf „Für dich“ (verkauf_list, verkauf_set), siehe verkauf.ts. */
 const VERKAUF = verkaufModul({ admin, json, heuteBerlin, whoNorm });
 const ENTSCHEIDUNGEN = entscheidungenModul({ admin, json, heuteBerlin, whoNorm });
+/* Stufe 3: der Lauf im Kompass (lauf.ts); Lagebild und Bilanz kommen aus dem Entscheidungsmodul. */
+const LAUF = laufModul({ admin, json, heuteBerlin, whoNorm, rueckkehrLage: ENTSCHEIDUNGEN.rueckkehrLage, laufBilanz: ENTSCHEIDUNGEN.laufBilanz });
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -1315,10 +1318,11 @@ Deno.serve(async (req: Request) => {
   const gains: Gain[] = []; const DAY = dayOf(t); const WHO = whoNorm(t.who ?? t.created_by ?? t.updated_by ?? t.done_by ?? t.decided_by ?? t.started_by ?? t.ended_by ?? '');
 
   try {
-    if (action === 'ping') return json({ ok:true, version:42, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY'), kommTabelleConfigured: !!Deno.env.get('GOOGLE_DIENSTKONTO_JSON') });
+    if (action === 'ping') return json({ ok:true, version:43, secretConfigured: !!PASSWORD, asanaConfigured: !!ASANA_TOKEN, aiConfigured: !!Deno.env.get('ANTHROPIC_API_KEY'), gmailConfigured: !!(Deno.env.get('GOOGLE_SA_JSON') || '').trim(), kommTabelleConfigured: !!Deno.env.get('GOOGLE_DIENSTKONTO_JSON') });
     /* V32 Kommunikation */
     if (typeof action === 'string' && action.startsWith('komm_')) return await KOMM.handle(action, t, WHO);
     if (action === 'verkauf_list' || action === 'verkauf_set') return await VERKAUF.handle(action, t);
+    if (typeof action === 'string' && ['lauf_tick','lauf_einstellungen_get','lauf_einstellungen_set','lauf_gmail_probe','lauf_retro_auswertung'].includes(action)) return await LAUF.handle(action, t);
     if (typeof action === 'string' && (action === 'entscheidungen_list' || action === 'entscheidungen_sammelaktion' || action.startsWith('entscheidung_') || action === 'korb_list' || action === 'korb_set' || action === 'vorhaben_phase' || action === 'lauf_bilanz' || action === 'lauf_rueckgaengig' || action === 'rueckkehr_lage' || action === 'rueckkehr_brief_set')) return await ENTSCHEIDUNGEN.handle(action, t);
     if (action === 'list') {
       const { data, error } = await admin.from('gfweekly_topics').select('*').eq('archived', false)
