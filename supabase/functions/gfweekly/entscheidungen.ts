@@ -252,18 +252,20 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
        hh_punkt_toggle (Eintrag „Punkt erledigt: …“, created_by lauf), Rückgängig schreibt source_ref rueckgaengig:lauf:<eintrag>. Verfall und
        Verwerfen zählen nach status_at (Trigger seit Runde 2). */
     const [pk, vl, kd, en, rz] = await Promise.all([
-      admin.from('hh_vorhaben_verlauf').select('created_at').eq('created_by', 'lauf').eq('art', 'system').like('text', 'Punkt erledigt:%').gte('created_at', seit),
+      admin.from('hh_vorhaben_verlauf').select('id,created_at').eq('created_by', 'lauf').eq('art', 'system').like('text', 'Punkt erledigt:%').gte('created_at', seit),
       admin.from('hh_vorhaben_verlauf').select('created_at,status,status_at,created_by,tag').not('created_by', 'in', '("Alex","Lea","kompass")').or(`created_at.gte.${seit},status_at.gte.${seit}`),
       admin.from('gfweekly_news').select('created_at,status').eq('kind', 'kandidat').gte('created_at', seit),
       admin.from('hh_entscheidungen').select('updated_at,frage_von').eq('frage_von', 'lauf').gte('updated_at', seit),
-      admin.from('hh_vorhaben_verlauf').select('created_at').like('source_ref', 'rueckgaengig:lauf:%').gte('created_at', seit),
+      admin.from('hh_vorhaben_verlauf').select('created_at,source_ref').like('source_ref', 'rueckgaengig:lauf:%').gte('created_at', seit),
     ]);
     for (const r of [pk, vl, kd, en, rz]) if (r.error) throw r.error;
     const woche = (d: string) => { const x = new Date(d); const t0 = new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate())); const tag = t0.getUTCDay() || 7; t0.setUTCDate(t0.getUTCDate() + 4 - tag); const j1 = new Date(Date.UTC(t0.getUTCFullYear(), 0, 1)); return `${t0.getUTCFullYear()}-W${String(Math.ceil((((t0.getTime() - j1.getTime()) / 86400000) + 1) / 7)).padStart(2, '0')}`; };
     const W: Record<string, Any> = {};
     const z = (w: string, k: string) => { W[w] = W[w] || { woche: w, erledigt: 0, zurueckgenommen: 0, vorschlaege: 0, vorschlaege_uebernommen: 0, verlauf: 0, verlauf_bestaetigt: 0, verlauf_vorschlag: 0, verlauf_verworfen: 0, verlauf_verfallen: 0, kandidaten: 0, kandidaten_uebernommen: 0, kandidaten_verworfen: 0, kandidaten_archiviert: 0, fragen: 0 }; W[w][k]++; };
+    /* Rücknahmen zählen zur Woche ihrer Erledigung (Kohorte, Stufe 3 Runde 3 Befund 7); Rücknahmen älterer Erledigungen außerhalb des Fensters bleiben außen vor. */
+    const erlWoche = new Map<string, string>(((pk.data || []) as Any[]).map((r: Any) => [r.id, woche(r.created_at)]));
     for (const r of (pk.data || []) as Any[]) z(woche(r.created_at), 'erledigt');
-    for (const r of (rz.data || []) as Any[]) z(woche(r.created_at), 'zurueckgenommen');
+    for (const r of (rz.data || []) as Any[]) { const w = erlWoche.get(String(r.source_ref).replace('rueckgaengig:lauf:', '')); if (w) z(w, 'zurueckgenommen'); }
     for (const r of (vl.data || []) as Any[]) {
       /* Entstehung in der Woche des Eintrags; Verwerfen und Verfall in der Woche des Statuswechsels (status_at, Runde 2 Befund 6). */
       const vorschlag = /^Vorschlag/i.test(r.tag || '') || r.status === 'vorschlag' || r.status === 'verworfen' || r.status === 'verfallen';   // Vorschläge erkennt man am tag, ihr Status wechselt später

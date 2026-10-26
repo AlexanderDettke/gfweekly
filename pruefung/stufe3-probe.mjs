@@ -6,7 +6,7 @@
       Google-Probe ohne Secret (sauberer Fehler); danach Modus zurück auf den Ausgangswert und aufräumen.
    Aufruf: node pruefung/stufe3-probe.mjs
            GF_PW=… node pruefung/stufe3-probe.mjs   (Passwort aus dem Vault, nie ausgeben; siehe docs/TECHNIKSTAND.md) */
-import { laufStufe, laufAktion, istEinwurfMail, mailText } from '../supabase/functions/gfweekly/lauf.ts';
+import { laufStufe, laufAktion, istEinwurfMail, mailText, belegVerankert, abschaltungFaellig } from '../supabase/functions/gfweekly/lauf.ts';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -22,6 +22,8 @@ pruefe('sicher nur mit Punkt, Sicherheit ab 0,8 und belegtem Abschluss; wahrsche
 pruefe('Aktion: live erledigt, vorschlag und probe schlagen vor, gesperrter Punkt wird nicht erledigt, Kandidat nie aus gesendeter Mail',
   laufAktion('sicher', 'live', true, false, false, false) === 'erledigt' && laufAktion('sicher', 'vorschlag', true, false, false, false) === 'vorschlag' && laufAktion('sicher', 'probe', true, false, false, false) === 'vorschlag'
   && laufAktion('sicher', 'live', true, false, false, true) === 'gesperrt' && laufAktion('wahrscheinlich', 'live', false, true, true, false) === 'nichts' && laufAktion('wahrscheinlich', 'live', false, true, false, false) === 'kandidat' && laufAktion('unklar', 'live', false, false, false, false) === 'nichts' && laufAktion('unklar', 'live', false, true, false, false) === 'nichts');
+pruefe('Beleg nur verankert mit Datum, Betrag oder kennzeichnendem Wort aus der Quelle; allgemeine Sätze nicht', belegVerankert('Die Nordlicht GmbH bestätigt den Eingang des Probevertrags.', { betreff: 'Re: Probevertrag Nordlicht GmbH', text: 'ist eingegangen' }) && belegVerankert('Zahlung von 1.200 Euro am 24.10.2026 bestätigt.', { betreff: 'x', text: 'y' }) && !belegVerankert('Die Angelegenheit ist nun erledigt und abgeschlossen.', { betreff: 'Re: Probevertrag Nordlicht GmbH', text: 'ist eingegangen' }) && !belegVerankert('Erledigt.', { betreff: 'Nordlicht', text: '' }));
+pruefe('Selbstabschaltung: fünf Fälle über zwei Wochen, jede Woche unter 50 %', abschaltungFaellig({ erledigt: 3, zurueck: 2 }, { erledigt: 2, zurueck: 2 }) && !abschaltungFaellig({ erledigt: 3, zurueck: 2 }, { erledigt: 1, zurueck: 0 }) && !abschaltungFaellig({ erledigt: 4, zurueck: 3 }, { erledigt: 0, zurueck: 0 }));
 pruefe('Einwurf-Adressen bleiben beim Einwurf-Weg; Mailtext trägt Kopfzeilen und ist begrenzt', istEinwurfMail({ an: 'Lea <lea+einwurf@wildemoehre.org>' }) && !istEinwurfMail({ an: 'lea@wildemoehre.org' }) && /^Von: a\nAn: b\nDatum: c\nBetreff: d\n/.test(mailText({ von: 'a', an: 'b', datum: 'c', betreff: 'd', text: 'x'.repeat(5000) })) && mailText({ text: 'x'.repeat(5000) }).length <= 3500);
 {
   const core = fs.readFileSync(new URL('../site/assets/core.js', import.meta.url), 'utf8');
@@ -55,7 +57,8 @@ else {
     if (K.vorhaben) { t.push(`delete from public.hh_vorhaben_verlauf where vorhaben_id = '${K.vorhaben}';`); t.push(`delete from public.hh_vorhaben_punkte where vorhaben_id = '${K.vorhaben}';`); t.push(`delete from public.hh_vorhaben where id = '${K.vorhaben}' and title like '%(Test)%';`); }
     t.push(`delete from public.gfweekly_news where source_ref like 'mail:s3fix%' or source_ref like 'lauf:tag:%' and body like '%fixtures%';`);
     if (K.modusVorher) t.push(`update public.hh_lauf_einstellungen set modus = '${K.modusVorher}', abbruch_grund = null where id = 1;`);
-    t.push(`select (select count(*) from public.hh_vorhaben where id ${K.vorhaben ? `= '${K.vorhaben}'` : 'is null'}) as vh, (select count(*) from public.hh_lauf_protokoll where run_id like '${K.run}%' or (run_id like 'abschaltung:%' and created_at >= '${K.start}')) as prot, (select count(*) from public.gfweekly_news where (source_ref like 'mail:s3fix%' or source_ref like 'lauf:abschaltung:%') and created_at >= '${K.start}') as news, (select modus from public.hh_lauf_einstellungen where id = 1) as modus;`);
+    if (K.tagVorher !== undefined) t.push(`insert into public.hh_lauf_tag (tag, sichtung) values (current_date, ${K.tagVorher}) on conflict (tag) do update set sichtung = ${K.tagVorher};`);
+    t.push(`select (select count(*) from public.hh_vorhaben where id ${K.vorhaben ? `= '${K.vorhaben}'` : 'is null'}) as vh, (select count(*) from public.hh_lauf_protokoll where run_id like '${K.run}%' or (run_id like 'abschaltung:%' and created_at >= '${K.start}')) as prot, (select count(*) from public.gfweekly_news where (source_ref like 'mail:s3fix%' or source_ref like 'lauf:abschaltung:%') and created_at >= '${K.start}') as news, (select modus from public.hh_lauf_einstellungen where id = 1) as modus, (select coalesce((select sichtung from public.hh_lauf_tag where tag = current_date), 0)) as tag;`);
     return sql(t.join('\n'));
   };
   const fix = (id, o) => ({ thread_id: 's3fix-' + id, message_id: 's3fix-' + id + '-m', von: o.von || 'partner@example.org', an: o.an || 'alex@wildemoehre.org', betreff: o.betreff, datum: o.datum || new Date().toISOString(), text: o.text, gesendet: !!o.gesendet });
@@ -64,6 +67,7 @@ else {
     pruefe('Edge Function mit Stufe 3 (ping version ≥ 43, gmailConfigured gemeldet)', ping.status === 200 && ping.d.version >= 43 && typeof ping.d.gmailConfigured === 'boolean', JSON.stringify(ping.d));
     const e0 = await api('lauf_einstellungen_get', {});
     K.modusVorher = e0.d?.einstellungen?.modus || 'aus';
+    K.tagVorher = Number(sql(`select coalesce((select sichtung from public.hh_lauf_tag where tag = current_date), 0) as n;`).rows?.[0]?.n ?? 0);
     pruefe('Einstellungen lesen: Modus, Zeitplan hh_lauf_tick, vier Kriterien, Wochen, Protokoll', e0.status === 200 && ['aus','probe','vorschlag','live'].includes(K.modusVorher) && (e0.d.cron || []).some(c => String(c.jobname).startsWith('hh_lauf_tick') && c.active) && (e0.d.kriterien || []).length === 4 && Array.isArray(e0.d.wochen) && Array.isArray(e0.d.letzte), JSON.stringify(e0.d).slice(0, 200));
     const s1 = await api('lauf_einstellungen_set', { modus: 'probe', by: 'Helge' });
     const s2 = await api('lauf_einstellungen_set', { modus: 'irgendwas', by: 'Alex' });
@@ -134,7 +138,7 @@ else {
     fehler++; console.log('  FEHLT  Ausnahme in der Wirkungsprobe · ' + (e.stack || e.message).slice(0, 400));
   } finally {
     const r = aufraeumen(); const z = r.rows?.[0];
-    pruefe('Aufgeräumt: Testvorhaben, Protokoll des Laufs samt Abschaltungszeile, Ticker, Modus wie vorher', !!z && Number(z.vh) === 0 && Number(z.prot) === 0 && Number(z.news) === 0 && z.modus === K.modusVorher, JSON.stringify(r).slice(0, 300));
+    pruefe('Aufgeräumt: Testvorhaben, Protokoll des Laufs samt Abschaltungszeile, Ticker, Modus wie vorher', !!z && Number(z.vh) === 0 && Number(z.prot) === 0 && Number(z.news) === 0 && z.modus === K.modusVorher && Number(z.tag) === K.tagVorher, JSON.stringify(r).slice(0, 300));
   }
 }
 console.log(`\n${ok} ok, ${fehler} Abweichungen`);

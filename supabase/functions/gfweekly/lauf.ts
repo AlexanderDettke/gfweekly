@@ -35,14 +35,25 @@ export function mailText(m: Any, max = 3500): string {
   const kopf = `Von: ${m.von || ''}\nAn: ${m.an || ''}\nDatum: ${m.datum || ''}\nBetreff: ${m.betreff || ''}\n`;
   return (kopf + '\n' + String(m.text || m.snippet || '').replace(/\r/g, '').replace(/\n{3,}/g, '\n\n')).slice(0, max);
 }
+/* Ein Belegsatz ist verankert, wenn er ein Datum, einen Betrag oder ein kennzeichnendes Wort (mindestens fünf Zeichen, großgeschrieben) aus Betreff
+   oder Text der Quelle enthält; allgemeine Sätze („Die Angelegenheit ist erledigt.“) reichen nicht (Runde 3, Befund 2). */
+export function belegVerankert(beleg: string, quelle: { betreff?: string; text?: string; von?: string }): boolean {
+  const b = String(beleg || '');
+  if (b.length < 20) return false;
+  if (/\b(\d{1,2}\.\d{1,2}\.(\d{2,4})?|\d{4}-\d{2}-\d{2})\b/.test(b) || /\d[\d.,]*\s?(€|euro|eur)\b/i.test(b)) return true;
+  const quelleText = `${quelle.betreff || ''} ${quelle.von || ''} ${quelle.text || ''}`;
+  const woerter = new Set((quelleText.match(/\b[A-ZÄÖÜ][\wäöüß-]{4,}\b/g) || []).map(w => w.toLowerCase()));
+  const allgemein = new Set(['hallo', 'liebe', 'lieber', 'viele', 'grüße', 'danke', 'freundliche', 'sehr', 'geehrte', 'betreff', 'datum', 'alex', 'alexander', 'wilde', 'möhre', 'gmbh', 'festival']);
+  return (b.match(/\b[A-ZÄÖÜ][\wäöüß-]{4,}\b/g) || []).some(w => woerter.has(w.toLowerCase()) && !allgemein.has(w.toLowerCase()));
+}
 export function istEinwurfMail(m: Any): boolean { const an = String(m.an || '').toLowerCase(); return EINWURF.some(e => an.includes(e)); }
 /* Selbstabschaltung (Stufe 4): zwei getrennte Wochen, jede mit mindestens drei Erledigungen und unter 50 % bleibend. */
-export function abschaltungFaellig(w1: { erledigt: number; zurueck: number }, w2: { erledigt: number; zurueck: number }, mindest = 3): boolean {
+export function abschaltungFaellig(w1: { erledigt: number; zurueck: number }, w2: { erledigt: number; zurueck: number }, mindest = 5): boolean {
   const quote = (w: { erledigt: number; zurueck: number }) => w.erledigt ? (w.erledigt - w.zurueck) / w.erledigt : 1;
-  return w1.erledigt >= mindest && w2.erledigt >= mindest && quote(w1) < 0.5 && quote(w2) < 0.5;
+  return w1.erledigt + w2.erledigt >= mindest && w1.erledigt > 0 && w2.erledigt > 0 && quote(w1) < 0.5 && quote(w2) < 0.5;   // Runde 3, Befund 8: fünf Fälle über beide Wochen, jede Woche unter 50 %
 }
 /* Vertraulichkeit: Zugangsdaten, Kontonummern, Gesundheit, Bewertungen von Menschen. Wortliste, kein Verständnis; die Prompt-Regel bleibt zusätzlich. */
-export const LAUF_VERTRAULICH = /(passwort|kennwort|zugangsdaten|\bpin\b|\btan\b|\biban\b|\bDE\d{2}(?:\s?\d{4}){4}|\b(?:\d{4}[ -]?){3}\d{4}\b|krank|diagnose|therapie|psychisch|depress|burn-?out|schwanger|\barzt|klinik|gesundheit|ungeeignet|unfähig|inkompetent|\bfaul\b|unzuverlässig|untragbar|versag|\bdumm|\bidiot|nicht tragbar|abmahnung|kündigung|privat)/i;
+export const LAUF_VERTRAULICH = /(passwort|kennwort|zugangsdaten|\bpin\b|\btan\b|\biban\b|\bDE\d{2}(?:\s?\d{4}){4}|\b(?:\d{4}[ -]?){3}\d{4}\b|krank|diagnose|therapie|psychisch|depress|burn-?out|schwanger|\barzt|klinik|gesundheit|ungeeignet|unfähig|inkompetent|\bfaul\b|unzuverlässig|untragbar|versag|\bdumm|\bidiot|nicht tragbar|traut .{0,40}(nicht|kein)|nicht mehr zu\b|vertrauen (in|zu) \w+ (ist|sei|war)|eignung|charakter|verhalten von|zu nichts|abmahnung|kündigung|privat)/i;
 
 function b64url(x: string | ArrayBuffer): string {
   const bytes = typeof x === 'string' ? new TextEncoder().encode(x) : new Uint8Array(x);
@@ -130,10 +141,14 @@ export function laufModul(deps: { admin: Any; json: (b: Any, s?: number) => Resp
     return '';
   }
   /* Threads eines Postfachs im Fenster; je Thread die jüngste Nachricht als Quelle, der Threadtext (höchstens 3 Nachrichten) als Kontext. */
-  async function gmailMails(postfach: string, q: string, max: number): Promise<Any[]> {
-    const liste = await gmailGet(postfach, `threads?maxResults=${Math.min(50, max)}&q=${encodeURIComponent(q)}`);
-    const aus: Any[] = [];
-    for (const t of (liste.threads || []).slice(0, max)) {
+  /* Schon protokollierte Threads (gleicher Modus oder ausgeführt) zählen nicht in den Stapel; `mehr` meldet, ob Gmail weitere Seiten hätte (Runde 3, Befund 1). */
+  async function gmailMails(postfach: string, q: string, max: number, schonDa: (ref: string) => Promise<boolean> = async () => false): Promise<Any[] & { mehr?: boolean }> {
+    const liste = await gmailGet(postfach, `threads?maxResults=${Math.min(50, Math.max(max * 2, 10))}&q=${encodeURIComponent(q)}`);
+    const aus: Any[] & { mehr?: boolean } = [];
+    aus.mehr = !!liste.nextPageToken || (liste.threads || []).length > max;
+    for (const t of (liste.threads || [])) {
+      if (aus.length >= max) { aus.mehr = true; break; }
+      if (await schonDa(`mail:${t.id}:`)) continue;
       const th = await gmailGet(postfach, `threads/${t.id}?format=full`);
       const msgs = (th.messages || []).slice(-3);
       const letzte = msgs[msgs.length - 1]; if (!letzte) continue;
@@ -228,6 +243,7 @@ Regeln:
     let mails: Any[] = [];
     let quelle = 'nutzlast';
     let cursorNeu: string | null = null;
+    let mehrMails = false;
     if (fixtures) {
       postfach = postfach || 'fixtures';
       if (postfach !== 'fixtures' && !erlaubt.includes(postfach)) throw new LaufFehler('postfach nicht erlaubt');   // Runde 1, Befund 2
@@ -247,7 +263,9 @@ Regeln:
       const bisD = t.before ? new Date(t.before) : (rest || new Date());
       /* Hauptpostfach ohne Werbung, Soziales, Benachrichtigungen und Foren (GitHub, Netlify, Stripe, Newsletter); Einwurf-Mails eigens; XCeed-Berichte über die Plus-Adresse. */
       const zeit = `after:${Math.floor(seit.getTime() / 1000)} before:${Math.floor(bisD.getTime() / 1000) + 1}`;
-      mails = await gmailMails(postfach, `${zeit} -category:promotions -category:social -category:updates -category:forums ${EINWURF.map(x => '-to:' + x).join(' ')}`, batch);
+      const schonDa = async (prefix: string) => { const { data } = await admin.from('hh_lauf_protokoll').select('modus,ausgefuehrt,quelle_ref').like('quelle_ref', prefix + '%'); return ((data || []) as Any[]).some((x: Any) => x.ausgefuehrt || x.modus === modus); };
+      const haupt = await gmailMails(postfach, `${zeit} -category:promotions -category:social -category:updates -category:forums ${EINWURF.map(x => '-to:' + x).join(' ')}`, batch, schonDa);
+      mails = haupt; mehrMails = !!haupt.mehr;
       const einwurfAdresse = EINWURF.find(x => x.startsWith(postfach.split('@')[0] + '+')) || null;
       if (einwurfAdresse && mails.length < batch) { const x = await gmailMails(postfach, `${zeit} to:${einwurfAdresse}`, batch - mails.length); mails.push(...x.filter(m => !mails.some(y => y.thread_id === m.thread_id))); }
       if (/^alex/i.test(postfach) && mails.length < batch) { const x = await gmailMails(postfach, `${zeit} to:alex+xceed@wildemoehre.org`, batch - mails.length); mails.push(...x.filter(m => !mails.some(y => y.thread_id === m.thread_id))); }
@@ -265,7 +283,7 @@ Regeln:
       /* Runde 1, Befund 4: ein Probelauf sperrt nichts; übersprungen wird nur, was im selben Modus schon protokolliert oder tatsächlich ausgeführt ist. */
       const { data: schon } = await admin.from('hh_lauf_protokoll').select('modus,ausgefuehrt').eq('quelle_ref', ref);
       if ((schon || []).some((x: Any) => x.ausgefuehrt || x.modus === modus)) { zusammen.uebersprungen++; continue; }
-      let zeile: Any = { run_id: runId, modus, postfach, quelle_art: m.quelle_art === 'plattform' ? 'plattform' : 'mail', quelle_ref: ref, punkt_id: null, vorhaben_id: null, stufe: 'keine', aktion: 'nichts', beleg: null, ausgefuehrt: false };
+      let zeile: Any = { run_id: runId, modus, postfach, quelle_art: m.quelle_art === 'plattform' ? 'plattform' : 'mail', quelle_ref: ref, punkt_id: null, vorhaben_id: null, stufe: 'keine', aktion: 'nichts', beleg: null, ausgefuehrt: false, quelle_at: m.datum && !isNaN(Date.parse(m.datum)) ? new Date(m.datum).toISOString() : null };
       try {
         if (istEinwurfMail(m)) {
           /* Regel D des Abgleichs: Einwurf-Mails werden Einwürfe mit Vorschlag (Einwurf-Weg der Akte). */
@@ -284,7 +302,7 @@ Regeln:
           const gesp = !!punkt && gesperrt.has(punkt.id);
           let aktion = laufAktion(stufe, modus, !!punkt, !!kand && !!vh, !!m.gesendet, gesp);
           if (punkt && punkt.erledigt && aktion !== 'nichts') aktion = 'nichts';   // Rückblick: schon erledigte Punkte nur protokollieren
-          const belegKonkret = !!txt(roh?.beleg, 600) && !LAUF_VERTRAULICH.test(txt(roh?.beleg, 600)) && txt(roh?.beleg, 600).length >= 20;
+          const belegKonkret = !!txt(roh?.beleg, 600) && !LAUF_VERTRAULICH.test(txt(roh?.beleg, 600)) && belegVerankert(txt(roh?.beleg, 600), m);
           if (aktion === 'erledigt' && !belegKonkret) aktion = 'vorschlag';   // Runde 2, Befund 2: ohne konkreten Belegsatz kein automatisches Erledigen
           zeile = { ...zeile, punkt_id: punkt?.id || null, vorhaben_id: vh?.id || null, stufe, aktion, beleg: beleg || null };
           const frist = tag(roh?.frist_datum);
@@ -321,7 +339,7 @@ Regeln:
     }
     if (cursorNeu && modus !== 'probe') {
       /* Voller Stapel: die älteste gelesene Mail wird obere Grenze des Rests (nächster Tick liest darunter); sonst ist das Fenster abgeschlossen. */
-      const voll = mails.filter(m => m.quelle_art === 'mail').length >= batch;
+      const voll = mehrMails;   // Gmail hätte weitere Treffer im Fenster
       const aeltestes = voll ? mails.map(m => String(m.datum || '')).filter(Boolean).sort()[0] : null;
       const { error } = await admin.from('hh_lauf_cursor').upsert({ postfach, bis_at: cursorNeu, rest_bis: voll && aeltestes ? aeltestes : null, updated_at: new Date().toISOString() }, { onConflict: 'postfach' });
       if (error) throw new LaufFehler('Cursor: ' + error.message, 500);
@@ -391,11 +409,11 @@ Regeln:
   async function retroAuswertung(t: Any) {
     const von = tag(t.von) || heuteBerlin(); const bis = tag(t.bis) || heuteBerlin(); const run = txt(t.run_id, 80) || 'retro';
     const [pr, pk] = await Promise.all([
-      admin.from('hh_lauf_protokoll').select('punkt_id,vorhaben_id,stufe,aktion,beleg,quelle_ref,created_at').like('run_id', run + '%'),
-      admin.from('hh_vorhaben_punkte').select('id,titel,erledigt,erledigt_at,erledigt_by,vorhaben_id').eq('erledigt', true).gte('erledigt_at', von + 'T00:00:00+01:00').lte('erledigt_at', bis + 'T23:59:59+01:00'),
+      admin.from('hh_lauf_protokoll').select('punkt_id,vorhaben_id,stufe,aktion,beleg,quelle_ref,created_at,quelle_at').like('run_id', run + '%'),
+      admin.from('hh_vorhaben_punkte').select('id,titel,erledigt,erledigt_at,erledigt_by,vorhaben_id').eq('erledigt', true).gte('erledigt_at', von + 'T00:00:00+02:00').lte('erledigt_at', bis + 'T23:59:59+00:00'),
     ]);
     for (const r of [pr, pk]) if (r.error) throw r.error;
-    const P = (pr.data || []) as Any[]; const hand = ((pk.data || []) as Any[]).filter(p => !/^lauf$/i.test(p.erledigt_by || ''));
+    const P = (pr.data || []) as Any[]; const hand = ((pk.data || []) as Any[]).filter(p => !/^lauf$/i.test(p.erledigt_by || '') && berlinTag(p.erledigt_at) >= von && berlinTag(p.erledigt_at) <= bis);   // Berliner Tag entscheidet
     const sicher = P.filter(x => x.stufe === 'sicher' && x.punkt_id);
     const handIds = new Set(hand.map(p => p.id));
     const treffer = sicher.filter(x => handIds.has(x.punkt_id)).length;
@@ -404,7 +422,7 @@ Regeln:
     const fehlalarm = ((nochOffen || []) as Any[]).filter(p => !p.erledigt).length;
     const verpasst = hand.filter(p => !sicher.some(x => x.punkt_id === p.id)).length;
     const wahrsch = P.filter(x => x.stufe === 'wahrscheinlich').length;
-    const jeTag: Record<string, number> = {}; for (const x of P) if (x.aktion === 'vorschlag' || x.aktion === 'kandidat') { const d = berlinTag(x.created_at); jeTag[d] = (jeTag[d] || 0) + 1; }
+    const jeTag: Record<string, number> = {}; for (const x of P) if (x.aktion === 'vorschlag' || x.aktion === 'kandidat') { const d = berlinTag(x.quelle_at || x.created_at); jeTag[d] = (jeTag[d] || 0) + 1; }   // Quellentag, nicht Prüftag (Runde 3, Befund 5)
     const tage = Math.max(1, Math.round((Date.parse(bis) - Date.parse(von)) / 86400000) + 1);
     const sichtungen = Object.values(jeTag).reduce((a, b) => a + b, 0);
     return { run_id: run, von, bis, geprueft: P.length, sicher: sicher.length, treffer, fehlalarm, unentschieden: sicher.length - treffer - fehlalarm, verpasst_von_hand_erledigt: verpasst, wahrscheinlich: wahrsch, unklar: P.filter(x => x.stufe === 'unklar').length,
