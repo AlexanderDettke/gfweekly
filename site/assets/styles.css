@@ -1821,7 +1821,8 @@ input:not([type=hidden]):focus-visible,textarea:focus-visible,select:focus-visib
 .ls-modus{display:flex;flex-wrap:wrap;gap:var(--s-8)}
 .ls-modus .btn[aria-pressed="true"]{background:var(--action);border-color:var(--action);color:var(--on-action)}
 .ls-krit{display:grid;gap:var(--s-8)}
-.ls-krit .zeile{display:flex;align-items:center;justify-content:space-between;gap:var(--s-12);padding:var(--s-8) 0;border-bottom:1px solid var(--line)}
+.ls-krit .zeile{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s-8) var(--s-12);padding:var(--s-8) 0;border-bottom:1px solid var(--line)}
+.ls-karte .zst,.ls-krit .zst{white-space:normal;max-width:100%;height:auto;line-height:1.3;padding-top:3px;padding-bottom:3px}
 .ls-krit .zeile:last-child{border-bottom:0}
 .ls-scroll{overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
 .ls-scroll:focus-visible{outline:2px solid var(--focus);outline-offset:2px}

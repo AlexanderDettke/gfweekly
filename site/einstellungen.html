@@ -67,7 +67,7 @@ function renderKarten(){
     </div>
     <div class="ls-karte"><h3>Zugänge</h3>
       <p>${gfZustand(D.ki_konfiguriert?"ok":"warn", D.ki_konfiguriert?"Claude-API verbunden":"Claude-API fehlt")}</p>
-      <p>${gfZustand(D.gmail_konfiguriert?"ok":"warn", D.gmail_konfiguriert?"Google-Zugang gesetzt":"Google-Zugang fehlt (Secret GOOGLE_SA_JSON)")}</p>
+      <p>${gfZustand(D.gmail_konfiguriert?"ok":"warn", D.gmail_konfiguriert?"Google-Zugang gesetzt":"Google-Zugang fehlt")}${D.gmail_konfiguriert?"":` <span class="fd-note">Secret GOOGLE_SA_JSON (Paket Stufe 3, Abschnitt 2.4)</span>`}</p>
       <p>${gfZustand(cron?"ok":"warn", cron?`Zeitplan ${gfEsc(cron.schedule)} UTC`:"Zeitplan fehlt")}</p>
       <p class="fd-note">Postfächer: ${(e.postfaecher||[]).map(gfEsc).join(", ")}</p>
       <div class="fchips compact">${(e.postfaecher||[]).map(p=>`<button type="button" class="chip" data-probe="${gfEsc(p)}">Verbindung prüfen: ${gfEsc(p.split("@")[0])}</button>`).join("")}<button type="button" class="chip" id="lsTick">Jetzt einen Probelauf ausführen</button></div>
