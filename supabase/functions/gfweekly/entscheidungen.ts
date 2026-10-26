@@ -165,6 +165,8 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
     if (error) throw error;
     const { alle, zaehler } = enRechne(data || [], heute);
     const gezeigt = await herkunft(enFilter(alle, status, heute));
+    /* Stufe 4 (Runde 1, Befund 11): ruhende Zeilen zählen nicht als überfällig oder diese Woche. */
+    for (const g of gezeigt) if (g.ruht && g.faellig) { if (g.zustand === 'ueberfaellig') zaehler.ueberfaellig = Math.max(0, zaehler.ueberfaellig - 1); if (['ueberfaellig', 'heute', 'woche'].includes(g.zustand)) zaehler.diese_woche = Math.max(0, zaehler.diese_woche - 1); }
     const letzte = alle.filter(e => e.status === 'entschieden').sort((a, b) => String(b.entschieden_am || '').localeCompare(String(a.entschieden_am || '')))[0] || null;
     return { heute, status, sync, zaehler, eintraege: gezeigt, gesamt: alle.length, erfasst: alle.map(e => e.quelle_id),
       zuletzt_entschieden: letzte ? { id: letzte.id, frage: letzte.frage, ergebnis: letzte.ergebnis, entschieden_am: letzte.entschieden_am, entschieden_von: letzte.entschieden_von } : null };

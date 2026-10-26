@@ -101,6 +101,7 @@ function abschnitt(e){ if(e.ruht) return "ruht"; if(!e.reif) return "unreif"; if
 function fristWort(e){
   if(!e.frist) return gfZustand("offen","ohne Frist");
   const d=e.frist.slice(8,10)+"."+e.frist.slice(5,7)+".";
+  if(e.ruht) return gfZustand("info", d+" · ruht seit 60 Tagen");
   const w=e.zustand==="ueberfaellig"?"überfällig":e.zustand==="heute"?"heute":e.zustand==="woche"?"diese Woche":e.zustand==="zwei_wochen"?"in "+e.tage+" Tagen":"später";
   return gfZustand(e.zustand==="ueberfaellig"?"crit":["heute","woche"].includes(e.zustand)?"warn":"offen", d+" · "+w);
 }
@@ -139,7 +140,7 @@ function renderKacheln(){
   $("#enKk").innerHTML=[
     gfKachel({icon:"zahl", value:z.offen||0, label:"offen", btn:`data-f="offen"`}),
     gfKachel({icon:"zahl", value:z.diese_woche||0, label:"diese Woche", tone:z.diese_woche?"warn":"", btn:`data-f="offen"`}),
-    gfKachel({icon:"zahl", value:(EN.eintraege||[]).filter(e=>e.faellig&&e.vorhaben&&e.vorhaben.fokus).length, label:"im Fokus", tone:"pos", btn:`data-f="offen"`}),
+    gfKachel({icon:"zahl", value:(EN.eintraege||[]).filter(e=>e.faellig&&!e.ruht&&e.vorhaben&&e.vorhaben.fokus).length, label:"im Fokus", tone:"pos", btn:`data-f="offen"`}),
     gfKachel({icon:"zahl", value:z.ueberfaellig||0, label:"überfällig", tone:z.ueberfaellig?"crit":"", btn:`data-f="offen"`}),
   ].join("");
   $("#enStand").textContent=`Stand ${new Date().toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}${EN.sync&&EN.sync.eingefuegt?` · ${EN.sync.eingefuegt} neu aus den Quellen`:""}`;
@@ -164,7 +165,7 @@ function renderListe(){
   }
   if(EN_FILTER!=="offen"){ $("#enListe").innerHTML=`<div class="en-list${EN_FILTER==="entschieden"?" en-dim":""}">${L.map(zeile).join("")}</div>`; bind(); return; }
   /* Stufe 2: zuerst der Fokus (Vorhaben, die gerade tragen), nach Phase geordnet, dann die Abschnitte nach Fristzustand für den Rest. */
-  const fokus=L.filter(e=>e.reif&&e.vorhaben&&e.vorhaben.fokus).sort((a,b)=>GF_PHASE_REIHE.indexOf(a.vorhaben.phase)-GF_PHASE_REIHE.indexOf(b.vorhaben.phase)||(a.frist||"9999").localeCompare(b.frist||"9999"));
+  const fokus=L.filter(e=>e.reif&&!e.ruht&&e.vorhaben&&e.vorhaben.fokus).sort((a,b)=>GF_PHASE_REIHE.indexOf(a.vorhaben.phase)-GF_PHASE_REIHE.indexOf(b.vorhaben.phase)||(a.frist||"9999").localeCompare(b.frist||"9999"));
   const rest=L.filter(e=>!fokus.includes(e));
   const gruppen=new Map(); for(const e of rest){ const k=abschnitt(e); if(!gruppen.has(k)) gruppen.set(k,[]); gruppen.get(k).push(e); }
   let html="";

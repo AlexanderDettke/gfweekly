@@ -40,7 +40,7 @@ else {
   const URL_FN = 'https://bnfmupnmqyrcltrphfak.supabase.co/functions/v1/gfweekly';
   const api = async (action, payload) => { const r = await fetch(URL_FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, password: PW, payload }) }); let d = null; try { d = await r.json(); } catch { d = null; } return { status: r.status, d }; };
   const M = 'Stufe 3 Probe (Test)';
-  const K = { vorhaben: null, punkt: null, modusVorher: null, run: 'probe-s3-' + Date.now() };
+  const K = { vorhaben: null, punkt: null, modusVorher: null, run: 'probe-s3-' + Date.now(), start: new Date().toISOString() };
   const sql = (text) => {
     const leer = fs.mkdtempSync(path.join(os.tmpdir(), 's3-probe-')); const f = path.join(leer, 'q.sql'); fs.writeFileSync(f, text);
     const r = spawnSync('npx', ['--yes', 'supabase', 'db', 'query', '--linked', '--project-ref', 'bnfmupnmqyrcltrphfak', '-f', f], { cwd: leer, stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' });
@@ -49,12 +49,13 @@ else {
   };
   const aufraeumen = () => {
     const t = [];
-    t.push(`delete from public.hh_lauf_protokoll where run_id like '${K.run}%' or run_id like 'abschaltung:%' and beleg like '%(Test)%';`);
+    t.push(`delete from public.hh_lauf_protokoll where run_id like '${K.run}%' or (run_id like 'abschaltung:%' and created_at >= '${K.start}');`);
+    t.push(`delete from public.gfweekly_news where source_ref like 'lauf:abschaltung:%' and created_at >= '${K.start}';`);
     if (K.punkt) t.push(`delete from public.hh_entscheidungen where quelle_id = '${K.punkt}';`);
     if (K.vorhaben) { t.push(`delete from public.hh_vorhaben_verlauf where vorhaben_id = '${K.vorhaben}';`); t.push(`delete from public.hh_vorhaben_punkte where vorhaben_id = '${K.vorhaben}';`); t.push(`delete from public.hh_vorhaben where id = '${K.vorhaben}' and title like '%(Test)%';`); }
     t.push(`delete from public.gfweekly_news where source_ref like 'mail:s3fix%' or source_ref like 'lauf:tag:%' and body like '%fixtures%';`);
     if (K.modusVorher) t.push(`update public.hh_lauf_einstellungen set modus = '${K.modusVorher}', abbruch_grund = null where id = 1;`);
-    t.push(`select (select count(*) from public.hh_vorhaben where id ${K.vorhaben ? `= '${K.vorhaben}'` : 'is null'}) as vh, (select count(*) from public.hh_lauf_protokoll where run_id like '${K.run}%') as prot, (select modus from public.hh_lauf_einstellungen where id = 1) as modus;`);
+    t.push(`select (select count(*) from public.hh_vorhaben where id ${K.vorhaben ? `= '${K.vorhaben}'` : 'is null'}) as vh, (select count(*) from public.hh_lauf_protokoll where run_id like '${K.run}%' or (run_id like 'abschaltung:%' and created_at >= '${K.start}')) as prot, (select count(*) from public.gfweekly_news where (source_ref like 'mail:s3fix%' or source_ref like 'lauf:abschaltung:%') and created_at >= '${K.start}') as news, (select modus from public.hh_lauf_einstellungen where id = 1) as modus;`);
     return sql(t.join('\n'));
   };
   const fix = (id, o) => ({ thread_id: 's3fix-' + id, message_id: 's3fix-' + id + '-m', von: o.von || 'partner@example.org', an: o.an || 'alex@wildemoehre.org', betreff: o.betreff, datum: o.datum || new Date().toISOString(), text: o.text, gesendet: !!o.gesendet });
@@ -68,6 +69,8 @@ else {
     const s2 = await api('lauf_einstellungen_set', { modus: 'irgendwas', by: 'Alex' });
     const s3 = await api('lauf_einstellungen_set', { by: 'Alex' });
     pruefe('Einstellungen ändern: fremde Person 400, falscher Modus 400, nichts zu ändern 400', s1.status === 400 && s2.status === 400 && s3.status === 400, [s1.status, s2.status, s3.status].join(','));
+    const gpX = await api('lauf_gmail_probe', { postfach: 'fremd@example.org' });
+    pruefe('Fremdes Postfach wird abgelehnt (400), auch im Tick', gpX.status === 400 && (await api('lauf_tick', { probe: true, postfach: 'fremd@example.org', mails: [] })).status === 400, JSON.stringify(gpX.d));
     const gp = await api('lauf_gmail_probe', { postfach: 'alex@wildemoehre.org' });
     pruefe('Google-Probe: ohne Secret ein benannter Fehler (503), mit Secret eine Zahl', (gp.status === 503 && /GOOGLE_SA_JSON/.test(gp.d?.error || '')) || (gp.status === 200 && typeof gp.d.threads_24h === 'number'), JSON.stringify(gp.d));
     /* Testvorhaben und Punkt */
@@ -82,6 +85,8 @@ else {
       fix('gesendet', { von: 'alex@wildemoehre.org', an: 'buero@nordlicht-gmbh.example', betreff: 'Probevertrag Nordlicht GmbH', text: 'Hallo, anbei der unterschriebene Probevertrag Nordlicht GmbH. Viele Grüße Alex', gesendet: true }),
       fix('einwurf', { von: 'alex@wildemoehre.org', an: 'alex+einwurf@wildemoehre.org', betreff: 'Notiz', text: 'Victor hat zugesagt.' }),
     ];
+    const t0 = K.modusVorher === 'aus' ? await api('lauf_tick', { run_id: K.run + '-0', postfach: 'alex@wildemoehre.org', mails }) : { status: 200, d: { uebersprungen: true } };
+    pruefe('Modus aus schreibt nichts, auch nicht mit Nutzlast (Runde 1, Befund 1)', t0.status === 200 && t0.d.uebersprungen === true, JSON.stringify(t0.d).slice(0, 200));
     const t1 = await api('lauf_tick', { probe: true, run_id: K.run + '-a', postfach: 'alex@wildemoehre.org', mails });
     const z = (ref) => (t1.d?.zeilen || []).find(x => x.ref.includes(ref));
     pruefe('Probelauf: der Beleg zum Testpunkt ist sicher, der Newsletter unklar, die Einwurf-Mail übersprungen, nichts ausgeführt', t1.status === 200 && t1.d.modus === 'probe' && z('s3fix-sicher')?.stufe === 'sicher' && z('s3fix-sicher')?.punkt === K.punkt && z('s3fix-sicher')?.aktion === 'vorschlag' && z('s3fix-unklar')?.stufe === 'unklar' && z('s3fix-einwurf')?.aktion === 'uebersprungen' && t1.d.zusammen.erledigt === 0, JSON.stringify(t1.d?.zeilen).slice(0, 500));
@@ -91,7 +96,7 @@ else {
     pruefe('Derselbe Lauf noch einmal: alle Mails übersprungen (Protokoll dedupliziert)', t1b.status === 200 && t1b.d.zusammen.uebersprungen === 4 && t1b.d.zusammen.geprueft === 0, JSON.stringify(t1b.d?.zusammen));
     /* Live auf dem Testvorhaben */
     const sl = await api('lauf_einstellungen_set', { modus: 'live', by: 'Lea' });
-    const t2 = await api('lauf_tick', { run_id: K.run + '-b', postfach: 'alex@wildemoehre.org', mails: [fix('sicher2', { von: 'buero@nordlicht-gmbh.example', betreff: 'Re: Probevertrag Nordlicht GmbH', text: 'Hallo Alex, der unterschriebene Probevertrag Nordlicht GmbH ist heute bei uns eingegangen, vielen Dank, damit ist dieser Punkt erledigt.' })] });
+    const t2 = await api('lauf_tick', { run_id: K.run + '-b', postfach: 'alex@wildemoehre.org', mails: [mails[0]] });   // dieselbe Mail wie im Probelauf: der Probelauf sperrt sie nicht (Runde 1, Befund 4)
     const lq = sql(`select p.erledigt, p.erledigt_by, (select count(*) from public.hh_vorhaben_verlauf v where v.punkt_id = p.id and v.created_by = 'lauf' and v.status = 'bestaetigt') as lauf_eintraege, (select source_url from public.hh_vorhaben_verlauf v where v.punkt_id = p.id and v.created_by = 'lauf' and v.art = 'mail' limit 1) as url from public.hh_vorhaben_punkte p where p.id = '${K.punkt}';`);
     pruefe('Live: der Lauf erledigt den Testpunkt (erledigt_by lauf) mit Beleg-Eintrag (zwei Lauf-Einträge, keine Gmail-Adresse bei Fixtures)', sl.status === 200 && t2.status === 200 && t2.d.zusammen.erledigt === 1 && lq.rows?.[0]?.erledigt === true && lq.rows[0].erledigt_by === 'lauf' && Number(lq.rows[0].lauf_eintraege) === 2 && lq.rows[0].url === null, JSON.stringify([sl.d?.error, t2.d?.zeilen, lq.rows]).slice(0, 400));
     const lk = await api('entscheidungen_list', { status: 'alle' });
@@ -119,7 +124,7 @@ else {
     fehler++; console.log('  FEHLT  Ausnahme in der Wirkungsprobe · ' + (e.stack || e.message).slice(0, 400));
   } finally {
     const r = aufraeumen(); const z = r.rows?.[0];
-    pruefe('Aufgeräumt: Testvorhaben, Protokoll des Laufs, Ticker, Modus wie vorher', !!z && Number(z.vh) === 0 && Number(z.prot) === 0 && z.modus === K.modusVorher, JSON.stringify(r).slice(0, 300));
+    pruefe('Aufgeräumt: Testvorhaben, Protokoll des Laufs samt Abschaltungszeile, Ticker, Modus wie vorher', !!z && Number(z.vh) === 0 && Number(z.prot) === 0 && Number(z.news) === 0 && z.modus === K.modusVorher, JSON.stringify(r).slice(0, 300));
   }
 }
 console.log(`\n${ok} ok, ${fehler} Abweichungen`);

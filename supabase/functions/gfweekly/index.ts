@@ -1298,8 +1298,25 @@ const KOMM = kommModul({ admin, json, heuteBerlin, whoNorm, launchFestivals, lau
 /* 25.10.2026 · Verkauf 2027 je Festival auf „Für dich“ (verkauf_list, verkauf_set), siehe verkauf.ts. */
 const VERKAUF = verkaufModul({ admin, json, heuteBerlin, whoNorm });
 const ENTSCHEIDUNGEN = entscheidungenModul({ admin, json, heuteBerlin, whoNorm });
-/* Stufe 3: der Lauf im Kompass (lauf.ts); Lagebild und Bilanz kommen aus dem Entscheidungsmodul. */
-const LAUF = laufModul({ admin, json, heuteBerlin, whoNorm, rueckkehrLage: ENTSCHEIDUNGEN.rueckkehrLage, laufBilanz: ENTSCHEIDUNGEN.laufBilanz });
+/* Stufe 3: der Lauf im Kompass (lauf.ts); Lagebild und Bilanz kommen aus dem Entscheidungsmodul. Einwurf-Mails legt der Lauf wie
+   einwurf_add an (Einwurf mit KI-Vorschlag), Dubletten fängt source_ref. */
+async function laufEinwurf(text: string, von: string, sourceRef: string, kanal: string){
+  const { data: da } = await admin.from('hh_einwurf').select('id').eq('source_ref', sourceRef).maybeSingle();
+  if (da) return { doppelt: true, id: da.id };
+  const { data: ew, error } = await admin.from('hh_einwurf').insert({ von, kanal: EW_KANAL.includes(kanal) ? kanal : 'mail', text: vhText(text, 4000), vorhaben_id: null, status: 'neu', source_ref: sourceRef }).select().single();
+  if (error) { if ((error as any).code === '23505') return { doppelt: true }; throw error; }
+  let einwurf = ew; let ki_fehler: string | null = null;
+  try {
+    const kontext = await vhKontext(null);
+    if (!kontext.length) throw new Error('Es gibt keine aktiven Vorhaben');
+    const { roh, model } = await einwurfKI(text, von, kontext);
+    const vs: any = einwurfPruefen(roh, kontext, null, von); vs.model = model; vs.revision = crypto.randomUUID();
+    const { data: up, error: ue } = await admin.from('hh_einwurf').update({ vorschlag: vs, status: 'vorgeschlagen', vorhaben_id: vs.vorhaben_id || null }).eq('id', ew.id).eq('status', 'neu').select().single();
+    if (ue) throw ue; einwurf = up;
+  } catch (e) { ki_fehler = String((e as Error).message || e).slice(0, 300); }
+  return { doppelt: false, einwurf, ki_fehler };
+}
+const LAUF = laufModul({ admin, json, heuteBerlin, whoNorm, rueckkehrLage: ENTSCHEIDUNGEN.rueckkehrLage, laufBilanz: ENTSCHEIDUNGEN.laufBilanz, einwurfAnlegen: laufEinwurf });
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
