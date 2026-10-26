@@ -275,9 +275,12 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
     for (const r of (en.data || []) as Any[]) z(woche(r.updated_at), 'fragen');
     const zeilen = Object.values(W).sort((a: Any, b: Any) => String(b.woche).localeCompare(String(a.woche)));
     const summe = zeilen.reduce((a: Any, r: Any) => { for (const k of Object.keys(r)) if (k !== 'woche') a[k] = (a[k] || 0) + r[k]; return a; }, {} as Any);
-    /* Trefferquote: übernommene Vorschläge und Kandidaten an allen erzeugten (Paket Abschnitt 0, Kriterium a). */
-    const erzeugt = (summe.vorschlaege || 0) + (summe.kandidaten || 0);
-    return { seit, wochen: zeilen, summe, trefferquote: erzeugt ? Math.round(100 * ((summe.vorschlaege_uebernommen || 0) + (summe.kandidaten_uebernommen || 0)) / erzeugt) : null };
+    /* Trefferquote (Paket Stufe 3, Abschnitt 1a): übernommen oder unbeanstandet an allem, was der Lauf anlegt. Unbeanstandet heißt: eine Lauf-Erledigung
+       ohne Rücknahme; ein Vorschlag, der noch offen steht, zählt weder als Treffer noch als Fehlschlag, verworfene und verfallene sind Fehlschläge. */
+    const bleibend = Math.max(0, (summe.erledigt || 0) - (summe.zurueckgenommen || 0));
+    const treffer = (summe.vorschlaege_uebernommen || 0) + (summe.kandidaten_uebernommen || 0) + bleibend;
+    const bewertet = treffer + (summe.verlauf_verworfen || 0) + (summe.verlauf_verfallen || 0) + (summe.kandidaten_verworfen || 0) + (summe.kandidaten_archiviert || 0) + (summe.zurueckgenommen || 0);
+    return { seit, wochen: zeilen, summe, trefferquote: bewertet ? Math.round(100 * treffer / bewertet) : null, bewertet };
   }
 
   /* Stufe 2 · Rückkehr: Lagebild über den Zeitraum der Abwesenheit nach Phase (Entschieden, Bewegt, Wartet auf dich) und nach Menschen. */

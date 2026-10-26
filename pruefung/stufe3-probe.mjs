@@ -21,7 +21,7 @@ pruefe('sicher nur mit Punkt, Sicherheit ab 0,8 und belegtem Abschluss; wahrsche
   && laufStufe({ sicherheit: 0.9, abschluss_belegt: true }, false, true) === 'wahrscheinlich' && laufStufe({ sicherheit: 0.65, abschluss_belegt: true }, true, true) === 'unklar' && laufStufe({ sicherheit: 0.95 }, false, false) === 'unklar');
 pruefe('Aktion: live erledigt, vorschlag und probe schlagen vor, gesperrter Punkt wird nicht erledigt, Kandidat nie aus gesendeter Mail',
   laufAktion('sicher', 'live', true, false, false, false) === 'erledigt' && laufAktion('sicher', 'vorschlag', true, false, false, false) === 'vorschlag' && laufAktion('sicher', 'probe', true, false, false, false) === 'vorschlag'
-  && laufAktion('sicher', 'live', true, false, false, true) === 'gesperrt' && laufAktion('wahrscheinlich', 'live', false, true, true, false) === 'nichts' && laufAktion('wahrscheinlich', 'live', false, true, false, false) === 'kandidat' && laufAktion('unklar', 'live', false, false, false, false) === 'nichts');
+  && laufAktion('sicher', 'live', true, false, false, true) === 'gesperrt' && laufAktion('wahrscheinlich', 'live', false, true, true, false) === 'nichts' && laufAktion('wahrscheinlich', 'live', false, true, false, false) === 'kandidat' && laufAktion('unklar', 'live', false, false, false, false) === 'nichts' && laufAktion('unklar', 'live', false, true, false, false) === 'nichts');
 pruefe('Einwurf-Adressen bleiben beim Einwurf-Weg; Mailtext trägt Kopfzeilen und ist begrenzt', istEinwurfMail({ an: 'Lea <lea+einwurf@wildemoehre.org>' }) && !istEinwurfMail({ an: 'lea@wildemoehre.org' }) && /^Von: a\nAn: b\nDatum: c\nBetreff: d\n/.test(mailText({ von: 'a', an: 'b', datum: 'c', betreff: 'd', text: 'x'.repeat(5000) })) && mailText({ text: 'x'.repeat(5000) }).length <= 3500);
 {
   const core = fs.readFileSync(new URL('../site/assets/core.js', import.meta.url), 'utf8');
@@ -111,6 +111,9 @@ else {
     const kq = sql(`select gate, gate_frist, vorhaben_vorschlag, relevance, source from public.gfweekly_news where source_ref = 'mail:s3fix-kandidat:s3fix-kandidat-m:k1';`);
     const zk = (tk.d?.zeilen || [])[0];
     pruefe('Kandidat aus einer Mail: ohne gate (keine Entscheidung ohne Punkt), mit Vorschlag auf das Vorhaben und Datum aus der Quelle; oder als Vorschlag im Verlauf, nie als Entscheidung', tk.status === 200 && zk && ['kandidat', 'vorschlag', 'nichts'].includes(zk.aktion) && (zk.aktion !== 'kandidat' || (kq.rows?.[0] && kq.rows[0].gate === null && kq.rows[0].vorhaben_vorschlag === K.vorhaben && kq.rows[0].source === 'mail')), JSON.stringify([zk, kq.rows]).slice(0, 400));
+    const te = await api('lauf_tick', { run_id: K.run + '-e', postfach: 'alex@wildemoehre.org', mails: [mails[3]] });
+    const eq2 = sql(`select count(*) as n from public.hh_einwurf where source_ref like 'mail:s3fix-einwurf%';`);
+    pruefe('Einwurf-Mail aus der Nutzlast legt außerhalb des Probelaufs keinen Einwurf an (Runde 2, Befund 4)', te.status === 200 && (te.d.zeilen || [])[0]?.aktion === 'uebersprungen' && Number(eq2.rows?.[0]?.n) === 0, JSON.stringify([te.d?.zeilen, eq2.rows]).slice(0, 300));
     const t3 = await api('lauf_tick', { run_id: K.run + '-c', postfach: 'alex@wildemoehre.org', mails: [fix('sicher3', { von: 'buero@nordlicht-gmbh.example', betreff: 'Re: Probevertrag Nordlicht GmbH', text: 'Nochmals: der unterschriebene Probevertrag Nordlicht GmbH ist eingegangen, erledigt.' })] });
     const z3 = (t3.d?.zeilen || [])[0];
     pruefe('Ein zweites Erledigen desselben Punkts nach Rückgängig wird gesperrt', t3.status === 200 && z3 && z3.aktion === 'gesperrt' && t3.d.zusammen.erledigt === 0, JSON.stringify(z3));

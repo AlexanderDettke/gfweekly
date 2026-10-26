@@ -29,8 +29,7 @@ export function laufStufe(roh: Any, punktBekannt: boolean, vorhabenBekannt: bool
 export function laufAktion(stufe: string, modus: string, hatPunkt: boolean, hatKandidat: boolean, gesendet: boolean, gesperrt: boolean): string {
   if (stufe === 'sicher' && hatPunkt) { if (gesperrt) return 'gesperrt'; return modus === 'live' ? 'erledigt' : 'vorschlag'; }
   if (stufe === 'wahrscheinlich') return hatPunkt || !hatKandidat ? 'vorschlag' : (gesendet ? 'nichts' : 'kandidat');
-  if (hatKandidat && !gesendet) return 'kandidat';
-  return 'nichts';
+  return 'nichts';   // unklar: nichts schreiben (Runde 2, Befund 5)
 }
 export function mailText(m: Any, max = 3500): string {
   const kopf = `Von: ${m.von || ''}\nAn: ${m.an || ''}\nDatum: ${m.datum || ''}\nBetreff: ${m.betreff || ''}\n`;
@@ -43,7 +42,7 @@ export function abschaltungFaellig(w1: { erledigt: number; zurueck: number }, w2
   return w1.erledigt >= mindest && w2.erledigt >= mindest && quote(w1) < 0.5 && quote(w2) < 0.5;
 }
 /* Vertraulichkeit: Zugangsdaten, Kontonummern, Gesundheit, Bewertungen von Menschen. Wortliste, kein Verständnis; die Prompt-Regel bleibt zusätzlich. */
-export const LAUF_VERTRAULICH = /(passwort|kennwort|zugangsdaten|\bpin\b|\btan\b|\biban\b|\bDE\d{2}(?:\s?\d{4}){4}|\b(?:\d{4}[ -]?){3}\d{4}\b|krank|diagnose|therapie|psychisch|depress|burn-?out|schwanger|\barzt|klinik|gesundheit|ungeeignet|unfähig|inkompetent|\bfaul\b|unzuverlässig|abmahnung|kündigung|privat)/i;
+export const LAUF_VERTRAULICH = /(passwort|kennwort|zugangsdaten|\bpin\b|\btan\b|\biban\b|\bDE\d{2}(?:\s?\d{4}){4}|\b(?:\d{4}[ -]?){3}\d{4}\b|krank|diagnose|therapie|psychisch|depress|burn-?out|schwanger|\barzt|klinik|gesundheit|ungeeignet|unfähig|inkompetent|\bfaul\b|unzuverlässig|untragbar|versag|\bdumm|\bidiot|nicht tragbar|abmahnung|kündigung|privat)/i;
 
 function b64url(x: string | ArrayBuffer): string {
   const bytes = typeof x === 'string' ? new TextEncoder().encode(x) : new Uint8Array(x);
@@ -159,15 +158,17 @@ export function laufModul(deps: { admin: Any; json: (b: Any, s?: number) => Resp
   /* ---- Kontext: aktive Vorhaben mit offenen Punkten (im Rückblick auch Punkte, die seit `kontextAb` erledigt wurden), gesperrte Punkte ---- */
   async function kontext(kontextAb: string | null) {
     const pq = admin.from('hh_vorhaben_punkte').select('id,vorhaben_id,titel,stand,wer,frist,erledigt,erledigt_at');
+    const vq = admin.from('hh_vorhaben').select('id,slug,title,status,phase,fokus,ball,ball_name,stand,naechster_schritt,frist').order('sort');
     const [vh, pk, sperre] = await Promise.all([
-      admin.from('hh_vorhaben').select('id,slug,title,phase,fokus,ball,ball_name,stand,naechster_schritt,frist').in('status', ['aktiv', 'pausiert']).order('sort'),
+      kontextAb ? vq : vq.in('status', ['aktiv', 'pausiert']),
       kontextAb ? pq.or(`erledigt.eq.false,erledigt_at.gte.${kontextAb}`) : pq.eq('erledigt', false),
       admin.from('hh_vorhaben_verlauf').select('punkt_id').like('source_ref', 'rueckgaengig:lauf:%'),
     ]);
     for (const r of [vh, pk, sperre]) if (r.error) throw r.error;
     const punkte = new Map<string, Any[]>();
     for (const p of (pk.data || []) as Any[]) { if (!punkte.has(p.vorhaben_id)) punkte.set(p.vorhaben_id, []); punkte.get(p.vorhaben_id)!.push(p); }
-    const liste = ((vh.data || []) as Any[]).map(v => ({ ...v, punkte: punkte.get(v.id) || [] }));
+    /* Im Rückblick zählen auch inzwischen abgeschlossene Vorhaben, sofern sie seit kontextAb erledigte Punkte haben (Runde 2, Befund 8). */
+    const liste = ((vh.data || []) as Any[]).filter(v => ['aktiv', 'pausiert'].includes(v.status) || (punkte.get(v.id) || []).some((p: Any) => p.erledigt)).map(v => ({ ...v, punkte: punkte.get(v.id) || [] }));
     return { liste, gesperrt: new Set(((sperre.data || []) as Any[]).map(x => x.punkt_id).filter(Boolean)) };
   }
 
@@ -239,9 +240,11 @@ Regeln:
         postfach = [...erlaubt].sort((a: string, b: string) => String(c.get(a) || '').localeCompare(String(c.get(b) || '')))[0] || '';
       }
       if (!postfach || !erlaubt.includes(postfach)) throw new LaufFehler('postfach nicht erlaubt (nur die eingestellten Postfächer)');
-      const { data: cur } = await admin.from('hh_lauf_cursor').select('bis_at').eq('postfach', postfach).maybeSingle();
+      const { data: cur } = await admin.from('hh_lauf_cursor').select('bis_at,rest_bis').eq('postfach', postfach).maybeSingle();
       const seit = t.after ? new Date(t.after) : new Date(cur?.bis_at ? Date.parse(cur.bis_at) - 3600e3 : Date.now() - (e.fenster_stunden || 26) * 3600e3);
-      const bisD = t.before ? new Date(t.before) : new Date();
+      /* Runde 2, Befund 1: war der letzte Stapel voll, liegt die obere Grenze des ungelesenen Rests in rest_bis; der Tick liest erst darunter weiter. */
+      const rest = !t.after && !t.before && cur?.rest_bis ? new Date(cur.rest_bis) : null;
+      const bisD = t.before ? new Date(t.before) : (rest || new Date());
       /* Hauptpostfach ohne Werbung, Soziales, Benachrichtigungen und Foren (GitHub, Netlify, Stripe, Newsletter); Einwurf-Mails eigens; XCeed-Berichte über die Plus-Adresse. */
       const zeit = `after:${Math.floor(seit.getTime() / 1000)} before:${Math.floor(bisD.getTime() / 1000) + 1}`;
       mails = await gmailMails(postfach, `${zeit} -category:promotions -category:social -category:updates -category:forums ${EINWURF.map(x => '-to:' + x).join(' ')}`, batch);
@@ -249,8 +252,7 @@ Regeln:
       if (einwurfAdresse && mails.length < batch) { const x = await gmailMails(postfach, `${zeit} to:${einwurfAdresse}`, batch - mails.length); mails.push(...x.filter(m => !mails.some(y => y.thread_id === m.thread_id))); }
       if (/^alex/i.test(postfach) && mails.length < batch) { const x = await gmailMails(postfach, `${zeit} to:alex+xceed@wildemoehre.org`, batch - mails.length); mails.push(...x.filter(m => !mails.some(y => y.thread_id === m.thread_id))); }
       if (postfach === erlaubt[0] && mails.length < batch) mails.push(...await feedQuellen(seit, bisD, batch - mails.length));
-      /* Runde 1, Befund 5: der Cursor rückt nur vor, wenn das Fenster vollständig gelesen war; sonst holt der nächste Tick den Rest (Dubletten fängt das Protokoll). */
-      cursorNeu = t.after || t.before || mails.length >= batch ? null : bisD.toISOString();
+      cursorNeu = t.after || t.before ? null : (rest ? cur.bis_at : new Date().toISOString());
     }
     const person = /^lea/i.test(postfach) ? 'Lea' : 'Alex';
     const kontextAb = t.after ? new Date(t.after).toISOString() : (t.kontext_ab ? new Date(t.kontext_ab).toISOString() : null);
@@ -268,7 +270,7 @@ Regeln:
         if (istEinwurfMail(m)) {
           /* Regel D des Abgleichs: Einwurf-Mails werden Einwürfe mit Vorschlag (Einwurf-Weg der Akte). */
           zeile.quelle_art = 'einwurf'; zeile.beleg = 'Einwurf aus Mail';
-          if (modus === 'probe' || !deps.einwurfAnlegen) zeile.aktion = 'uebersprungen';
+          if (modus === 'probe' || !deps.einwurfAnlegen || fixtures) { zeile.aktion = 'uebersprungen'; if (fixtures && modus !== 'probe') zeile.beleg = 'Einwurf aus der Nutzlast: nicht angelegt (Runde 2, Befund 4)'; }
           else { const ew = await deps.einwurfAnlegen(mailText(m, 2000), person, `${ref}:einwurf`, 'mail'); zeile.aktion = ew?.doppelt ? 'uebersprungen' : 'nichts'; zeile.ausgefuehrt = !ew?.doppelt; zusammen.einwurf += ew?.doppelt ? 0 : 1; }
         } else {
           zusammen.geprueft++;
@@ -282,6 +284,8 @@ Regeln:
           const gesp = !!punkt && gesperrt.has(punkt.id);
           let aktion = laufAktion(stufe, modus, !!punkt, !!kand && !!vh, !!m.gesendet, gesp);
           if (punkt && punkt.erledigt && aktion !== 'nichts') aktion = 'nichts';   // Rückblick: schon erledigte Punkte nur protokollieren
+          const belegKonkret = !!txt(roh?.beleg, 600) && !LAUF_VERTRAULICH.test(txt(roh?.beleg, 600)) && txt(roh?.beleg, 600).length >= 20;
+          if (aktion === 'erledigt' && !belegKonkret) aktion = 'vorschlag';   // Runde 2, Befund 2: ohne konkreten Belegsatz kein automatisches Erledigen
           zeile = { ...zeile, punkt_id: punkt?.id || null, vorhaben_id: vh?.id || null, stufe, aktion, beleg: beleg || null };
           const frist = tag(roh?.frist_datum);
           const link = m.quelle_art === 'plattform' ? (m.url || null) : (quelle === 'gmail' && m.thread_id ? `https://mail.google.com/mail/u/0/#all/${m.thread_id}` : null);
@@ -315,7 +319,13 @@ Regeln:
       await schreibe('hh_lauf_protokoll', zeile, 'schluessel');
       zeilen.push({ ref, betreff: txt(m.betreff, 80), stufe: zeile.stufe, aktion: zeile.aktion, punkt: zeile.punkt_id, beleg: zeile.beleg });
     }
-    if (cursorNeu && modus !== 'probe') { const { error } = await admin.from('hh_lauf_cursor').upsert({ postfach, bis_at: cursorNeu, updated_at: new Date().toISOString() }, { onConflict: 'postfach' }); if (error) throw new LaufFehler('Cursor: ' + error.message, 500); }
+    if (cursorNeu && modus !== 'probe') {
+      /* Voller Stapel: die älteste gelesene Mail wird obere Grenze des Rests (nächster Tick liest darunter); sonst ist das Fenster abgeschlossen. */
+      const voll = mails.filter(m => m.quelle_art === 'mail').length >= batch;
+      const aeltestes = voll ? mails.map(m => String(m.datum || '')).filter(Boolean).sort()[0] : null;
+      const { error } = await admin.from('hh_lauf_cursor').upsert({ postfach, bis_at: cursorNeu, rest_bis: voll && aeltestes ? aeltestes : null, updated_at: new Date().toISOString() }, { onConflict: 'postfach' });
+      if (error) throw new LaufFehler('Cursor: ' + error.message, 500);
+    }
     let abschaltung: Any = null;
     if (modus === 'live') abschaltung = await selbstabschaltung();
     let brief: Any = null;
@@ -335,14 +345,14 @@ Regeln:
   /* Stufe 4: zwei getrennte Wochen mit je mindestens drei Erledigungen und unter 50 % bleibend schalten den Lauf auf „vorschlag“ (Runde 1, Befund 10). */
   async function selbstabschaltung() {
     const jetzt = Date.now(); const w1a = new Date(jetzt - 7 * 86400000).toISOString(), w2a = new Date(jetzt - 14 * 86400000).toISOString();
-    const zaehle = async (von: string, bis: string | null) => {
-      let qe = admin.from('hh_vorhaben_verlauf').select('id', { count: 'exact', head: true }).eq('created_by', 'lauf').eq('art', 'system').like('text', 'Punkt erledigt:%').gte('created_at', von);
-      let qz = admin.from('hh_vorhaben_verlauf').select('id', { count: 'exact', head: true }).like('source_ref', 'rueckgaengig:lauf:%').gte('created_at', von);
-      if (bis) { qe = qe.lt('created_at', bis); qz = qz.lt('created_at', bis); }
-      const [er, rz] = await Promise.all([qe, qz]);
-      return { erledigt: er.count || 0, zurueck: rz.count || 0 };
-    };
-    const [w1, w2] = await Promise.all([zaehle(w1a, null), zaehle(w2a, w1a)]);
+    /* Runde 2, Befund 7: eine Rücknahme zählt zur Woche ihrer Erledigung (Kohorte), nicht zur Woche der Rücknahme. */
+    const [er, rz] = await Promise.all([
+      admin.from('hh_vorhaben_verlauf').select('id,created_at').eq('created_by', 'lauf').eq('art', 'system').like('text', 'Punkt erledigt:%').gte('created_at', w2a),
+      admin.from('hh_vorhaben_verlauf').select('source_ref').like('source_ref', 'rueckgaengig:lauf:%').gte('created_at', w2a),
+    ]);
+    const zurueckIds = new Set(((rz.data || []) as Any[]).map((x: Any) => String(x.source_ref).replace('rueckgaengig:lauf:', '')));
+    const w1 = { erledigt: 0, zurueck: 0 }, w2 = { erledigt: 0, zurueck: 0 };
+    for (const x of (er.data || []) as Any[]) { const w = x.created_at >= w1a ? w1 : w2; w.erledigt++; if (zurueckIds.has(x.id)) w.zurueck++; }
     if (abschaltungFaellig(w1, w2)) {
       const grund = `Selbstabschaltung ${heuteBerlin()}: diese Woche ${w1.erledigt} Lauf-Erledigungen, ${w1.zurueck} zurückgenommen; Vorwoche ${w2.erledigt} und ${w2.zurueck}. Beide unter 50 % bleibend, Modus auf vorschlag.`;
       await admin.from('hh_lauf_einstellungen').update({ modus: 'vorschlag', abbruch_grund: grund, updated_at: new Date().toISOString() }).eq('id', 1);
