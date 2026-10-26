@@ -56,7 +56,7 @@ let bekannteSchuld = 0;
 const SEITEN = [
   ['vorstand.html', '#vbDetail'], ['vorstand.html?tab=task', '#vbTask'], ['vorstand.html?tab=status', '#vbStatusPanel'], ['index.html', '#fdEntL'], ['neuigkeiten.html', '#fokusList .kd'], ['besprechung.html', '#bsAgL'], ['board.html', '#lanes,#grid,.board'],
   ['cockpit.html', '#list'], ['entscheidungen.html', '#enListe .en-row'], ['jahr.html', '#cycle'], ['capture.html', '#form'],
-  ['seiten.html', '#groups'], ['bearbeiten.html', '#itemsView'], ['aufraeumen.html', '#list'], ['checkin.html', '#agenda'],
+  ['seiten.html', '#groups'], ['einstellungen.html', '#lsKarten .ls-karte'], ['bearbeiten.html', '#itemsView'], ['aufraeumen.html', '#list'], ['checkin.html', '#agenda'],
   ['inbox.html', '#list'],
   ['vertretung.html', '#absList'], ['uebergabe.html', '#list'], ['rueckkehr.html', '#phasen .rk2-phase, #phasen .fd-empty'],
   ['saison.html', '#saLage'], ['kommunikation.html', '#kmFest'], ['launch.html', '#lnAufgaben'], ['organisation.html', '#ogDecs'],
@@ -224,7 +224,7 @@ for (const thema of THEMES) {
       }, kern);
       if (befund.tor) meldungen.push('Tor blieb zu');
       if (!befund.app) meldungen.push('Seiteninhalt blieb verborgen');
-      if (befund.nav !== 18) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 18 Haupteinträgen)');   // 18 ohne Themen, Eingabe, Aufräumen (Stufe 2, 25.10.2026)
+      if (befund.nav !== 14) meldungen.push('Navigation unvollständig (' + befund.nav + ' von 14 Haupteinträgen)');   // 14 in drei Gruppen (Stufe 3, 26.10.2026)
       if (befund.unternav !== 0) meldungen.push('Unternavigation unerwartet (' + befund.unternav + ' Einträge; seit Stufe 2 gibt es keinen Themen-Eintrag mehr)');   // Stufe 2 (25.10.2026)
       if (befund.fehltext.length) meldungen.push('Fehlermeldung auf der Seite: ' + befund.fehltext.join(', '));
       if (befund.kern < 0) meldungen.push('Kerninhalt ' + kern + ' fehlt im Aufbau');

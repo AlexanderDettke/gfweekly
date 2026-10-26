@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Kompass · Vorhaben</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=42" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=42" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=42" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=42" />
-<link rel="stylesheet" href="/assets/styles.css?v=42" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=43" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=43" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=43" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=43" />
+<link rel="stylesheet" href="/assets/styles.css?v=43" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -64,7 +64,7 @@
 <button type="button" class="vh-fab" id="vhFab" aria-label="Einwurf: etwas eintragen"><span aria-hidden="true">+</span> Einwurf</button>
 <div class="modal-back" id="vhModal"></div>
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=42"></script>
+<script src="/assets/core.js?v=43"></script>
 <script>
 /* V31 · Vorhaben: eine Seite, drei Ansichten (Woche, Board, Liste), die Akte rechts (ab 1024 px) oder als Blatt.
    Liest vorhaben_list und vorhaben_get, schreibt über vorhaben_save, punkt_*, verlauf_status, vorhaben_verknuepfen,
@@ -405,10 +405,13 @@ function verknBlock(namen, liste, link, kind, zu){
 }
 function punktZeile(p, zu){
   const meta=[p.stand, p.wer, p.frist?("Frist "+gfVhTag(p.frist)):"", p.erledigt&&p.erledigt_at?("erledigt "+gfNewsWhen(p.erledigt_at)+(p.erledigt_by?" von "+p.erledigt_by:"")):"", p.quelle?("Quelle: "+p.quelle):""].filter(Boolean).join(" · ");
-  const spaet=!p.erledigt && p.frist && p.frist<heute();
-  return `<li class="vh-punkt${p.erledigt?" fertig":""}" data-punkt="${p.id}">
+  /* Stufe 4: 60 Tage ohne Bewegung (Punkt und Verlauf) heißt „ruht“; dann keine Überfällig-Marke, bis jemand den Punkt anfasst. */
+  const tag60=new Date(Date.now()-60*86400000).toISOString();
+  const ruht=!p.erledigt && String(p.updated_at||p.created_at||"")<tag60 && !(AKTE&&AKTE.verlauf||[]).some(e=>e.punkt_id===p.id && String(e.created_at||"")>=tag60);
+  const spaet=!p.erledigt && !ruht && p.frist && p.frist<heute();
+  return `<li class="vh-punkt${p.erledigt?" fertig":""}${ruht?" ruht":""}" data-punkt="${p.id}">
     <input type="checkbox" id="pk-${p.id}" ${p.erledigt?"checked":""} ${zu?"disabled":""} data-toggle="${p.id}">
-    <label for="pk-${p.id}"><span class="t">${gfEsc(p.titel)}</span>${spaet?` ${markeHtml(["warn","⚠","überfällig"])}`:""}${meta?`<small>${gfEsc(meta)}</small>`:""}</label>
+    <label for="pk-${p.id}"><span class="t">${gfEsc(p.titel)}</span>${spaet?` ${markeHtml(["warn","⚠","überfällig"])}`:""}${ruht?` ${markeHtml(["info","·","ruht seit 60 Tagen"])}`:""}${meta?`<small>${gfEsc(meta)}</small>`:""}</label>
     ${zu?"":`<button type="button" class="btn btn-sm btn-ghost vh-p-edit" data-punkt-edit="${p.id}" aria-label="${gfEsc(p.titel)} ändern">ändern</button>`}
   </li>`;
 }

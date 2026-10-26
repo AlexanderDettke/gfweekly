@@ -1,7 +1,11 @@
 # Stufe 2 · Läufe: erledigen statt vorschlagen (Wortlaut zum Einsetzen)
 
-Stand 25.10.2026. Quelle: `docs/PAKET-STUFE-2-EIN-BEHAELTER.md`, Abschnitte 4 und 6. Einsetzen in den Auftrag „GF Weekly · Neuigkeiten
-täglich“ (Alex) und spiegelbildlich in Leas Tagesabgleich; das Einspielen macht Cowork nach dem Push, nicht die Terminal-Sitzung.
+Stand 26.10.2026 (Stufe 3): Diese Regeln führt seit Stufe 3 die Edge Function selbst aus (`supabase/functions/gfweekly/lauf.ts`, pg_cron
+`hh_lauf_tick`, Einstellungen auf `einstellungen.html`); sie werden **nicht** mehr in Cowork eingespielt. Die Cowork-Aufträge „Vorhaben-Abgleich
+(Alex)“ und „(Lea)“ schaltet Alex bei der Abnahme von Stufe 3 aus. Die Regeln bleiben hier als Wortlaut, weil der Code sie Punkt für Punkt umsetzt
+(Deckel, Stufen, Schreibwege, Vertraulichkeit); Abweichungen stehen in `docs/TECHNIKSTAND.md`, Abschnitt „Stufe 3“.
+
+Ursprung 25.10.2026. Quelle: `docs/PAKET-STUFE-2-EIN-BEHAELTER.md`, Abschnitte 4 und 6.
 Die Abschnitte B und E aus `STUFE1-NEUIGKEITEN-ABSCHNITTE.md` bleiben gültig, soweit sie hier nicht ersetzt werden (Regel E2 entfällt:
 es gibt keine offenen Themen mehr, Kandidaten bekommen `vorhaben_vorschlag` wie bisher).
 

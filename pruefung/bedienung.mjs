@@ -1143,6 +1143,40 @@ console.log('\n== Stufe 1: Entscheidungsliste, Besprechung darauf, Korb, Spielsc
   await p2.close();
 }
 
+console.log('\n== Stufe 3: Navigation in drei Gruppen, Reiter, Einstellungen mit Lauf (26.10.2026) ==');
+{
+  frisch();
+  const n = await seite('/vertretung.html');
+  pruefe('Navigation: 14 Einträge in drei Gruppen, Vertretung unter Arbeiten markiert', (await n.locator('.sb-nav a[data-k]').count()) === 14 && (await n.locator('.sb-group').count()) === 3 && (await n.locator('.sb-nav a[data-k="vertretung"][aria-current="page"]').count()) === 1);
+  pruefe('Reiter Abwesenheiten, Übergabe, Rückkehr unter dem Kopf, erster aktiv', (await n.locator('.gf-reiter a').allInnerTexts()).join('|') === 'Abwesenheiten|Übergabe|Rückkehr' && (await n.locator('.gf-reiter a.on').innerText()) === 'Abwesenheiten');
+  await n.close();
+  const u = await seite('/uebergabe.html?id=abs-1');
+  pruefe('Übergabe: Seitenleiste markiert Vertretung, Reiter Übergabe aktiv, Reiter Rückkehr trägt die Kennung weiter', (await u.locator('.sb-nav a[data-k="vertretung"][aria-current="page"]').count()) === 1 && (await u.locator('.gf-reiter a.on').innerText()) === 'Übergabe' && /rueckkehr\.html\?id=abs-1$/.test(await u.locator('.gf-reiter a').nth(2).getAttribute('href')));
+  await u.close();
+  const j = await seite('/jahr.html');
+  pruefe('Jahr: Reiter Saison|Jahr, Seitenleiste markiert Saison', (await j.locator('.gf-reiter a').allInnerTexts()).join('|') === 'Saison|Jahr' && (await j.locator('.sb-nav a[data-k="saison"][aria-current="page"]').count()) === 1);
+  await j.close();
+  const e = await seite('/einstellungen.html'); await e.waitForTimeout(300);
+  pruefe('Einstellungen: drei Karten, Modus Aus gedrückt, Google-Zugang fehlt sichtbar, Zeitplan sichtbar, Reiter Lauf|Personen|Seiten', (await e.locator('#lsKarten .ls-karte').count()) === 3 && (await e.locator('[data-modus="aus"]').getAttribute('aria-pressed')) === 'true' && /Google-Zugang fehlt/.test(await e.locator('#lsKarten').innerText()) && /Zeitplan 7 5-21\/2/.test(await e.locator('#lsKarten').innerText()) && (await e.locator('.gf-reiter a').allInnerTexts()).join('|') === 'Lauf und Kriterien|Personen und Links|Wichtige Seiten');
+  pruefe('Kriterien: vier Zeilen mit Wert und Ziel, a rot, b bis d grün', (await e.locator('#lsKrit .zeile').count()) === 4 && /33% \(Ziel ab 50%\)/.test(await e.locator('#lsKrit').innerText()) && (await e.locator('#lsKrit .zeile').first().locator('.zustand.warn, [class*="warn"]').count()) >= 1);
+  pruefe('Wochen-Tabelle und Protokoll-Klappe', (await e.locator('#lsWochen table tbody tr').count()) === 1 && (await e.locator('#lsProtN').innerText()) === '1');
+  await e.locator('[data-modus="probe"]').click(); await e.waitForTimeout(400);
+  const ms = letzte('lauf_einstellungen_set');
+  pruefe('Modus Probe sendet lauf_einstellungen_set mit by, Knopf springt um, Erklärung wechselt', ms && ms.nutzlast.modus === 'probe' && ms.nutzlast.by === 'Alex' && (await e.locator('[data-modus="probe"]').getAttribute('aria-pressed')) === 'true' && /protokolliert nur/.test(await e.locator('#lsModusText').innerText()));
+  await e.evaluate(() => { window.confirm = () => false; });
+  await e.locator('[data-modus="live"]').click(); await e.waitForTimeout(200);
+  pruefe('Live fragt nach; Abbruch sendet nichts', letzte('lauf_einstellungen_set').nutzlast.modus === 'probe');
+  await e.locator('[data-probe="alex@wildemoehre.org"]').click(); await e.waitForTimeout(300);
+  pruefe('Verbindung prüfen ohne Zugang: Fehler sichtbar benannt', /Keine Verbindung: Google-Zugang fehlt/.test(await e.locator('#lsProbeErg').innerText()));
+  await e.locator('#lsTick').click(); await e.waitForTimeout(400);
+  const tk = letzte('lauf_tick');
+  pruefe('Probelauf-Knopf sendet lauf_tick probe und zeigt die Zusammenfassung', tk && tk.nutzlast.probe === true && /3 Mails geprüft, 2 Vorschläge/.test(await e.locator('#lsProbeErg').innerText()));
+  await e.locator('#lsDeckel').fill('3'); await e.locator('#lsForm [type="submit"]').click(); await e.waitForTimeout(300);
+  const fs2 = letzte('lauf_einstellungen_set');
+  pruefe('Regeln speichern sendet Deckel und Modell mit by', fs2 && fs2.nutzlast.deckel_tag === 3 && typeof fs2.nutzlast.modell === 'string' && fs2.nutzlast.by === 'Alex');
+  await e.close();
+}
+
 console.log('\n== Stufe 2: Vorschlagsfrist, Mehrfachauswahl, Akte-Chips, Übergabe, Lauf-Bilanz (25.10.2026) ==');
 {
   frisch();

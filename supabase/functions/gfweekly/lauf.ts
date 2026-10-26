@@ -20,7 +20,7 @@ const TIMEOUT_MS = 25000;
 export function laufStufe(roh: Any, punktBekannt: boolean, vorhabenBekannt: boolean): 'sicher' | 'wahrscheinlich' | 'unklar' {
   const s = Number(roh?.sicherheit); const sich = isFinite(s) ? Math.max(0, Math.min(1, s)) : 0;
   if (punktBekannt && sich >= 0.8 && roh?.abschluss_belegt === true) return 'sicher';
-  if ((punktBekannt || vorhabenBekannt) && sich >= 0.6) return 'wahrscheinlich';
+  if ((punktBekannt || vorhabenBekannt) && sich >= 0.7) return 'wahrscheinlich';   // Stichprobe 26.10.: bei 0,6 kam ein falscher Punktbezug durch
   return 'unklar';
 }
 export function laufAktion(stufe: string, modus: string, hatPunkt: boolean, hatKandidat: boolean, gesendet: boolean, gesperrt: boolean): string {
@@ -211,8 +211,11 @@ Regeln:
       const { data: cur } = await admin.from('hh_lauf_cursor').select('bis_at').eq('postfach', postfach).maybeSingle();
       const seit = t.after ? new Date(t.after) : new Date(cur?.bis_at ? Date.parse(cur.bis_at) - 3600e3 : Date.now() - (e.fenster_stunden || 26) * 3600e3);
       const bisD = t.before ? new Date(t.before) : new Date();
-      const q = `after:${Math.floor(seit.getTime() / 1000)} before:${Math.floor(bisD.getTime() / 1000) + 1} -category:promotions -category:social ${EINWURF.map(x => '-to:' + x).join(' ')}`;
+      /* Hauptpostfach ohne Werbung, Soziales, Benachrichtigungen und Foren (GitHub, Netlify, Stripe, Newsletter); XCeed-Berichte landen unter Werbung und kommen über die Plus-Adresse getrennt dazu. */
+      const zeit = `after:${Math.floor(seit.getTime() / 1000)} before:${Math.floor(bisD.getTime() / 1000) + 1}`;
+      const q = `${zeit} -category:promotions -category:social -category:updates -category:forums ${EINWURF.map(x => '-to:' + x).join(' ')}`;
       mails = await gmailMails(postfach, q, batch);
+      if (/^alex/i.test(postfach) && mails.length < batch) { const x = await gmailMails(postfach, `${zeit} to:alex+xceed@wildemoehre.org`, batch - mails.length); mails.push(...x.filter(m => !mails.some(y => y.thread_id === m.thread_id))); }
       cursorNeu = t.after || t.before ? null : bisD.toISOString();
     }
     const person = /^lea/i.test(postfach) ? 'Lea' : 'Alex';
@@ -231,7 +234,8 @@ Regeln:
           zusammen.geprueft++;
           const roh = await einordnen(m, liste, e.modell, person);
           const vh = roh?.vorhaben_slug ? bySlug.get(String(roh.vorhaben_slug)) : null;
-          const punkt = vh && roh?.punkt_id ? (vh.punkte as Any[]).find((p: Any) => p.id === String(roh.punkt_id)) : null;
+          const sichRoh = Number(roh?.sicherheit) || 0;
+          const punkt = vh && roh?.punkt_id && sichRoh >= 0.75 ? (vh.punkte as Any[]).find((p: Any) => p.id === String(roh.punkt_id)) : null;   // Punktbezug nur bei hoher Sicherheit, sonst Vorschlag am Vorhaben
           const stufe = laufStufe(roh, !!punkt, !!vh);
           let beleg = txt(roh?.beleg, 600); if (VERTRAULICH.test(beleg)) beleg = 'Beleg weggelassen (möglicherweise vertraulich)';
           const kand = roh?.kandidat && txt(roh.kandidat.titel, 300) && !VERTRAULICH.test(txt(roh.kandidat.titel, 300) + ' ' + txt(roh.kandidat.body, 600)) ? { titel: txt(roh.kandidat.titel, 300), body: txt(roh.kandidat.body, 600) } : null;

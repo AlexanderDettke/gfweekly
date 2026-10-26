@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#171d18" />
+<title>Kompass · Einstellungen</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=43" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=43" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=43" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=43" />
+<link rel="stylesheet" href="/assets/styles.css?v=43" />
+<script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}if(n==="schmal")document.documentElement.classList.add("nav-schmal");})();</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="mark pic"><img src="/assets/img/kompass-288.png" alt="" width="54" height="54"></div>
+    <span class="badge-conf">Wilde Möhre · vertraulich</span>
+    <h1>Kompass</h1>
+    <div class="sub">Einstellungen · Geschäftsführung der Wilden Habitate · Alex &amp; Lea</div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button class="btn btn-primary" id="unlock" style="width:100%;justify-content:center;margin-top:4px">Entsperren</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="app wrap" id="app">
+  <header id="topbar"></header>
+  <div id="hero"></div>
+
+  <!-- Stufe 3 (26.10.2026), Abschnitt 2.3: der Lauf im Kompass. Modus, Deckel, Modell, Postfächer, Bilanz und die vier Kriterien. -->
+  <div id="lsFehler"></div>
+  <section class="ls-grid" aria-label="Lauf" id="lsKarten"><div class="loading">lädt …</div></section>
+
+  <section class="rk-sec" aria-labelledby="lsKritH">
+    <div class="sec-h"><h2 id="lsKritH">Erfolgskriterien (vier Wochen ab Live-Gang)</h2><span class="line"></span></div>
+    <div class="ls-krit" id="lsKrit"></div>
+  </section>
+
+  <section class="rk-sec" aria-labelledby="lsWochenH">
+    <div class="sec-h"><h2 id="lsWochenH">Was der Lauf getan hat, je Woche</h2><span class="line"></span></div>
+    <div id="lsWochen"></div>
+  </section>
+
+  <details class="en-klappe" id="lsProt">
+    <summary><span>Protokoll des Laufs (letzte 30 Einträge)</span><span class="fd-n" id="lsProtN"></span></summary>
+    <ul class="ls-prot" id="lsProtL"></ul>
+  </details>
+</div>
+
+<script src="/assets/core.js?v=43"></script>
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+let D=null;
+const MODUS=[["aus","Aus","Der Zeitplan läuft, tut aber nichts."],["probe","Probe","Liest und protokolliert nur; schreibt nichts in Akten."],["vorschlag","Vorschlag","Alles wird Vorschlag in der Akte, auch Sicheres; nichts wird erledigt."],["live","Live","Sichere Belege erledigen den Punkt; Rückgängig 7 Tage in der Akte."]];
+function fmtZeit(iso){ return iso?gfNewsWhen(iso):"noch nie"; }
+function renderKarten(){
+  const e=D.einstellungen; const cron=(D.cron||[]).find(c=>c.jobname==="hh_lauf_tick");
+  $("#lsKarten").innerHTML=`
+    <div class="ls-karte"><h3>Modus</h3>
+      <div class="ls-modus" role="group" aria-label="Lauf-Modus">${MODUS.map(([k,l])=>`<button type="button" class="btn btn-sm" data-modus="${k}" aria-pressed="${e.modus===k}">${l}</button>`).join("")}</div>
+      <p class="fd-note" id="lsModusText">${gfEsc((MODUS.find(m=>m[0]===e.modus)||MODUS[0])[2])}</p>
+      ${e.abbruch_grund?`<p class="fd-note">${gfZustand("warn","Selbst zurückgestellt")} ${gfEsc(e.abbruch_grund)}</p>`:""}
+    </div>
+    <div class="ls-karte"><h3>Zugänge</h3>
+      <p>${gfZustand(D.ki_konfiguriert?"ok":"warn", D.ki_konfiguriert?"Claude-API verbunden":"Claude-API fehlt")}</p>
+      <p>${gfZustand(D.gmail_konfiguriert?"ok":"warn", D.gmail_konfiguriert?"Google-Zugang gesetzt":"Google-Zugang fehlt (Secret GOOGLE_SA_JSON)")}</p>
+      <p>${gfZustand(cron?"ok":"warn", cron?`Zeitplan ${gfEsc(cron.schedule)} UTC`:"Zeitplan fehlt")}</p>
+      <p class="fd-note">Postfächer: ${(e.postfaecher||[]).map(gfEsc).join(", ")}</p>
+      <div class="fchips compact">${(e.postfaecher||[]).map(p=>`<button type="button" class="chip" data-probe="${gfEsc(p)}">Verbindung prüfen: ${gfEsc(p.split("@")[0])}</button>`).join("")}<button type="button" class="chip" id="lsTick">Jetzt einen Probelauf ausführen</button></div>
+      <p class="fd-note" id="lsProbeErg"></p>
+    </div>
+    <div class="ls-karte"><h3>Regeln</h3>
+      <form class="en-form" id="lsForm" novalidate>
+        <div class="fld"><label for="lsDeckel">Sichtungen am Tag höchstens</label><input id="lsDeckel" name="deckel_tag" type="number" min="0" max="50" value="${e.deckel_tag}"></div>
+        <div class="fld"><label for="lsModell">Modell des Laufs</label><input id="lsModell" name="modell" value="${gfEsc(e.modell)}"></div>
+        <div class="fd-note">Letzter Lauf: ${gfEsc(fmtZeit(e.letzter_lauf_at))}${e.letzter_fehler?` · ${gfEsc(e.letzter_fehler)}`:""}</div>
+        <div class="en-form-btns"><button type="submit" class="btn btn-primary">Speichern</button><span class="hint" id="lsFormErg"></span></div>
+      </form>
+    </div>`;
+}
+function renderKrit(){
+  const K=D.kriterien||[];
+  $("#lsKrit").innerHTML=K.map(k=>`<div class="zeile"><span><b>${gfEsc(k.kennung)}</b> · ${gfEsc(k.text)}</span><span>${k.wert==null?gfZustand("info","noch keine Daten"):gfZustand(k.ok?"ok":"warn",`${k.wert}${k.einheit||""} (Ziel ${k.kennung==="c"||k.kennung==="d"?"unter ":"ab "}${k.ziel}${k.einheit||""})`)}</span></div>`).join("")
+    + `<p class="fd-note">a und b aus der Bilanz des Laufs, c aus der Entscheidungsliste, d aus dem Protokoll (Vorschläge und Kandidaten je Tag). Unter 50 % bleibende Erledigungen über zwei Wochen stellt der Lauf sich selbst auf Vorschlag.</p>`;
+}
+function renderWochen(){
+  const W=D.wochen||[];
+  $("#lsWochen").innerHTML=W.length?`<table class="fd-tab"><thead><tr><th>Woche</th><th>geprüft</th><th>sicher</th><th>wahrsch.</th><th>unklar</th><th>erledigt</th><th>Vorschläge</th><th>Kandidaten</th><th>gedeckelt</th><th>Fehler</th></tr></thead><tbody>${W.map(w=>`<tr><td>${gfEsc(w.woche)}</td><td>${w.geprueft}</td><td>${w.sicher}</td><td>${w.wahrscheinlich}</td><td>${w.unklar}</td><td>${w.erledigt}</td><td>${w.vorschlag}</td><td>${w.kandidat}</td><td>${w.gedeckelt}</td><td>${w.fehler}</td></tr>`).join("")}</tbody></table>`:`<p class="fd-empty">Noch kein Lauf protokolliert.</p>`;
+}
+function renderProt(){
+  const L=D.letzte||[]; $("#lsProtN").textContent=L.length;
+  $("#lsProtL").innerHTML=L.length?L.map(r=>`<li>${gfEsc(gfNewsWhen(r.created_at))} · ${gfEsc(r.modus)} · ${gfEsc(r.stufe)} → <b>${gfEsc(r.aktion)}</b>${r.ausgefuehrt?"":" (nicht ausgeführt)"}${r.beleg?`: ${gfEsc(r.beleg)}`:""}</li>`).join(""):`<li>Noch nichts.</li>`;
+}
+function renderAll(){ renderKarten(); renderKrit(); renderWochen(); renderProt(); }
+async function load(){
+  try{ D=await gfApi("lauf_einstellungen_get",{}); $("#lsFehler").innerHTML=""; renderAll(); }
+  catch(e){ gfLadefehler($("#lsFehler"), e, {titel:"Die Einstellungen ließen sich nicht laden."}); $("#lsKarten").innerHTML=""; }
+}
+document.addEventListener("click", async e=>{
+  const m=e.target.closest("[data-modus]"); if(m){ const modus=m.dataset.modus; if(modus===D.einstellungen.modus) return;
+    if(modus==="live" && !confirm("Live: der Lauf erledigt Punkte mit sicherem Beleg selbst (Rückgängig 7 Tage in der Akte). Jetzt einschalten?")) return;
+    m.disabled=true; try{ await gfApi("lauf_einstellungen_set",{ modus, by:gfWho() }); gfToast("Modus: "+modus); await load(); } catch(err){ m.disabled=false; gfToast("Nicht gespeichert: "+(err.message||"Verbindung")); } return; }
+  const p=e.target.closest("[data-probe]"); if(p){ p.disabled=true; $("#lsProbeErg").textContent="prüft …";
+    try{ const r=await gfApi("lauf_gmail_probe",{ postfach:p.dataset.probe }); $("#lsProbeErg").textContent=`${r.postfach}: Verbindung steht, ${r.threads_24h} Threads in 24 Stunden.`; }
+    catch(err){ $("#lsProbeErg").textContent="Keine Verbindung: "+(err.message||"Fehler"); } p.disabled=false; return; }
+  if(e.target.closest("#lsTick")){ const b=e.target.closest("#lsTick"); b.disabled=true; $("#lsProbeErg").textContent="Probelauf läuft …";
+    try{ const r=await gfApi("lauf_tick",{ probe:true }); const text=r.uebersprungen?`Übersprungen: ${r.grund||"Lauf ist aus"}`:`Probelauf ${r.run_id}: ${r.mails} Mails geprüft, ${r.zusammen?.vorschlag||0} Vorschläge, ${r.zusammen?.erledigt||0} sicher, ${r.zusammen?.unklar||0} unklar.`; await load(); $("#lsProbeErg").textContent=text; }
+    catch(err){ $("#lsProbeErg").textContent="Probelauf nicht möglich: "+(err.message||"Fehler"); } b.disabled=false; return; }
+});
+document.addEventListener("submit", async e=>{
+  if(e.target.id!=="lsForm") return; e.preventDefault();
+  const deckel=parseInt($("#lsDeckel").value,10), modell=$("#lsModell").value.trim();
+  if(isNaN(deckel)||deckel<0||deckel>50){ $("#lsFormErg").textContent="Deckel: 0 bis 50."; return; }
+  if(modell.length<5){ $("#lsFormErg").textContent="Modell fehlt."; return; }
+  try{ await gfApi("lauf_einstellungen_set",{ deckel_tag:deckel, modell, by:gfWho() }); $("#lsFormErg").textContent="Gespeichert."; await load(); }
+  catch(err){ $("#lsFormErg").textContent="Nicht gespeichert: "+(err.message||"Verbindung"); }
+});
+gfGate(async()=>{ $("#app").style.display="block"; gfMountTopbar("einstellungen"); gfMountHero("pflege","Einstellungen","Der Lauf im Kompass: was er darf, was er getan hat, ob die Kriterien halten. Personen, Links und Wichtige Seiten in den Reitern.",{compact:true}); await load(); });
+</script>
+</body>
+</html>

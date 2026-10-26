@@ -7,11 +7,11 @@
 <meta name="theme-color" content="#171d18" />
 <title>Kompass · Entscheidungen</title>
 <meta name="description" content="Offene Entscheidungen der Geschäftsführung, Wilde Möhre: entscheiden, vertagen, abgeben. Vertraulich." />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=42" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=42" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=42" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=42" />
-<link rel="stylesheet" href="/assets/styles.css?v=42" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=43" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=43" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=43" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=43" />
+<link rel="stylesheet" href="/assets/styles.css?v=43" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -84,7 +84,7 @@
 <div class="modal-back" id="enModal"></div>
 <div class="toast" id="toast"></div>
 
-<script src="/assets/core.js?v=42"></script>
+<script src="/assets/core.js?v=43"></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 let EN=null, EN_FILTER="offen", EN_LAUF=0, EN_OFFEN=new Set(), SEL=new Set(), SEL_AN=false, SEL_LAEUFT=false;
@@ -95,8 +95,9 @@ function daysAgo(n){ const d=new Date(today); d.setDate(d.getDate()-n); return d
 /* ---- Wörter ---- */
 const EN_ART={ punkt:"Vorhaben-Punkt", thema:"Thema", kandidat:"Kandidat" };
 const EN_AN={ alex:"Alex", lea:"Lea", team:"Team" };
-const EN_ABSCHNITT=[["ueberfaellig","Überfällig"],["woche","Diese Woche"],["zwei_wochen","Nächste zwei Wochen"],["spaeter","Später"],["ohne","Ohne Frist"]];
-function abschnitt(e){ if(!e.reif) return "unreif"; if(e.zustand==="heute") return "woche"; return e.zustand; }
+const EN_ABSCHNITT=[["ueberfaellig","Überfällig"],["woche","Diese Woche"],["zwei_wochen","Nächste zwei Wochen"],["spaeter","Später"],["ohne","Ohne Frist"],["ruht","Ruht (60 Tage ohne Bewegung)"]];
+/* Stufe 4: ein Punkt ohne Bewegung seit 60 Tagen ruht und steht nicht unter Überfällig, bis jemand ihn anfasst. */
+function abschnitt(e){ if(e.ruht) return "ruht"; if(!e.reif) return "unreif"; if(e.zustand==="heute") return "woche"; return e.zustand; }
 function fristWort(e){
   if(!e.frist) return gfZustand("offen","ohne Frist");
   const d=e.frist.slice(8,10)+"."+e.frist.slice(5,7)+".";

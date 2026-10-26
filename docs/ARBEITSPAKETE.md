@@ -163,3 +163,10 @@ am genauen Commit prüfen. Zusammenarbeit, die es nicht gibt, wird nicht behaupt
 - **Prüfer:** Codex CLI, read-only, je Runde ein eigener Worktree am eingefrorenen Commit nach `docs/reviews/STUFE2-pruefauftrag.md`, höchstens drei Runden; Ergebnisse `docs/reviews/STUFE2-runde-N.md`, Antworten `STUFE2-antwort-N.md`.
 - **Stand:** siehe `docs/TECHNIKSTAND.md`, Abschnitt „Stufe 2“, und `docs/STAND-STUFE-2.md`.
 
+### WP-S3 · Stufe 3 · Lauf im Kompass, weniger Seiten, Ruhe halten
+
+- **Auftrag:** `docs/PAKET-STUFE-3-LAUF-IM-KOMPASS.md`, Abschnitte 2 bis 6, entschieden von Alex am 26.10.2026 („C“: Lauf aus Cowork in den Kompass, Stufe 3 und 4 in einem Zug, eine Gesamtabnahme am Ende, keine Zwischentests).
+- **Zuständig:** Claude Code, Branch `stufe-3/lauf-im-kompass` von `origin/main` (`802a3ba`). Alex: Google-Zugang (Secret `GOOGLE_SA_JSON`) und am Ende die Testaufgabe mit Lea, Cowork-Abgleich ausschalten.
+- **Prüfer:** Codex CLI, read-only, je Runde ein eigener Worktree am eingefrorenen Commit nach `docs/reviews/STUFE3-pruefauftrag.md`, höchstens drei Runden; Ergebnisse `docs/reviews/STUFE3-runde-N.md`, Antworten `STUFE3-antwort-N.md`.
+- **Stand:** siehe `docs/TECHNIKSTAND.md`, Abschnitt „Stufe 3“, und `docs/STAND-STUFE-3.md`.
+

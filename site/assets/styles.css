@@ -1812,6 +1812,19 @@ details[open]>summary .chev,.tk.open .chev,.kd.open .chev,.lg.open .chev{transfo
 input:not([type=hidden]):focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--focus)!important;outline-offset:1px}
 .stepper:focus-within{outline:2px solid var(--focus);outline-offset:1px}
 .stepper input:focus-visible{outline:none!important}
+/* Stufe 3: Reiter unter dem Kopf (Vertretung, Saison, Einstellungen) */
+.gf-reiter{margin:0 0 var(--s-16)}
+.gf-reiter .chip{text-decoration:none}
+.ls-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--s-12)}
+.ls-karte{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-m);padding:var(--s-16)}
+.ls-karte h3{margin:0 0 var(--s-8);font-size:var(--fs-title)}
+.ls-modus{display:flex;flex-wrap:wrap;gap:var(--s-8)}
+.ls-modus .btn[aria-pressed="true"]{background:var(--action);border-color:var(--action);color:var(--on-action)}
+.ls-krit{display:grid;gap:var(--s-8)}
+.ls-krit .zeile{display:flex;align-items:center;justify-content:space-between;gap:var(--s-12);padding:var(--s-8) 0;border-bottom:1px solid var(--line)}
+.ls-krit .zeile:last-child{border-bottom:0}
+.ls-prot{font-size:var(--fs-sm);color:var(--text-2)}
+.ls-prot li{padding:var(--s-4) 0;border-bottom:1px solid var(--line)}
 .rk2-akt{display:inline-flex;gap:var(--s-8);margin-top:var(--s-4)}
 .rk2-mehr>summary{cursor:pointer;min-height:var(--ziel-min);display:flex;align-items:center;color:var(--text-2)}
 /* Stufe 2: der Ring sitzt am Suchfeld selbst, nicht am Rahmen (Tastaturprobe misst das fokussierte Element). */

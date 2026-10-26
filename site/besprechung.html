@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#171d18" />
 <title>Kompass · Besprechung</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=42" />
-<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=42" />
-<link rel="apple-touch-icon" href="/assets/icon-180.png?v=42" />
-<link rel="manifest" href="/assets/manifest.webmanifest?v=42" />
-<link rel="stylesheet" href="/assets/styles.css?v=42" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=43" />
+<link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-512.png?v=43" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png?v=43" />
+<link rel="manifest" href="/assets/manifest.webmanifest?v=43" />
+<link rel="stylesheet" href="/assets/styles.css?v=43" />
 <script>(function(){var t=localStorage.getItem("gf_theme");document.documentElement.dataset.theme=(t==="light"||t==="colorful")?"light":"dark";var n=null;try{n=localStorage.getItem("gf_nav")}catch(e){}var d=document.documentElement;d.dataset.nav=matchMedia("(max-width:1023px)").matches?"drawer":((n==="open"||n==="rail")?n:(matchMedia("(min-width:1280px)").matches?"open":"rail"));})();</script>
 </head>
 <body>
@@ -54,7 +54,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="/assets/core.js?v=42"></script>
+<script src="/assets/core.js?v=43"></script>
 <script>
 const $=s=>document.querySelector(s);
 const NOW=new Date(); const TODAY=NOW.toLocaleDateString("sv-SE");
@@ -75,7 +75,7 @@ function fristWort(e){
 }
 function herkunft(e){ const h=e.herkunft||{}; const t=[EN_ART[e.quelle_art]||e.quelle_art]; if(e.vorhaben) t.push(e.vorhaben.title); else if(e.quelle_art==="thema"&&h.titel&&h.titel!==e.frage) t.push(h.titel); if(h.quelle) t.push(h.quelle); return t.map(gfEsc).join(" · "); }
 /* Stufe 2: Fokus zuerst (Phasenreihenfolge), dann der Rest in der Reihenfolge der Liste. */
-function agenda(){ const f=ITEMS.filter(x=>x.vorhaben&&x.vorhaben.fokus).sort((a,b)=>GF_PHASE_REIHE.indexOf(a.vorhaben.phase)-GF_PHASE_REIHE.indexOf(b.vorhaben.phase)); return f.concat(ITEMS.filter(x=>!f.includes(x))); }
+function agenda(){ const f=ITEMS.filter(x=>x.vorhaben&&x.vorhaben.fokus&&!x.ruht).sort((a,b)=>GF_PHASE_REIHE.indexOf(a.vorhaben.phase)-GF_PHASE_REIHE.indexOf(b.vorhaben.phase)); const rest=ITEMS.filter(x=>!f.includes(x)); return f.concat(rest.filter(x=>!x.ruht), rest.filter(x=>x.ruht)); }   // Stufe 4: Ruhendes zuletzt
 function fmtDur(ms){ const s=Math.floor(ms/1000); const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), x=s%60; return (h?h+":":"")+String(m).padStart(2,"0")+":"+String(x).padStart(2,"0"); }
 const FEHLT=`<span class="bs-fehlt">fehlt</span>`;
 const WORT={ entschieden:"entschieden", vertagt:"vertagt", abgegeben:"abgegeben", uebersprungen:"übersprungen" };

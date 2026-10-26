@@ -127,6 +127,7 @@ export const KORB_SAAT = {
 export let KORB = JSON.parse(JSON.stringify(KORB_SAAT));
 export let NEUE = [];
 export function zuruecksetzen(){ KORB = JSON.parse(JSON.stringify(KORB_SAAT)); NEUE = []; if (typeof vhZuruecksetzen === 'function') vhZuruecksetzen(); vkZuruecksetzen(); enZuruecksetzen(); }
+const LAUF_E = { id:1, modus:'aus', deckel_tag:5, modell:'claude-opus-5-5', postfaecher:['alex@wildemoehre.org','lea@wildemoehre.org'], fenster_stunden:26, batch:8, letzter_lauf_at:null, letzter_fehler:null, abbruch_grund:null, updated_by:null, updated_at:zeit(-1) };
 const zeileVon = (id) => Object.values(KORB).flat().find(r => r.id === id);
 const vorgangVon = (z) => z && z.kind === 'thema'
   ? { id:z.ref_id, gate: z.vertretung ? 'alex' : 'lea', owner_backup: z.vertretung || null } : null;
@@ -314,6 +315,18 @@ export const ANTWORT = {
     z.status = p.status || 'bestaetigt'; z.by = p.by || 'Alex';
     return { item:{ ...z }, vorgang: vorgangVon(z) };
   },
+  /* Stufe 3: der Lauf im Kompass. */
+  lauf_einstellungen_get: () => ({ einstellungen: LAUF_E, gmail_konfiguriert: false, ki_konfiguriert: true, cron: [{ jobname:'hh_lauf_tick', schedule:'7 5-21/2 * * *', active:true }],
+    wochen: [{ woche:'2026-W43', geprueft:12, sicher:2, wahrscheinlich:5, unklar:5, erledigt:2, vorschlag:5, kandidat:1, gedeckelt:0, gesperrt:0, fehler:0 }],
+    letzte: [{ run_id:'lauf-1', modus:'probe', stufe:'sicher', aktion:'vorschlag', beleg:'Victor hat am 24.10. den Vertrag zurückgeschickt.', ausgefuehrt:false, created_at:zeit(-1) }],
+    bilanz: { summe: { erledigt:2, zurueckgenommen:0, vorschlaege:5, vorschlaege_uebernommen:2, kandidaten:1, kandidaten_uebernommen:0 }, trefferquote:33 },
+    kriterien: [ { kennung:'a', text:'Trefferquote des Laufs mindestens 50 %', wert:33, ziel:50, einheit:'%', ok:false }, { kennung:'b', text:'Mindestens 70 % der Lauf-Erledigungen bleiben', wert:100, ziel:70, einheit:'%', ok:true }, { kennung:'c', text:'Entscheidungsliste unter 15 offenen Einträgen', wert:9, ziel:15, einheit:'', ok:true }, { kennung:'d', text:'Höchstens 5 Sichtungen am Tag', wert:1.2, ziel:5, einheit:'', ok:true } ] }),
+  lauf_einstellungen_set: (p) => { const by = enPerson(p); if (!by) return { __status:400, error:'by muss Alex oder Lea sein' };
+    if (p.modus !== undefined) { if (!['aus','probe','vorschlag','live'].includes(p.modus)) return { __status:400, error:'modus: aus, probe, vorschlag oder live' }; LAUF_E.modus = p.modus; if (['live','vorschlag'].includes(p.modus)) LAUF_E.abbruch_grund = null; }
+    if (p.deckel_tag !== undefined) LAUF_E.deckel_tag = Number(p.deckel_tag); if (p.modell !== undefined) LAUF_E.modell = p.modell;
+    LAUF_E.updated_by = by; return { einstellungen: { ...LAUF_E }, geaendert: true }; },
+  lauf_gmail_probe: (p) => ({ __status:503, error:'Google-Zugang fehlt: Supabase-Secret GOOGLE_SA_JSON setzen (Paket Stufe 3, Abschnitt 2.4)' }),
+  lauf_tick: (p) => LAUF_E.modus === 'aus' && !p.probe ? { uebersprungen:true, modus:'aus', grund:'Lauf ist aus' } : { run_id:'lauf-probe', modus: p.probe ? 'probe' : LAUF_E.modus, postfach:'alex@wildemoehre.org', mails:3, zusammen:{ geprueft:3, erledigt:0, vorschlag:2, kandidat:0, unklar:1 }, zeilen:[] },
   handover_erledigt: (p) => {
     const z = zeileVon(p.id); if (!z) return { __status:404, error:'Korbzeile gibt es nicht' };
     if (z.status === 'erledigt' || z.status === 'entfallen') return { __status:409, error:'Die Zeile ist schon geschlossen, bitte neu laden' };
@@ -495,7 +508,7 @@ export const VH_ANTWORT = {
 
 export const FALLBACK = { ok:true, items:[], topics:[], gains:[] };
 // Schreibende Aktionen darf der Lauf beantworten, ohne dass die Testdaten sie kennen; alles andere ist ein Testfehler.
-export const SCHREIBEND = new Set(['handover_erledigt', 'wahl','freigabe','begruendung','log_verknuepfen','rolle','tor','add','update','delete','capture','capture_many','checkin','score_event','decision_add','decision_update','decision_delete',
+export const SCHREIBEND = new Set(['lauf_einstellungen_set', 'lauf_tick', 'handover_erledigt', 'wahl','freigabe','begruendung','log_verknuepfen','rolle','tor','add','update','delete','capture','capture_many','checkin','score_event','decision_add','decision_update','decision_delete',
   'session_start','session_end','session_delete','ritual_toggle','ritual_save','ritual_delete','milestone_save','milestone_delete','news_update','news_accept','news_delete',
   'people_save','people_delete','link_add','link_delete','sites_save','sites_delete','category_save','gate_set','gate_set_many','inbox_promote','inbox_reject','tidy_suggest',
   'absence_end','absence_tick','deputies_set','handover_build','handover_dossier','handover_log_add','launch_set',

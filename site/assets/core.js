@@ -237,7 +237,7 @@ function gfLadefehler(el, e, opts={}){
 }
 
 /* ---- Seitenleiste (V18): links, einklappbar zur Symbolleiste, am Handy als Schublade hinter einer schmalen Kopfzeile.
-   Gruppen: Heute (Für dich, Entscheidungen, Vorhaben, Neuigkeiten, Besprechung) · Arbeiten · Vertretung · Verwalten (Wichtige Seiten, Bearbeiten).
+   Gruppen (Stufe 3): Heute (Für dich, Entscheidungen, Vorhaben, Neuigkeiten, Besprechung) · Arbeiten (acht, mit Vertretung) · Verwalten (Einstellungen).
    Stufe 2 (25.10.2026): Themen (Board, Kacheln, Liste), Eingabe und Aufräumen sind nicht mehr verlinkt; board.html?topic= bleibt als Archivansicht erreichbar.
    Unten: Habitat-Taler (game.js hängt sich an .tb-ctl), Dunkel/Hell, Person. Zustand offen/schmal in localStorage gf_nav. ---- */
 const GF_APP_NAME="Kompass";
@@ -270,10 +270,24 @@ const GF_ICONS={
 };
 const GF_NAV=[
   ["Heute",[["start","index.html","Für dich","home",null,"Deine Entscheidungen, seit gestern, nächste Fristen"],["entscheidungen","entscheidungen.html","Entscheidungen","check",null,"Offene Entscheidungen der GF als Frage mit Frist: entscheiden, vertagen, abgeben"],["vorhaben","vorhaben.html","Vorhaben","wegweiser","vorhabenBadge","Woche, Board, Liste, Akte je Vorhaben"],["neuigkeiten","neuigkeiten.html","Neuigkeiten","bell","newsBadge","Ticker und Vorschläge des Laufs"],["besprechung","besprechung.html","Besprechung","check",null,"Agenda der GF, abarbeiten, Protokoll"]]],
-  ["Arbeiten",[["vorstand","vorstand.html","Vorstand","pen",null,"Gemeinsame Vorstandspost der mit Freude eG: Stand, Antwortentwürfe und Asana Aufgaben"],["jahr","jahr.html","Jahr","cal",null,"Zyklus, Meilensteine, Rituale, Team, Plattformen, Habitat"],["saison","saison.html","Saison","rad",null,"Saison in vier Fragen: Phase und Herausforderung, wen wir haben, was sich geändert hat, wann was wie passieren kann"],["kommunikation","kommunikation.html","Kommunikation","megafon",null,"Postingplan-Standard: wer zuständig ist, wo es eng wird, was die GF entscheidet"],["launch","launch.html","Launch","fahne",null,"Launch verteilen: wer macht was bis wann für alle fünf Festivals, bestätigen und nach Asana senden"],["organisation","organisation.html","Organisation","haus","orgBadge","Haus, Operations, Formate: acht Entscheidungen, Teamaufbau, Tore der vier Stufen"],["besetzung","besetzung.html","Besetzung","leute",null,"Aus Gesprächen der Besetzungswerkstatt Aufgaben mit Person machen, je Festival und Bereich"],["arbeiten","arbeiten.html","So arbeiten wir","zwei",null,"Ist-Aufnahme, Umfrage und Systeme: wie wir heute arbeiten und was davon bleibt"]]],
-  ["Vertretung",[["vertretung","vertretung.html","Abwesenheiten","schild",null,"Wer ist wann weg, wer vertritt, mit welcher Vollmacht"],["uebergabe","uebergabe.html","Übergabe","tausch","uebergabeBadge","Der Korb einer Abwesenheit: was vorher, was an die Vertretung, was ruht"],["rueckkehr","rueckkehr.html","Rückkehr","tuer",null,"Was in deiner Abwesenheit entschieden wurde und was für dich bereitliegt"]]],
-  ["Verwalten",[["seiten","seiten.html","Wichtige Seiten","grid",null,"Arbeitsseiten mit Zugang"],["edit","bearbeiten.html","Bearbeiten","sliders",null,"Personen, Links, Altbestand der Themen pflegen"]]]
+  ["Arbeiten",[["vorstand","vorstand.html","Vorstand","pen",null,"Gemeinsame Vorstandspost der mit Freude eG: Stand, Antwortentwürfe und Asana Aufgaben"],["saison","saison.html","Saison","rad",null,"Saison in vier Fragen; Reiter Jahr mit Zyklus, Meilensteinen, Ritualen"],["kommunikation","kommunikation.html","Kommunikation","megafon",null,"Postingplan-Standard: wer zuständig ist, wo es eng wird, was die GF entscheidet"],["launch","launch.html","Launch","fahne",null,"Launch verteilen: wer macht was bis wann für alle fünf Festivals, bestätigen und nach Asana senden"],["organisation","organisation.html","Organisation","haus","orgBadge","Haus, Operations, Formate: acht Entscheidungen, Teamaufbau, Tore der vier Stufen"],["besetzung","besetzung.html","Besetzung","leute",null,"Aus Gesprächen der Besetzungswerkstatt Aufgaben mit Person machen, je Festival und Bereich"],["arbeiten","arbeiten.html","So arbeiten wir","zwei",null,"Ist-Aufnahme, Umfrage und Systeme: wie wir heute arbeiten und was davon bleibt"],["vertretung","vertretung.html","Vertretung","schild","uebergabeBadge","Abwesenheiten, Übergabe und Rückkehr auf einer Seite"]]],
+  ["Verwalten",[["einstellungen","einstellungen.html","Einstellungen","sliders",null,"Lauf, Bilanz und Kriterien; Personen, Links und Wichtige Seiten als Reiter"]]]
 ];
+/* Stufe 3 (26.10.2026): drei Gruppen, 14 Einträge. Übergabe, Rückkehr, Jahr, Bearbeiten und Wichtige Seiten sind Reiter ihrer Seite (GF_REITER),
+   der Seitenleisteneintrag ihrer Gruppe bleibt markiert (GF_NAV_ALIAS). */
+const GF_NAV_ALIAS={ uebergabe:"vertretung", rueckkehr:"vertretung", jahr:"saison", edit:"einstellungen", seiten:"einstellungen", themen:null, capture:null, aufraeumen:null, liste:null };
+const GF_REITER={
+  vertretung:[["vertretung","vertretung.html","Abwesenheiten"],["uebergabe","uebergabe.html","Übergabe"],["rueckkehr","rueckkehr.html","Rückkehr"]],
+  saison:[["saison","saison.html","Saison"],["jahr","jahr.html","Jahr"]],
+  einstellungen:[["einstellungen","einstellungen.html","Lauf und Kriterien"],["edit","bearbeiten.html","Personen und Links"],["seiten","seiten.html","Wichtige Seiten"]]
+};
+function gfMountReiter(active){
+  const gruppe=GF_NAV_ALIAS[active]===undefined?active:GF_NAV_ALIAS[active]; const r=gruppe&&GF_REITER[gruppe]; if(!r) return;
+  const id=new URLSearchParams(location.search).get("id");
+  const html=`<nav class="fchips compact gf-reiter" aria-label="Bereich ${gfEsc(gruppe)}">${r.map(([k,h,l])=>`<a class="chip${k===active?" on":""}" href="${h}${id&&gruppe==="vertretung"&&k!=="vertretung"?"?id="+encodeURIComponent(id):""}"${k===active?' aria-current="page"':""}>${gfEsc(l)}</a>`).join("")}</nav>`;
+  const alt=document.querySelector(".gf-reiter"); if(alt) alt.remove();
+  const hero=document.getElementById("hero"); if(hero) hero.insertAdjacentHTML("afterend", html); else document.getElementById("app")?.insertAdjacentHTML("afterbegin", html);
+}
 const GF_SUBNAV=[["board","board.html?view=board","Board","Spalten nach Ablauf, Prio, Zeitraum oder Person, verschiebbar"],["kacheln","board.html?view=kacheln","Kacheln","Gruppen als Kachelraster"],["liste","cockpit.html","Liste","Ausführliche Liste mit Details und Protokoll"]];
 function gfNavMode(){
   if(window.matchMedia("(max-width:1023px)").matches) return "drawer";
@@ -320,7 +334,9 @@ function gfMountTopbar(active){
         <div class="sb-drawer-only">${themeSw("themeSw2")}</div>
       </div>
     </aside>`;
-  const a=el.querySelector(`.sb-nav a[data-k="${active}"]`); if(a){ a.classList.add("active"); a.setAttribute("aria-current","page"); }
+  const navKey=GF_NAV_ALIAS[active]===undefined?active:GF_NAV_ALIAS[active];
+  const a=navKey?el.querySelector(`.sb-nav a[data-k="${navKey}"]`):null; if(a){ a.classList.add("active"); a.setAttribute("aria-current","page"); }
+  gfMountReiter(active);
   const cur=gfTheme();
   el.querySelectorAll(".theme-sw button").forEach(b=>{ b.classList.toggle("on",b.dataset.th===cur); b.setAttribute("aria-pressed",b.dataset.th===cur?"true":"false");
     b.onclick=()=>{ gfApplyTheme(b.dataset.th); el.querySelectorAll(".theme-sw button").forEach(x=>{ const on=x.dataset.th===b.dataset.th; x.classList.toggle("on",on); x.setAttribute("aria-pressed",on?"true":"false"); }); }; });

@@ -1,3 +1,33 @@
+## Stufe 3 · Lauf im Kompass, weniger Seiten, Ruhe halten (26.10.2026)
+
+Auftrag: `docs/PAKET-STUFE-3-LAUF-IM-KOMPASS.md` (Entscheidung Alex 26.10.2026: „C“, alles in einem Zug, eine Gesamtabnahme am Ende); Branch `stufe-3/lauf-im-kompass` von `origin/main` `802a3ba`. Der Lauf wandert aus Cowork in die Edge Function; Stufe 3 (weniger Seiten) und Stufe 4 (Ruhe halten) im selben Paket.
+
+**Stand in fünf Kategorien**: siehe Tabelle am Ende dieses Abschnitts.
+
+Datenbank, Migration `20261026120000_stufe3_lauf` (angewendet am 26.10.2026 per `db query --linked`, vorher in einer zurückgerollten Transaktion geprüft, Fernhistorie): `hh_lauf_einstellungen` (eine Zeile: `modus` aus|probe|vorschlag|live, `deckel_tag` 5, `modell` claude-opus-5-5, `postfaecher`, `fenster_stunden` 26, `batch` 8, letzter Lauf, Fehler, Abbruchgrund), `hh_lauf_cursor` (Zeitgrenze je Postfach), `hh_lauf_protokoll` (je geprüfter Quelle: Stufe, Aktion, Beleg-Satz, ausgeführt; eindeutig je Quelle und Punkt; keine Mailtexte), `hh_lauf_tag` (Sichtungsdeckel je Berliner Tag); Funktionen `hh_lauf_einstellungen_set` (nur Alex oder Lea, Protokollzeile), `hh_lauf_sichtung` (Deckel), `hh_lauf_cron_steht`, `hh_lauf_tick` (pg_net mit Passwort aus dem Vault, tut bei `aus` nichts); pg_cron `hh_lauf_tick` `7 5-21/2 * * *` UTC. RLS ohne Policies, Rechte nur `service_role`.
+
+Edge Function `gfweekly` (ping `version` 43, `gmailConfigured`), neues Modul `lauf.ts`: `lauf_tick {postfach?, mails?, probe?, after?, before?, run_id?, batch?}` (ein Postfach, höchstens `batch` Threads; Mails aus Gmail per Dienstkonto mit Delegation, JWT mit WebCrypto aus `GOOGLE_SA_JSON`, oder aus der Nutzlast; je Thread ein Claude-Aufruf mit Werkzeugschema `einordnung`, `tool_choice auto` mit JSON-Rückfall, weil Opus 5.5 keine erzwungene Werkzeugwahl zulässt; Einstufung `laufStufe`: sicher ab 0,8 mit belegtem Abschluss und Punkt, wahrscheinlich ab 0,7, Punktbezug nur ab 0,75; Aktion `laufAktion` je Modus; harte Regeln im Code: nie ein zurückgenommener Punkt, Deckel über `hh_lauf_sichtung`, kein Kandidat aus gesendeten Mails, Einwurf-Adressen übersprungen, Vertraulichkeitsfilter; Schreibwege wie Stufe 2: `hh_punkt_toggle(…, 'lauf', ref)` plus Beleg-Eintrag, Vorschläge `status 'vorschlag'` mit `tag`, Kandidaten mit `vorhaben_vorschlag` und `gate_frist`; Protokoll je Mail, Ticker je Tag, Cursor nur bei echten Läufen; Selbstabschaltung bei unter 50 % bleibend über 14 Tage ab fünf Erledigungen; Rückkehr-Brief aus `rueckkehr_lage` in fünf bis acht Sätzen, nur wenn leer), `lauf_einstellungen_get` (Einstellungen, Zugänge, Zeitplan, Wochen aus dem Protokoll, Bilanz, vier Kriterien mit Ampel), `lauf_einstellungen_set {modus, deckel_tag, modell}`, `lauf_gmail_probe {postfach}` (zählt Threads, liest nichts), `lauf_retro_auswertung {run_id, von, bis}` (sichere Treffer gegen von Hand erledigte Punkte: Präzision, verpasst, Sichtungen je Tag). Gmail-Abfrage ohne Werbung, Soziales, Benachrichtigungen und Foren; XCeed-Berichte über `alex+xceed@` getrennt. `entscheidungen.ts`: `herkunft` liefert `ruht` (Punkt ohne Bewegung seit 60 Tagen, Stufe 4).
+
+Oberfläche (`?v=43`): Navigation in drei Gruppen mit 14 Einträgen (Heute 5, Arbeiten 8 mit Vertretung, Verwalten 1: Einstellungen); Reiter unter dem Kopf (`gfMountReiter`, `GF_REITER`, `GF_NAV_ALIAS`): Vertretung (Abwesenheiten, Übergabe, Rückkehr; `?id=` wird weitergereicht), Saison (Saison, Jahr), Einstellungen (Lauf und Kriterien, Personen und Links, Wichtige Seiten); die Dateien `uebergabe.html`, `rueckkehr.html`, `jahr.html`, `bearbeiten.html`, `seiten.html` bleiben mit ihrem Inhalt. Neu `einstellungen.html`: Modus (vier Knöpfe mit Folge-Text, Rückfrage vor Live), Zugänge (Claude, Google, Zeitplan, „Verbindung prüfen“ je Postfach, „Probelauf ausführen“), Regeln (Deckel, Modell, letzter Lauf), Kriterien a bis d mit Ampel, Wochen-Tabelle, Protokoll-Klappe. `entscheidungen.html`: Abschnitt „Ruht (60 Tage ohne Bewegung)“ zuletzt statt Überfällig; `besprechung.html`: Ruhendes zuletzt; `vorhaben.html`: Marke „ruht seit 60 Tagen“ am Punkt, dann keine Überfällig-Marke.
+
+Rückblick (Abschnitt 3): Stichprobe am 26.10. mit vier echten Threads aus Alex' Postfach (Xceed-Ticketshops, Fluidity-Entwürfe, Härting-Mahnung, Xceed-3-Mio-Antwort) im Probelauf: alle vier „wahrscheinlich“ mit treffendem Beleg, kein falsches „sicher“; eine frühere Fixture hatte bei Schwelle 0,6 einen falschen Punktbezug, darum Schwellen auf 0,7 und 0,75. Der volle Vier-Wochen-Rückblick läuft im Probelauf über die Function, sobald der Google-Zugang gesetzt ist (bis dahin: Grenze, siehe Tabelle).
+
+**Lesarten und Detailentscheidungen**:
+- Google-Zugang als Dienstkonto mit domänenweiter Delegation (`gmail.readonly`), Secret `GOOGLE_SA_JSON` von Alex gesetzt; der Token-Weg ist in `gmailToken` gekapselt, OAuth je Postfach wäre ein Austausch dieser Funktion.
+- Übergabe, Rückkehr, Jahr, Bearbeiten und Wichtige Seiten sind Reiter ihrer Gruppe statt umgebauter Einzelseiten: gleiche Wirkung in der Navigation (14 Einträge), keine Weiterleitungen, kein Risiko für bestehende Links und Tests.
+- Modell des Laufs als Vorgabe im Code und änderbar in den Einstellungen, kein Secret.
+- „ruht“ wird gerechnet (Punkt `updated_at`, Entscheidung `updated_at`, Verlauf mit `punkt_id`), keine neue Spalte.
+
+Prüfungen: `pruefung/stufe3-probe.mjs` (Rechenregeln, Navigation, Reiter, Asset-Version; mit `GF_PW` die Wirkung: Einstellungen, Probelauf mit Fixtures, Live auf Testvorhaben mit Erledigen, Rückgängig und Sperre, Selbstabschaltung, Rückblick-Auswertung, Aufräumen mit Modus zurück), Bedienproben Gruppe „Stufe 3“, Schirme mit `einstellungen.html`, Webstandard, Wächter, `abnahme.sh`.
+
+| Kategorie | Stand |
+| --- | --- |
+| Umgesetzt | in Arbeit (Branch `stufe-3/lauf-im-kompass`) |
+| Technisch geprüft | wird nach Abnahme und Wirkungsproben eingetragen |
+| Unabhängig geprüft | wird nach den Codex-Runden eingetragen |
+| Veröffentlicht | Function wird bei Deploys mit `modus 'aus'` ausgerollt; Push nach `main` am Ende |
+| Fachlich angenommen | Nein; Testaufgabe Abschnitt 9 nach dem Push |
+
 ## Stufe 2 · Ein Behälter (25.10.2026)
 
 Auftrag: `docs/PAKET-STUFE-2-EIN-BEHAELTER.md`, Abschnitte 1 bis 8 und 12; Branch `stufe-2/ein-behaelter` von `origin/main` `4bced15`. Entscheidung von Alex (25.10.2026): Deploy, Push, Pull und die Auflösung der Produktionszeilen führt die Sitzung selbst aus; Freigaberegeln in `~/gfweekly/.claude/settings.local.json` (git-ignoriert).

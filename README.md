@@ -1,5 +1,10 @@
 # Kompass (vormals Das Hohe Haus, davor GF Weekly)
 
+> **Stand 26.10.2026: Stufe 3 · Lauf im Kompass, weniger Seiten, Ruhe halten** (Branch `stufe-3/lauf-im-kompass`). Der tägliche Lauf
+> läuft in der Edge Function (`lauf.ts`, pg_cron, Claude API, Gmail per Dienstkonto) mit Modus aus/probe/vorschlag/live auf der neuen Seite
+> „Einstellungen“ (Kriterien-Ampel, Bilanz, Protokoll). Navigation in drei Gruppen mit 14 Einträgen; Übergabe, Rückkehr, Jahr, Bearbeiten,
+> Wichtige Seiten als Reiter. Punkte ohne Bewegung seit 60 Tagen „ruhen“. Auftrag: `docs/PAKET-STUFE-3-LAUF-IM-KOMPASS.md`.
+
 > **Stand 25.10.2026: Stufe 2 · Ein Behälter** (Branch `stufe-2/ein-behaelter`). Themen und Kandidaten sind aufgelöst: 53 Themen und 35
 > Kandidaten wurden Punkte oder Verlaufseinträge an Vorhaben (Archiv `archiv_grund 'stufe2:*'`), Themen, Eingabe und Aufräumen sind aus der
 > Navigation; Entscheidungen hängen an Punkten. Fristen nur von Person oder Punkt (Datum aus der Quelle ist ein Vorschlag). Vorhaben haben

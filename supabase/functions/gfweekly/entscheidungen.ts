@@ -120,11 +120,15 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
     const ids = (art: string) => rows.filter(r => r.quelle_art === art).map(r => r.quelle_id);
     const vhIds = new Set<string>(rows.map(r => r.vorhaben_id).filter(Boolean));
     const [punkte, themen, kandidaten]: Any[] = await Promise.all([
-      ids('punkt').length ? admin.from('hh_vorhaben_punkte').select('id,titel,stand,position,quelle,created_at,vorhaben_id').in('id', ids('punkt')) : { data: [] },
+      ids('punkt').length ? admin.from('hh_vorhaben_punkte').select('id,titel,stand,position,quelle,created_at,updated_at,vorhaben_id').in('id', ids('punkt')) : { data: [] },
       ids('thema').length ? admin.from('gfweekly_topics').select('id,title,context,short_description,next_action,recommendation,gate_frist,created_at,vorhaben_id,board_lane,archived').in('id', ids('thema')) : { data: [] },
       ids('kandidat').length ? admin.from('gfweekly_news').select('id,title,body,quote,source,source_title,source_url,happened_at,created_at,vorhaben_id,status').in('id', ids('kandidat')) : { data: [] },
     ]);
     for (const r of [punkte, themen, kandidaten]) if (r.error) throw r.error;   // Runde 3, Befund 3: ein Abfragefehler ist kein „Quelle fehlt“
+    /* Stufe 4 (Ruhe halten): ein Punkt ohne Bewegung seit 60 Tagen (Punkt, Entscheidung, Verlauf) ruht; die Liste zeigt ihn nicht als überfällig. */
+    const seit60 = new Date(Date.now() - 60 * 86400000).toISOString();
+    const bewegt = new Set<string>();
+    if (ids('punkt').length) { const { data: vb, error: eb } = await admin.from('hh_vorhaben_verlauf').select('punkt_id').in('punkt_id', ids('punkt')).gte('created_at', seit60); if (eb) throw eb; for (const x of (vb || []) as Any[]) if (x.punkt_id) bewegt.add(x.punkt_id); }
     for (const p of ((punkte.data || []) as Any[])) if (p.vorhaben_id) vhIds.add(p.vorhaben_id);
     const vh: Any = vhIds.size ? await admin.from('hh_vorhaben').select('id,slug,title,status,ball,naechster_schritt,phase,fokus').in('id', [...vhIds]) : { data: [] };
     if (vh.error) throw vh.error;
@@ -135,9 +139,11 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
     return rows.map(r => {
       let h: Any = { art: r.quelle_art, titel: null, text: null, url: null, datum: null, fehlt: false };
       let vorhaben: Any = r.vorhaben_id ? VH.get(r.vorhaben_id) : null;
+      let ruht = false;
       if (r.quelle_art === 'punkt') {
         const p = P.get(r.quelle_id); if (!p) h.fehlt = true;
-        else { vorhaben = vorhaben || VH.get(p.vorhaben_id); h = { ...h, titel: p.titel, text: p.stand || null, datum: p.created_at, url: vorhaben ? `vorhaben.html?v=${encodeURIComponent(vorhaben.slug)}` : null }; }
+        else { vorhaben = vorhaben || VH.get(p.vorhaben_id); h = { ...h, titel: p.titel, text: p.stand || null, datum: p.created_at, url: vorhaben ? `vorhaben.html?v=${encodeURIComponent(vorhaben.slug)}` : null };
+          ruht = !bewegt.has(p.id) && String(p.updated_at || p.created_at || '') < seit60 && String(r.updated_at || '') < seit60 && (r.status === 'offen' || r.status === 'vertagt'); }
       } else if (r.quelle_art === 'thema') {
         const x = T.get(r.quelle_id); if (!x) h.fehlt = true;
         else h = { ...h, titel: x.title, text: x.short_description || x.context || null, datum: x.created_at, url: `board.html?topic=${encodeURIComponent(x.id)}` };
@@ -145,7 +151,7 @@ export function entscheidungenModul(ctx: { admin: Any, json: (b: unknown, s?: nu
         const x = K.get(r.quelle_id); if (!x) h.fehlt = true;
         else h = { ...h, titel: x.title, text: x.body || x.quote || null, datum: x.happened_at || x.created_at, url: /^https?:/.test(x.source_url || '') ? x.source_url : null, quelle: x.source_title || x.source || null };
       }
-      return { ...r, herkunft: h, vorhaben: vorhaben ? { id: vorhaben.id, slug: vorhaben.slug, title: vorhaben.title, status: vorhaben.status, phase: vorhaben.phase || 'sonstiges', fokus: !!vorhaben.fokus } : { phase: 'sonstiges', fokus: false, id: null, slug: null, title: null, status: null } };
+      return { ...r, ruht, herkunft: h, vorhaben: vorhaben ? { id: vorhaben.id, slug: vorhaben.slug, title: vorhaben.title, status: vorhaben.status, phase: vorhaben.phase || 'sonstiges', fokus: !!vorhaben.fokus } : { phase: 'sonstiges', fokus: false, id: null, slug: null, title: null, status: null } };
     });
   }
 
