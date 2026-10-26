@@ -116,7 +116,7 @@ else {
     const fake = sql(fakeZeilen.concat(['select 1 as ok;']).join('\n'));
     const t4 = await api('lauf_tick', { run_id: K.run + '-d', postfach: 'alex@wildemoehre.org', mails: [] });
     const e4 = await api('lauf_einstellungen_get', {});
-    pruefe('Selbstabschaltung: zwei Wochen je unter 50 % bleibend (ab drei Erledigungen) stellen den Modus auf vorschlag mit Grund', fake.rows?.[0]?.ok === 1 && t4.status === 200 && t4.d.abschaltung?.abgeschaltet === true && e4.d?.einstellungen?.modus === 'vorschlag' && /Selbstabschaltung/.test(e4.d.einstellungen.abbruch_grund || ''), JSON.stringify([fake.fehler, t4.d?.abschaltung, e4.d?.einstellungen?.modus]).slice(0, 300));
+    pruefe('Selbstabschaltung: zwei Wochen je unter 50 % bleibend (ab drei Erledigungen) stellen den Modus auf vorschlag mit Grund', fake.rows?.[0]?.ok === 1 && t4.status === 200 && t4.d.abschaltung?.abgeschaltet === true && e4.d?.einstellungen?.modus === 'vorschlag' && /Selbstabschaltung/.test(e4.d.einstellungen.abbruch_grund || ''), JSON.stringify([fake.fehler, t4.status, t4.d, e4.d?.einstellungen?.modus]).slice(0, 500));
     const sr = await api('lauf_einstellungen_set', { modus: K.modusVorher, by: 'Alex' });
     pruefe('Modus zurück auf den Ausgangswert, Abbruchgrund gelöscht', sr.status === 200 && sr.d.einstellungen.modus === K.modusVorher && (K.modusVorher === 'aus' ? sr.d.einstellungen.abbruch_grund !== undefined : true), JSON.stringify(sr.d).slice(0, 200));
     /* Rückblick-Auswertung läuft über das Protokoll */

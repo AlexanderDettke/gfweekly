@@ -346,8 +346,9 @@ Regeln:
     if (abschaltungFaellig(w1, w2)) {
       const grund = `Selbstabschaltung ${heuteBerlin()}: diese Woche ${w1.erledigt} Lauf-Erledigungen, ${w1.zurueck} zurückgenommen; Vorwoche ${w2.erledigt} und ${w2.zurueck}. Beide unter 50 % bleibend, Modus auf vorschlag.`;
       await admin.from('hh_lauf_einstellungen').update({ modus: 'vorschlag', abbruch_grund: grund, updated_at: new Date().toISOString() }).eq('id', 1);
-      await schreibe('hh_lauf_protokoll', { run_id: 'abschaltung:' + heuteBerlin(), modus: 'vorschlag', quelle_art: 'system', quelle_ref: 'abschaltung:' + heuteBerlin(), stufe: 'keine', aktion: 'nichts', beleg: grund.slice(0, 600), ausgefuehrt: true }, 'schluessel');
-      await schreibe('gfweekly_news', { kind: 'ticker', title: 'Lauf auf Vorschlag zurückgestellt', body: grund, who: 'Lauf', source: 'lauf', source_ref: 'lauf:abschaltung:' + heuteBerlin(), happened_at: new Date().toISOString(), status: 'neu' }, 'source_ref');
+      const stempel = heuteBerlin() + ':' + new Date().toISOString().slice(11, 19).replace(/:/g, '');
+      await schreibe('hh_lauf_protokoll', { run_id: 'abschaltung:' + stempel, modus: 'vorschlag', quelle_art: 'system', quelle_ref: 'abschaltung:' + stempel, stufe: 'keine', aktion: 'nichts', beleg: grund.slice(0, 600), ausgefuehrt: true }, 'schluessel');
+      await schreibe('gfweekly_news', { kind: 'ticker', title: 'Lauf auf Vorschlag zurückgestellt', body: grund, who: 'Lauf', source: 'lauf', source_ref: 'lauf:abschaltung:' + stempel, happened_at: new Date().toISOString(), status: 'neu' }, 'source_ref');
       return { abgeschaltet: true, w1, w2 };
     }
     return { abgeschaltet: false, w1, w2 };
