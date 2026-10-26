@@ -243,7 +243,7 @@ Regeln:
           const aktion = laufAktion(stufe, modus, !!punkt, !!kand && !!vh, !!m.gesendet, gesp);
           zeile = { ...zeile, punkt_id: punkt?.id || null, vorhaben_id: vh?.id || null, stufe, aktion, beleg: beleg || null };
           const frist = tag(roh?.frist_datum);
-          const link = m.thread_id && !/^fix|^test/i.test(String(m.thread_id)) ? `https://mail.google.com/mail/u/0/#all/${m.thread_id}` : null;
+          const link = m.thread_id && quelle === 'gmail' ? `https://mail.google.com/mail/u/0/#all/${m.thread_id}` : null;   // nur echte Gmail-Threads verlinken, Fixtures und Rückblicke aus der Nutzlast nicht
           if (modus !== 'probe' && (aktion === 'vorschlag' || aktion === 'kandidat')) {
             const frei = await rpc('hh_lauf_sichtung', { p_tag: heute, p_n: 1 });
             if (Number(frei) < 1) zeile.aktion = 'gedeckelt';

@@ -96,7 +96,7 @@ else {
     pruefe('Live: der Lauf erledigt den Testpunkt (erledigt_by lauf) mit Beleg-Eintrag (zwei Lauf-Einträge, keine Gmail-Adresse bei Fixtures)', sl.status === 200 && t2.status === 200 && t2.d.zusammen.erledigt === 1 && lq.rows?.[0]?.erledigt === true && lq.rows[0].erledigt_by === 'lauf' && Number(lq.rows[0].lauf_eintraege) === 2 && lq.rows[0].url === null, JSON.stringify([sl.d?.error, t2.d?.zeilen, lq.rows]).slice(0, 400));
     const lk = await api('entscheidungen_list', { status: 'alle' });
     const en = (lk.d?.eintraege || []).find(e => e.quelle_id === K.punkt);
-    pruefe('Die Entscheidung zum Punkt ist hinfällig (erledigt durch den Lauf)', !en || en.status === 'hinfaellig', JSON.stringify(en).slice(0, 200));
+    pruefe('Die Entscheidung zum Punkt ist hinfällig (erledigt durch den Lauf)', !en || en.status === 'hinfaellig', JSON.stringify(en || null).slice(0, 200));
     const vg = await api('vorhaben_get', { id: K.vorhaben });
     const eintrag = (vg.d?.verlauf || []).find(e => e.created_by === 'lauf' && e.art === 'system');
     const rg = eintrag ? await api('lauf_rueckgaengig', { id: eintrag.id, by: 'Alex' }) : { status: 0 };
