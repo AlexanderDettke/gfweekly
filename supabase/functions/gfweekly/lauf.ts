@@ -303,7 +303,7 @@ Regeln:
             zeile.ausgefuehrt = true;
           } else if (darfSchreiben && zeile.aktion === 'kandidat' && kand) {
             /* Runde 1, Befund 6: ohne gate; der Kandidat ist ein Vorschlag an ein Vorhaben im Korb, keine Entscheidung ohne Punkt. */
-            await schreibe('gfweekly_news', { kind: 'kandidat', title: kand.titel, body: kand.body || null, who: person, source: m.quelle_art === 'plattform' ? 'plattform' : 'mail', source_title: sauber(m.betreff, 200, 'Quelle'), source_url: link, source_ref: `${ref}:k1`, happened_at: m.datum || new Date().toISOString(), status: 'neu', relevance: 'mittel', gate: null, gate_frist: frist, vorhaben_vorschlag: vh?.id || null, run_id: runId }, 'source_ref');
+            await schreibe('gfweekly_news', { kind: 'kandidat', title: kand.titel, body: kand.body || null, who: person, source: m.quelle_art === 'plattform' ? 'plattform' : 'mail', source_title: sauber(m.betreff, 200, 'Quelle'), source_url: link || '', source_ref: `${ref}:k1`, happened_at: m.datum || new Date().toISOString(), status: 'neu', relevance: 'mittel', gate: null, gate_frist: frist, vorhaben_vorschlag: vh?.id || null, run_id: runId }, 'source_ref');
             zeile.ausgefuehrt = true;
           }
         }
@@ -326,7 +326,7 @@ Regeln:
       if (mails.length && !fixtures) {
         const { data: tagz } = await admin.from('hh_lauf_protokoll').select('aktion,created_at').gte('created_at', new Date(Date.now() - 36 * 3600e3).toISOString());
         const z: Record<string, number> = {}; for (const r of (tagz || []) as Any[]) if (berlinTag(r.created_at) === heute) z[r.aktion] = (z[r.aktion] || 0) + 1;
-        await admin.from('gfweekly_news').upsert({ kind: 'ticker', title: `Lauf ${heute}: erledigt ${z.erledigt || 0}, Vorschläge ${z.vorschlag || 0}, Kandidaten ${z.kandidat || 0}, unklar oder nichts ${z.nichts || 0}${z.gedeckelt ? ', gedeckelt ' + z.gedeckelt : ''}`, body: `Modus ${modus}, Postfach ${postfach}.`, who: 'Lauf', source: 'notiz', relevance: 'niedrig', source_ref: `lauf:tag:${heute}`, happened_at: new Date().toISOString(), status: 'neu' }, { onConflict: 'source_ref' });   // source laut CHECK: notiz, asana, kalender, mail, protokoll, entscheidung, manuell, plattform
+        await schreibe('gfweekly_news', { kind: 'ticker', source_url: '', title: `Lauf ${heute}: erledigt ${z.erledigt || 0}, Vorschläge ${z.vorschlag || 0}, Kandidaten ${z.kandidat || 0}, unklar oder nichts ${z.nichts || 0}${z.gedeckelt ? ', gedeckelt ' + z.gedeckelt : ''}`, body: `Modus ${modus}, Postfach ${postfach}.`, who: 'Lauf', source: 'notiz', relevance: 'niedrig', source_ref: `lauf:tag:${heute}`, happened_at: new Date().toISOString(), status: 'neu' }, 'source_ref');   // source laut CHECK: notiz, asana, kalender, mail, protokoll, entscheidung, manuell, plattform
       }
     }
     return { run_id: runId, modus, postfach, quelle, mails: mails.length, zusammen, zeilen, cursor: cursorNeu, abschaltung, brief };
@@ -348,7 +348,7 @@ Regeln:
       await admin.from('hh_lauf_einstellungen').update({ modus: 'vorschlag', abbruch_grund: grund, updated_at: new Date().toISOString() }).eq('id', 1);
       const stempel = heuteBerlin() + ':' + new Date().toISOString().slice(11, 19).replace(/:/g, '');
       await schreibe('hh_lauf_protokoll', { run_id: 'abschaltung:' + stempel, modus: 'vorschlag', quelle_art: 'system', quelle_ref: 'abschaltung:' + stempel, stufe: 'keine', aktion: 'nichts', beleg: grund.slice(0, 600), ausgefuehrt: true }, 'schluessel');
-      await schreibe('gfweekly_news', { kind: 'ticker', title: 'Lauf auf Vorschlag zurückgestellt', body: grund, who: 'Lauf', source: 'notiz', relevance: 'hoch', source_ref: 'lauf:abschaltung:' + stempel, happened_at: new Date().toISOString(), status: 'neu' }, 'source_ref');
+      await schreibe('gfweekly_news', { kind: 'ticker', source_url: '', title: 'Lauf auf Vorschlag zurückgestellt', body: grund, who: 'Lauf', source: 'notiz', relevance: 'hoch', source_ref: 'lauf:abschaltung:' + stempel, happened_at: new Date().toISOString(), status: 'neu' }, 'source_ref');
       return { abgeschaltet: true, w1, w2 };
     }
     return { abgeschaltet: false, w1, w2 };
