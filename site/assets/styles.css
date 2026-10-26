@@ -1823,6 +1823,8 @@ input:not([type=hidden]):focus-visible,textarea:focus-visible,select:focus-visib
 .ls-krit{display:grid;gap:var(--s-8)}
 .ls-krit .zeile{display:flex;align-items:center;justify-content:space-between;gap:var(--s-12);padding:var(--s-8) 0;border-bottom:1px solid var(--line)}
 .ls-krit .zeile:last-child{border-bottom:0}
+.ls-scroll{overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
+.ls-scroll:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .ls-prot{font-size:var(--fs-sm);color:var(--text-2)}
 .ls-prot li{padding:var(--s-4) 0;border-bottom:1px solid var(--line)}
 .rk2-akt{display:inline-flex;gap:var(--s-8);margin-top:var(--s-4)}

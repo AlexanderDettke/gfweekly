@@ -27,6 +27,7 @@ Abschnitt 0 nennt jede Fähigkeit, die der Pilot verändert hat, mit neuer Umset
 | W-17 | Asana senden (Launch) | Rückfrage ohne Anzahl | Rückfrage nennt Festival und Anzahl aus dem Knopf | B-06 | Codeprüfung |
 | W-18 | Skript-Scrollen (Organisation, Besprechung, Neuigkeiten, Liste) | Weich trotz „Bewegung reduzieren“ | Springt sofort, wenn reduzierte Bewegung gewünscht ist | G-06 | Messung |
 | W-19 | Darstellung aller Seiten | Schrift unter 12 px, Ziele unter 44 px, Überlauf bei 320 px und 200 %, gedämpfte erledigte Karten und Abzeichen | Rollen 12/14 px, 44-px-Ziele, Umbruch, Kontrast ohne Deckkraft | G-01 bis G-05 | Messung, Schirme |
+| S3-01 | Stufe 3 (26.10.2026): Navigation in drei Gruppen mit 14 Einträgen; Übergabe, Rückkehr, Jahr, Bearbeiten und Wichtige Seiten als Reiter ihrer Gruppe (`GF_REITER`, `GF_NAV_ALIAS`); neue Seite `einstellungen.html` mit dem Lauf im Kompass (Modus, Zugänge, Regeln, Kriterien, Wochen, Protokoll); Cowork-Lauf abgelöst | 18 Einträge in vier Gruppen; Lauf nur in Cowork, nicht messbar | `gfMountReiter` unter dem Kopf; Lauf als Edge-Function-Modul `lauf.ts` mit pg_cron; „ruht“ nach 60 Tagen ohne Bewegung in Liste, Besprechung, Akte | – | `stufe3-probe.mjs`, Bedienproben „Stufe 3“, Schirme (14 Einträge) |
 | S2-01 | Stufe 2 (25.10.2026): Themen (Board, Kacheln, Liste), Eingabe (`capture.html`) und Aufräumen in der Navigation; Themen-Zähler; Kandidaten-Zähler | Themen und Kandidaten liefen als zweiter Behälter neben den Vorhaben; 375 Kandidaten brachten 18 Übernahmen | Einträge aus `GF_NAV` entfernt (Dateien bleiben, `board.html?topic=` als Archivansicht erreichbar); Neuigkeiten-Zähler zeigt den Korb (`korb_list`); offene Themen und Kandidaten in Punkte und Verlauf aufgelöst | – | `stufe2-probe.mjs`, Schirme (18 Haupteinträge) |
 | W-21 | Besprechung beenden (Besprechung, Board) | Bei Speicherfehler trotzdem beendet und „Gespeichert unter …“ angezeigt | Besprechung bleibt offen, Text zur Sicherung im Dialog, erneutes Beenden möglich (Server aktualisiert dieselbe Sitzung) | B-04, B-07 | Codeprüfung |
 | W-22 | Saison-Rad: Bereich schließen mit ungespeicherten Änderungen | Schloss sofort, Fehler im geschlossenen Bereich, Eingaben weg | Erst speichern, bei Fehler bleibt der Bereich mit Eingaben offen | B-04 | Codeprüfung |
@@ -105,10 +106,9 @@ Gebaut von `gfMountTopbar(active)` in jede Seite. Einträge mit Symbol, Beschrif
 |---|---|---|
 | Heute | Für dich (`start` → index.html) · Entscheidungen (`entscheidungen` → entscheidungen.html, Stufe 1) · Vorhaben (`vorhaben` → vorhaben.html) · Neuigkeiten (`neuigkeiten` → neuigkeiten.html) · Besprechung (`besprechung` → besprechung.html) | Vorhaben: `vorhaben_badge` (offene Einwürfe plus überfällige Vorhaben bei mir, `core.js:712–718`); Neuigkeiten: Kandidaten mit Status neu (`core.js:229`) |
 | Arbeiten | Vorstand (vorstand.html) · Jahr · Saison · Kommunikation · Launch · Organisation · Besetzung · So arbeiten wir (arbeiten.html) · Eingabe (capture.html) | Themen: Anzahl „zu besprechen“ (`core.js:232`); Organisation: `orgBadge`, nur befüllt, solange man auf `organisation.html` ist (`organisation.html:391`) |
-| Vertretung | Abwesenheiten (vertretung.html) · Übergabe (uebergabe.html) · Rückkehr (rueckkehr.html) | Übergabe: `uebergabeBadge` wird angelegt, aber nirgends befüllt (kein Treffer außerhalb `core.js:167`), bleibt also immer verborgen |
-| Verwalten | Wichtige Seiten (seiten.html) · Bearbeiten (bearbeiten.html) | – (Aufräumen seit Stufe 2 nicht mehr verlinkt, Datei bleibt) |
+| Verwalten | Einstellungen (`einstellungen` → einstellungen.html) mit Reitern Lauf und Kriterien, Personen und Links (bearbeiten.html), Wichtige Seiten (seiten.html) | – |
 
-18 Haupteinträge, keine Unterpunkte (Stufe 2, 25.10.2026: Themen mit Unternavigation, Eingabe und Aufräumen entfernt; `GF_SUBNAV` bleibt für `board.html` und `cockpit.html`, die nur noch über Links erreichbar sind). Der aktive Eintrag bekommt `aria-current="page"` (`core.js:211`).
+14 Haupteinträge in drei Gruppen (Stufe 3, 26.10.2026); Reiter unter dem Kopf für Vertretung (Abwesenheiten, Übergabe, Rückkehr), Saison (Saison, Jahr) und Einstellungen (Lauf, Personen und Links, Wichtige Seiten). Die Gruppe Arbeiten enthält jetzt auch Vertretung (vertretung.html); Jahr (jahr.html) ist Reiter von Saison.
 
 Nicht in der Navigation: `inbox.html` (meldet sich als „themen“ an, keine eingehenden Links gefunden), `checkin.html` (Schlüssel `checkin` existiert nicht in `GF_NAV`, kein Eintrag wird aktiv, keine eingehenden Links), `saison-rad.html` und `saison-steckbriefe.html` (nur im Fußtext von `saison.html:226` bzw. `saison-steckbriefe.html:309` erwähnt, kein `href` auf sie gefunden; sie aktivieren „Saison“). Diese vier Seiten sind nur per Direktadresse erreichbar; `saison-rad.html` schreibt trotzdem voll, einschließlich Löschen.
 
@@ -408,7 +408,7 @@ Quelle: `docs/PAKET-VORHABEN-ABSCHLIESSEN.md` und `site/vorhaben.html` bei `05af
 
 ---
 
-### 3.9 jahr.html · Jahr
+### 3.9 jahr.html · Jahr (Stufe 3: Reiter von Saison)
 **Hauptaufgabe:** Jahresüberblick mit Begrüßung, Laufband, Team- und Plattformlage, Habitat-Punkten, Jahreszyklus, Kennzahlen, Meilensteinen, wichtigsten Themen, Ritualen und Schnellzugriff.
 **Darstellungsformen:** Kopfbild, Laufband, aufklappbare Abschnitte (details) mit Zeilen und Mini-Balkendiagrammen (Team), Plattformkarten mit KPI-Kacheln, Punktekarten mit Fortschrittsbalken, Zeitleiste/Jahresband (Kalenderstreifen mit Markern), Kennzahlenkacheln, Karten (Meilensteine, Themen, Schnellzugriff), Checkliste (Rituale) mit Phasen-Tabs, Inline-Formular.
 **Navigation/Einstieg:** `gfMountTopbar("jahr")` (jahr.html:360). Keine URL-Parameter; verlinkt auf `entscheidungen.html#abzeichen` (jahr.html:340).
@@ -737,7 +737,7 @@ Quelle: `docs/PAKET-VORHABEN-ABSCHLIESSEN.md` und `site/vorhaben.html` bei `05af
 
 ---
 
-### 3.20 uebergabe.html · Übergabe
+### 3.20 uebergabe.html · Übergabe (Stufe 3: Reiter von Vertretung)
 **Hauptaufgabe:** Den Korb einer Abwesenheit sichten und je Zeile Cluster, Ampel, Vertretung, Frist und Regel festlegen, Vorschläge bestätigen, Vertretungsbrief erzeugen und bestätigte Punkte nach Asana senden.
 **Darstellungsformen:** Kopf mit Aktionen, Hinweisbänder, Quadranten-Kacheln als Filter, Filterleiste mit Chips und Haken, Zeilenkarten mit Chip-Reihen, aufklappbares Dossier (Definitionsliste), Protokoll (`<details>`), Textdialog (core.js `gfTextModal`).
 **Navigation/Einstieg:** `gfMountTopbar("uebergabe")` (uebergabe.html:335). URL `?id=<Abwesenheit>` (314); ohne `?id=` die nächste aktive, sonst geplante, sonst Rückkehr (321-322).
@@ -765,7 +765,7 @@ Quelle: `docs/PAKET-VORHABEN-ABSCHLIESSEN.md` und `site/vorhaben.html` bei `05af
 
 ---
 
-### 3.21 rueckkehr.html · Rückkehr
+### 3.21 rueckkehr.html · Rückkehr (Stufe 3: Reiter von Vertretung)
 **Hauptaufgabe:** Nach einer Abwesenheit zeigen, was in Vertretung entschieden, weitergegeben und erledigt wurde, was wartet und wie die Vorhaben-Bälle stehen, und die Rückübergabe bestätigen.
 **Darstellungsformen:** Kopfbereich mit Briefing, KPI-Kacheln, Zeilenlisten, aufklappbare Mehr-Liste (`<details>`).
 **Navigation/Einstieg:** `gfMountTopbar("rueckkehr")` (rueckkehr.html:177). URL `?id=<Abwesenheit>` (137); ohne `?id=` gewinnt die erste Abwesenheit im Status Rückkehr der aktiven Person, sonst irgendeine (140).
@@ -783,7 +783,7 @@ Quelle: `docs/PAKET-VORHABEN-ABSCHLIESSEN.md` und `site/vorhaben.html` bei `05af
 
 ---
 
-### 3.22 seiten.html · Wichtige Seiten
+### 3.22 seiten.html · Wichtige Seiten (Stufe 3: Reiter von Einstellungen)
 **Hauptaufgabe:** Übersicht der Arbeitsseiten der Geschäftsleitung mit Vorschaubild, Zweck und hinterlegtem Zugang; Seiten und Bereiche pflegen.
 **Darstellungsformen:** Kennzahlenleiste, Kacheln (Karten mit Bild), Liste (Tabellenzeilen mit Kopfzeile), Schnellstart (Bildraster), Inline-Formular.
 **Navigation/Einstieg:** `gfMountTopbar("seiten")` (seiten.html:252). Keine URL-Parameter.
@@ -809,7 +809,7 @@ Quelle: `docs/PAKET-VORHABEN-ABSCHLIESSEN.md` und `site/vorhaben.html` bei `05af
 
 ---
 
-### 3.23 bearbeiten.html · Bearbeiten
+### 3.23 bearbeiten.html · Bearbeiten (Stufe 3: Reiter von Einstellungen)
 **Hauptaufgabe:** Themen und wiederkehrende Check-ins in allen Feldern pflegen, Links anhängen und das Team-Verzeichnis (Personen) bearbeiten.
 **Darstellungsformen:** Segment-Umschalter (zwei Ansichten), Anlegezeile, aufklappbare Bearbeitungskarten mit Formular-Raster, Link-Liste je Thema, Personenkarten mit Formular.
 **Navigation/Einstieg:** `gfMountTopbar("edit")` (bearbeiten.html:82), Hero „pflege“ compact. Keine URL-Parameter.
@@ -849,6 +849,17 @@ Quelle: `docs/PAKET-VORHABEN-ABSCHLIESSEN.md` und `site/vorhaben.html` bei `05af
 | F-aufraeumen-07 | „Alle Vorschläge übernehmen“ (40, 118–124) | Wirkung nur im `title` erklärt (40); `confirm()` (121) | gfweekly:`gate_set_many` | fachlich bestätigen (Sammelbestätigung) | „Nichts zu übernehmen“ per Toast (120); Ergebnis „n übernommen“ per Toast; Fehler per Toast |
 
 ---
+
+### 3.24a einstellungen.html · Einstellungen (Stufe 3, neu)
+
+**Navigation/Einstieg:** `gfMountTopbar("einstellungen")`, Reiter Lauf und Kriterien, Personen und Links, Wichtige Seiten. Liest `lauf_einstellungen_get`, schreibt `lauf_einstellungen_set` (nur Alex oder Lea), ruft `lauf_gmail_probe` und `lauf_tick {probe:true}`.
+
+| Kennung | Fähigkeit | Auslöser | Backend | Wirkung | Zustände |
+| --- | --- | --- | --- | --- | --- |
+| F-einst-01 | Lauf-Modus aus, probe, vorschlag, live (vier Knöpfe mit Folge-Text, Rückfrage vor Live) | Klick | `lauf_einstellungen_set` | schreibt Einstellungen und Protokollzeile | Knopf gedrückt, Erklärung, Selbstabschaltung als Warnung |
+| F-einst-02 | Zugänge: Claude-API, Google-Zugang, Zeitplan; „Verbindung prüfen“ je Postfach; „Probelauf ausführen“ | Klick | `lauf_gmail_probe`, `lauf_tick` | liest; Probelauf schreibt nur Protokoll | Fehler benannt (503 ohne Secret) |
+| F-einst-03 | Regeln: Deckel je Tag, Modell, letzter Lauf | Formular | `lauf_einstellungen_set` | schreibt | Feldfehler am Formular |
+| F-einst-04 | Kriterien a bis d mit Ampel, Wochen-Tabelle (seitlich scrollbar), Protokoll-Klappe | laden | `lauf_einstellungen_get` | liest | leer: „Noch kein Lauf protokolliert.“, Ladefehler mit „Erneut laden“ |
 
 ### 3.25 checkin.html · Check-in vorbereiten
 **Hauptaufgabe:** Vorbereitung auf das Weekly: Agenda aus den Board-Spalten, Neues seit der letzten Besprechung, fällige und lange offene Themen, letzte Besprechung.

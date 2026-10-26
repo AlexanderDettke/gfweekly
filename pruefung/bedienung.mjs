@@ -65,7 +65,7 @@ const seite = async (url) => {
     if (m.type() !== 'error') return;
     /* Eine abgefangene Fehlerantwort ist gewollt (Asana ohne Token). Der Browser meldet sie trotzdem;
        das ist keine Meldung der Seite und zählt hier nicht. */
-    if (erwarteterFehler && /Failed to load resource: (the server responded with a status of (40[09]|500)|net::ERR_CONNECTION_RESET)/.test(m.text())) return;   // ERR_CONNECTION_RESET: Verkauf, verlorene Antwort
+    if (erwarteterFehler && /Failed to load resource: (the server responded with a status of (40[09]|50[03])|net::ERR_CONNECTION_RESET)/.test(m.text())) return;   // ERR_CONNECTION_RESET: Verkauf, verlorene Antwort
     meldungen.push(m.text());
   });
   p.on('pageerror', e => meldungen.push('Skriptfehler: ' + e.message));
@@ -1166,7 +1166,7 @@ console.log('\n== Stufe 3: Navigation in drei Gruppen, Reiter, Einstellungen mit
   await e.evaluate(() => { window.confirm = () => false; });
   await e.locator('[data-modus="live"]').click(); await e.waitForTimeout(200);
   pruefe('Live fragt nach; Abbruch sendet nichts', letzte('lauf_einstellungen_set').nutzlast.modus === 'probe');
-  await e.locator('[data-probe="alex@wildemoehre.org"]').click(); await e.waitForTimeout(300);
+  erwarteterFehler = true; await e.locator('[data-probe="alex@wildemoehre.org"]').click(); await e.waitForTimeout(300); erwarteterFehler = false;   // 503 ist hier das erwartete Ergebnis
   pruefe('Verbindung prüfen ohne Zugang: Fehler sichtbar benannt', /Keine Verbindung: Google-Zugang fehlt/.test(await e.locator('#lsProbeErg').innerText()));
   await e.locator('#lsTick').click(); await e.waitForTimeout(400);
   const tk = letzte('lauf_tick');

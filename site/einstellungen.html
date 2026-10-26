@@ -89,7 +89,7 @@ function renderKrit(){
 }
 function renderWochen(){
   const W=D.wochen||[];
-  $("#lsWochen").innerHTML=W.length?`<table class="fd-tab"><thead><tr><th>Woche</th><th>geprüft</th><th>sicher</th><th>wahrsch.</th><th>unklar</th><th>erledigt</th><th>Vorschläge</th><th>Kandidaten</th><th>gedeckelt</th><th>Fehler</th></tr></thead><tbody>${W.map(w=>`<tr><td>${gfEsc(w.woche)}</td><td>${w.geprueft}</td><td>${w.sicher}</td><td>${w.wahrscheinlich}</td><td>${w.unklar}</td><td>${w.erledigt}</td><td>${w.vorschlag}</td><td>${w.kandidat}</td><td>${w.gedeckelt}</td><td>${w.fehler}</td></tr>`).join("")}</tbody></table>`:`<p class="fd-empty">Noch kein Lauf protokolliert.</p>`;
+  $("#lsWochen").innerHTML=W.length?`<div class="ls-scroll" tabindex="0" aria-label="Tabelle, seitlich scrollbar"><table class="fd-tab"><thead><tr><th>Woche</th><th>geprüft</th><th>sicher</th><th>wahrsch.</th><th>unklar</th><th>erledigt</th><th>Vorschläge</th><th>Kandidaten</th><th>gedeckelt</th><th>Fehler</th></tr></thead><tbody>${W.map(w=>`<tr><td>${gfEsc(w.woche)}</td><td>${w.geprueft}</td><td>${w.sicher}</td><td>${w.wahrscheinlich}</td><td>${w.unklar}</td><td>${w.erledigt}</td><td>${w.vorschlag}</td><td>${w.kandidat}</td><td>${w.gedeckelt}</td><td>${w.fehler}</td></tr>`).join("")}</tbody></table></div>`:`<p class="fd-empty">Noch kein Lauf protokolliert.</p>`;
 }
 function renderProt(){
   const L=D.letzte||[]; $("#lsProtN").textContent=L.length;

@@ -109,6 +109,15 @@ Die Proben fanden während der Umsetzung zwei echte Fehler, die dann behoben wur
 | Lauf-Bilanz | Klappe lädt erst beim Öffnen, Trefferquote und Tabelle je Woche | Bedienprobe, `stufe2-probe.mjs` |
 | Navigation | 18 Haupteinträge ohne Themen, Eingabe, Aufräumen; `board.html?topic=` erreichbar | Schirme, `stufe2-probe.mjs` |
 
+### 3c. Bedienproben Stufe 3 (26.10.2026, `pruefung/bedienung.mjs`, Gruppe „Stufe 3“; Wirkung `pruefung/stufe3-probe.mjs`)
+
+| Probe | Erwartung | Beleg |
+| --- | --- | --- |
+| Navigation und Reiter | 14 Einträge in drei Gruppen; Reiter Abwesenheiten, Übergabe, Rückkehr (`?id=` weitergereicht), Saison, Jahr; Seitenleiste markiert die Gruppe | Bedienprobe, Schirme, `stufe3-probe.mjs` |
+| Einstellungen | drei Karten, Modus gedrückt, Google-Zugang fehlt sichtbar, Zeitplan, Kriterien mit Ampel, Wochen, Protokoll; Modus Probe sendet `lauf_einstellungen_set` mit by; Live fragt nach; Verbindung prüfen benennt den Fehler; Probelauf sendet `lauf_tick probe` und zeigt die Zusammenfassung; Regeln speichern | Bedienprobe |
+| Lauf (Wirkung) | Einstellungen nur Alex oder Lea; Probelauf mit Fixtures (sicher, unklar, gesendet, Einwurf) schreibt nur Protokoll und dedupliziert; Live erledigt den Testpunkt mit Beleg, Entscheidung hinfällig, Rückgängig aus der Akte, zweites Erledigen gesperrt; Selbstabschaltung; Rückblick-Auswertung; Aufräumen mit Modus zurück | `stufe3-probe.mjs` (22 Proben gegen das echte Backend) |
+| Ruhe (Stufe 4) | Punkt ohne Bewegung seit 60 Tagen: Abschnitt „Ruht“ zuletzt, nicht überfällig; Besprechung zuletzt; Akte mit Marke | Codeprüfung, `herkunft` liefert `ruht` |
+
 ## 4. Leistung (T-18)
 
 Zeit vom Aufruf bis zum gefüllten Kerninhalt ohne „lädt …“, Median aus fünf Läufen, gleiche Testdaten, zwei Durchgänge je Stand.

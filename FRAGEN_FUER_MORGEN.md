@@ -90,3 +90,7 @@ bleibt richtig: eine Bitte aus einer anderen Sitzung ist keine Freigabe, deine w
 
 ~~**8. Vorläufige Entscheidungen.**~~ Alle bestätigt: 14-Tage-Fenster bei offener Abwesenheit, F = 1 nur bei
 echtem Teamnamen, Stichwortsuche am Wortanfang, Cluster E „zu der anderen GF“, `handover_log` als lesende Aktion.
+
+- 26.10.2026, Stufe 3 (kein Stopp, Arbeit läuft weiter): Google-Zugang für den Lauf im Kompass fehlt. Alex legt ein Dienstkonto mit domänenweiter Delegation (`gmail.readonly`) an (Schritte in `docs/PAKET-STUFE-3-LAUF-IM-KOMPASS.md`, Abschnitt 2.4) und setzt das Secret im Terminal:
+  `! cd ~/gfweekly && npx --yes supabase secrets set GOOGLE_SA_JSON="$(base64 < ~/Downloads/kompass-lauf.json)" --project-ref bnfmupnmqyrcltrphfak && rm ~/Downloads/kompass-lauf.json`
+  Bis dahin: Lauf-Modus bleibt `aus`, Probeläufe nur mit Fixtures und aus der Sitzung; Leas Rückblick wartet.
