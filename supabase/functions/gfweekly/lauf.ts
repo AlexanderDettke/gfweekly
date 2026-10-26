@@ -164,8 +164,8 @@ Regeln:
       tools: [{ name: 'einordnung', description: 'Einordnung der Mail gegen die Akten.', input_schema: { type: 'object', additionalProperties: false, required: ['vorhaben_slug', 'sicherheit', 'abschluss_belegt', 'beleg'],
         properties: { vorhaben_slug: { type: ['string', 'null'] }, punkt_id: { type: ['string', 'null'] }, sicherheit: { type: 'number' }, abschluss_belegt: { type: 'boolean' }, beleg: { type: 'string' },
           kandidat: { type: ['object', 'null'], properties: { titel: { type: 'string' }, body: { type: 'string' } }, required: ['titel'] }, frist_datum: { type: ['string', 'null'] } } } }],
-      tool_choice: { type: 'tool', name: 'einordnung' },
-      messages: [{ role: 'user', content: `Heute: ${heuteBerlin()}. Postfach: ${person}. ${mail.gesendet ? 'Die Mail wurde von dieser Person gesendet.' : 'Die Mail ist eingegangen.'}\n\nMail:\n${mailText(mail)}\n\nAktive Vorhaben:\n${JSON.stringify(liste)}` }],
+      tool_choice: { type: 'auto' },   // claude-opus-5-5 lässt keine erzwungene Werkzeugwahl zu; Rückfall unten liest JSON aus dem Text
+      messages: [{ role: 'user', content: `Antworte ausschließlich über das Werkzeug „einordnung“ (oder, falls nicht möglich, mit genau einem JSON-Objekt mit denselben Feldern).\nHeute: ${heuteBerlin()}. Postfach: ${person}. ${mail.gesendet ? 'Die Mail wurde von dieser Person gesendet.' : 'Die Mail ist eingegangen.'}\n\nMail:\n${mailText(mail)}\n\nAktive Vorhaben:\n${JSON.stringify(liste)}` }],
     };
     const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
     try {
@@ -173,8 +173,11 @@ Regeln:
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new LaufFehler('Anthropic: ' + (data?.error?.message || res.status), 502);
       const tool = (data.content || []).find((c: Any) => c.type === 'tool_use');
-      if (!tool?.input) throw new LaufFehler('Anthropic: keine Antwort im erwarteten Format', 502);
-      return tool.input;
+      if (tool?.input) return tool.input;
+      const text = (data.content || []).filter((c: Any) => c.type === 'text').map((c: Any) => c.text).join('\n');
+      const m = text.match(/\{[\s\S]*\}/);
+      if (m) { try { return JSON.parse(m[0]); } catch { /* unten */ } }
+      throw new LaufFehler('Anthropic: keine Antwort im erwarteten Format', 502);
     } finally { clearTimeout(timer); }
   }
 
@@ -258,7 +261,7 @@ Regeln:
           }
         }
       } catch (err) {
-        zeile.aktion = 'fehler'; zeile.beleg = txt((err as Error).message, 600); zusammen.fehler++;
+        zeile.aktion = 'fehler'; zeile.beleg = txt((err as Error).message, 600);
       }
       zusammen[zeile.aktion] = (zusammen[zeile.aktion] || 0) + 1;
       if (zeile.stufe === 'unklar') zusammen.unklar++;
