@@ -286,7 +286,7 @@ Regeln:
           const frist = tag(roh?.frist_datum);
           const link = m.quelle_art === 'plattform' ? (m.url || null) : (quelle === 'gmail' && m.thread_id ? `https://mail.google.com/mail/u/0/#all/${m.thread_id}` : null);
           /* Runde 1, Befund 3: Quellen aus der Nutzlast schreiben außerhalb des Probelaufs nur an Vorhaben mit „(Test)“ im Titel. */
-          const darfSchreiben = modus !== 'probe' && (!fixtures || /\(Test\)\s*$/.test(String(vh?.title || '')));
+          const darfSchreiben = modus !== 'probe' && (!fixtures || /\(Test\)/.test(String(vh?.title || '')));
           if (modus !== 'probe' && fixtures && !darfSchreiben && ['erledigt', 'vorschlag', 'kandidat'].includes(aktion)) { zeile.aktion = 'uebersprungen'; zeile.beleg = 'Quelle aus der Nutzlast außerhalb des Probelaufs: nicht geschrieben'; }
           else if (darfSchreiben && (aktion === 'vorschlag' || aktion === 'kandidat')) {
             const frei = await rpc('hh_lauf_sichtung', { p_tag: heute, p_n: 1 });

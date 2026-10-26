@@ -58,7 +58,7 @@ let D=null;
 const MODUS=[["aus","Aus","Der Zeitplan läuft, tut aber nichts."],["probe","Probe","Liest und protokolliert nur; schreibt nichts in Akten."],["vorschlag","Vorschlag","Alles wird Vorschlag in der Akte, auch Sicheres; nichts wird erledigt."],["live","Live","Sichere Belege erledigen den Punkt; Rückgängig 7 Tage in der Akte."]];
 function fmtZeit(iso){ return iso?gfNewsWhen(iso):"noch nie"; }
 function renderKarten(){
-  const e=D.einstellungen; const cron=(D.cron||[]).find(c=>c.jobname==="hh_lauf_tick");
+  const e=D.einstellungen; const jobs=(D.cron||[]).filter(c=>String(c.jobname).startsWith("hh_lauf_tick")&&c.active); const cron=jobs.length?{schedule:jobs.map(j=>j.schedule).join(" | ")}:null;
   $("#lsKarten").innerHTML=`
     <div class="ls-karte"><h3>Modus</h3>
       <div class="ls-modus" role="group" aria-label="Lauf-Modus">${MODUS.map(([k,l])=>`<button type="button" class="btn btn-sm" data-modus="${k}" aria-pressed="${e.modus===k}">${l}</button>`).join("")}</div>
