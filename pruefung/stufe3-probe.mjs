@@ -107,6 +107,10 @@ else {
     const rg = eintrag ? await api('lauf_rueckgaengig', { id: eintrag.id, by: 'Alex' }) : { status: 0 };
     const rq = sql(`select erledigt from public.hh_vorhaben_punkte where id = '${K.punkt}';`);
     pruefe('Rückgängig aus der Akte: Punkt wieder offen, zwei Lauf-Einträge verworfen', rg.status === 200 && rg.d.verworfen === 2 && rq.rows?.[0]?.erledigt === false, JSON.stringify([!!eintrag, rg.d]).slice(0, 300));
+    const tk = await api('lauf_tick', { run_id: K.run + '-k', postfach: 'alex@wildemoehre.org', mails: [fix('kandidat', { von: 'buero@nordlicht-gmbh.example', betreff: 'Nordlicht GmbH: Entscheidung zur Zusatzoption bis 05.11.', text: `Hallo Alex, zum Probevertrag Nordlicht GmbH (Test) bräuchten wir bis zum 05.11.2026 eure Entscheidung, ob ihr die Zusatzoption Winterlager für 1.200 Euro ziehen wollt. Viele Grüße Nordlicht GmbH` })] });
+    const kq = sql(`select gate, gate_frist, vorhaben_vorschlag, relevance, source from public.gfweekly_news where source_ref = 'mail:s3fix-kandidat:s3fix-kandidat-m:k1';`);
+    const zk = (tk.d?.zeilen || [])[0];
+    pruefe('Kandidat aus einer Mail: ohne gate (keine Entscheidung ohne Punkt), mit Vorschlag auf das Vorhaben und Datum aus der Quelle; oder als Vorschlag im Verlauf, nie als Entscheidung', tk.status === 200 && zk && ['kandidat', 'vorschlag', 'nichts'].includes(zk.aktion) && (zk.aktion !== 'kandidat' || (kq.rows?.[0] && kq.rows[0].gate === null && kq.rows[0].vorhaben_vorschlag === K.vorhaben && kq.rows[0].source === 'mail')), JSON.stringify([zk, kq.rows]).slice(0, 400));
     const t3 = await api('lauf_tick', { run_id: K.run + '-c', postfach: 'alex@wildemoehre.org', mails: [fix('sicher3', { von: 'buero@nordlicht-gmbh.example', betreff: 'Re: Probevertrag Nordlicht GmbH', text: 'Nochmals: der unterschriebene Probevertrag Nordlicht GmbH ist eingegangen, erledigt.' })] });
     const z3 = (t3.d?.zeilen || [])[0];
     pruefe('Ein zweites Erledigen desselben Punkts nach Rückgängig wird gesperrt', t3.status === 200 && z3 && z3.aktion === 'gesperrt' && t3.d.zusammen.erledigt === 0, JSON.stringify(z3));
